@@ -2,6 +2,8 @@ import { prismaClient } from "@/lib/prisma/client";
 import Link from "next/link";
 import { Routes } from "@/routes";
 import { CreateCircleForm } from "@/circles/create-circle-form";
+import { Button } from "@/components/ui/button";
+import { PlusIcon } from "@radix-ui/react-icons";
 
 export const CirclesNav = async ({ circleId }: { circleId?: string }) => {
   const circles = await prismaClient.circle.getMeCircles({
