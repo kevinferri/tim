@@ -1,0 +1,78 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  // Base
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Specific
+  name     String?
+  email    String? @unique
+  imageUrl String?
+  googleId String  @unique
+
+  // Relations
+  createdCircles    Circle[] @relation("circlesCreatedByUser")
+  createdTopics     Topic[]  @relation("topicsCreatedByUser")
+  circleMemberships Circle[] @relation("circleMembershipsForUser")
+
+  @@index([email])
+  @@map(name: "users")
+}
+
+model Circle {
+  // Base
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Specific
+  name        String
+  description String?
+  imageUrl    String?
+  userId      String
+  defaultTopicId String? @unique
+  
+
+  // Relations
+  createdBy    User    @relation("circlesCreatedByUser", fields: [userId], references: [id])
+  members      User[]  @relation("circleMembershipsForUser")
+  topics       Topic[] @relation("topicsInCircle")
+  defaultTopic Topic?    @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
+  
+
+  @@index([userId])
+  @@map(name: "circles")
+}
+
+model Topic {
+  // Base
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Specfic
+  name               String
+  description        String?
+  userId             String
+  circleId           String
+  
+
+  // Relations
+  createdBy        User    @relation("topicsCreatedByUser", fields: [userId], references: [id])
+  parentCircle     Circle  @relation("topicsInCircle", fields: [circleId], references: [id])
+  defaultForCircle Circle? @relation("defaultTopicForCircle")
+  
+
+  @@map(name: "topics")
+}
