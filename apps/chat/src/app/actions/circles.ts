@@ -39,9 +39,7 @@ export async function createCircle(formData: FormData) {
         in: validatedFields.data.members?.split(", "),
       },
     },
-    select: {
-      id: true,
-    },
+    select: { id: true },
   });
 
   try {
@@ -57,7 +55,10 @@ export async function createCircle(formData: FormData) {
             connect: [{ id: userId }, ...members],
           },
         },
+        select: { id: true },
       });
+
+      console.log(newCircle);
 
       // Create default topic for circle
       await prismaClient.topic.create({
@@ -69,6 +70,7 @@ export async function createCircle(formData: FormData) {
             connect: { id: newCircle.id },
           },
         },
+        select: { id: true },
       });
 
       revalidatePath("/");
