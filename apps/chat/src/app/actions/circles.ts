@@ -58,8 +58,6 @@ export async function createCircle(formData: FormData) {
         select: { id: true },
       });
 
-      console.log(newCircle);
-
       // Create default topic for circle
       await prismaClient.topic.create({
         data: {

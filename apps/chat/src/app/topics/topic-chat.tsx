@@ -22,7 +22,6 @@ export function TopicChat({ topicId }: { topicId: string }) {
 
   const messageProcessedHandler = useCallback(
     (newMessage: ProcessedMessage) => {
-      console.log(newMessage);
       setMessages([...messages, newMessage]);
     },
     [messages]
