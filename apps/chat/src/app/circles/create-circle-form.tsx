@@ -16,17 +16,39 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createCircle } from "@/actions/circles";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
+import { Routes, getLinkForTopic } from "@/routes";
 
 export const CreateCircleForm = () => {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   return (
     <>
-      <Button variant="outline" size="iconSm" onClick={() => setOpen(true)}>
-        <PlusIcon />
-      </Button>
+      <TooltipProvider>
+        <Tooltip delayDuration={100}>
+          <TooltipTrigger>
+            <Avatar>
+              <AvatarFallback
+                className="bg-secondary border"
+                onClick={() => setOpen(true)}
+              >
+                <PlusIcon height={18} width={18} />
+              </AvatarFallback>
+            </Avatar>
+          </TooltipTrigger>
+          <TooltipContent side="right">Create a circle</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -39,9 +61,17 @@ export const CreateCircleForm = () => {
             onSubmit={async (event) => {
               event.preventDefault();
               setSubmitting(true);
-              await createCircle(new FormData(event.currentTarget));
+
+              const resp = await createCircle(
+                new FormData(event.currentTarget)
+              );
+
               setSubmitting(false);
               setOpen(false);
+
+              if (resp && resp.data.defaultTopicId) {
+                router.push(getLinkForTopic(resp.data.defaultTopicId));
+              }
             }}
           >
             <div className="grid gap-4 py-4">

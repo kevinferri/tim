@@ -2,11 +2,12 @@ import React from "react";
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import jwt from "jsonwebtoken";
-import { getServerSession } from "next-auth";
 
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { SocketProvider } from "@/components/socket/socket-provider";
-import { authOptions } from "./lib/session";
+import { Toaster } from "@/components/ui/toaster";
+import { prismaClient } from "./lib/prisma/client";
+
 import "@/globals.css";
 
 export const metadata: Metadata = {
@@ -15,12 +16,16 @@ export const metadata: Metadata = {
 };
 
 async function getSocketConfig() {
-  const session = await getServerSession(authOptions);
-  const token = session?.user
-    ? jwt.sign(
-        JSON.stringify({ id: session.user.id }),
-        process.env.CHAT_SERVER_AUTH_SECRET ?? ""
-      )
+  const user = await prismaClient.user.getLoggedIn({
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+    },
+  });
+
+  const token = user
+    ? jwt.sign(JSON.stringify(user), process.env.CHAT_SERVER_AUTH_SECRET ?? "")
     : undefined;
 
   return {
@@ -47,6 +52,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster />
           <SocketProvider {...socketConfig}>{children}</SocketProvider>
         </ThemeProvider>
       </body>

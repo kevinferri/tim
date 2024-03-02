@@ -1,7 +1,6 @@
-import { Header } from "@/components/layouts/dashboard/header";
-import { CirclesNav } from "@/components/layouts/dashboard/circles-nav";
+import { CirclesNav } from "@/circles/circles-nav";
 import { Content } from "./content";
-import { TopicsNav } from "./topics-nav";
+import { TopicsNav } from "@/topics/topics-nav";
 
 export const DashboardLayout = ({
   circleId,
@@ -14,7 +13,6 @@ export const DashboardLayout = ({
 }) => {
   return (
     <div className="flex flex-col h-screen ">
-      <Header />
       <div className="flex overflow-hidden h-100 basis-full">
         <CirclesNav circleId={circleId} />
         {circleId ? (

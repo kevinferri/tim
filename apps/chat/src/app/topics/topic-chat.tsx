@@ -9,26 +9,28 @@ import {
   useSocketHandler,
 } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Message, MessageProps } from "./message";
 
-type ProcessedMessage = {
-  text: string;
-  sentBy: string;
-};
-
-export function TopicChat({ topicId }: { topicId: string }) {
-  const [messages, setMessages] = useState<ProcessedMessage[]>([]);
+export function TopicChat({
+  topicId,
+  prevMessages,
+}: {
+  topicId: string;
+  prevMessages: MessageProps[];
+}) {
+  const [messages, setMessages] = useState<MessageProps[]>(prevMessages);
   const joinRoom = useSocketEmit(EmitEvent.JoinRoom);
   const leaveRoom = useSocketEmit(EmitEvent.LeaveRoom);
 
   const messageProcessedHandler = useCallback(
-    (newMessage: ProcessedMessage) => {
+    (newMessage: MessageProps) => {
       setMessages([...messages, newMessage]);
     },
     [messages]
   );
 
   useEffect(() => {
-    joinRoom.emit({ topicId });
+    joinRoom.emit({ id: topicId, roomType: "topic" });
 
     return () => {
       leaveRoom.emit({ topicId });
@@ -36,20 +38,25 @@ export function TopicChat({ topicId }: { topicId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useSocketHandler<ProcessedMessage>(
+  useSocketHandler<MessageProps>(
     HandlerEvent.MessageProcessed,
     messageProcessedHandler
   );
 
   return (
-    <ScrollArea className="flex flex-col basis-full overflow-y-scroll">
-      {messages.map((message: ProcessedMessage) => {
-        return (
-          <div key={message.text}>
-            {message.sentBy}: {message.text}
-          </div>
-        );
-      })}
+    <ScrollArea className="flex flex-col basis-full p-3">
+      <div className="flex flex-col gap-4">
+        {messages.map((message: MessageProps) => {
+          return (
+            <Message
+              key={message.id}
+              id={message.id}
+              text={message.text}
+              sentBy={message.sentBy}
+            />
+          );
+        })}
+      </div>
     </ScrollArea>
   );
 }

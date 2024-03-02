@@ -11,9 +11,9 @@ datasource db {
 
 model User {
   // Base
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @default(now())
 
   // Specific
   name     String?
@@ -22,9 +22,10 @@ model User {
   googleId String  @unique
 
   // Relations
-  createdCircles    Circle[] @relation("circlesCreatedByUser")
-  createdTopics     Topic[]  @relation("topicsCreatedByUser")
-  circleMemberships Circle[] @relation("circleMembershipsForUser")
+  createdCircles    Circle[]  @relation("circlesCreatedByUser")
+  createdTopics     Topic[]   @relation("topicsCreatedByUser")
+  circleMemberships Circle[]  @relation("circleMembershipsForUser")
+  messages          Message[] @relation("messagesSentByUser")
 
   @@index([email])
   @@map(name: "users")
@@ -32,24 +33,22 @@ model User {
 
 model Circle {
   // Base
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @default(now())
 
   // Specific
-  name        String
-  description String?
-  imageUrl    String?
-  userId      String
+  name           String
+  description    String?
+  imageUrl       String?
+  userId         String
   defaultTopicId String? @unique
-  
 
   // Relations
   createdBy    User    @relation("circlesCreatedByUser", fields: [userId], references: [id])
   members      User[]  @relation("circleMembershipsForUser")
   topics       Topic[] @relation("topicsInCircle")
-  defaultTopic Topic?    @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
-  
+  defaultTopic Topic?  @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
 
   @@index([userId])
   @@map(name: "circles")
@@ -57,22 +56,40 @@ model Circle {
 
 model Topic {
   // Base
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @default(now())
 
   // Specfic
-  name               String
-  description        String?
-  userId             String
-  circleId           String
-  
+  name        String
+  description String?
+  userId      String
+  circleId    String
 
   // Relations
-  createdBy        User    @relation("topicsCreatedByUser", fields: [userId], references: [id])
-  parentCircle     Circle  @relation("topicsInCircle", fields: [circleId], references: [id])
-  defaultForCircle Circle? @relation("defaultTopicForCircle")
-  
+  createdBy        User      @relation("topicsCreatedByUser", fields: [userId], references: [id])
+  parentCircle     Circle    @relation("topicsInCircle", fields: [circleId], references: [id])
+  defaultForCircle Circle?   @relation("defaultTopicForCircle")
+  messages         Message[] @relation("messagesInTopic")
 
   @@map(name: "topics")
+}
+
+model Message {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  // Specific 
+  text           String?
+  userId         String
+  topicId        String
+  highlightCount Int?     @default(0)
+
+  // Relations
+  sentBy User  @relation("messagesSentByUser", fields: [userId], references: [id])
+  topic  Topic @relation("messagesInTopic", fields: [topicId], references: [id])
+
+  @@map(name: "messages")
 }

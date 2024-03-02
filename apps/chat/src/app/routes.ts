@@ -6,7 +6,11 @@ export enum Routes {
   SignIn = "/signin",
   Terms = "/static/terms",
   Privacy = "/static/privacy",
+}
 
-  // API
-  ChatHooks = "/api/chat-hooks",
+const generateTopicHash = () =>
+  btoa(Math.random().toString()).substring(10, 15);
+
+export function getLinkForTopic(id: string) {
+  return `${Routes.Topic.replace(":id", id)}?t=${generateTopicHash()}`;
 }

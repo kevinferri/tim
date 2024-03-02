@@ -7,11 +7,6 @@ export function middleware(req: NextRequest) {
   const cookieStore = cookies();
   const sessionToken = cookieStore.get("next-auth.session-token");
 
-  if (pathname.startsWith(Routes.ChatHooks)) {
-    // TODO: check for private key in headers
-    return NextResponse.next();
-  }
-
   // Public API routes
   if (pathname.startsWith("/api")) {
     return NextResponse.next();

@@ -18,10 +18,7 @@ export function ThemeToggle({ buttonProps }: { buttonProps?: ButtonProps }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant={buttonProps?.variant ?? "outline"}
-          size={buttonProps?.size ?? "icon"}
-        >
+        <Button variant="ghost" size="icon" className="rounded-full">
           <SunIcon className="h-[1rem] w-[1rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <MoonIcon className="absolute h-[1rem] w-[1rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>

@@ -1,8 +1,8 @@
 import { AuthOptions, getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-import { prismaClient } from "@/lib/prisma/client";
-import { Routes } from "@/routes";
+import { prismaClient } from "./prisma/client";
+import { Routes } from "../routes";
 
 export const authOptions: AuthOptions = {
   session: {

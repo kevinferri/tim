@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useSocketContext } from "./socket-provider";
+import { useRouter } from "next/navigation";
 
 export enum HandlerEvent {
   MessageProcessed = "message processed",

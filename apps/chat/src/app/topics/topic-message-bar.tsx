@@ -27,11 +27,11 @@ export function TopicMessageBar({ topicId }: { topicId: string }) {
   };
 
   return (
-    <div className="flex flex-1 bg-secondary p-4">
+    <div className="flex flex-1 p-4">
       <form onSubmit={emitMessage} className="basis-full">
         <Input
           autoFocus
-          className="bg-white focus-visible:ring-transparent focus-visible:border-slate-300"
+          className="focus-visible:ring-transparent focus-visible:border-slate-300"
           type="text"
           onChange={(e) => setMessage(e.target.value)}
           value={message}

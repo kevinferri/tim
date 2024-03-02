@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
-import { userModel } from "@/lib/prisma/user-model";
-import { circleModel } from "@/lib/prisma/circle-model";
-import { topicModel } from "@/lib/prisma/topic-model";
+import { userModel } from "./user-model";
+import { circleModel } from "./circle-model";
+import { topicModel } from "./topic-model";
 
 const prismaClientSingleton = () => {
   const client = new PrismaClient({ log: ["error"] }).$extends({

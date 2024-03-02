@@ -23,7 +23,7 @@ export default async function GroupPage({
           <div>Will list the topics for group id {params.id}</div>
         </>
       ) : (
-        <NotFound copy="Group not found" />
+        <NotFound copy="Topic not found" />
       )}
     </DashboardLayout>
   );

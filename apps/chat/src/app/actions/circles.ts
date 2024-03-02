@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prismaClient } from "@/lib/prisma/client";
@@ -20,7 +19,6 @@ const createCircleSchema = z.object({
 
 export async function createCircle(formData: FormData) {
   const userId = await getLoggedInUserId();
-
   if (!userId) return false;
 
   const validatedFields = createCircleSchema.safeParse({
@@ -42,6 +40,9 @@ export async function createCircle(formData: FormData) {
     select: { id: true },
   });
 
+  let newCircle: { id?: string } = {};
+  let defaultTopic: { id?: string } = {};
+
   try {
     await prismaClient.$transaction(async () => {
       const newCircle = await prismaClient.circle.create({
@@ -59,7 +60,7 @@ export async function createCircle(formData: FormData) {
       });
 
       // Create default topic for circle
-      await prismaClient.topic.create({
+      defaultTopic = await prismaClient.topic.create({
         data: {
           userId,
           name: validatedFields.data.defaultTopicName ?? "General",
@@ -70,14 +71,15 @@ export async function createCircle(formData: FormData) {
         },
         select: { id: true },
       });
-
-      revalidatePath("/");
-
-      return {
-        data: newCircle,
-      };
     });
-  } catch {
+  } catch (err) {
     return false;
   }
+
+  return {
+    data: {
+      ...newCircle,
+      defaultTopicId: defaultTopic.id,
+    },
+  };
 }

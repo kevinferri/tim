@@ -48,4 +48,28 @@ export const circleModel = {
       select,
     });
   },
+
+  async isUserInCirle({
+    circleId,
+    userId,
+  }: {
+    circleId?: string;
+    userId?: string;
+  }) {
+    if (!userId || !circleId) return false;
+
+    const foundCircle = await prismaClient.circle.findUnique({
+      where: {
+        id: circleId,
+        members: {
+          some: {
+            id: userId,
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    return Boolean(foundCircle);
+  },
 };
