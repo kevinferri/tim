@@ -15,7 +15,7 @@ export function middleware(
 
   try {
     const user = jwt.verify(token, process.env.AUTH_SECRET) as JwtPayload;
-    socket.data.userId = user.id;
+    socket.data.user = user;
   } catch (err) {
     return invalidCredentialsError(next);
   }
