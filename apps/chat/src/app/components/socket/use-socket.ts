@@ -1,15 +1,16 @@
 import { useCallback, useEffect } from "react";
 import { useSocketContext } from "./socket-provider";
-import { useRouter } from "next/navigation";
 
 export enum HandlerEvent {
   MessageProcessed = "message processed",
+  CreatedTopicProcessed = "created topic processed",
 }
 
 export enum EmitEvent {
   SendMessage = "send message",
   JoinRoom = "join room",
   LeaveRoom = "leave room",
+  CreateTopic = "create topic",
 }
 
 export function useSocketHandler<T>(

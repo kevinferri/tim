@@ -13,20 +13,23 @@ const getInitials = (name?: string) => {
     .split(" ")
     .map((x) => x.charAt(0))
     .join("")
-    .substr(0, 2)
+    .substring(0, 2)
     .toUpperCase();
 };
 
 export const Message = ({ id, text, sentBy }: MessageProps) => {
   return (
     <div className="flex gap-2">
-      <Avatar className="shadow-md border border-slate-200">
-        <AvatarImage src={sentBy.imageUrl ?? undefined} />
+      <Avatar className="shadow-md border border-slate-300 p-[1px]">
+        <AvatarImage
+          className="rounded-full"
+          src={sentBy.imageUrl ?? undefined}
+        />
         <AvatarFallback>{getInitials(sentBy.name ?? undefined)}</AvatarFallback>
       </Avatar>
       <div className="flex flex-col">
-        <span className="font-medium leading-5">{sentBy.name}</span>
-        <span>{text}</span>
+        <span className="font-medium leading-4">{sentBy.name}</span>
+        <span className="whitespace-pre-line">{text}</span>
       </div>
     </div>
   );

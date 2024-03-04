@@ -13,9 +13,11 @@ import { Message, MessageProps } from "./message";
 
 export function TopicChat({
   topicId,
+  circleId,
   prevMessages,
 }: {
   topicId: string;
+  circleId: string;
   prevMessages: MessageProps[];
 }) {
   const [messages, setMessages] = useState<MessageProps[]>(prevMessages);
@@ -31,9 +33,11 @@ export function TopicChat({
 
   useEffect(() => {
     joinRoom.emit({ id: topicId, roomType: "topic" });
+    joinRoom.emit({ id: circleId, roomType: "circle" });
 
     return () => {
       leaveRoom.emit({ topicId });
+      leaveRoom.emit({ circleId });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

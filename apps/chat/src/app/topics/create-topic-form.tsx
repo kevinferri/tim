@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { getLinkForTopic } from "@/routes";
 import { createTopic } from "@/actions/topics";
 import { PlusIcon } from "@radix-ui/react-icons";
+import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
 
 export const CreateTopicForm = ({
   circleId,
@@ -30,6 +31,7 @@ export const CreateTopicForm = ({
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const createTopicEmit = useSocketEmit(EmitEvent.CreateTopic);
 
   return (
     <>
@@ -71,6 +73,7 @@ export const CreateTopicForm = ({
 
               if (resp && resp.data) {
                 router.push(getLinkForTopic(resp.data.id));
+                createTopicEmit.emit({ circleId });
               }
             }}
           >

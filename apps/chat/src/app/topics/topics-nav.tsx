@@ -1,10 +1,8 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { CreateTopicForm } from "./create-topic-form";
-import Link from "next/link";
-import { getLinkForTopic } from "@/routes";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { GearIcon } from "@radix-ui/react-icons";
+import { TopicsList } from "./topics-list";
 
 export async function TopicsNav({
   circleId,
@@ -38,26 +36,7 @@ export async function TopicsNav({
         {parentCircle?.name}
       </div>
 
-      {topics ? (
-        <ScrollArea>
-          <div className="flex flex-col gap-2 p-3">
-            {topics.map((topic) => {
-              return (
-                <Link href={getLinkForTopic(topic.id)} key={topic.id}>
-                  <Button
-                    variant={topic.id === topicId ? "secondary" : "ghost"}
-                    className="w-full flex justify-start"
-                  >
-                    {topic.name}
-                  </Button>
-                </Link>
-              );
-            })}
-          </div>
-        </ScrollArea>
-      ) : (
-        "No topics yet..."
-      )}
+      <TopicsList topics={topics} topicId={topicId} />
 
       <div className="flex flex-col items-center mt-auto gap-3 p-3">
         <CreateTopicForm circleId={circleId} circleName={parentCircle?.name} />

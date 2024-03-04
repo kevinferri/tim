@@ -30,10 +30,8 @@ export default async function TopicsPage({
     },
   });
 
-  const messages = await prismaClient.message.findMany({
-    where: {
-      topicId: topic?.id,
-    },
+  const messages = await prismaClient.message.getMessagesForTopic({
+    topicId: topic?.id,
     select: {
       id: true,
       text: true,
@@ -48,19 +46,16 @@ export default async function TopicsPage({
     },
   });
 
-  const messagesForTopic = messages.map((message) => {
-    return {
-      ...message,
-      text: getReadableMessage(message.text),
-    };
-  });
-
   return (
     <DashboardLayout circleId={topic?.circleId} topicId={topic?.id}>
       {topic ? (
         <>
           <TopicHeader name={topic.name} />
-          <TopicChat topicId={topic.id} prevMessages={messagesForTopic} />
+          <TopicChat
+            topicId={topic.id}
+            circleId={topic.circleId}
+            prevMessages={messages}
+          />
           <TopicMessageBar topicId={topic.id} />
         </>
       ) : (

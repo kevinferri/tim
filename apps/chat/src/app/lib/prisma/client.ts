@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { userModel } from "./user-model";
 import { circleModel } from "./circle-model";
 import { topicModel } from "./topic-model";
+import { messageModel } from "./message-model";
 
 const prismaClientSingleton = () => {
   const client = new PrismaClient({ log: ["error"] }).$extends({
@@ -9,6 +10,7 @@ const prismaClientSingleton = () => {
       user: userModel,
       circle: circleModel,
       topic: topicModel,
+      message: messageModel,
     },
   });
 
