@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { isUserInTopic } from "../db/queries";
+import { isUserInCircle, isUserInTopic } from "../db/queries";
 import { EventName, HandlerArgs } from "./main";
 
 export enum RoomType {
@@ -29,6 +29,10 @@ async function canJoinRoom({
 }) {
   if (roomType === RoomType.Topic) {
     return await isUserInTopic({ userId: socket.data.user.id, topicId: id });
+  }
+
+  if (roomType === RoomType.Circle) {
+    return await isUserInCircle({ userId: socket.data.user.id, circleId: id });
   }
 
   return true;
