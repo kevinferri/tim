@@ -10,19 +10,22 @@ export type HandlerArgs = {
   socket: Socket;
 };
 
-export enum EventName {
+export enum IncomingEvent {
   Connection = "connection",
   Disconnect = "disconnect",
   SendMessage = "send message",
-  MessageProcessed = "message processed",
   JoinRoom = "join room",
   LeaveRoom = "leave room",
   CreateTopic = "create topic",
+}
+
+export enum OutgoingEvent {
+  MessageProcessed = "message processed",
   CreatedTopicProcessed = "created topic processed",
 }
 
 export function registerEventHandlers(server: Server) {
-  server.on(EventName.Connection, (socket) => {
+  server.on(IncomingEvent.Connection, (socket) => {
     // Log emitted and handled events
     handleOnAny({ socket, server });
     handleOnAnyOutgoing({ socket, server });

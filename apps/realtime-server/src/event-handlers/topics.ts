@@ -1,10 +1,10 @@
-import { EventName, HandlerArgs } from "./main";
+import { IncomingEvent, HandlerArgs, OutgoingEvent } from "./main";
 import { RoomType, toRoomKey } from "./rooms";
 
 export function handleCreateTopic({ socket, server }: HandlerArgs) {
-  socket.on(EventName.CreateTopic, async (payload) => {
+  socket.on(IncomingEvent.CreateTopic, async (payload) => {
     server
       .to(toRoomKey({ id: payload.circleId, roomType: RoomType.Circle }))
-      .emit(EventName.CreatedTopicProcessed, payload);
+      .emit(OutgoingEvent.CreatedTopicProcessed, payload);
   });
 }

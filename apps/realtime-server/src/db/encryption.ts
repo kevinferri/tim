@@ -11,5 +11,5 @@ export function encrypt(text: string) {
 
 export function decrypt(encrypted: string) {
   const decipher = crypto.createDecipheriv(algorithm, key, iv);
-  return decipher.update(encrypted, "hex", "utf8") + decipher.final("utf8"); //deciphered text
+  return decipher.update(encrypted, "hex", "utf8") + decipher.final("utf8");
 }

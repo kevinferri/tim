@@ -1,11 +1,11 @@
-import { EventName, HandlerArgs } from "./main";
+import { IncomingEvent, HandlerArgs } from "./main";
 
 export function handleClientConnected({ server }: HandlerArgs) {
   console.log(`📈 clients: ${server.engine.clientsCount}`);
 }
 
 export function handleClientDisconnected({ socket, server }: HandlerArgs) {
-  socket.on(EventName.Disconnect, () => {
+  socket.on(IncomingEvent.Disconnect, () => {
     console.log(`📉 clients: ${server.engine.clientsCount}`);
   });
 }
