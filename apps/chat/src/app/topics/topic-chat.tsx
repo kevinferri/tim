@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   EmitEvent,
@@ -9,7 +9,7 @@ import {
   useSocketHandler,
 } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Message, MessageProps } from "./message";
+import { Message, MessageProps } from "@/topics/message";
 
 export function TopicChat({
   topicId,
@@ -48,8 +48,8 @@ export function TopicChat({
   );
 
   return (
-    <ScrollArea className="flex flex-col basis-full p-3">
-      <div className="flex flex-col gap-4">
+    <ScrollArea className="flex flex-col basis-full">
+      <div className="flex flex-col gap-4 p-3">
         {messages.map((message: MessageProps) => {
           return (
             <Message

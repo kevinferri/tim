@@ -2,11 +2,13 @@ import React from "react";
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import jwt from "jsonwebtoken";
+import { User } from "@prisma/client";
 
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { SocketProvider } from "@/components/socket/socket-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { prismaClient } from "./lib/prisma/client";
+import { prismaClient } from "@/lib/prisma/client";
+import { SelfProvider } from "@/components/auth/self-provider";
 
 import "@/globals.css";
 
@@ -15,15 +17,7 @@ export const metadata: Metadata = {
   description: "Tim messaging platform",
 };
 
-async function getSocketConfig() {
-  const user = await prismaClient.user.getLoggedIn({
-    select: {
-      id: true,
-      name: true,
-      imageUrl: true,
-    },
-  });
-
+async function getSocketConfig(user?: User) {
   const token = user
     ? jwt.sign(JSON.stringify(user), process.env.CHAT_SERVER_AUTH_SECRET ?? "")
     : undefined;
@@ -40,7 +34,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const socketConfig = await getSocketConfig();
+  const user =
+    (await prismaClient.user.getLoggedIn({
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+      },
+    })) ?? undefined;
+
+  const socketConfig = await getSocketConfig(user);
 
   return (
     <html lang="en" className={GeistSans.className}>
@@ -53,7 +56,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster />
-          <SocketProvider {...socketConfig}>{children}</SocketProvider>
+          <SelfProvider user={user}>
+            <SocketProvider {...socketConfig}>{children}</SocketProvider>
+          </SelfProvider>
         </ThemeProvider>
       </body>
     </html>

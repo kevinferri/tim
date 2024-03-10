@@ -2,44 +2,65 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Topic } from "@prisma/client";
 
 import { HandlerEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { getLinkForTopic } from "@/routes";
-import { Topic } from "@prisma/client";
 import { ToastAction } from "@/components/ui/toast";
-import { Badge } from "@/components/ui/badge";
+import { useSelf } from "@/components/auth/self-provider";
 
-type NewTopicHandlerProps = {
-  createdBy: string;
-  topicId: string;
-  topicName: string;
+type NewTopicHandlerProps = Topic & {
+  createdBy: {
+    name: string;
+    id: string;
+  };
 };
-
-var oneDayAgo = new Date().getTime() + 1 * 24 * 60 * 60 * 1000;
 
 export const TopicsList = ({
   topics,
   topicId,
+  circleName,
 }: {
   topics?: Topic[];
   topicId?: string;
+  circleName?: string;
 }) => {
-  const [liveTopics, setLiveTopics] = useState(topics);
+  const self = useSelf();
+  const [currentTopics, setCurrentTopics] = useState(topics);
   const { toast } = useToast();
+  const router = useRouter();
+
   const createdTopicProcessedHandler = useCallback(
     (payload: NewTopicHandlerProps) => {
-      toast({
-        title: "Topic created",
-        description: `${payload.createdBy} created a new topic called ${payload.topicName}`,
-        action: <ToastAction altText="Go there now">Go there now</ToastAction>,
+      const createdBySelf = payload.createdBy.id === self.id;
+      const name = createdBySelf ? "You" : payload.createdBy.name;
+
+      setCurrentTopics((topics) => {
+        const _topics = topics ?? [];
+        return [..._topics, payload];
       });
 
-      // also need to add to state in nav to show new topic!
+      toast({
+        title: `New topic created in ${circleName}`,
+        description: `${name} created a new topic called "${payload.name}"`,
+        duration: 10000,
+        action: (
+          <ToastAction
+            altText="Go there now"
+            onClick={() => {
+              router.push(getLinkForTopic(payload.id));
+            }}
+          >
+            Go there now
+          </ToastAction>
+        ),
+      });
     },
-    [toast]
+    [toast, circleName, self.id, router]
   );
 
   useSocketHandler<NewTopicHandlerProps>(
@@ -47,14 +68,14 @@ export const TopicsList = ({
     createdTopicProcessedHandler
   );
 
-  if (!liveTopics) {
+  if (!currentTopics) {
     return <>No topics yet...</>;
   }
 
   return (
     <ScrollArea>
       <div className="flex flex-col gap-2 p-3">
-        {liveTopics.map((topic) => {
+        {currentTopics.map((topic) => {
           return (
             <Link href={getLinkForTopic(topic.id)} key={topic.id}>
               <Button

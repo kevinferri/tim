@@ -14,8 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
-import { getLinkForTopic } from "@/routes";
 import { createTopic } from "@/actions/topics";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
@@ -27,7 +25,6 @@ export const CreateTopicForm = ({
   circleId: string;
   circleName?: string;
 }) => {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -67,13 +64,21 @@ export const CreateTopicForm = ({
             onSubmit={async (event) => {
               event.preventDefault();
               setSubmitting(true);
+
               const resp = await createTopic(new FormData(event.currentTarget));
+
               setSubmitting(false);
               setOpen(false);
 
               if (resp && resp.data) {
-                router.push(getLinkForTopic(resp.data.id));
-                createTopicEmit.emit({ circleId });
+                const { id, name, createdBy } = resp.data;
+
+                createTopicEmit.emit({
+                  circleId,
+                  id,
+                  name,
+                  createdBy,
+                });
               }
             }}
           >

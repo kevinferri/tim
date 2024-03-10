@@ -1,5 +1,5 @@
 import { CirclesNav } from "@/circles/circles-nav";
-import { Content } from "./content";
+import { Content } from "@/components/layouts/dashboard/content";
 import { TopicsNav } from "@/topics/topics-nav";
 
 export const DashboardLayout = ({

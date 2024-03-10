@@ -41,6 +41,16 @@ export async function createTopic(formData: FormData) {
       description: validatedFields.data.description,
       circleId: validatedFields.data.circleId,
     },
+    select: {
+      id: true,
+      name: true,
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
   });
 
   return {

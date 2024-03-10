@@ -1,8 +1,8 @@
 import { prismaClient } from "@/lib/prisma/client";
-import { CreateTopicForm } from "./create-topic-form";
+import { CreateTopicForm } from "@/topics/create-topic-form";
 import { Button } from "@/components/ui/button";
 import { GearIcon } from "@radix-ui/react-icons";
-import { TopicsList } from "./topics-list";
+import { TopicsList } from "@/topics/topics-list";
 
 export async function TopicsNav({
   circleId,
@@ -36,7 +36,11 @@ export async function TopicsNav({
         {parentCircle?.name}
       </div>
 
-      <TopicsList topics={topics} topicId={topicId} />
+      <TopicsList
+        topics={topics}
+        topicId={topicId}
+        circleName={parentCircle?.name}
+      />
 
       <div className="flex flex-col items-center mt-auto gap-3 p-3">
         <CreateTopicForm circleId={circleId} circleName={parentCircle?.name} />

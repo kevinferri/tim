@@ -1,5 +1,5 @@
-import { prismaClient } from "./client";
-import { getLoggedInUserId } from "../session";
+import { prismaClient } from "@/lib/prisma/client";
+import { getLoggedInUserId } from "@/lib/session";
 import { Prisma } from "@prisma/client";
 
 export const userModel = {

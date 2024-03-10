@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
-import { getLoggedInUserId } from "../session";
-import { prismaClient } from "./client";
-import { decrypt } from "../decryption";
+import { getLoggedInUserId } from "@/lib/session";
+import { prismaClient } from "@/lib/prisma/client";
+import { decrypt } from "@/lib/decryption";
 
 function getReadableMessage(text?: string | null) {
   if (!text) return undefined;
