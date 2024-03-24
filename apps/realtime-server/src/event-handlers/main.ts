@@ -4,6 +4,7 @@ import { handleClientConnected, handleClientDisconnected } from "./socket";
 import { handleJoinRoom, handleLeaveRoom } from "./rooms";
 import { handleOnAny, handleOnAnyOutgoing } from "./any";
 import { handleCreateTopic } from "./topics";
+import { handleToggleHighlight } from "./highlights";
 
 export type HandlerArgs = {
   server: Server;
@@ -17,11 +18,14 @@ export enum IncomingEvent {
   JoinRoom = "join room",
   LeaveRoom = "leave room",
   CreateTopic = "create topic",
+  ToggleHighlight = "toggle highlight",
 }
 
 export enum OutgoingEvent {
   MessageProcessed = "message processed",
   CreatedTopicProcessed = "created topic processed",
+  AddHighlightProcessed = "add highlight processed",
+  RemoveHighlightProcessed = "remove highlight processed",
 }
 
 export function registerEventHandlers(server: Server) {
@@ -43,5 +47,8 @@ export function registerEventHandlers(server: Server) {
 
     // Topic action handlers
     handleCreateTopic({ socket, server });
+
+    // Highlights
+    handleToggleHighlight({ socket, server });
   });
 }
