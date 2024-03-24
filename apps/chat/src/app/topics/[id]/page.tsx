@@ -5,11 +5,11 @@ import { TopicChat } from "@/topics/topic-chat";
 import { TopicMessageBar } from "@/topics/topic-message-bar";
 import { NotFound } from "@/components/ui/not-found";
 
-export default async function TopicsPage({
-  params,
-}: {
+type Props = {
   params: { id: string };
-}) {
+};
+
+export default async function TopicsPage({ params }: Props) {
   const topic = await prismaClient.topic.getMeTopicById({
     topicId: params.id,
     select: {

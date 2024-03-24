@@ -23,17 +23,19 @@ import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { getLinkForTopic } from "@/routes";
 
+type Props = {
+  existingTopic?: Pick<Topic, "id" | "name" | "description" | "userId">;
+  circleId: string;
+  circleName?: string;
+  trigger?: React.ReactNode;
+};
+
 export const UpsertTopicForm = ({
   existingTopic,
   circleId,
   circleName,
   trigger,
-}: {
-  existingTopic?: Pick<Topic, "id" | "name" | "description" | "userId">;
-  circleId: string;
-  circleName?: string;
-  trigger?: React.ReactNode;
-}) => {
+}: Props) => {
   const self = useSelf();
   const router = useRouter();
   const [open, setOpen] = useState(false);
