@@ -55,6 +55,9 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        highlight: {
+          DEFAULT: "#ffffcd",
+        },
       },
       dropShadow: {
         glow: [

@@ -4,17 +4,6 @@ import { TopicHeader } from "@/topics/topic-header";
 import { TopicChat } from "@/topics/topic-chat";
 import { TopicMessageBar } from "@/topics/topic-message-bar";
 import { NotFound } from "@/components/ui/not-found";
-import { decrypt } from "@/lib/decryption";
-
-function getReadableMessage(text?: string | null) {
-  if (!text) return undefined;
-
-  try {
-    return decrypt(text);
-  } catch {
-    return "";
-  }
-}
 
 export default async function TopicsPage({
   params,
@@ -26,7 +15,14 @@ export default async function TopicsPage({
     select: {
       id: true,
       name: true,
-      circleId: true,
+      userId: true,
+      description: true,
+      parentCircle: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   });
 
@@ -36,25 +32,32 @@ export default async function TopicsPage({
       id: true,
       text: true,
       createdAt: true,
+      highlights: {
+        select: {
+          id: true,
+          userId: true,
+        },
+      },
       sentBy: {
         select: {
           id: true,
           name: true,
           imageUrl: true,
+          createdAt: true,
         },
       },
     },
   });
 
   return (
-    <DashboardLayout circleId={topic?.circleId} topicId={topic?.id}>
+    <DashboardLayout circleId={topic?.parentCircle.id} topicId={topic?.id}>
       {topic ? (
         <>
-          <TopicHeader name={topic.name} />
+          <TopicHeader topic={topic} />
           <TopicChat
             topicId={topic.id}
-            circleId={topic.circleId}
-            prevMessages={messages}
+            circleId={topic.parentCircle.id}
+            existingMessages={messages}
           />
           <TopicMessageBar topicId={topic.id} />
         </>

@@ -2,7 +2,10 @@ import { AvatarIcon } from "@radix-ui/react-icons";
 import { prismaClient } from "@/lib/prisma/client";
 
 import { Routes, getLinkForTopic } from "@/routes";
-import { CreateCircleForm } from "@/circles/create-circle-form";
+import {
+  CreateCircleForm,
+  UpsertCircleForm,
+} from "@/circles/upsert-circle-form";
 import {
   Tooltip,
   TooltipContent,
@@ -83,7 +86,7 @@ export const CirclesNav = async ({ circleId }: { circleId?: string }) => {
             );
           })}
 
-          <CreateCircleForm />
+          <UpsertCircleForm />
         </div>
       </ScrollArea>
 

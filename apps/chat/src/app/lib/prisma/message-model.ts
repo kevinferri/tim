@@ -3,6 +3,8 @@ import { getLoggedInUserId } from "@/lib/session";
 import { prismaClient } from "@/lib/prisma/client";
 import { decrypt } from "@/lib/decryption";
 
+const MESSAGE_LIMIT = 50;
+
 function getReadableMessage(text?: string | null) {
   if (!text) return undefined;
 
@@ -25,10 +27,14 @@ export const messageModel = {
     if (!topicId || !userId) return [];
 
     const messages = await prismaClient.message.findMany({
+      select,
+      take: MESSAGE_LIMIT,
       where: {
         topicId: topicId,
       },
-      select,
+      orderBy: {
+        createdAt: "asc",
+      },
     });
 
     return messages.map((message) => {

@@ -13,7 +13,7 @@ model User {
   // Base
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   // Specific
   name     String?
@@ -22,10 +22,11 @@ model User {
   googleId String  @unique
 
   // Relations
-  createdCircles    Circle[]  @relation("circlesCreatedByUser")
-  createdTopics     Topic[]   @relation("topicsCreatedByUser")
-  circleMemberships Circle[]  @relation("circleMembershipsForUser")
-  messages          Message[] @relation("messagesSentByUser")
+  createdCircles    Circle[]    @relation("circlesCreatedByUser")
+  createdTopics     Topic[]     @relation("topicsCreatedByUser")
+  circleMemberships Circle[]    @relation("circleMembershipsForUser")
+  messages          Message[]   @relation("messagesSentByUser")
+  highlights        Highlight[] @relation("highlightsByUser")
 
   @@index([email])
   @@map(name: "users")
@@ -35,7 +36,7 @@ model Circle {
   // Base
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   // Specific
   name           String
@@ -58,7 +59,7 @@ model Topic {
   // Base
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   // Specfic
   name        String
@@ -79,17 +80,34 @@ model Message {
   // Base
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   // Specific 
-  text           String?
-  userId         String
-  topicId        String
-  highlightCount Int?     @default(0)
+  text    String?
+  userId  String
+  topicId String
 
   // Relations
-  sentBy User  @relation("messagesSentByUser", fields: [userId], references: [id])
-  topic  Topic @relation("messagesInTopic", fields: [topicId], references: [id])
+  sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
+  topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id])
+  highlights Highlight[] @relation("highlightsForMessage")
 
   @@map(name: "messages")
+}
+
+model Highlight {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specific 
+  userId    String
+  messageId String
+
+  // Relations
+  createdBy     User    @relation("highlightsByUser", fields: [userId], references: [id])
+  message       Message @relation("highlightsForMessage", fields: [messageId], references: [id])
+
+  @@map(name: "highlights")
 }

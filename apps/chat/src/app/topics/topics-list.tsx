@@ -13,6 +13,12 @@ import { getLinkForTopic } from "@/routes";
 import { ToastAction } from "@/components/ui/toast";
 import { useSelf } from "@/components/auth/self-provider";
 
+type Props = {
+  topics?: Topic[];
+  topicId?: string;
+  circleName?: string;
+};
+
 type NewTopicHandlerProps = Topic & {
   createdBy: {
     name: string;
@@ -20,15 +26,7 @@ type NewTopicHandlerProps = Topic & {
   };
 };
 
-export const TopicsList = ({
-  topics,
-  topicId,
-  circleName,
-}: {
-  topics?: Topic[];
-  topicId?: string;
-  circleName?: string;
-}) => {
+export const TopicsList = ({ topics, topicId, circleName }: Props) => {
   const self = useSelf();
   const [currentTopics, setCurrentTopics] = useState(topics);
   const { toast } = useToast();
@@ -80,7 +78,7 @@ export const TopicsList = ({
             <Link href={getLinkForTopic(topic.id)} key={topic.id}>
               <Button
                 variant={topic.id === topicId ? "secondary" : "ghost"}
-                className="w-full flex justify-start gap-2"
+                className="w-full flex justify-start gap-2 text-base font-normal"
               >
                 {topic.name}
               </Button>

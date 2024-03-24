@@ -1,7 +1,9 @@
 "use server";
 
-import { getLoggedInUserId } from "@/lib/session";
 import { z } from "zod";
+
+import { getLoggedInUserId } from "@/lib/session";
+import { prismaClient } from "@/lib/prisma/client";
 
 const createTopicSchema = z.object({
   name: z
@@ -15,32 +17,60 @@ const createTopicSchema = z.object({
     })
     .min(1),
   description: z.string().nullable(),
+  topicId: z.string().nullable(),
 });
 
-export async function createTopic(formData: FormData) {
+export async function upsertTopic(formData: FormData) {
   const userId = await getLoggedInUserId();
+
   const validatedFields = createTopicSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description"),
     circleId: formData.get("circleId"),
+    topicId: formData.get("topicId"),
   });
 
   if (!validatedFields.success || !userId) return false;
 
-  const isInCircle = await prismaClient?.circle.isUserInCirle({
+  const circleId = validatedFields.data.circleId;
+  const topicId = validatedFields.data.topicId;
+
+  const isInCircle = await prismaClient.circle.isUserInCirle({
     userId,
-    circleId: validatedFields.data.circleId,
+    circleId,
   });
 
   if (!isInCircle) return false;
 
-  const data = await prismaClient?.topic.create({
-    data: {
-      userId,
-      name: validatedFields.data.name,
-      description: validatedFields.data.description,
-      circleId: validatedFields.data.circleId,
+  const existingTopic = topicId
+    ? await prismaClient.topic.findUnique({
+        where: {
+          id: topicId,
+          circleId,
+        },
+        select: {
+          id: true,
+          userId: true,
+        },
+      })
+    : undefined;
+
+  // Make sure cur user is creator of current topic
+  if (existingTopic && existingTopic.userId !== userId) return false;
+
+  const payload = {
+    userId,
+    circleId,
+    name: validatedFields.data.name,
+    description: validatedFields.data.description,
+  };
+
+  const data = await prismaClient.topic.upsert({
+    where: {
+      id: topicId ?? undefined,
     },
+    create: payload,
+    update: payload,
     select: {
       id: true,
       name: true,

@@ -1,35 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-import {
-  EmitEvent,
-  HandlerEvent,
-  useSocketEmit,
-  useSocketHandler,
-} from "@/components/socket/use-socket";
+import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message, MessageProps } from "@/topics/message";
+import { useMessages } from "./use-messages";
 
-export function TopicChat({
-  topicId,
-  circleId,
-  prevMessages,
-}: {
+type Props = {
   topicId: string;
   circleId: string;
-  prevMessages: MessageProps[];
-}) {
-  const [messages, setMessages] = useState<MessageProps[]>(prevMessages);
+  existingMessages: MessageProps[];
+};
+
+export function TopicChat({ topicId, circleId, existingMessages }: Props) {
   const joinRoom = useSocketEmit(EmitEvent.JoinRoom);
   const leaveRoom = useSocketEmit(EmitEvent.LeaveRoom);
+  const scrollRef = useRef<null | HTMLDivElement>(null);
+  const messages = useMessages(existingMessages);
 
-  const messageProcessedHandler = useCallback(
-    (newMessage: MessageProps) => {
-      setMessages([...messages, newMessage]);
-    },
-    [messages]
-  );
+  useEffect(() => {
+    scrollRef?.current?.scrollIntoView();
+  }, [messages.length]);
 
   useEffect(() => {
     joinRoom.emit({ id: topicId, roomType: "topic" });
@@ -42,25 +34,21 @@ export function TopicChat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useSocketHandler<MessageProps>(
-    HandlerEvent.MessageProcessed,
-    messageProcessedHandler
-  );
-
   return (
     <ScrollArea className="flex flex-col basis-full">
-      <div className="flex flex-col gap-4 p-3">
-        {messages.map((message: MessageProps) => {
-          return (
-            <Message
-              key={message.id}
-              id={message.id}
-              text={message.text}
-              sentBy={message.sentBy}
-            />
-          );
-        })}
-      </div>
+      {messages.map((message: MessageProps) => {
+        return (
+          <Message
+            key={message.id}
+            id={message.id}
+            text={message.text}
+            sentBy={message.sentBy}
+            createdAt={message.createdAt}
+            highlights={message.highlights}
+          />
+        );
+      })}
+      <div ref={scrollRef} />
     </ScrollArea>
   );
 }

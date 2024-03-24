@@ -4,6 +4,8 @@ import { useSocketContext } from "@/components/socket/socket-provider";
 export enum HandlerEvent {
   MessageProcessed = "message processed",
   CreatedTopicProcessed = "created topic processed",
+  AddHighlightProcessed = "add highlight processed",
+  RemoveHighlightProcessed = "remove highlight processed",
 }
 
 export enum EmitEvent {
@@ -11,6 +13,7 @@ export enum EmitEvent {
   JoinRoom = "join room",
   LeaveRoom = "leave room",
   CreateTopic = "create topic",
+  ToggleHighlight = "toggle highlight",
 }
 
 export function useSocketHandler<T>(
