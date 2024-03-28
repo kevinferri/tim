@@ -8,14 +8,29 @@ export enum RoomType {
   User = "user",
 }
 
-export function toRoomKey({
+function toRoomKey({ id, roomType }: { id: string; roomType: RoomType }) {
+  return `${roomType}::${id}`;
+}
+
+export function getRoomKeyOrFail({
   id,
   roomType,
+  socket,
 }: {
+  socket: Socket;
   id: string;
   roomType: RoomType;
 }) {
-  return `${roomType}::${id}`;
+  const roomKey = toRoomKey({
+    id,
+    roomType,
+  });
+
+  if (socket.rooms.has(roomKey)) {
+    return roomKey;
+  }
+
+  return false;
 }
 
 async function canJoinRoom({

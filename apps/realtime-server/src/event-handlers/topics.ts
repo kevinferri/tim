@@ -1,10 +1,16 @@
 import { IncomingEvent, HandlerArgs, OutgoingEvent } from "./main";
-import { RoomType, toRoomKey } from "./rooms";
+import { RoomType, getRoomKeyOrFail } from "./rooms";
 
 export function handleCreateTopic({ socket, server }: HandlerArgs) {
   socket.on(IncomingEvent.CreateTopic, async (payload) => {
-    server
-      .to(toRoomKey({ id: payload.circleId, roomType: RoomType.Circle }))
-      .emit(OutgoingEvent.CreatedTopicProcessed, payload);
+    const roomKey = getRoomKeyOrFail({
+      socket,
+      id: payload.circleId,
+      roomType: RoomType.Circle,
+    });
+
+    if (!roomKey) return false;
+
+    server.to(roomKey).emit(OutgoingEvent.CreatedTopicProcessed, payload);
   });
 }
