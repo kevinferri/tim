@@ -11,7 +11,7 @@ export function handleChatMessage({ socket, server }: HandlerArgs) {
       roomType: RoomType.Topic,
     });
 
-    if (!roomKey) return false;
+    if (!roomKey) return;
 
     const savedMessage = await writeMessage({
       userId: socket.data.user.id,

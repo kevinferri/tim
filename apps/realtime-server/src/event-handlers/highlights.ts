@@ -11,7 +11,7 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
       roomType: RoomType.Topic,
     });
 
-    if (!roomKey) return false;
+    if (!roomKey) return;
 
     const highlight = await toggleHighlight({
       userId: socket.data.user.id,
@@ -20,15 +20,14 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
 
     // Highlight added
     if (Boolean(highlight)) {
-      // TODO: let client hydrate user, just send user id to client
-      const user = await pgClient("users")
+      const highlightedBy = await pgClient("users")
         .select("id", "imageUrl")
         .where("id", highlight.userId)
         .first();
 
       server.to(roomKey).emit(OutgoingEvent.AddHighlightProcessed, {
         highlight,
-        user,
+        highlightedBy,
       });
 
       return;

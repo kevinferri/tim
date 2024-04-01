@@ -9,7 +9,7 @@ export function handleCreateTopic({ socket, server }: HandlerArgs) {
       roomType: RoomType.Circle,
     });
 
-    if (!roomKey) return false;
+    if (!roomKey) return;
 
     server.to(roomKey).emit(OutgoingEvent.CreatedTopicProcessed, payload);
   });
