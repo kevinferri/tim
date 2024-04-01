@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+.message {
+  position: relative;
+  z-index: 0;
+}
+
+.message:hover {
+  background: #f9f9f9;
+}
+
+.message:after {
+  content: "";
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  z-index: -1;
+}
+
+.message.hilited:after {
+  background: yellow;
+  transition: 500ms;
+  width: 100%;
+  z-index: -1;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

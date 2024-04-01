@@ -5,17 +5,14 @@ import { Socket, io } from "socket.io-client";
 
 const SocketContext = createContext<Socket | undefined>(undefined);
 
-export function SocketProvider({
-  endpoint,
-  path,
-  jwt,
-  children,
-}: {
+type Props = {
   endpoint: string;
   path: string;
   jwt?: string;
   children: React.ReactNode;
-}) {
+};
+
+export function SocketProvider({ endpoint, path, jwt, children }: Props) {
   const prevSocket = useRef<Socket | undefined>(undefined);
   const socket = !prevSocket.current
     ? io(endpoint, {

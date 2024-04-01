@@ -45,6 +45,7 @@ export function TopicChat({ topicId, circleId, existingMessages }: Props) {
             sentBy={message.sentBy}
             createdAt={message.createdAt}
             highlights={message.highlights}
+            topicId={topicId}
           />
         );
       })}

@@ -36,6 +36,11 @@ export default async function TopicsPage({ params }: Props) {
         select: {
           id: true,
           userId: true,
+          highlightedBy: {
+            select: {
+              imageUrl: true,
+            },
+          },
         },
       },
       sentBy: {

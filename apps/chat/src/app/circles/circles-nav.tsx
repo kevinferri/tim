@@ -2,10 +2,7 @@ import { AvatarIcon } from "@radix-ui/react-icons";
 import { prismaClient } from "@/lib/prisma/client";
 
 import { Routes, getLinkForTopic } from "@/routes";
-import {
-  CreateCircleForm,
-  UpsertCircleForm,
-} from "@/circles/upsert-circle-form";
+import { UpsertCircleForm } from "@/circles/upsert-circle-form";
 import {
   Tooltip,
   TooltipContent,
