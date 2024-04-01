@@ -20,14 +20,14 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
 
     // Highlight added
     if (Boolean(highlight)) {
-      const highlightedBy = await pgClient("users")
+      const createdBy = await pgClient("users")
         .select("id", "imageUrl")
         .where("id", highlight.userId)
         .first();
 
       server.to(roomKey).emit(OutgoingEvent.AddHighlightProcessed, {
         highlight,
-        highlightedBy,
+        createdBy,
       });
 
       return;
