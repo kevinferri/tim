@@ -19,6 +19,7 @@ type Props = {
 };
 
 const DELAY = 100;
+const HIGHLIGHT_ICON_COLOR = "#dfa0a1";
 
 export const HighlightTooltip = (props: Props) => {
   return (
@@ -37,9 +38,9 @@ export const HighlightTooltip = (props: Props) => {
               onClick={props.onHighlight}
             >
               {props.highlightedBySelf ? (
-                <StarFilledIcon color="#dfa0a1" />
+                <StarFilledIcon color={HIGHLIGHT_ICON_COLOR} />
               ) : (
-                <StarIcon color="#dfa0a1" />
+                <StarIcon color={HIGHLIGHT_ICON_COLOR} />
               )}
             </Button>
             {props.highlights.length}
