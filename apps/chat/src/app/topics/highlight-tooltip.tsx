@@ -52,12 +52,12 @@ export const HighlightTooltip = (props: Props) => {
         >
           <div className="flex gap-2">
             {props.highlights.length > 0
-              ? props.highlights.map(({ highlightedBy }) => {
+              ? props.highlights.map(({ createdBy }) => {
                   return (
-                    <Avatar key={highlightedBy.imageUrl} className="h-7 w-7">
+                    <Avatar key={createdBy.imageUrl} className="h-7 w-7">
                       <AvatarImage
                         className="rounded-full"
-                        src={highlightedBy.imageUrl ?? undefined}
+                        src={createdBy.imageUrl ?? undefined}
                       />
                     </Avatar>
                   );

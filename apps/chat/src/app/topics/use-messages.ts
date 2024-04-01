@@ -21,9 +21,9 @@ export function useMessages(existingMessages: MessageProps[]) {
   );
 
   // Handle add highlight
-  useSocketHandler<{ highlight: Highlight; highlightedBy: User }>(
+  useSocketHandler<{ highlight: Highlight; createdBy: User }>(
     HandlerEvent.AddHighlightProcessed,
-    ({ highlight, highlightedBy }) => {
+    ({ highlight, createdBy }) => {
       setMessages((prevMessages) => {
         return prevMessages.map((message) => {
           if (message.id !== highlight.messageId) {
@@ -38,7 +38,7 @@ export function useMessages(existingMessages: MessageProps[]) {
                 id: highlight.id,
                 messageId: highlight.messageId,
                 userId: highlight.userId,
-                highlightedBy,
+                createdBy,
               },
             ],
           };

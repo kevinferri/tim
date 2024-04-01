@@ -8,7 +8,7 @@ import { HighlightTooltip } from "./highlight-tooltip";
 export type Highlights = {
   id: Highlight["id"];
   userId: Highlight["userId"];
-  highlightedBy: {
+  createdBy: {
     imageUrl: User["imageUrl"];
   };
 }[];
