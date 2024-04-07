@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message, MessageProps } from "@/topics/message";
 import { useMessages } from "./use-messages";
@@ -14,8 +14,8 @@ type Props = {
 };
 
 export function TopicChat({ topicId, circleId, existingMessages }: Props) {
-  const joinRoom = useSocketEmit(EmitEvent.JoinRoom);
-  const leaveRoom = useSocketEmit(EmitEvent.LeaveRoom);
+  const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
+  const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
   const scrollRef = useRef<null | HTMLDivElement>(null);
   const messages = useMessages(existingMessages);
 

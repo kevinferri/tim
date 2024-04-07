@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { Highlight, User } from "@prisma/client";
 import { MessageProps } from "./message";
-import { HandlerEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 
 export function useMessages(existingMessages: MessageProps[]) {
   const [messages, setMessages] = useState<MessageProps[]>(existingMessages);
 
   // Handle new message
   useSocketHandler<MessageProps>(
-    HandlerEvent.MessageProcessed,
+    SocketEvent.SendMessage,
     (newMessage: MessageProps) => {
       setMessages([
         ...messages,
@@ -20,9 +20,20 @@ export function useMessages(existingMessages: MessageProps[]) {
     }
   );
 
+  // Handle delete message
+  useSocketHandler<{ deletedMessageId: string }>(
+    SocketEvent.DeleteMessage,
+    (payload) => {
+      console.log(payload);
+      setMessages((prevMessages) => {
+        return prevMessages.filter(({ id }) => id !== payload.deletedMessageId);
+      });
+    }
+  );
+
   // Handle add highlight
   useSocketHandler<{ highlight: Highlight; createdBy: User }>(
-    HandlerEvent.AddHighlightProcessed,
+    SocketEvent.AddedHighlight,
     ({ highlight, createdBy }) => {
       setMessages((prevMessages) => {
         return prevMessages.map((message) => {
@@ -49,7 +60,7 @@ export function useMessages(existingMessages: MessageProps[]) {
 
   // Handle remove highlight
   useSocketHandler<{ messageId: string; userId: string }>(
-    HandlerEvent.RemoveHighlightProcessed,
+    SocketEvent.RemovedHighlight,
     (payload) => {
       setMessages((prevMessages) => {
         return prevMessages.map((message) => {

@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Topic } from "@prisma/client";
 
-import { HandlerEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { useSocketHandler, SocketEvent } from "@/components/socket/use-socket";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
@@ -62,7 +62,7 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
   );
 
   useSocketHandler<NewTopicHandlerProps>(
-    HandlerEvent.CreatedTopicProcessed,
+    SocketEvent.CreateTopic,
     createdTopicProcessedHandler
   );
 

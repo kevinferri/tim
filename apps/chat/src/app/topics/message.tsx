@@ -2,17 +2,11 @@ import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "./highlight-tooltip";
 import { useState } from "react";
-import { Pencil1Icon, Pencil2Icon, TrashIcon } from "@radix-ui/react-icons";
+import { Pencil2Icon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { DeleteMessageModal } from "./delete-message-modal";
 
 export type Highlights = {
@@ -44,7 +38,7 @@ const getInitials = (name?: string) => {
 
 const baseStyles = [
   "z-0",
-  "p-3",
+  "px-3 py-2",
   "relative",
   "leading-snug",
   "hover:bg-slate-50",
@@ -76,7 +70,7 @@ export const Message = (props: MessageProps) => {
   );
 
   const toggleHighlight = useSocketEmit<{ messageId: string; topicId: string }>(
-    EmitEvent.ToggleHighlight
+    SocketEvent.ToggleHighlight
   );
 
   const handleToggleHighlight = () => {
@@ -93,7 +87,7 @@ export const Message = (props: MessageProps) => {
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <Avatar className="shadow-md">
           <AvatarImage
             className="rounded-full"
@@ -103,8 +97,8 @@ export const Message = (props: MessageProps) => {
             {getInitials(props.sentBy.name ?? undefined)}
           </AvatarFallback>
         </Avatar>
-        <div className="flex flex-col w-full">
-          <div className="flex gap-2">
+        <div className="flex flex-col flex-1">
+          <div className="flex gap-2 items-center">
             <span
               className={cn(
                 `font-semibold ${
@@ -115,7 +109,7 @@ export const Message = (props: MessageProps) => {
             >
               {props.sentBy.name}
             </span>
-            <time className="text-slate-300 text-xs mt-1">
+            <time className="text-slate-300 text-xs">
               {props.createdAt.toLocaleDateString("en-US", {
                 day: "numeric",
                 month: "short",
@@ -127,28 +121,27 @@ export const Message = (props: MessageProps) => {
               })}
             </time>
             {showActions && sentBySelf && (
-              <div className="relative h-0 w-0">
-                <div className="absolute flex gap-1">
-                  <Button size="iconXs" variant="outline">
-                    <Pencil2Icon />
-                  </Button>
-                  <DeleteMessageModal messageId={props.id} />
-                </div>
+              <div className="flex gap-1">
+                <Button size="iconXs" variant="outline">
+                  <Pencil2Icon />
+                </Button>
+                <DeleteMessageModal
+                  messageId={props.id}
+                  topicId={props.topicId}
+                />
               </div>
             )}
-
-            <div className="h-0 ml-auto">
-              <HighlightTooltip
-                highlightedBySelf={highlightedBySelf}
-                highlights={props.highlights}
-                messageId={props.id}
-                onHighlight={handleToggleHighlight}
-              />
-            </div>
           </div>
 
           <div className="whitespace-pre-line break-all">{props.text}</div>
         </div>
+
+        <HighlightTooltip
+          highlightedBySelf={highlightedBySelf}
+          highlights={props.highlights}
+          messageId={props.id}
+          onHighlight={handleToggleHighlight}
+        />
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { upsertTopic } from "@/actions/topics";
-import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { getLinkForTopic } from "@/routes";
@@ -41,7 +41,7 @@ export const UpsertTopicForm = ({
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState(existingTopic?.name ?? "");
   const [submitting, setSubmitting] = useState(false);
-  const createTopicEmit = useSocketEmit(EmitEvent.CreateTopic);
+  const createTopicEmit = useSocketEmit(SocketEvent.CreateTopic);
   const isCreator = !existingTopic || existingTopic.userId === self.id;
 
   return (

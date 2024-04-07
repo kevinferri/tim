@@ -2,7 +2,7 @@
 
 import { ChangeEvent, useState } from "react";
 
-import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { Textarea } from "@/components/ui/textarea";
 
 function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
@@ -17,7 +17,7 @@ type MessagePayload = {
 
 export function TopicMessageBar({ topicId }: { topicId: string }) {
   const [message, setMessage] = useState("");
-  const sendMessage = useSocketEmit<MessagePayload>(EmitEvent.SendMessage);
+  const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
 
   const emitMessage = (message: string) => {
     if (!message.trim()) return;

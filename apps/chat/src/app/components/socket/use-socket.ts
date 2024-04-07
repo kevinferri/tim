@@ -1,23 +1,19 @@
 import { useCallback, useEffect } from "react";
 import { useSocketContext } from "@/components/socket/socket-provider";
 
-export enum HandlerEvent {
-  MessageProcessed = "message processed",
-  CreatedTopicProcessed = "created topic processed",
-  AddHighlightProcessed = "add highlight processed",
-  RemoveHighlightProcessed = "remove highlight processed",
-}
-
-export enum EmitEvent {
-  SendMessage = "send message",
-  JoinRoom = "join room",
-  LeaveRoom = "leave room",
-  CreateTopic = "create topic",
-  ToggleHighlight = "toggle highlight",
+export enum SocketEvent {
+  SendMessage = "message:send",
+  DeleteMessage = "message:delete",
+  JoinRoom = "room:join",
+  LeaveRoom = "room:leave",
+  CreateTopic = "topic:create",
+  ToggleHighlight = "highlight:toggle",
+  AddedHighlight = "highlight:added",
+  RemovedHighlight = "highlight:removed",
 }
 
 export function useSocketHandler<T>(
-  eventName: HandlerEvent,
+  eventName: SocketEvent,
   handler: (args: T) => void
 ) {
   const socket = useSocketContext();
@@ -33,7 +29,7 @@ export function useSocketHandler<T>(
   return socket;
 }
 
-export function useSocketEmit<T>(eventName: EmitEvent) {
+export function useSocketEmit<T>(eventName: SocketEvent) {
   const socket = useSocketContext();
 
   const emit = useCallback(

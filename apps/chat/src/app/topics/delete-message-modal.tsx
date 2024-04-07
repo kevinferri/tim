@@ -1,6 +1,4 @@
 "use client";
-import { useState } from "react";
-import { deleteMessage } from "@/actions/messages";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,17 +11,18 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { TrashIcon } from "@radix-ui/react-icons";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 
 type Props = {
   messageId: string;
+  topicId: string;
 };
 
-export const DeleteMessageModal = ({ messageId }: Props) => {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [open, setOpen] = useState(false);
+export const DeleteMessageModal = ({ messageId, topicId }: Props) => {
+  const deleteMessage = useSocketEmit<Props>(SocketEvent.DeleteMessage);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog>
       <DialogTrigger asChild>
         <Button size="iconXs" variant="outline">
           <TrashIcon />
@@ -43,22 +42,16 @@ export const DeleteMessageModal = ({ messageId }: Props) => {
               Cancel
             </Button>
           </DialogClose>
-          <Button
-            variant="destructive"
-            disabled={isDeleting}
-            onClick={async () => {
-              setIsDeleting(true);
-              const resp = await deleteMessage(messageId);
-              setIsDeleting(false);
-              setOpen(false);
-
-              if (resp) {
-                console.log("emit deleted message", resp.data);
-              }
-            }}
-          >
-            Delete
-          </Button>
+          <DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                deleteMessage.emit({ messageId, topicId });
+              }}
+            >
+              Delete
+            </Button>
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>
