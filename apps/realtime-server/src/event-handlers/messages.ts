@@ -1,10 +1,10 @@
 import { decrypt } from "../db/encryption";
-import { writeMessage } from "../db/mutations";
-import { HandlerArgs, IncomingEvent, OutgoingEvent } from "./main";
+import { deleteMessage, writeMessage } from "../db/mutations";
+import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 
-export function handleChatMessage({ socket, server }: HandlerArgs) {
-  socket.on(IncomingEvent.SendMessage, async (payload) => {
+export function handleSendMessage({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.SendMessage, async (payload) => {
     const roomKey = getRoomKeyOrFail({
       socket,
       id: payload.topicId,
@@ -27,6 +27,30 @@ export function handleChatMessage({ socket, server }: HandlerArgs) {
       highlights: [],
     };
 
-    server.to(roomKey).emit(OutgoingEvent.MessageProcessed, emittedMessage);
+    server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
+  });
+}
+
+export function handleDeleteMessage({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.DeleteMessage, async (payload) => {
+    const roomKey = getRoomKeyOrFail({
+      socket,
+      id: payload.topicId,
+      roomType: RoomType.Topic,
+    });
+
+    if (!roomKey) return;
+
+    const deletedMessage = await deleteMessage({
+      userId: socket.data.user.id,
+      messageId: payload.messageId,
+      topicId: payload.topicId,
+    });
+
+    if (!deletedMessage) return;
+
+    server
+      .to(roomKey)
+      .emit(SocketEvent.DeleteMessage, { deletedMessageId: deletedMessage.id });
   });
 }

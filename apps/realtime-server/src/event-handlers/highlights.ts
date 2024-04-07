@@ -1,10 +1,10 @@
-import { HandlerArgs, IncomingEvent, OutgoingEvent } from "./main";
+import { HandlerArgs, SocketEvent } from "./main";
 import { pgClient } from "../db/client";
 import { toggleHighlight } from "../db/mutations";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 
 export function handleToggleHighlight({ socket, server }: HandlerArgs) {
-  socket.on(IncomingEvent.ToggleHighlight, async (payload) => {
+  socket.on(SocketEvent.ToggleHighlight, async (payload) => {
     const roomKey = getRoomKeyOrFail({
       socket,
       id: payload.topicId,
@@ -25,7 +25,7 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
         .where("id", highlight.userId)
         .first();
 
-      server.to(roomKey).emit(OutgoingEvent.AddHighlightProcessed, {
+      server.to(roomKey).emit(SocketEvent.AddedHighlight, {
         highlight,
         createdBy,
       });
@@ -34,7 +34,7 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
     }
 
     // Highlight removed
-    server.to(roomKey).emit(OutgoingEvent.RemoveHighlightProcessed, {
+    server.to(roomKey).emit(SocketEvent.RemovedHighlight, {
       messageId: payload.messageId,
       userId: socket.data.user.id,
     });

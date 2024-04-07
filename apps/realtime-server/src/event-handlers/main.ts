@@ -1,7 +1,7 @@
 import { type Server, type Socket } from "socket.io";
-import { handleChatMessage } from "./messages";
+import { handleDeleteMessage, handleSendMessage } from "./messages";
 import { handleClientConnected, handleClientDisconnected } from "./socket";
-import { handleJoinRoom, handleLeaveRoom } from "./rooms";
+import { getRoomKeyOrFail, handleJoinRoom, handleLeaveRoom } from "./rooms";
 import { handleOnAny, handleOnAnyOutgoing } from "./any";
 import { handleCreateTopic } from "./topics";
 import { handleToggleHighlight } from "./highlights";
@@ -11,25 +11,32 @@ export type HandlerArgs = {
   socket: Socket;
 };
 
-export enum IncomingEvent {
+export enum SocketEvent {
+  // socket.io interals
   Connection = "connection",
   Disconnect = "disconnect",
-  SendMessage = "send message",
-  JoinRoom = "join room",
-  LeaveRoom = "leave room",
-  CreateTopic = "create topic",
-  ToggleHighlight = "toggle highlight",
-}
 
-export enum OutgoingEvent {
-  MessageProcessed = "message processed",
-  CreatedTopicProcessed = "created topic processed",
-  AddHighlightProcessed = "add highlight processed",
-  RemoveHighlightProcessed = "remove highlight processed",
+  // custom
+  SendMessage = "message:send",
+  DeleteMessage = "message:delete",
+  JoinRoom = "room:join",
+  LeaveRoom = "room:leave",
+  CreateTopic = "topic:create",
+  ToggleHighlight = "highlight:toggle",
+  AddedHighlight = "highlight:added",
+  RemovedHighlight = "highlight:removed",
 }
 
 export function registerEventHandlers(server: Server) {
-  server.on(IncomingEvent.Connection, (socket) => {
+  server.on(SocketEvent.Connection, (socket) => {
+    socket.use((_, next) => {
+      if (!socket.data.user) {
+        return next(new Error("Unauthorized"));
+      }
+
+      next();
+    });
+
     // Log emitted and handled events
     handleOnAny({ socket, server });
     handleOnAnyOutgoing({ socket, server });
@@ -43,7 +50,8 @@ export function registerEventHandlers(server: Server) {
     handleLeaveRoom({ socket, server });
 
     // Chat message handlers
-    handleChatMessage({ socket, server });
+    handleSendMessage({ socket, server });
+    handleDeleteMessage({ socket, server });
 
     // Topic action handlers
     handleCreateTopic({ socket, server });

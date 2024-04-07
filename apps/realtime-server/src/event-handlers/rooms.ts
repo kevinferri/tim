@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { isUserInCircle, isUserInTopic } from "../db/queries";
-import { IncomingEvent, HandlerArgs } from "./main";
+import { SocketEvent, HandlerArgs } from "./main";
 
 export enum RoomType {
   Topic = "topic",
@@ -55,7 +55,7 @@ async function canJoinRoom({
 
 export function handleJoinRoom({ socket }: HandlerArgs) {
   socket.on(
-    IncomingEvent.JoinRoom,
+    SocketEvent.JoinRoom,
     async (payload: { id: string; roomType: RoomType }) => {
       if (!payload.id || !payload.roomType) return;
 
@@ -74,7 +74,7 @@ export function handleJoinRoom({ socket }: HandlerArgs) {
 }
 
 export function handleLeaveRoom({ socket }: HandlerArgs) {
-  socket.on(IncomingEvent.LeaveRoom, (payload) => {
+  socket.on(SocketEvent.LeaveRoom, (payload) => {
     if (!payload.id || !payload.roomType) return;
 
     const { id, roomType } = payload;

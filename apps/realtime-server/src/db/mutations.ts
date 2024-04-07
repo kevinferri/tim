@@ -7,6 +7,12 @@ type WriteMessageArgs = {
   text: string;
 };
 
+type DeleteMessageArgs = {
+  userId: string;
+  topicId: string;
+  messageId: string;
+};
+
 type ToggleHighlightArgs = {
   userId: string;
   messageId: string;
@@ -65,4 +71,19 @@ export async function toggleHighlight({
   }
 
   return await writeHighlight({ userId, messageId });
+}
+
+export async function deleteMessage({
+  userId,
+  messageId,
+  topicId,
+}: DeleteMessageArgs) {
+  const message = await pgClient("messages")
+    .where("id", messageId)
+    .where("userId", userId)
+    .where("topicId", topicId)
+    .del()
+    .returning("id");
+
+  return message[0];
 }
