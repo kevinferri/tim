@@ -14,7 +14,7 @@ type Props = {
 
 export function TopicHeader(props: Props) {
   return (
-    <div className="flex flex-row flex-1 justify-left p-2 border-b p-3 items-center gap-1">
+    <div className="flex flex-row justify-left p-2 border-b p-3 items-center gap-1">
       <div className="font-medium">{props.topic.name}</div>
       <div>
         <UpsertTopicForm

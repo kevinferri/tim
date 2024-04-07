@@ -1,5 +1,5 @@
 "use client";
-
+import uniqBy from "lodash.uniqby";
 import { Button } from "@/components/ui/button";
 import { Highlights } from "./message";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
@@ -22,11 +22,13 @@ const DELAY = 100;
 const HIGHLIGHT_ICON_COLOR = "#dfa0a1";
 
 export const HighlightTooltip = (props: Props) => {
+  const _highlights = uniqBy(props.highlights, "userId");
+
   return (
     <TooltipProvider>
       <Tooltip delayDuration={DELAY}>
         <TooltipTrigger
-          className="text-xs"
+          className="text-xs cursor-default"
           onClick={(event) => event.preventDefault()}
         >
           <div className="flex gap-0.5 items-center w-9">
@@ -34,7 +36,7 @@ export const HighlightTooltip = (props: Props) => {
               variant="ghost"
               size="iconSm"
               asChild
-              className="h-6 w-6 p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
+              className="cursor-pointer h-6 w-6 p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
               onClick={props.onHighlight}
             >
               {props.highlightedBySelf ? (
@@ -43,18 +45,19 @@ export const HighlightTooltip = (props: Props) => {
                 <StarIcon color={HIGHLIGHT_ICON_COLOR} />
               )}
             </Button>
-            {props.highlights.length}
+            {_highlights.length}
           </div>
         </TooltipTrigger>
         <TooltipContent
           side="left"
           onPointerDownOutside={(e) => e.preventDefault()}
+          className="px-2"
         >
-          <div className="flex gap-2">
-            {props.highlights.length > 0
-              ? props.highlights.map(({ createdBy }) => {
+          <div className="flex gap-1.5">
+            {_highlights.length > 0
+              ? _highlights.map(({ createdBy, id }) => {
                   return (
-                    <Avatar key={createdBy.imageUrl} className="h-7 w-7">
+                    <Avatar key={id} className="h-7 w-7">
                       <AvatarImage
                         className="rounded-full"
                         src={createdBy.imageUrl ?? undefined}

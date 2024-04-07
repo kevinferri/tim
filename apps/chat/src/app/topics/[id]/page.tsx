@@ -4,6 +4,7 @@ import { TopicHeader } from "@/topics/topic-header";
 import { TopicChat } from "@/topics/topic-chat";
 import { TopicMessageBar } from "@/topics/topic-message-bar";
 import { NotFound } from "@/components/ui/not-found";
+import { TopicSideBar } from "../topic-side-bar";
 
 type Props = {
   params: { id: string };
@@ -32,6 +33,7 @@ export default async function TopicsPage({ params }: Props) {
       id: true,
       text: true,
       createdAt: true,
+      topicId: true,
       highlights: {
         select: {
           id: true,
@@ -48,7 +50,6 @@ export default async function TopicsPage({ params }: Props) {
           id: true,
           name: true,
           imageUrl: true,
-          createdAt: true,
         },
       },
     },
@@ -59,12 +60,17 @@ export default async function TopicsPage({ params }: Props) {
       {topic ? (
         <>
           <TopicHeader topic={topic} />
-          <TopicChat
-            topicId={topic.id}
-            circleId={topic.parentCircle.id}
-            existingMessages={messages}
-          />
-          <TopicMessageBar topicId={topic.id} />
+          <div className="flex flex-1 flex-row overflow-y-hidden">
+            <div className="flex flex-1 flex-col">
+              <TopicChat
+                topicId={topic.id}
+                circleId={topic.parentCircle.id}
+                existingMessages={messages}
+              />
+              <TopicMessageBar topicId={topic.id} />
+            </div>
+            <TopicSideBar topicId={topic.id} />
+          </div>
         </>
       ) : (
         <NotFound copy="Topic not found" />

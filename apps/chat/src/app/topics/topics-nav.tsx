@@ -5,13 +5,12 @@ import { GearIcon } from "@radix-ui/react-icons";
 import { TopicsList } from "@/topics/topics-list";
 import { UpsertCircleForm } from "@/circles/upsert-circle-form";
 
-export async function TopicsNav({
-  circleId,
-  topicId,
-}: {
+type Props = {
   circleId: string;
   topicId?: string;
-}) {
+};
+
+export async function TopicsNav({ circleId, topicId }: Props) {
   const parentCircle = await prismaClient.circle.getMeCircleById({
     circleId,
     select: {
@@ -41,7 +40,7 @@ export async function TopicsNav({
   });
 
   return (
-    <div className="flex flex-col shadow-md border-r max-w-[270px] min-w-[270px]">
+    <div className="flex flex-col shadow-md border-r max-w-[260px] min-w-[260px]">
       <div className="block p-3 border-b overflow-hidden whitespace-nowrap text-ellipsis font-medium">
         {parentCircle?.name}
       </div>

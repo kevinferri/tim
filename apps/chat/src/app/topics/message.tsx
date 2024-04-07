@@ -4,6 +4,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { EmitEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "./highlight-tooltip";
+import { useState } from "react";
+import { Pencil1Icon, Pencil2Icon, TrashIcon } from "@radix-ui/react-icons";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { DeleteMessageModal } from "./delete-message-modal";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -59,6 +69,8 @@ const highlightStyles = [
 
 export const Message = (props: MessageProps) => {
   const self = useSelf();
+  const [showActions, setShowActions] = useState(false);
+  const sentBySelf = props.sentBy.id === self.id;
   const highlightedBySelf = !!props.highlights.find(
     (highlight) => self.id === highlight.userId
   );
@@ -78,6 +90,8 @@ export const Message = (props: MessageProps) => {
     <div
       className={cn(baseStyles, highlightedBySelf ? highlightStyles : "")}
       onDoubleClick={handleToggleHighlight}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex gap-2">
         <Avatar className="shadow-md">
@@ -90,39 +104,49 @@ export const Message = (props: MessageProps) => {
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col w-full">
-          <div>
-            <div className="flex">
-              <span
-                className={cn(
-                  `mr-2 font-semibold ${
-                    props.sentBy.id === self.id &&
-                    "text-purple-700 dark:text-purple-500"
-                  }`
-                )}
-              >
-                {props.sentBy.name}
-              </span>
-              <time className="text-slate-300 text-xs mt-auto">
-                {props.createdAt.toLocaleDateString("en-US", {
-                  day: "numeric",
-                  month: "short",
-                })}
-                {", "}
-                {props.createdAt.toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "numeric",
-                })}
-              </time>
-              <div className="h-0 ml-auto">
-                <HighlightTooltip
-                  highlightedBySelf={highlightedBySelf}
-                  highlights={props.highlights}
-                  messageId={props.id}
-                  onHighlight={handleToggleHighlight}
-                />
+          <div className="flex gap-2">
+            <span
+              className={cn(
+                `font-semibold ${
+                  props.sentBy.id === self.id &&
+                  "text-purple-700 dark:text-purple-500"
+                }`
+              )}
+            >
+              {props.sentBy.name}
+            </span>
+            <time className="text-slate-300 text-xs mt-1">
+              {props.createdAt.toLocaleDateString("en-US", {
+                day: "numeric",
+                month: "short",
+              })}
+              {", "}
+              {props.createdAt.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "numeric",
+              })}
+            </time>
+            {showActions && sentBySelf && (
+              <div className="relative h-0 w-0">
+                <div className="absolute flex gap-1">
+                  <Button size="iconXs" variant="outline">
+                    <Pencil2Icon />
+                  </Button>
+                  <DeleteMessageModal messageId={props.id} />
+                </div>
               </div>
+            )}
+
+            <div className="h-0 ml-auto">
+              <HighlightTooltip
+                highlightedBySelf={highlightedBySelf}
+                highlights={props.highlights}
+                messageId={props.id}
+                onHighlight={handleToggleHighlight}
+              />
             </div>
           </div>
+
           <div className="whitespace-pre-line break-all">{props.text}</div>
         </div>
       </div>
