@@ -6,7 +6,7 @@ export enum SocketEvent {
   DeleteMessage = "message:delete",
   JoinRoom = "room:join",
   LeaveRoom = "room:leave",
-  CreateTopic = "topic:create",
+  CreatedTopic = "topic:created",
   ToggleHighlight = "highlight:toggle",
   AddedHighlight = "highlight:added",
   RemovedHighlight = "highlight:removed",

@@ -2,6 +2,7 @@ import { AuthOptions, getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 import { prismaClient } from "@/lib/prisma/client";
+import { uploadImageByPath } from "@/lib/cloudinary";
 import { Routes } from "@/routes";
 
 export const authOptions: AuthOptions = {
@@ -26,25 +27,46 @@ export const authOptions: AuthOptions = {
 
       if (!email) return false;
 
-      const existingUser = await prismaClient.user.findUnique({
+      let existingUser = await prismaClient.user.findUnique({
         where: { email },
         select: {
+          id: true,
           email: true,
         },
       });
 
       if (!existingUser) {
-        await prismaClient.user.create({
+        existingUser = await prismaClient.user.create({
           data: {
             email: email,
             googleId: user.id,
             name: user.name,
             imageUrl: user.image,
           },
+          select: {
+            id: true,
+            email: true,
+            googleId: true,
+            name: true,
+            imageUrl: true,
+          },
         });
       }
 
-      // update user picture
+      if (user.image) {
+        const avatarImage = await uploadImageByPath(user.image);
+
+        if (avatarImage) {
+          await prismaClient.user.update({
+            where: {
+              id: existingUser.id,
+            },
+            data: {
+              imageUrl: avatarImage.secure_url,
+            },
+          });
+        }
+      }
 
       return true;
     },

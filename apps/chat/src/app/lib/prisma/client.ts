@@ -25,5 +25,6 @@ const prismaClient = globalThis.prismaClient ?? prismaClientSingleton();
 
 export { prismaClient };
 
-if (process.env.NODE_ENV !== "production")
+if (process.env.NODE_ENV !== "production") {
   globalThis.prismaClient = prismaClient;
+}

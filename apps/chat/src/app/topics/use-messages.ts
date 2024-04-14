@@ -24,7 +24,6 @@ export function useMessages(existingMessages: MessageProps[]) {
   useSocketHandler<{ deletedMessageId: string }>(
     SocketEvent.DeleteMessage,
     (payload) => {
-      console.log(payload);
       setMessages((prevMessages) => {
         return prevMessages.filter(({ id }) => id !== payload.deletedMessageId);
       });

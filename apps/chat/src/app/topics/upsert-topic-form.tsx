@@ -41,7 +41,7 @@ export const UpsertTopicForm = ({
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState(existingTopic?.name ?? "");
   const [submitting, setSubmitting] = useState(false);
-  const createTopicEmit = useSocketEmit(SocketEvent.CreateTopic);
+  const createdTopicEmitter = useSocketEmit(SocketEvent.CreatedTopic);
   const isCreator = !existingTopic || existingTopic.userId === self.id;
 
   return (
@@ -118,7 +118,7 @@ export const UpsertTopicForm = ({
                   return;
                 }
 
-                createTopicEmit.emit({
+                createdTopicEmitter.emit({
                   circleId,
                   id,
                   name,

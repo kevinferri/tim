@@ -5,6 +5,7 @@ import { TopicChat } from "@/topics/topic-chat";
 import { TopicMessageBar } from "@/topics/topic-message-bar";
 import { NotFound } from "@/components/ui/not-found";
 import { TopicSideBar } from "../topic-side-bar";
+import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
 
 type Props = {
   params: { id: string };
@@ -29,30 +30,7 @@ export default async function TopicsPage({ params }: Props) {
 
   const messages = await prismaClient.message.getMessagesForTopic({
     topicId: topic?.id,
-    select: {
-      id: true,
-      text: true,
-      createdAt: true,
-      topicId: true,
-      highlights: {
-        select: {
-          id: true,
-          userId: true,
-          createdBy: {
-            select: {
-              imageUrl: true,
-            },
-          },
-        },
-      },
-      sentBy: {
-        select: {
-          id: true,
-          name: true,
-          imageUrl: true,
-        },
-      },
-    },
+    select: DEFAULT_MESSAGE_SELECT,
   });
 
   return (

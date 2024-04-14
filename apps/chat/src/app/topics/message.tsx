@@ -38,7 +38,7 @@ const getInitials = (name?: string) => {
 
 const baseStyles = [
   "z-0",
-  "px-3 py-2",
+  "p-3",
   "relative",
   "leading-snug",
   "hover:bg-slate-50",

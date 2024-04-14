@@ -62,7 +62,7 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
   );
 
   useSocketHandler<NewTopicHandlerProps>(
-    SocketEvent.CreateTopic,
+    SocketEvent.CreatedTopic,
     createdTopicProcessedHandler
   );
 

@@ -69,7 +69,7 @@ model Topic {
 
   // Relations
   createdBy        User      @relation("topicsCreatedByUser", fields: [userId], references: [id])
-  parentCircle     Circle    @relation("topicsInCircle", fields: [circleId], references: [id])
+  parentCircle     Circle    @relation("topicsInCircle", fields: [circleId], references: [id], onDelete: Cascade)
   defaultForCircle Circle?   @relation("defaultTopicForCircle")
   messages         Message[] @relation("messagesInTopic")
 
@@ -89,7 +89,7 @@ model Message {
 
   // Relations
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
-  topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id])
+  topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
   highlights Highlight[] @relation("highlightsForMessage")
 
   @@map(name: "messages")
@@ -107,7 +107,7 @@ model Highlight {
 
   // Relations
   createdBy     User    @relation("highlightsByUser", fields: [userId], references: [id])
-  message       Message @relation("highlightsForMessage", fields: [messageId], references: [id])
+  message       Message @relation("highlightsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
 
   @@map(name: "highlights")
 }
