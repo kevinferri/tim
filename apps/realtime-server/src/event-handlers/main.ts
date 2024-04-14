@@ -1,9 +1,9 @@
 import { type Server, type Socket } from "socket.io";
 import { handleDeleteMessage, handleSendMessage } from "./messages";
 import { handleClientConnected, handleClientDisconnected } from "./socket";
-import { getRoomKeyOrFail, handleJoinRoom, handleLeaveRoom } from "./rooms";
+import { handleJoinRoom, handleLeaveRoom } from "./rooms";
 import { handleOnAny, handleOnAnyOutgoing } from "./any";
-import { handleCreateTopic } from "./topics";
+import { handleCreatedTopic } from "./topics";
 import { handleToggleHighlight } from "./highlights";
 
 export type HandlerArgs = {
@@ -21,7 +21,7 @@ export enum SocketEvent {
   DeleteMessage = "message:delete",
   JoinRoom = "room:join",
   LeaveRoom = "room:leave",
-  CreateTopic = "topic:create",
+  CreatedTopic = "topic:created",
   ToggleHighlight = "highlight:toggle",
   AddedHighlight = "highlight:added",
   RemovedHighlight = "highlight:removed",
@@ -54,7 +54,7 @@ export function registerEventHandlers(server: Server) {
     handleDeleteMessage({ socket, server });
 
     // Topic action handlers
-    handleCreateTopic({ socket, server });
+    handleCreatedTopic({ socket, server });
 
     // Highlights
     handleToggleHighlight({ socket, server });
