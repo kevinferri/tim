@@ -17,7 +17,6 @@ type ContextValue = {
   circleId: string;
   messages: MessageProps[];
   topHighlights: MessageProps[];
-  topHighlightsLimit: number;
 };
 
 type Props = {
@@ -187,8 +186,7 @@ export function CurrentTopicProvider(props: Props) {
   const contextValue = useMemo(
     () => ({
       messages,
-      topHighlights,
-      topHighlightsLimit: props.topHighlightsLimit,
+      topHighlights: sanitize(topHighlights, props.topHighlightsLimit),
       topicId: props.topicId,
       circleId: props.circleId,
     }),
@@ -218,4 +216,15 @@ export function useCurrentTopicContext() {
   }
 
   return context;
+}
+
+function sanitize(messages: MessageProps[], limit: number) {
+  return messages
+    .sort((a, b) => {
+      return (
+        b.highlights.length - a.highlights.length ||
+        Number(b.createdAt) - Number(a.createdAt)
+      );
+    })
+    .slice(0, limit);
 }
