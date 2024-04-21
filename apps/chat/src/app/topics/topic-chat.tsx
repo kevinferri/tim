@@ -5,19 +5,13 @@ import { useEffect, useRef } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message, MessageProps } from "@/topics/message";
-import { useMessages } from "./use-messages";
+import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 
-type Props = {
-  topicId: string;
-  circleId: string;
-  existingMessages: MessageProps[];
-};
-
-export function TopicChat({ topicId, circleId, existingMessages }: Props) {
+export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
   const scrollRef = useRef<null | HTMLDivElement>(null);
-  const messages = useMessages(existingMessages);
+  const { messages, topicId, circleId } = useCurrentTopicContext();
 
   useEffect(() => {
     scrollRef?.current?.scrollIntoView();
@@ -37,17 +31,7 @@ export function TopicChat({ topicId, circleId, existingMessages }: Props) {
   return (
     <ScrollArea className="flex flex-col basis-full">
       {messages.map((message: MessageProps) => {
-        return (
-          <Message
-            key={message.id}
-            id={message.id}
-            text={message.text}
-            sentBy={message.sentBy}
-            createdAt={message.createdAt}
-            highlights={message.highlights}
-            topicId={topicId}
-          />
-        );
+        return <Message key={message.id} {...message} />;
       })}
       <div ref={scrollRef} />
     </ScrollArea>

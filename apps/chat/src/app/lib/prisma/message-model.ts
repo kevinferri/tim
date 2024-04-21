@@ -14,8 +14,8 @@ type MessageArgs = {
   select: Prisma.MessageSelect;
 };
 
-const MESSAGE_LIMIT = 50;
-const TOP_HIGHLIGHTS_LIMIT = 10;
+export const MESSAGE_LIMIT = 50;
+export const TOP_HIGHLIGHTS_LIMIT = 10;
 export const DEFAULT_MESSAGE_SELECT = {
   id: true,
   text: true,
@@ -92,6 +92,8 @@ export const messageModel = {
       ],
     });
 
-    return normalizeMessages(messages);
+    const filtered = messages.filter((m) => m.highlights.length > 0);
+
+    return normalizeMessages(filtered);
   },
 };

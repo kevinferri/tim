@@ -4,6 +4,7 @@ import { ChangeEvent, useState } from "react";
 
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentTopicContext } from "./current-topic-provider";
 
 function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
   target.style.height = "";
@@ -15,9 +16,10 @@ type MessagePayload = {
   topicId: string;
 };
 
-export function TopicMessageBar({ topicId }: { topicId: string }) {
+export function TopicMessageBar() {
   const [message, setMessage] = useState("");
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
+  const { topicId } = useCurrentTopicContext();
 
   const emitMessage = (message: string) => {
     if (!message.trim()) return;

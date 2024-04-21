@@ -1,27 +1,29 @@
-import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
-import { prismaClient } from "@/lib/prisma/client";
+"use client";
+
+import { useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCurrentTopicContext } from "@/topics/current-topic-provider";
+import { Message, MessageProps } from "@/topics/message";
 
-type Props = {
-  topicId: string;
-};
+export function TopHighlights() {
+  const { topHighlights } = useCurrentTopicContext();
 
-export async function TopHighlights(props: Props) {
-  const messages = await prismaClient.message.getTopHighlightedMessagesForTopic(
-    {
-      topicId: props.topicId,
-      select: DEFAULT_MESSAGE_SELECT,
-    }
+  // Need to stay sorted after client updates
+  const sorted = useMemo(
+    () =>
+      topHighlights.sort((a, b) => {
+        return (
+          b.highlights.length - a.highlights.length ||
+          Number(b.createdAt) - Number(a.createdAt)
+        );
+      }),
+    [topHighlights]
   );
 
   return (
     <ScrollArea>
-      {messages.map((m) => {
-        return (
-          <div key={m.id}>
-            {m.text} ({m.highlights.length})
-          </div>
-        );
+      {sorted.map((message: MessageProps) => {
+        return <Message key={message.id} {...message} />;
       })}
     </ScrollArea>
   );

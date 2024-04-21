@@ -2,11 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BellIcon, ImageIcon, StarIcon } from "@radix-ui/react-icons";
 import { TopHighlights } from "./top-highlights";
 
-type Props = {
-  topicId: string;
-};
-
-export async function TopicSideBar(props: Props) {
+export async function TopicSideBar() {
   return (
     <div className="flex flex-col shadow-md border-l max-w-[320px] min-w-[320px] p-3">
       <Tabs defaultValue="highlights">
@@ -22,7 +18,7 @@ export async function TopicSideBar(props: Props) {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="highlights">
-          <TopHighlights topicId={props.topicId} />
+          <TopHighlights />
         </TabsContent>
         <TabsContent value="media">Media</TabsContent>
         <TabsContent value="notifications">Notifications</TabsContent>

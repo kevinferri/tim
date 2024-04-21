@@ -1,13 +1,14 @@
+import { useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { HighlightTooltip } from "./highlight-tooltip";
-import { useState } from "react";
+import { HighlightTooltip } from "@/topics/highlight-tooltip";
 import { Pencil2Icon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
-import { DeleteMessageModal } from "./delete-message-modal";
+import { DeleteMessageModal } from "@/topics/delete-message-modal";
+import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -20,10 +21,10 @@ export type Highlights = {
 export type MessageProps = {
   id: DbMessage["id"];
   text?: DbMessage["text"];
+  topicId: DbMessage["topicId"];
   createdAt: DbMessage["createdAt"];
   sentBy: Pick<User, "id" | "name" | "imageUrl">;
   highlights: Highlights;
-  topicId: string;
 };
 
 const getInitials = (name?: string) => {
@@ -63,6 +64,7 @@ const highlightStyles = [
 
 export const Message = (props: MessageProps) => {
   const self = useSelf();
+  const { topicId } = useCurrentTopicContext();
   const [showActions, setShowActions] = useState(false);
   const sentBySelf = props.sentBy.id === self.id;
   const highlightedBySelf = !!props.highlights.find(
@@ -76,7 +78,7 @@ export const Message = (props: MessageProps) => {
   const handleToggleHighlight = () => {
     toggleHighlight.emit({
       messageId: props.id,
-      topicId: props.topicId,
+      topicId,
     });
   };
 
@@ -125,10 +127,7 @@ export const Message = (props: MessageProps) => {
                 <Button size="iconXs" variant="outline">
                   <Pencil2Icon />
                 </Button>
-                <DeleteMessageModal
-                  messageId={props.id}
-                  topicId={props.topicId}
-                />
+                <DeleteMessageModal messageId={props.id} topicId={topicId} />
               </div>
             )}
           </div>

@@ -4,8 +4,13 @@ import { TopicHeader } from "@/topics/topic-header";
 import { TopicChat } from "@/topics/topic-chat";
 import { TopicMessageBar } from "@/topics/topic-message-bar";
 import { NotFound } from "@/components/ui/not-found";
-import { TopicSideBar } from "../topic-side-bar";
-import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
+import { TopicSideBar } from "@/topics/topic-side-bar";
+import {
+  DEFAULT_MESSAGE_SELECT,
+  MESSAGE_LIMIT,
+  TOP_HIGHLIGHTS_LIMIT,
+} from "@/lib/prisma/message-model";
+import { CurrentTopicProvider } from "@/topics/current-topic-provider";
 
 type Props = {
   params: { id: string };
@@ -33,22 +38,33 @@ export default async function TopicsPage({ params }: Props) {
     select: DEFAULT_MESSAGE_SELECT,
   });
 
+  const topHighlights =
+    await prismaClient.message.getTopHighlightedMessagesForTopic({
+      topicId: topic?.id,
+      select: DEFAULT_MESSAGE_SELECT,
+    });
+
   return (
     <DashboardLayout circleId={topic?.parentCircle.id} topicId={topic?.id}>
       {topic ? (
         <>
           <TopicHeader topic={topic} />
-          <div className="flex flex-1 flex-row overflow-y-hidden">
-            <div className="flex flex-1 flex-col">
-              <TopicChat
-                topicId={topic.id}
-                circleId={topic.parentCircle.id}
-                existingMessages={messages}
-              />
-              <TopicMessageBar topicId={topic.id} />
+          <CurrentTopicProvider
+            topicId={topic.id}
+            circleId={topic.parentCircle.id}
+            messagesLimit={MESSAGE_LIMIT}
+            topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
+            existingMessages={messages}
+            existingTopHighlights={topHighlights}
+          >
+            <div className="flex flex-1 flex-row overflow-y-hidden">
+              <div className="flex flex-1 flex-col">
+                <TopicChat />
+                <TopicMessageBar />
+              </div>
+              <TopicSideBar />
             </div>
-            <TopicSideBar topicId={topic.id} />
-          </div>
+          </CurrentTopicProvider>
         </>
       ) : (
         <NotFound copy="Topic not found" />

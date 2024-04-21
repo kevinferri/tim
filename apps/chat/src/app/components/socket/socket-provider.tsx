@@ -40,7 +40,7 @@ export function useSocketContext() {
   const context = useContext(SocketContext);
 
   if (!context) {
-    throw new Error("useSocket must be used inside useSocketProvider");
+    throw new Error("useSocketContext must be used inside SocketProvider");
   }
 
   return context;
