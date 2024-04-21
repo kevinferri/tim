@@ -75,7 +75,11 @@ export function CurrentTopicProvider(props: Props) {
       );
 
       if (wasTopHighlight) {
-        const refreshed = await getTopHighlightsAction(props.topicId);
+        const refreshed = await getTopHighlightsAction({
+          topicId: props.topicId,
+          circleId: props.circleId,
+        });
+
         setTopHighlights(refreshed as MessageProps[]);
       }
     }
@@ -179,7 +183,11 @@ export function CurrentTopicProvider(props: Props) {
           );
 
           // Get top highlight from server to replace the removed one
-          const refreshed = await getTopHighlightsAction(props.topicId);
+          const refreshed = await getTopHighlightsAction({
+            topicId: props.topicId,
+            circleId: props.circleId,
+          });
+
           setTopHighlights(refreshed as MessageProps[]);
         }
       }

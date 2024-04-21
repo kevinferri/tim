@@ -7,6 +7,7 @@ export enum SocketEvent {
   JoinRoom = "room:join",
   LeaveRoom = "room:leave",
   CreatedTopic = "topic:created",
+  CreatedCircle = "circle:created",
   ToggleHighlight = "highlight:toggle",
   AddedHighlight = "highlight:added",
   RemovedHighlight = "highlight:removed",
