@@ -17,6 +17,7 @@ type ContextValue = {
   circleId: string;
   messages: MessageProps[];
   topHighlights: MessageProps[];
+  topHighlightsLimit: number;
 };
 
 type Props = {
@@ -124,12 +125,7 @@ export function CurrentTopicProvider(props: Props) {
       });
 
       if (newTopHighlight) {
-        const newTopHighlights =
-          topHighlights.length === props.topHighlightsLimit
-            ? [...topHighlights.slice(0, -1), newTopHighlight]
-            : [...topHighlights, newTopHighlight];
-
-        setTopHighlights(newTopHighlights);
+        setTopHighlights([...topHighlights, newTopHighlight]);
       }
     }
   );
@@ -168,14 +164,22 @@ export function CurrentTopicProvider(props: Props) {
       });
 
       if (toBeRemovedFromTopHighlights) {
-        // Optimistically remove from state
-        setTopHighlights((prevHighlights) =>
-          prevHighlights.filter(({ id }) => id !== toBeRemovedFromTopHighlights)
+        const wasTopHighlight = !!topHighlights.find(
+          ({ id }) => toBeRemovedFromTopHighlights === id
         );
 
-        // Get top highlight from server to replace the removed one
-        const refreshed = await getTopHighlightsAction(props.topicId);
-        setTopHighlights(refreshed as MessageProps[]);
+        if (wasTopHighlight) {
+          // Optimistically remove from state
+          setTopHighlights((prevHighlights) =>
+            prevHighlights.filter(
+              ({ id }) => id !== toBeRemovedFromTopHighlights
+            )
+          );
+
+          // Get top highlight from server to replace the removed one
+          const refreshed = await getTopHighlightsAction(props.topicId);
+          setTopHighlights(refreshed as MessageProps[]);
+        }
       }
     }
   );
@@ -184,10 +188,17 @@ export function CurrentTopicProvider(props: Props) {
     () => ({
       messages,
       topHighlights,
+      topHighlightsLimit: props.topHighlightsLimit,
       topicId: props.topicId,
       circleId: props.circleId,
     }),
-    [messages, topHighlights, props.topicId, props.circleId]
+    [
+      messages,
+      topHighlights,
+      props.topicId,
+      props.circleId,
+      props.topHighlightsLimit,
+    ]
   );
 
   return (

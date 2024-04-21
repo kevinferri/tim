@@ -5,24 +5,27 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { Message, MessageProps } from "@/topics/message";
 
-export function TopHighlights() {
-  const { topHighlights } = useCurrentTopicContext();
+function sanitize(messages: MessageProps[], limit: number) {
+  return messages
+    .sort((a, b) => {
+      return (
+        b.highlights.length - a.highlights.length ||
+        Number(b.createdAt) - Number(a.createdAt)
+      );
+    })
+    .slice(0, limit);
+}
 
-  // Need to stay sorted after client updates
-  const sorted = useMemo(
-    () =>
-      topHighlights.sort((a, b) => {
-        return (
-          b.highlights.length - a.highlights.length ||
-          Number(b.createdAt) - Number(a.createdAt)
-        );
-      }),
-    [topHighlights]
+export function TopHighlights() {
+  const { topHighlights, topHighlightsLimit } = useCurrentTopicContext();
+  const toShow = useMemo(
+    () => sanitize(topHighlights, topHighlightsLimit),
+    [topHighlights, topHighlightsLimit]
   );
 
   return (
     <ScrollArea>
-      {sorted.map((message: MessageProps) => {
+      {toShow.map((message: MessageProps) => {
         return <Message key={message.id} {...message} />;
       })}
     </ScrollArea>
