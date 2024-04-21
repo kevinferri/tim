@@ -89,8 +89,11 @@ export function CurrentTopicProvider(props: Props) {
       const isAlreadyTopHighlight = topHighlights.find(
         ({ id }) => highlight.messageId == id
       );
+
       const lowestTopHighlights =
-        topHighlights[topHighlights.length - 1].highlights.length;
+        topHighlights.length > 0
+          ? topHighlights[topHighlights.length - 1].highlights.length
+          : 0;
 
       syncedUpdate((prevMessages) => {
         return prevMessages.map((message) => {
@@ -221,10 +224,11 @@ export function useCurrentTopicContext() {
 function sanitize(messages: MessageProps[], limit: number) {
   return messages
     .sort((a, b) => {
-      return (
-        b.highlights.length - a.highlights.length ||
-        Number(b.createdAt) - Number(a.createdAt)
-      );
+      if (b.highlights.length === a.highlights.length) {
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      } else {
+        return b.highlights.length - a.highlights.length;
+      }
     })
     .slice(0, limit);
 }
