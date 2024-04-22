@@ -8,7 +8,13 @@ export enum RoomType {
   User = "user",
 }
 
-function toRoomKey({ id, roomType }: { id: string; roomType: RoomType }) {
+export function toRoomKey({
+  id,
+  roomType,
+}: {
+  id: string;
+  roomType: RoomType;
+}) {
   return `${roomType}::${id}`;
 }
 
@@ -50,7 +56,11 @@ async function canJoinRoom({
     return await isUserInCircle({ userId: socket.data.user.id, circleId: id });
   }
 
-  return true;
+  if (roomType === RoomType.User) {
+    return socket.data.user.id === id;
+  }
+
+  return false;
 }
 
 export function handleJoinRoom({ socket }: HandlerArgs) {

@@ -5,6 +5,7 @@ import { handleJoinRoom, handleLeaveRoom } from "./rooms";
 import { handleOnAny, handleOnAnyOutgoing } from "./any";
 import { handleCreatedTopic } from "./topics";
 import { handleToggleHighlight } from "./highlights";
+import { handleCreatedCircle } from "./circles";
 
 export type HandlerArgs = {
   server: Server;
@@ -22,6 +23,7 @@ export enum SocketEvent {
   JoinRoom = "room:join",
   LeaveRoom = "room:leave",
   CreatedTopic = "topic:created",
+  CreatedCircle = "circle:created",
   ToggleHighlight = "highlight:toggle",
   AddedHighlight = "highlight:added",
   RemovedHighlight = "highlight:removed",
@@ -52,6 +54,9 @@ export function registerEventHandlers(server: Server) {
     // Chat message handlers
     handleSendMessage({ socket, server });
     handleDeleteMessage({ socket, server });
+
+    // Circle action handlers
+    handleCreatedCircle({ socket, server });
 
     // Topic action handlers
     handleCreatedTopic({ socket, server });
