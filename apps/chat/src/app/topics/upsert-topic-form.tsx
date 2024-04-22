@@ -53,7 +53,7 @@ export const UpsertTopicForm = ({
       ) : (
         <Button
           variant="ghost"
-          className="flex gap-2 flex-1 w-full"
+          className="flex gap-3 flex-1 w-full"
           onClick={() => setOpen(true)}
         >
           <span>New topic </span>

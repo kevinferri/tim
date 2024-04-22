@@ -14,7 +14,7 @@ type Props = {
 
 export function TopicHeader(props: Props) {
   return (
-    <div className="flex flex-row justify-left p-2 border-b p-3 items-center gap-1">
+    <div className="flex flex-row justify-left p-3 border-b p-3 items-center gap-1">
       <div className="font-medium">{props.topic.name}</div>
       <div>
         <UpsertTopicForm
@@ -22,7 +22,11 @@ export function TopicHeader(props: Props) {
           circleId={props.topic.parentCircle.id}
           circleName={props.topic.parentCircle.name}
           trigger={
-            <Button variant="ghost" size="iconSm" className="absolute top-2">
+            <Button
+              variant="ghost"
+              size="iconSm"
+              className="absolute top-[9px]"
+            >
               <InfoCircledIcon className="h-4 w-4" />
             </Button>
           }

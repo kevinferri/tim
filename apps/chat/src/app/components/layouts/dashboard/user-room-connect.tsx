@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useSelf } from "@/components/auth/self-provider";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { useEffect } from "react";
 
 type Props = {
   children: React.ReactNode;

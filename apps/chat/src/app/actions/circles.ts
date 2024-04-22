@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { prismaClient } from "@/lib/prisma/client";
 import { getLoggedInUserId } from "@/lib/session";
+import { Circle, Topic } from "@prisma/client";
 
 const upsertCircleSchema = z.object({
   name: z
@@ -59,8 +60,8 @@ export async function upsertCircle(formData: FormData) {
     select: { id: true },
   });
 
-  let newCircle: { id?: string } = {};
-  let defaultTopic: { id?: string } = {};
+  let newCircle: Partial<Circle> = {};
+  let defaultTopic: Partial<Topic> = {};
 
   try {
     await prismaClient.$transaction(async () => {
@@ -75,17 +76,32 @@ export async function upsertCircle(formData: FormData) {
         },
       };
 
-      const newCircle = await prismaClient.circle.upsert({
+      newCircle = await prismaClient.circle.upsert({
         where: {
           id: circleId ?? undefined,
         },
         create: data,
         update: data,
-        select: { id: true },
+        select: {
+          id: true,
+          imageUrl: true,
+          name: true,
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          members: {
+            select: {
+              id: true,
+            },
+          },
+        },
       });
 
       // Create default topic on circle creation
-      if (!existingCirle) {
+      if (!existingCirle && newCircle.id) {
         defaultTopic = await prismaClient.topic.create({
           data: {
             userId,
@@ -106,7 +122,7 @@ export async function upsertCircle(formData: FormData) {
   return {
     data: {
       ...newCircle,
-      defaultTopicId: defaultTopic.id ?? existingCirle?.defaultTopicId,
+      defaultTopicId: defaultTopic?.id ?? existingCirle?.defaultTopicId,
     },
   };
 }

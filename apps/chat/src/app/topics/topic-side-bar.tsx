@@ -1,11 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BellIcon, ImageIcon, StarIcon } from "@radix-ui/react-icons";
 import { TopHighlights } from "./top-highlights";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function TopicSideBar() {
   return (
-    <div className="flex flex-col shadow-md border-l max-w-[320px] min-w-[320px]">
-      <Tabs defaultValue="highlights">
+    <div className="flex flex-col shadow-md border-l max-w-[320px] min-w-[320px] basis-full h-full overflow-hidden">
+      <Tabs defaultValue="highlights" className="h-full">
         <div className="p-3">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="highlights">
@@ -19,9 +20,13 @@ export function TopicSideBar() {
             </TabsTrigger>
           </TabsList>
         </div>
-        <TabsContent value="highlights">
-          <TopHighlights />
-        </TabsContent>
+
+        <ScrollArea className="h-full">
+          <TabsContent value="highlights">
+            <TopHighlights />
+          </TabsContent>
+        </ScrollArea>
+
         <TabsContent value="media">Media</TabsContent>
         <TabsContent value="notifications">Notifications</TabsContent>
       </Tabs>

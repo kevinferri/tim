@@ -25,6 +25,7 @@ export type MessageProps = {
   createdAt: DbMessage["createdAt"];
   sentBy: Pick<User, "id" | "name" | "imageUrl">;
   highlights: Highlights;
+  variant: "default" | "minimal";
 };
 
 const getInitials = (name?: string) => {
@@ -57,7 +58,6 @@ const highlightStyles = [
   "after:-z-10",
   "after:w-full",
   "after:bg-highlight",
-  "dark:after:bg-yellow-600",
   "after:[transition:500ms]",
   "dark:text-secondary",
 ];
@@ -84,12 +84,18 @@ export const Message = (props: MessageProps) => {
 
   return (
     <div
-      className={cn(baseStyles, highlightedBySelf ? highlightStyles : "")}
+      className={cn(
+        baseStyles,
+        highlightedBySelf ? highlightStyles : "",
+        props.variant === "minimal"
+          ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
+          : ""
+      )}
       onDoubleClick={handleToggleHighlight}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-3 items-start">
         <Avatar className="shadow-md">
           <AvatarImage
             className="rounded-full"
@@ -100,7 +106,7 @@ export const Message = (props: MessageProps) => {
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col flex-1">
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-3 items-start">
             <span
               className={cn(
                 `font-semibold ${
@@ -122,7 +128,7 @@ export const Message = (props: MessageProps) => {
                 minute: "numeric",
               })}
             </time>
-            {showActions && sentBySelf && (
+            {showActions && sentBySelf && props.variant !== "minimal" && (
               <div className="flex gap-1">
                 <Button size="iconXs" variant="outline">
                   <Pencil2Icon />

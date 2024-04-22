@@ -56,7 +56,7 @@ export async function TopicsNav({ circleId, topicId }: Props) {
         <UpsertCircleForm
           existingCircle={parentCircle ?? undefined}
           trigger={
-            <Button variant="ghost" className="flex gap-2 w-full">
+            <Button variant="ghost" className="flex gap-3 w-full">
               <span>Circle settings</span>
               <span>
                 <GearIcon />

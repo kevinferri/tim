@@ -7,10 +7,10 @@ import { Routes } from "@/routes";
 export function NotFound({ copy }: { copy?: string }) {
   return (
     <div className="flex flex-1 flex-basis-full items-center justify-center">
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-3">
         <div>{copy ? copy : "Page not found"}</div>
         <Link href={Routes.Home}>
-          <Button variant="secondary" className="flex gap-2">
+          <Button variant="secondary" className="flex gap-3">
             <HomeIcon /> Go home
           </Button>
         </Link>

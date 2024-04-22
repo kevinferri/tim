@@ -36,7 +36,7 @@ export function UserDropDown({
       <DropdownMenuContent>
         <DropdownMenuItem disabled>{email}</DropdownMenuItem>
         <Separator />
-        <DropdownMenuItem onClick={() => signOut()} className="flex gap-2">
+        <DropdownMenuItem onClick={() => signOut()} className="flex gap-3">
           <ExitIcon /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>

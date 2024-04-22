@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { LockClosedIcon, PlusIcon } from "@radix-ui/react-icons";
-import { usePathname, useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +27,7 @@ import { getLinkForTopic } from "@/routes";
 import { Circle, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 
 type Props = {
   trigger?: React.ReactNode;
@@ -37,9 +37,8 @@ type Props = {
 };
 
 export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
-  const router = useRouter();
   const self = useSelf();
-  const pathname = usePathname();
+  const createdCircleEmitter = useSocketEmit(SocketEvent.CreatedCircle);
 
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState(existingCircle?.name ?? "");
@@ -114,11 +113,20 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
               setSubmitting(false);
               setOpen(false);
 
-              if (resp && resp.data.defaultTopicId) {
-                const topicId = existingCircle
-                  ? pathname.split("/").pop() ?? resp.data.defaultTopicId
-                  : resp.data.defaultTopicId;
-                router.push(getLinkForTopic(topicId));
+              // Need some logic when it's an edit...
+              // new members get toast, existing don't
+              // also need to edit the array rather than add if it's an edit
+              if (resp) {
+                createdCircleEmitter.emit({
+                  id: resp.data.id,
+                  name: resp.data.name,
+                  imageUrl: resp.data.imageUrl,
+                  defaultTopicId: resp.data.defaultTopicId,
+                  // @ts-expect-error db relation
+                  createdBy: resp.data.createdBy,
+                  // @ts-expect-error db relation
+                  members: resp.data.members.map(({ id }) => id),
+                });
               }
             }}
           >

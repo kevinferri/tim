@@ -32,7 +32,7 @@ export default async function LogInPage({
           "bg-zinc-900 px-12 py-14 text-white font-light tracking-wide flex flex-col"
         )}
       >
-        <div className={cn("flex items-center mb-4 gap-2")}>
+        <div className={cn("flex items-center mb-4 gap-3")}>
           <Avatar>
             <AvatarImage src="/assets/logo.svg" />
           </Avatar>
@@ -49,7 +49,7 @@ export default async function LogInPage({
         </p>
       </div>
       <div className={cn("px-10 py-12 flex flex-col")}>
-        <div className={cn("flex justify-end gap-2")}>
+        <div className={cn("flex justify-end gap-3")}>
           <SignIn />
           <ThemeToggle />
         </div>

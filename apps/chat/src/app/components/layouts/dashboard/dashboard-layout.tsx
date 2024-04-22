@@ -13,7 +13,7 @@ export const DashboardLayout = ({ circleId, topicId, children }: Props) => {
   return (
     <UserRoomConnect>
       <div className="flex flex-col h-screen">
-        <div className="flex overflow-hidden h-100 basis-full">
+        <div className="flex overflow-hidden basis-full">
           <CirclesNav circleId={circleId} />
           {circleId ? (
             <>
