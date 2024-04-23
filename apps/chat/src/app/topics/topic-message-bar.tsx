@@ -37,7 +37,7 @@ export function TopicMessageBar() {
       <Textarea
         rows={1}
         autoFocus
-        className="focus-visible:ring-transparent focus-visible:border-slate-300 resize-none"
+        className="focus-visible:ring-transparent focus-visible:border-slate-300 resize-none text-base"
         onChange={(e) => {
           setMessage(e.target.value);
           adjustHeight(e.target);

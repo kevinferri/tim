@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function TopicSideBar() {
   return (
-    <div className="flex flex-col shadow-md border-l max-w-[320px] min-w-[320px] basis-full h-full overflow-hidden">
+    <div className="flex flex-col shadow-md border-l max-w-[340px] min-w-[340px] basis-full h-full overflow-hidden">
       <Tabs defaultValue="highlights" className="h-full">
         <div className="p-3">
           <TabsList className="grid w-full grid-cols-3">

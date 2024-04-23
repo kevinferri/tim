@@ -4,7 +4,28 @@ import { z } from "zod";
 
 import { prismaClient } from "@/lib/prisma/client";
 import { getLoggedInUserId } from "@/lib/session";
-import { Circle, Topic } from "@prisma/client";
+import { Prisma, Topic } from "@prisma/client";
+
+const CIRCLE_SELECT = {
+  id: true,
+  imageUrl: true,
+  name: true,
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+  members: {
+    select: {
+      id: true,
+    },
+  },
+} as const;
+
+type CircleWithRelations = Prisma.CircleGetPayload<{
+  include: typeof CIRCLE_SELECT;
+}>;
 
 const upsertCircleSchema = z.object({
   name: z
@@ -60,7 +81,7 @@ export async function upsertCircle(formData: FormData) {
     select: { id: true },
   });
 
-  let newCircle: Partial<Circle> = {};
+  let newCircle: Partial<CircleWithRelations> = {};
   let defaultTopic: Partial<Topic> = {};
 
   try {
@@ -82,22 +103,7 @@ export async function upsertCircle(formData: FormData) {
         },
         create: data,
         update: data,
-        select: {
-          id: true,
-          imageUrl: true,
-          name: true,
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          members: {
-            select: {
-              id: true,
-            },
-          },
-        },
+        select: CIRCLE_SELECT,
       });
 
       // Create default topic on circle creation

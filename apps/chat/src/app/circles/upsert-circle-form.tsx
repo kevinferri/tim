@@ -23,7 +23,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { getLinkForTopic } from "@/routes";
 import { Circle, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertTitle } from "@/components/ui/alert";
@@ -117,15 +116,14 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
               // new members get toast, existing don't
               // also need to edit the array rather than add if it's an edit
               if (resp) {
+                const members = resp.data.members ?? [];
                 createdCircleEmitter.emit({
                   id: resp.data.id,
                   name: resp.data.name,
                   imageUrl: resp.data.imageUrl,
                   defaultTopicId: resp.data.defaultTopicId,
-                  // @ts-expect-error db relation
                   createdBy: resp.data.createdBy,
-                  // @ts-expect-error db relation
-                  members: resp.data.members.map(({ id }) => id),
+                  members: members.map(({ id }) => id),
                 });
               }
             }}
