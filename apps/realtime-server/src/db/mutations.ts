@@ -5,6 +5,7 @@ type WriteMessageArgs = {
   userId: string;
   topicId: string;
   text: string;
+  mediaUrl: string;
 };
 
 type DeleteMessageArgs = {
@@ -22,6 +23,7 @@ export async function writeMessage({
   userId,
   topicId,
   text,
+  mediaUrl,
 }: WriteMessageArgs) {
   const message = await pgClient("messages")
     .insert({
@@ -29,8 +31,9 @@ export async function writeMessage({
       text: encrypt(text),
       userId,
       topicId,
+      mediaUrl,
     })
-    .returning(["id", "text", "topicId"]);
+    .returning(["id", "text", "topicId", "mediaUrl"]);
 
   return message[0];
 }

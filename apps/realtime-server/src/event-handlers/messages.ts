@@ -17,6 +17,7 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
       userId: socket.data.user.id,
       text: payload.message,
       topicId: payload.topicId,
+      mediaUrl: payload.mediaUrl,
     });
 
     const emittedMessage = {
