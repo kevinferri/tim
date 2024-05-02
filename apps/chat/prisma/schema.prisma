@@ -83,9 +83,10 @@ model Message {
   updatedAt DateTime @default(now()) @updatedAt
 
   // Specific 
-  text    String?
-  userId  String
-  topicId String
+  text     String?
+  mediaUrl String?
+  userId   String
+  topicId  String
 
   // Relations
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
