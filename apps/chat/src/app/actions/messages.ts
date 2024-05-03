@@ -12,7 +12,6 @@ export async function getTopHighlightsAction({
   circleId: string;
 }) {
   const userId = await getLoggedInUserId();
-
   if (!userId) return;
 
   const isInCircle = await prismaClient.circle.isUserInCirle({

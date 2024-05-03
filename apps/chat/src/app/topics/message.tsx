@@ -9,6 +9,7 @@ import { Pencil2Icon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import { DeleteMessageModal } from "@/topics/delete-message-modal";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
+import { MediaViewer } from "./media-viewer";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -21,6 +22,7 @@ export type Highlights = {
 export type MessageProps = {
   id: DbMessage["id"];
   text?: DbMessage["text"];
+  mediaUrl?: DbMessage["mediaUrl"];
   topicId: DbMessage["topicId"];
   createdAt: DbMessage["createdAt"];
   sentBy: Pick<User, "id" | "name" | "imageUrl">;
@@ -42,7 +44,7 @@ const baseStyles = [
   "z-0",
   "p-3",
   "relative",
-  "leading-snug",
+  "leading-tight",
   "hover:bg-slate-50",
   "dark:hover:bg-slate-900",
   "after:content-['']",
@@ -138,7 +140,10 @@ export const Message = (props: MessageProps) => {
             )}
           </div>
 
-          <div className="whitespace-pre-line break-all">{props.text}</div>
+          <div className="flex flex-col gap-1">
+            <div className="whitespace-pre-line break-all">{props.text}</div>
+            {props.mediaUrl && <MediaViewer url={props.mediaUrl} />}
+          </div>
         </div>
 
         <HighlightTooltip

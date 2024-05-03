@@ -31,7 +31,7 @@ export const HighlightTooltip = (props: Props) => {
           className="text-xs cursor-default"
           onClick={(event) => event.preventDefault()}
         >
-          <div className="flex gap-0.5 items-center w-9">
+          <div className="flex gap-0.5 items-center w-9 mt-2">
             <Button
               variant="ghost"
               size="iconSm"

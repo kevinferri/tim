@@ -18,11 +18,14 @@ if (process.env.NODE_ENV !== "production") {
   globalThis.cloudinaryClient = cloudinaryClient;
 }
 
-export async function uploadImageByPath(imagePath: string) {
+export async function uploadImage(imagePath: string) {
   const options = {
     use_filename: true,
     unique_filename: false,
     overwrite: true,
+    height: 1000,
+    width: 1000,
+    crop: "limit",
   };
 
   try {

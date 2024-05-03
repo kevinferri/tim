@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prismaClient } from "@/lib/prisma/client";
 import { getLoggedInUserId } from "@/lib/session";
 import { Prisma, Topic } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 const CIRCLE_SELECT = {
   id: true,

@@ -112,11 +112,9 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
               setSubmitting(false);
               setOpen(false);
 
-              // Need some logic when it's an edit...
-              // new members get toast, existing don't
-              // also need to edit the array rather than add if it's an edit
               if (resp) {
                 const members = resp.data.members ?? [];
+
                 createdCircleEmitter.emit({
                   id: resp.data.id,
                   name: resp.data.name,
@@ -124,6 +122,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                   defaultTopicId: resp.data.defaultTopicId,
                   createdBy: resp.data.createdBy,
                   members: members.map(({ id }) => id),
+                  isEdit,
                 });
               }
             }}

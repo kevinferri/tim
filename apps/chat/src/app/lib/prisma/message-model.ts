@@ -21,6 +21,7 @@ export const DEFAULT_MESSAGE_SELECT = {
   text: true,
   createdAt: true,
   topicId: true,
+  mediaUrl: true,
   highlights: {
     select: {
       id: true,

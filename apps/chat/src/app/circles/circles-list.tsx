@@ -25,6 +25,8 @@ type Props = {
 };
 
 type NewCircleHandlerProps = Circle & {
+  isEdit: boolean;
+  members: string[];
   createdBy: {
     name: string;
     id: string;
@@ -42,11 +44,23 @@ export function CirclesList({ existingCircles, currentCircleId }: Props) {
 
       setCircles((circles) => {
         const _circles = circles ?? [];
+
+        if (payload.isEdit) {
+          return _circles.map((c) => {
+            if (c.id !== payload.id) return c;
+            return payload;
+          });
+        }
+
         return [..._circles, payload];
       });
 
+      if (payload.isEdit && createdBySelf) {
+        return;
+      }
+
       toast({
-        title: `New circle created`,
+        title: payload.isEdit ? "Circle updated" : `New circle created`,
         description: createdBySelf
           ? `You created a new circle called "${payload.name}"`
           : `${payload.createdBy.name} invited you to a new circle called "${payload.name}"`,

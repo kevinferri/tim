@@ -2,7 +2,7 @@ import { AuthOptions, getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 import { prismaClient } from "@/lib/prisma/client";
-import { uploadImageByPath } from "@/lib/cloudinary";
+import { uploadImage } from "@/lib/cloudinary";
 import { Routes } from "@/routes";
 
 export const authOptions: AuthOptions = {
@@ -54,7 +54,7 @@ export const authOptions: AuthOptions = {
       }
 
       if (user.image) {
-        const avatarImage = await uploadImageByPath(user.image);
+        const avatarImage = await uploadImage(user.image);
 
         if (avatarImage) {
           await prismaClient.user.update({
