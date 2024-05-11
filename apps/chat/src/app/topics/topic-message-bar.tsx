@@ -1,17 +1,17 @@
 "use client";
 
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useState } from "react";
 
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { MediaUploader } from "@/topics/media-uploader";
 import { uploadMedia } from "@/actions/media";
-import { MediaViewer } from "./media-viewer";
+import { MediaViewer } from "@/topics/media-viewer";
 import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Progress } from "@/components/ui/progress";
-import { useUploadProgres } from "./use-upload-progress";
+import { useUploadProgres } from "@/topics/use-upload-progress";
 
 type MessagePayload = {
   message: string;
