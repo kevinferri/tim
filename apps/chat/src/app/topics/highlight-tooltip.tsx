@@ -51,21 +51,19 @@ export const HighlightTooltip = (props: Props) => {
         <TooltipContent
           side="left"
           onPointerDownOutside={(e) => e.preventDefault()}
-          className="px-2"
+          className={`px-2 ${_highlights.length === 0 ? "hidden" : ""}`}
         >
           <div className="flex gap-1.5">
-            {_highlights.length > 0
-              ? _highlights.map(({ createdBy, id }) => {
-                  return (
-                    <Avatar key={id} className="h-7 w-7">
-                      <AvatarImage
-                        className="rounded-full"
-                        src={createdBy.imageUrl ?? undefined}
-                      />
-                    </Avatar>
-                  );
-                })
-              : "This message has no highlights"}
+            {_highlights.map(({ createdBy, id }) => {
+              return (
+                <Avatar key={id} className="h-7 w-7">
+                  <AvatarImage
+                    className="rounded-full"
+                    src={createdBy.imageUrl ?? undefined}
+                  />
+                </Avatar>
+              );
+            })}
           </div>
         </TooltipContent>
       </Tooltip>

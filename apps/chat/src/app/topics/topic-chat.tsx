@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,12 +10,12 @@ import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
-  const scrollRef = useRef<null | HTMLDivElement>(null);
-  const { messages, topicId, circleId } = useCurrentTopicContext();
+  const { messages, topicId, circleId, scrollRef, scrollToBottomOfChat } =
+    useCurrentTopicContext();
 
   useEffect(() => {
-    scrollRef?.current?.scrollIntoView();
-  }, [messages.length]);
+    scrollToBottomOfChat();
+  }, [messages.length, scrollToBottomOfChat]);
 
   useEffect(() => {
     joinRoom.emit({ id: topicId, roomType: "topic" });

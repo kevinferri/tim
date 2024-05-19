@@ -97,4 +97,25 @@ export const messageModel = {
 
     return normalizeMessages(filtered);
   },
+
+  async getMediaMessagesForTopic({ topicId, select }: MessageArgs) {
+    const userId = getLoggedInUserId();
+    if (!topicId || !userId) return [];
+
+    const messages = await prismaClient.message.findMany({
+      select,
+      take: MESSAGE_LIMIT,
+      where: {
+        topicId,
+        NOT: {
+          mediaUrl: null,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return normalizeMessages(messages);
+  },
 };

@@ -6,11 +6,13 @@ import {
 } from "@radix-ui/react-icons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TopHighlights } from "@/topics/top-highlights";
+import { MediaList } from "@/topics/media-list";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { CircleMembersList } from "@/topics/circle-members-list";
 
 export function TopicSideBar() {
   return (
-    <div className="flex flex-col shadow-md border-l max-w-[380px] min-w-[380px] basis-full h-full overflow-hidden">
+    <div className="flex flex-col shadow-md border-l max-w-[360px] min-w-[360px] basis-full h-full overflow-hidden">
       <Tabs defaultValue="highlights" className="h-full">
         <div className="p-3">
           <TabsList className="grid w-full grid-cols-4">
@@ -41,12 +43,14 @@ export function TopicSideBar() {
 
         <TabsContent value="media" className="h-full">
           <div className="text-center pb-3">Media</div>
-          <ScrollArea className="h-full">Media here</ScrollArea>
+          <MediaList />
         </TabsContent>
 
         <TabsContent value="members" className="h-full">
           <div className="text-center pb-3">Circle members</div>
-          <ScrollArea className="h-full">Circle members here</ScrollArea>
+          <ScrollArea className="h-full">
+            <CircleMembersList />
+          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="notifications" className="h-full">

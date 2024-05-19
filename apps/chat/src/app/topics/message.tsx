@@ -9,7 +9,7 @@ import { Pencil2Icon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import { DeleteMessageModal } from "@/topics/delete-message-modal";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
-import { MediaViewer } from "./media-viewer";
+import { MediaViewer } from "@/topics/media-viewer";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -30,7 +30,7 @@ export type MessageProps = {
   variant: "default" | "minimal";
 };
 
-const getInitials = (name?: string) => {
+export const getInitials = (name?: string) => {
   if (!name) return "?";
   return name
     .split(" ")

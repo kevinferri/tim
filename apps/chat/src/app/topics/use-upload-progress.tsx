@@ -15,15 +15,16 @@ export function useUploadProgres({ media, isUploadingMedia }: Props) {
     }
 
     const timer = setInterval(() => {
-      let n = media.size / 750;
-      if (n > 100) n = 3;
+      let n = media.size / 500;
+      if (n > 100) n = 1;
 
       setUploadProgress((uploadProgress) => {
         let total = uploadProgress + n;
         if (total > 100) total = 100;
+
         return total;
       });
-    }, 50);
+    }, 30);
 
     return () => clearTimeout(timer);
   }, [isUploadingMedia, media]);

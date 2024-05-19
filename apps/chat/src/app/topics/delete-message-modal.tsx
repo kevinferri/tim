@@ -37,12 +37,12 @@ export const DeleteMessageModal = ({ messageId, topicId }: Props) => {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <DialogClose>
+          <DialogClose asChild>
             <Button variant="ghost" type="button">
               Cancel
             </Button>
           </DialogClose>
-          <DialogClose>
+          <DialogClose asChild>
             <Button
               variant="destructive"
               onClick={() => {

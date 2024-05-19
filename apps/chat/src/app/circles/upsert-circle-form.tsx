@@ -90,7 +90,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
               )}
             </DialogTitle>
             <DialogDescription>
-              Invite friends to your circle to start communicating
+              Invite friends to your circle to start communicating.
             </DialogDescription>
           </DialogHeader>
           {!isCreator && (

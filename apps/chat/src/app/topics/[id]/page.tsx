@@ -44,6 +44,27 @@ export default async function TopicsPage({ params }: Props) {
       select: DEFAULT_MESSAGE_SELECT,
     });
 
+  const mediaMessages = await prismaClient.message.getMediaMessagesForTopic({
+    topicId: topic?.id,
+    select: DEFAULT_MESSAGE_SELECT,
+  });
+
+  const circleMembers = topic?.parentCircle.id
+    ? await prismaClient.user.getMembersForCircle({
+        circleId: topic.parentCircle.id,
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+          createdCircles: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      })
+    : [];
+
   return (
     <DashboardLayout circleId={topic?.parentCircle.id} topicId={topic?.id}>
       {topic ? (
@@ -54,8 +75,10 @@ export default async function TopicsPage({ params }: Props) {
             circleId={topic.parentCircle.id}
             messagesLimit={MESSAGE_LIMIT}
             topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
+            existingCircleMemebers={circleMembers}
             existingMessages={messages}
             existingTopHighlights={topHighlights}
+            existingMediaMessages={mediaMessages}
           >
             <div className="flex flex-1 flex-row overflow-y-hidden">
               <div className="flex flex-1 flex-col">

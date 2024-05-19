@@ -6,17 +6,26 @@ import {
   useState,
   useMemo,
   useCallback,
+  useRef,
+  MutableRefObject,
 } from "react";
 import { MessageProps } from "@/topics/message";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
 import { getTopHighlightsAction } from "@/actions/messages";
+import { WithRelation } from "../../../types/prisma";
+
+type CircleMember = WithRelation<"User", "createdCircles">;
 
 type ContextValue = {
   topicId: string;
   circleId: string;
   messages: MessageProps[];
   topHighlights: MessageProps[];
+  mediaMessages: MessageProps[];
+  circleMembers: CircleMember[];
+  scrollRef: MutableRefObject<HTMLDivElement | null>;
+  scrollToBottomOfChat: () => void;
 };
 
 type Props = {
@@ -24,6 +33,8 @@ type Props = {
   circleId: string;
   existingMessages: MessageProps[];
   existingTopHighlights: MessageProps[];
+  existingMediaMessages: MessageProps[];
+  existingCircleMemebers: CircleMember[];
   topHighlightsLimit: number;
   messagesLimit: number;
   children: React.ReactNode;
@@ -32,6 +43,13 @@ type Props = {
 const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 
 export function CurrentTopicProvider(props: Props) {
+  const scrollRef = useRef<null | HTMLDivElement>(null);
+  const scrollToBottomOfChat = useCallback((timeout?: number) => {
+    setTimeout(() => {
+      scrollRef?.current?.scrollIntoView();
+    }, timeout ?? 250);
+  }, []);
+
   const [messages, setMessages] = useState<MessageProps[]>(
     props.existingMessages
   );
@@ -40,10 +58,20 @@ export function CurrentTopicProvider(props: Props) {
     props.existingTopHighlights
   );
 
+  const [mediaMessages, setMediaMessages] = useState<MessageProps[]>(
+    props.existingMediaMessages
+  );
+
+  const [circleMembers, setCircleMembers] = useState<CircleMember[]>(
+    props.existingCircleMemebers
+  );
+
+  // Updates all message state (default messages, top highlights, media)
   const syncedUpdate = useCallback(
     (handler: (prevState: MessageProps[]) => MessageProps[]) => {
       setMessages((prevMessages) => handler(prevMessages));
       setTopHighlights((prevMessages) => handler(prevMessages));
+      setMediaMessages((prevMessages) => handler(prevMessages));
     },
     []
   );
@@ -59,6 +87,16 @@ export function CurrentTopicProvider(props: Props) {
           createdAt: new Date(newMessage.createdAt),
         },
       ]);
+
+      if (newMessage.mediaUrl) {
+        setMediaMessages([
+          {
+            ...newMessage,
+            createdAt: new Date(newMessage.createdAt),
+          },
+          ...mediaMessages,
+        ]);
+      }
     }
   );
 
@@ -197,16 +235,24 @@ export function CurrentTopicProvider(props: Props) {
   const contextValue = useMemo(
     () => ({
       messages,
+      mediaMessages,
       topHighlights: sanitize(topHighlights, props.topHighlightsLimit),
+      circleMembers,
       topicId: props.topicId,
       circleId: props.circleId,
+      scrollRef,
+      scrollToBottomOfChat,
     }),
     [
       messages,
+      mediaMessages,
       topHighlights,
+      circleMembers,
       props.topicId,
       props.circleId,
       props.topHighlightsLimit,
+      scrollRef,
+      scrollToBottomOfChat,
     ]
   );
 

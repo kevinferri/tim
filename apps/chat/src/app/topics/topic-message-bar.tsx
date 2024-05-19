@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,12 +38,21 @@ export function TopicMessageBar() {
   const [message, setMessage] = useState("");
   const [media, setMedia] = useState<File>();
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const { topicId } = useCurrentTopicContext();
-  const { uploadProgress } = useUploadProgres({ media, isUploadingMedia });
+  const { topicId, scrollToBottomOfChat } = useCurrentTopicContext();
+  const { uploadProgress } = useUploadProgres({
+    media,
+    isUploadingMedia,
+  });
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
+  const uploadText = uploadProgress >= 100 ? "FINALIZING..." : "UPLOADING...";
+
+  const mediaBlobUrl = useMemo(
+    () => (media ? URL.createObjectURL(media) : undefined),
+    [media]
+  );
 
   const emitMessage = async (message: string) => {
-    if (!message.trim()) return;
+    if (!media && !message.trim()) return;
     let mediaUrl = undefined;
 
     if (media) {
@@ -91,8 +100,12 @@ export function TopicMessageBar() {
           />
           <div className="pr-1">
             <MediaUploader
+              disabled={isUploadingMedia}
               file={media}
-              onFileChange={(file) => setMedia(file)}
+              onFileChange={(file) => {
+                setMedia(file);
+                scrollToBottomOfChat();
+              }}
               onFileRemove={() => setMedia(undefined)}
             />
           </div>
@@ -115,8 +128,13 @@ export function TopicMessageBar() {
                 <CrossCircledIcon />
               </Button>
             </div>
-            <MediaViewer url={URL.createObjectURL(media)} />
-            {isUploadingMedia && <Progress value={uploadProgress} />}
+            <MediaViewer url={mediaBlobUrl ?? ""} />
+            {isUploadingMedia && (
+              <>
+                <span className="text-xs">{uploadText}</span>
+                <Progress value={uploadProgress} />
+              </>
+            )}
           </div>
         )}
       </div>

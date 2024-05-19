@@ -12,4 +12,28 @@ export const userModel = {
       select,
     });
   },
+
+  async getMembersForCircle({
+    circleId,
+    select,
+  }: {
+    circleId: string;
+    select: Prisma.UserSelect;
+  }) {
+    const id = await getLoggedInUserId();
+    if (!id) return [];
+
+    return (
+      (await prismaClient.user.findMany({
+        where: {
+          circleMemberships: {
+            some: {
+              id: circleId,
+            },
+          },
+        },
+        select,
+      })) ?? []
+    );
+  },
 };
