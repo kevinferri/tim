@@ -10,8 +10,14 @@ type WriteMessageArgs = {
 
 type DeleteMessageArgs = {
   userId: string;
-  topicId: string;
   messageId: string;
+};
+
+type EditMessageArgs = {
+  userId: string;
+  messageId: string;
+  text: string;
+  mediaUrl?: string;
 };
 
 type ToggleHighlightArgs = {
@@ -29,9 +35,9 @@ export async function writeMessage({
     .insert({
       id: v4(),
       text: encrypt(text),
+      mediaUrl,
       userId,
       topicId,
-      mediaUrl,
     })
     .returning(["id", "text", "topicId", "mediaUrl"]);
 
@@ -76,17 +82,32 @@ export async function toggleHighlight({
   return await writeHighlight({ userId, messageId });
 }
 
-export async function deleteMessage({
-  userId,
-  messageId,
-  topicId,
-}: DeleteMessageArgs) {
+export async function deleteMessage({ userId, messageId }: DeleteMessageArgs) {
   const message = await pgClient("messages")
     .where("id", messageId)
     .where("userId", userId)
-    .where("topicId", topicId)
     .del()
     .returning("id");
+
+  return message[0];
+}
+
+export async function editMessage({
+  userId,
+  messageId,
+  text,
+  mediaUrl,
+}: EditMessageArgs) {
+  const message = await pgClient("messages")
+    .where("id", messageId)
+    .where("userId", userId)
+    .update(
+      {
+        text: encrypt(text),
+        mediaUrl,
+      },
+      ["id", "text", "mediaUrl"]
+    );
 
   return message[0];
 }
