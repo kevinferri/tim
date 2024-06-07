@@ -1,5 +1,4 @@
-import React from "react";
-import type { Metadata } from "next";
+import React, { cache } from "react";
 import { GeistSans } from "geist/font/sans";
 import jwt from "jsonwebtoken";
 import { User } from "@prisma/client";
@@ -12,10 +11,28 @@ import { SelfProvider } from "@/components/auth/self-provider";
 
 import "@/globals.css";
 
-export const metadata: Metadata = {
-  title: "",
-  description: "Tim messaging platform",
-};
+export const DEFAULT_TITLE = "Tim";
+
+const getLoggedInUser = cache(async () => {
+  const user = await prismaClient.user.getLoggedIn({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      imageUrl: true,
+    },
+  });
+
+  return user ?? undefined;
+});
+
+export async function generateMetadata() {
+  const user = await getLoggedInUser();
+
+  return {
+    title: `${DEFAULT_TITLE} - ${user?.email ?? "Dashboard"}`,
+  };
+}
 
 async function getSocketConfig(user?: User) {
   const token = user
@@ -34,15 +51,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user =
-    (await prismaClient.user.getLoggedIn({
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-      },
-    })) ?? undefined;
-
+  const user = await getLoggedInUser();
   const socketConfig = await getSocketConfig(user);
 
   return (

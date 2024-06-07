@@ -40,7 +40,7 @@ export async function TopicsNav({ circleId, topicId }: Props) {
   });
 
   return (
-    <div className="flex flex-col shadow-md border-r max-w-[260px] min-w-[260px]">
+    <div className="flex flex-col shadow-md border-r max-w-[280px] min-w-[280px]">
       <div className="block p-3 border-b overflow-hidden whitespace-nowrap text-ellipsis font-medium">
         {parentCircle?.name}
       </div>

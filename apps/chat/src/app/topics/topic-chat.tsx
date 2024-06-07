@@ -6,27 +6,31 @@ import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message, MessageProps } from "@/topics/message";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
+import { useEffectOnce, usePrevious } from "@/lib/hooks";
 
 export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
-  const { messages, topicId, circleId, scrollRef, scrollToBottomOfChat } =
+  const { messages, topicId, scrollRef, scrollToBottomOfChat } =
     useCurrentTopicContext();
+  const prevMessagesLength = usePrevious(messages.length) ?? 0;
 
   useEffect(() => {
-    scrollToBottomOfChat();
-  }, [messages.length, scrollToBottomOfChat]);
+    if (prevMessagesLength < messages.length) {
+      scrollToBottomOfChat();
+    }
+  }, [messages.length, prevMessagesLength, scrollToBottomOfChat]);
 
-  useEffect(() => {
-    joinRoom.emit({ id: topicId, roomType: "topic" });
-    joinRoom.emit({ id: circleId, roomType: "circle" });
+  useEffectOnce(() => {
+    const payload = { id: topicId, roomType: "topic" };
+
+    joinRoom.emit(payload);
+    scrollToBottomOfChat(100);
 
     return () => {
-      leaveRoom.emit({ topicId });
-      leaveRoom.emit({ circleId });
+      leaveRoom.emit(payload);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
 
   return (
     <ScrollArea className="flex flex-col basis-full">

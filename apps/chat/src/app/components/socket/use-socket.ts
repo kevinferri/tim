@@ -4,13 +4,26 @@ import { useSocketContext } from "@/components/socket/socket-provider";
 export enum SocketEvent {
   SendMessage = "message:send",
   DeleteMessage = "message:delete",
+  EditMessage = "message:edit",
+  ShuffleGifMessage = "message:shuffleGif",
+
   JoinRoom = "room:join",
   LeaveRoom = "room:leave",
+
   CreatedTopic = "topic:created",
+  UserJoinedOrLeftTopic = "topic:userJoinedOrLeft",
+
   CreatedCircle = "circle:created",
+  UserJoinedCircle = "circle:userJoined",
+
   ToggleHighlight = "highlight:toggle",
   AddedHighlight = "highlight:added",
   RemovedHighlight = "highlight:removed",
+
+  UserTabFocused = "user:tabFocused",
+  UserTabBlurred = "user:tabBlurred",
+  UserStartedTyping = "user:startedTyping",
+  UserStoppedTyping = "user:stoppedTyping",
 }
 
 export function useSocketHandler<T>(

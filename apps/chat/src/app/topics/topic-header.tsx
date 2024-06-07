@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { UpsertTopicForm } from "./upsert-topic-form";
+import { UpsertTopicForm } from "@/topics/upsert-topic-form";
 import { Topic } from "@prisma/client";
+import { TopicActiveUsers } from "@/topics/topic-active-users";
 
 type Props = {
   topic: Pick<Topic, "id" | "name" | "userId" | "description"> & {
@@ -31,6 +32,9 @@ export function TopicHeader(props: Props) {
             </Button>
           }
         />
+      </div>
+      <div className="absolute right-3">
+        <TopicActiveUsers topicId={props.topic.id} />
       </div>
     </div>
   );

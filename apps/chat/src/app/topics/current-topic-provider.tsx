@@ -10,12 +10,18 @@ import {
   MutableRefObject,
 } from "react";
 import { MessageProps } from "@/topics/message";
-import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import {
+  SocketEvent,
+  useSocketEmit,
+  useSocketHandler,
+} from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
 import { getTopHighlightsAction } from "@/actions/messages";
 import { WithRelation } from "../../../types/prisma";
+import { useEffectOnce, useWindowFocus } from "@/lib/hooks";
+import { useRouter } from "next/navigation";
 
-type CircleMember = WithRelation<"User", "createdCircles">;
+export type CircleMember = WithRelation<"User", "createdCircles">;
 
 type ContextValue = {
   topicId: string;
@@ -25,7 +31,9 @@ type ContextValue = {
   mediaMessages: MessageProps[];
   circleMembers: CircleMember[];
   scrollRef: MutableRefObject<HTMLDivElement | null>;
-  scrollToBottomOfChat: () => void;
+  scrollToBottomOfChat: (timeout?: number) => void;
+  addShufflingGif: (id: string) => void;
+  shufflingGifs: string[];
 };
 
 type Props = {
@@ -44,11 +52,22 @@ const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 
 export function CurrentTopicProvider(props: Props) {
   const scrollRef = useRef<null | HTMLDivElement>(null);
+  const router = useRouter();
+  const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
+  const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
   const scrollToBottomOfChat = useCallback((timeout?: number) => {
     setTimeout(() => {
       scrollRef?.current?.scrollIntoView();
-    }, timeout ?? 250);
+    }, timeout ?? 0);
   }, []);
+
+  // next caches server data (messages) by default,
+  // this ensures when the user switches
+  // topics they get the latest server data
+  // gross i know
+  useEffectOnce(() => {
+    router.refresh();
+  });
 
   const [messages, setMessages] = useState<MessageProps[]>(
     props.existingMessages
@@ -65,6 +84,35 @@ export function CurrentTopicProvider(props: Props) {
   const [circleMembers, setCircleMembers] = useState<CircleMember[]>(
     props.existingCircleMemebers
   );
+
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+
+  const [shufflingGifs, setShufflingGifs] = useState<string[]>([]);
+
+  const baseTitle = useMemo(
+    () => (typeof document !== "undefined" ? document.title : ""),
+    []
+  );
+
+  const addShufflingGif = useCallback(
+    (messageId: string) => {
+      setShufflingGifs([...shufflingGifs, messageId]);
+    },
+    [shufflingGifs]
+  );
+
+  const windowFocused = useWindowFocus({
+    onFocus: () => {
+      userTabFocused.emit({ topicId: props.topicId });
+      if (unreadMessageCount !== 0) {
+        setUnreadMessageCount(0);
+        document.title = baseTitle;
+      }
+    },
+    onBlur: () => {
+      userTabBlurred.emit({ topicId: props.topicId });
+    },
+  });
 
   // Updates all message state (default messages, top highlights, media)
   const syncedUpdate = useCallback(
@@ -97,6 +145,14 @@ export function CurrentTopicProvider(props: Props) {
           ...mediaMessages,
         ]);
       }
+
+      if (!windowFocused) {
+        setUnreadMessageCount((count) => {
+          const newCount = count + 1;
+          document.title = `(${newCount}) ${baseTitle}`;
+          return newCount;
+        });
+      }
     }
   );
 
@@ -120,6 +176,25 @@ export function CurrentTopicProvider(props: Props) {
 
         setTopHighlights(refreshed as MessageProps[]);
       }
+    }
+  );
+
+  // Handle edit message
+  useSocketHandler<{ id: string; text: string }>(
+    SocketEvent.EditMessage,
+    (payload) => {
+      syncedUpdate((prevMessages) =>
+        prevMessages.map((m) => {
+          if (m.id === payload.id) {
+            return {
+              ...m,
+              text: payload.text,
+            };
+          }
+
+          return m;
+        })
+      );
     }
   );
 
@@ -232,22 +307,47 @@ export function CurrentTopicProvider(props: Props) {
     }
   );
 
+  // Handle gif shuffle
+  useSocketHandler<{ messageId: string; mediaUrl: string }>(
+    SocketEvent.ShuffleGifMessage,
+    (payload) => {
+      syncedUpdate((prevMessages) =>
+        prevMessages.map((m) => {
+          if (m.id === payload.messageId) {
+            return {
+              ...m,
+              mediaUrl: payload.mediaUrl,
+            };
+          }
+
+          return m;
+        })
+      );
+
+      setShufflingGifs((gifs) => gifs.filter((id) => id !== payload.messageId));
+    }
+  );
+
   const contextValue = useMemo(
     () => ({
       messages,
       mediaMessages,
-      topHighlights: sanitize(topHighlights, props.topHighlightsLimit),
       circleMembers,
-      topicId: props.topicId,
-      circleId: props.circleId,
       scrollRef,
       scrollToBottomOfChat,
+      shufflingGifs,
+      addShufflingGif,
+      topHighlights: sanitize(topHighlights, props.topHighlightsLimit),
+      topicId: props.topicId,
+      circleId: props.circleId,
     }),
     [
       messages,
       mediaMessages,
       topHighlights,
       circleMembers,
+      shufflingGifs,
+      addShufflingGif,
       props.topicId,
       props.circleId,
       props.topHighlightsLimit,

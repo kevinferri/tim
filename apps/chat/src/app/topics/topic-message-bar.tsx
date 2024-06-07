@@ -1,22 +1,26 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { Textarea } from "@/components/ui/textarea";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { MediaUploader } from "@/topics/media-uploader";
 import { uploadMedia } from "@/actions/media";
-import { MediaViewer } from "@/topics/media-viewer";
+import { MediaViewer, extractMediaFromMessage } from "@/topics/media-viewer";
 import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Progress } from "@/components/ui/progress";
 import { useUploadProgres } from "@/topics/use-upload-progress";
+import { usePrevious } from "@/lib/hooks";
+import { AutoResizeTextarea } from "@/topics/auto-resize-textarea";
 
 type MessagePayload = {
   message: string;
   topicId: string;
   mediaUrl?: string;
+};
+
+type TypingPayload = {
+  topicId: string;
 };
 
 function toBase64(file: File) {
@@ -29,11 +33,6 @@ function toBase64(file: File) {
   });
 }
 
-function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
-  target.style.height = "";
-  target.style.height = `${target.scrollHeight + 0.5}px`;
-}
-
 export function TopicMessageBar() {
   const [message, setMessage] = useState("");
   const [media, setMedia] = useState<File>();
@@ -44,7 +43,16 @@ export function TopicMessageBar() {
     isUploadingMedia,
   });
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
+  const startedTyping = useSocketEmit<TypingPayload>(
+    SocketEvent.UserStartedTyping
+  );
+  const stoppedTyping = useSocketEmit<TypingPayload>(
+    SocketEvent.UserStoppedTyping
+  );
+
   const uploadText = uploadProgress >= 100 ? "FINALIZING..." : "UPLOADING...";
+
+  const previousMessage = usePrevious(message);
 
   const mediaBlobUrl = useMemo(
     () => (media ? URL.createObjectURL(media) : undefined),
@@ -53,21 +61,27 @@ export function TopicMessageBar() {
 
   const emitMessage = async (message: string) => {
     if (!media && !message.trim()) return;
+    let _media = media ?? (await extractMediaFromMessage(message));
+    let _message = message;
     let mediaUrl = undefined;
 
-    if (media) {
+    if (_media) {
       setIsUploadingMedia(true);
 
-      const uri = (await toBase64(media)) as string;
-      const resp = await uploadMedia({ file: uri });
+      const uri =
+        typeof _media === "string"
+          ? _media
+          : ((await toBase64(_media)) as string);
 
+      _message = _message.replaceAll(uri, "");
+      const resp = await uploadMedia({ file: uri });
       if (resp) mediaUrl = resp.mediaUrl;
 
       setIsUploadingMedia(false);
     }
 
     sendMessage.emit({
-      message,
+      message: _message,
       topicId,
       mediaUrl,
     });
@@ -76,24 +90,35 @@ export function TopicMessageBar() {
     setMedia(undefined);
   };
 
+  useEffect(() => {
+    if (previousMessage?.length === 0 && message.length > 0) {
+      startedTyping.emit({ topicId });
+      return;
+    }
+
+    if (
+      previousMessage &&
+      previousMessage?.length > 0 &&
+      message.length === 0
+    ) {
+      stoppedTyping.emit({ topicId });
+      return;
+    }
+  }, [message.length, previousMessage, startedTyping, stoppedTyping, topicId]);
+
   return (
-    <div className="p-4">
+    <div className="p-3">
       <div className="shadow-sm rounded-md border border-input bg-transparent shadow-sm">
         <div className="flex items-center">
-          <Textarea
+          <AutoResizeTextarea
             disabled={isUploadingMedia}
-            rows={1}
-            autoFocus
-            className="focus-visible:ring-transparent focus-visible:transparent border-none resize-none text-base shadow-none"
+            className="border-none"
             onChange={(e) => {
               setMessage(e.target.value);
-              adjustHeight(e.target);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
                 emitMessage(message);
-                e.currentTarget.style.height = "";
               }
             }}
             value={message}
@@ -104,7 +129,7 @@ export function TopicMessageBar() {
               file={media}
               onFileChange={(file) => {
                 setMedia(file);
-                scrollToBottomOfChat();
+                scrollToBottomOfChat(250);
               }}
               onFileRemove={() => setMedia(undefined)}
             />

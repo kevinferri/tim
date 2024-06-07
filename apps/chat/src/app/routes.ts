@@ -12,5 +12,5 @@ const generateTopicHash = () =>
   btoa(Math.random().toString()).substring(10, 15);
 
 export function getLinkForTopic(id: string) {
-  return `${Routes.Topic.replace(":id", id)}?t=${generateTopicHash()}`;
+  return Routes.Topic.replace(":id", id);
 }

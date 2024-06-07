@@ -1,7 +1,9 @@
 import { CirclesNav } from "@/circles/circles-nav";
 import { Content } from "@/components/layouts/dashboard/content";
 import { TopicsNav } from "@/topics/topics-nav";
-import { UserRoomConnect } from "./user-room-connect";
+import { UserRoomConnect } from "@/components/layouts/dashboard/user-room-connect";
+import { ActiveCircleMembersProvider } from "@/components/layouts/dashboard/active-circle-members-provider";
+import { CircleRoomConnect } from "./circle-room-connect";
 
 type Props = {
   circleId?: string;
@@ -16,10 +18,12 @@ export const DashboardLayout = ({ circleId, topicId, children }: Props) => {
         <div className="flex overflow-hidden basis-full">
           <CirclesNav circleId={circleId} />
           {circleId ? (
-            <>
-              <TopicsNav topicId={topicId} circleId={circleId} />
-              <Content>{children}</Content>
-            </>
+            <CircleRoomConnect circleId={circleId}>
+              <ActiveCircleMembersProvider>
+                <TopicsNav topicId={topicId} circleId={circleId} />
+                <Content>{children}</Content>
+              </ActiveCircleMembersProvider>
+            </CircleRoomConnect>
           ) : (
             <div className="flex basis-full justify-center items-center">
               {children}

@@ -12,6 +12,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { getLinkForTopic } from "@/routes";
 import { ToastAction } from "@/components/ui/toast";
 import { useSelf } from "@/components/auth/self-provider";
+import { UserAvatar } from "@/components/shared/user-avatar";
+import { useActiveCircleMembers } from "@/components/layouts/dashboard/active-circle-members-provider";
 
 type Props = {
   topics?: Topic[];
@@ -31,6 +33,7 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
   const [currentTopics, setCurrentTopics] = useState(topics);
   const { toast } = useToast();
   const router = useRouter();
+  const { getActiveMembersInTopic } = useActiveCircleMembers();
 
   const createdTopicProcessedHandler = useCallback(
     (payload: NewTopicHandlerProps) => {
@@ -74,13 +77,25 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
     <ScrollArea>
       <div className="flex flex-col gap-2 p-3">
         {currentTopics.map((topic) => {
+          const activeUsers = getActiveMembersInTopic(topic.id);
+
           return (
             <Link href={getLinkForTopic(topic.id)} key={topic.id}>
               <Button
                 variant={topic.id === topicId ? "secondary" : "ghost"}
-                className="w-full flex justify-start gap-2 text-base font-normal"
+                className="w-full flex justify-start text-base font-normal"
               >
                 {topic.name}
+                <div className="flex gap-1 ml-auto">
+                  {activeUsers.map((user) => (
+                    <UserAvatar
+                      key={user.id}
+                      name={user.name}
+                      imageUrl={user.imageUrl}
+                      size="xs"
+                    />
+                  ))}
+                </div>
               </Button>
             </Link>
           );

@@ -23,8 +23,8 @@ export const DeleteMessageModal = ({ messageId, topicId }: Props) => {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button size="iconXs" variant="outline">
+      <DialogTrigger>
+        <Button className="font-normal" size="iconSm" variant="outline">
           <TrashIcon />
         </Button>
       </DialogTrigger>

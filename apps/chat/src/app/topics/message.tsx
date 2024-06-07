@@ -1,15 +1,46 @@
-import { useState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "@/topics/highlight-tooltip";
-import { Pencil2Icon } from "@radix-ui/react-icons";
-import { Button } from "@/components/ui/button";
-import { DeleteMessageModal } from "@/topics/delete-message-modal";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { MediaViewer } from "@/topics/media-viewer";
+import { UserAvatar } from "@/components/shared/user-avatar";
+import { AutoResizeTextarea } from "./auto-resize-textarea";
+import { MessageActions } from "./message-actions";
+import { MessageText } from "./message-text";
+import { LinkPreview } from "./link-preview";
+
+function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
+  target.style.height = "";
+  target.style.height = `${target.scrollHeight + 0.5}px`;
+}
+
+function truncateText(str: string, maxLength = 50) {
+  const words = str.split(/\s+/);
+  if (words.length <= maxLength) return str;
+  return `${str.split(" ").splice(0, maxLength).join(" ")}...`;
+}
+
+function getLinksFromMessage(message?: string) {
+  if (!message) return [];
+
+  const links = [];
+  const words = message.split(/\s+/);
+  let url = null;
+
+  for (let word of words) {
+    try {
+      const potentialUrl = new URL(word);
+      url = potentialUrl.href;
+
+      if (url) links.push(url);
+    } catch (e) {}
+  }
+
+  return links;
+}
 
 export type Highlights = {
   id: Highlight["id"];
@@ -23,28 +54,16 @@ export type MessageProps = {
   id: DbMessage["id"];
   text?: DbMessage["text"];
   mediaUrl?: DbMessage["mediaUrl"];
-  topicId: DbMessage["topicId"];
   createdAt: DbMessage["createdAt"];
   sentBy: Pick<User, "id" | "name" | "imageUrl">;
   highlights: Highlights;
   variant: "default" | "minimal";
 };
 
-export const getInitials = (name?: string) => {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((x) => x.charAt(0))
-    .join("")
-    .substring(0, 2)
-    .toUpperCase();
-};
-
 const baseStyles = [
   "z-0",
   "p-3",
   "relative",
-  "leading-tight",
   "hover:bg-slate-50",
   "dark:hover:bg-slate-900",
   "after:content-['']",
@@ -61,27 +80,74 @@ const highlightStyles = [
   "after:w-full",
   "after:bg-highlight",
   "after:[transition:500ms]",
-  "dark:text-secondary",
+  "dark:after:bg-purple-950",
 ];
 
 export const Message = (props: MessageProps) => {
   const self = useSelf();
-  const { topicId } = useCurrentTopicContext();
+  const {
+    topicId,
+    scrollToBottomOfChat,
+    messages,
+    addShufflingGif,
+    shufflingGifs,
+  } = useCurrentTopicContext();
   const [showActions, setShowActions] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingText, setEditingText] = useState(props.text);
+  const [shuffledGifLoading, setShuffledGifLoading] = useState(false);
+
   const sentBySelf = props.sentBy.id === self.id;
+  const isNewestMessage = messages[messages.length - 1].id === props.id;
+  const isShufflingGif = shufflingGifs.includes(props.id) || shuffledGifLoading;
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const highlightedBySelf = !!props.highlights.find(
     (highlight) => self.id === highlight.userId
+  );
+  const links = useMemo(
+    () => getLinksFromMessage(props.text ?? undefined),
+    [props.text]
   );
 
   const toggleHighlight = useSocketEmit<{ messageId: string; topicId: string }>(
     SocketEvent.ToggleHighlight
   );
 
+  const editMessage = useSocketEmit<{
+    messageId: string;
+    topicId: string;
+    text: string;
+  }>(SocketEvent.EditMessage);
+
+  const shuffleGif = useSocketEmit<{
+    messageId: string;
+    topicId: string;
+  }>(SocketEvent.ShuffleGifMessage);
+
   const handleToggleHighlight = () => {
     toggleHighlight.emit({
       messageId: props.id,
       topicId,
     });
+  };
+
+  const onEditConfirm = () => {
+    if (!editingText || !editingText.trim()) return;
+
+    setIsEditing(false);
+
+    if (editingText === props.text) return;
+
+    editMessage.emit({
+      topicId,
+      messageId: props.id,
+      text: editingText,
+    });
+  };
+
+  const onEditCancel = () => {
+    setIsEditing(false);
+    setEditingText(props.text);
   };
 
   return (
@@ -93,22 +159,21 @@ export const Message = (props: MessageProps) => {
           ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
           : ""
       )}
-      onDoubleClick={handleToggleHighlight}
+      onDoubleClick={(e) => {
+        handleToggleHighlight();
+
+        const element = e.target as HTMLElement;
+        if (element.tagName !== "TEXTAREA" && typeof window !== "undefined") {
+          window.getSelection()?.removeAllRanges();
+        }
+      }}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <div className="flex gap-3 items-start">
-        <Avatar className="shadow-md">
-          <AvatarImage
-            className="rounded-full"
-            src={props.sentBy.imageUrl ?? undefined}
-          />
-          <AvatarFallback>
-            {getInitials(props.sentBy.name ?? undefined)}
-          </AvatarFallback>
-        </Avatar>
+      <div className="flex gap-3 items-start overflow-hidden leading-tight">
+        <UserAvatar name={props.sentBy.name} imageUrl={props.sentBy.imageUrl} />
         <div className="flex flex-col flex-1">
-          <div className="flex gap-3 items-start">
+          <div className="flex gap-3 items-center">
             <span
               className={cn(
                 `font-semibold ${
@@ -119,30 +184,120 @@ export const Message = (props: MessageProps) => {
             >
               {props.sentBy.name}
             </span>
-            <time className="text-slate-300 text-xs">
+            <time suppressHydrationWarning className="text-slate-300 text-xs">
               {props.createdAt.toLocaleDateString("en-US", {
+                timeZone,
                 day: "numeric",
                 month: "short",
               })}
               {", "}
               {props.createdAt.toLocaleTimeString("en-US", {
+                timeZone,
                 hour: "numeric",
                 minute: "numeric",
               })}
             </time>
             {showActions && sentBySelf && props.variant !== "minimal" && (
-              <div className="flex gap-1">
-                <Button size="iconXs" variant="outline">
-                  <Pencil2Icon />
-                </Button>
-                <DeleteMessageModal messageId={props.id} topicId={topicId} />
-              </div>
+              <MessageActions
+                messageId={props.id}
+                text={props.text ?? ""}
+                mediaUrl={props.mediaUrl ?? ""}
+                isShufflingGif={isShufflingGif}
+                onEditMessage={() => {
+                  setIsEditing(true);
+                  if (isNewestMessage) scrollToBottomOfChat();
+                }}
+                onShuffleGif={() => {
+                  addShufflingGif(props.id);
+                  setShuffledGifLoading(true);
+                  shuffleGif.emit({ messageId: props.id, topicId });
+                }}
+              />
             )}
           </div>
 
-          <div className="flex flex-col gap-1">
-            <div className="whitespace-pre-line break-all">{props.text}</div>
-            {props.mediaUrl && <MediaViewer url={props.mediaUrl} />}
+          <div className="flex flex-col gap-1.5">
+            {isEditing ? (
+              <div>
+                <AutoResizeTextarea
+                  onChange={(e) => {
+                    setEditingText(e.target.value);
+                    adjustHeight(e.target);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      onEditConfirm();
+                    }
+
+                    if (e.key === "Escape") {
+                      onEditCancel();
+                    }
+                  }}
+                  value={editingText ?? ""}
+                />
+                <div className="flex gap-1 text-xs">
+                  <span>
+                    esc to{" "}
+                    <span
+                      className="cursor-pointer text-purple-700 font-semibold"
+                      onClick={onEditCancel}
+                    >
+                      cancel
+                    </span>
+                  </span>
+                  <span>•</span>
+                  <span>
+                    enter to{" "}
+                    <span
+                      className="cursor-pointer text-purple-700 font-semibold"
+                      onClick={onEditConfirm}
+                    >
+                      save changes
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <MessageText
+                id={props.id}
+                text={
+                  props.variant === "minimal"
+                    ? truncateText(props.text ?? "")
+                    : props.text
+                }
+                isNewestMessage={isNewestMessage}
+              />
+            )}
+
+            {props.mediaUrl && (
+              <MediaViewer
+                variant={props.variant}
+                url={props.mediaUrl}
+                onPreviewLoad={() => {
+                  if (shuffledGifLoading) {
+                    setShuffledGifLoading(false);
+                  }
+
+                  if (isNewestMessage) {
+                    scrollToBottomOfChat();
+                  }
+                }}
+              />
+            )}
+
+            {links.map((link, i) => {
+              return (
+                <LinkPreview
+                  key={`${props.id}${link}${i}`}
+                  link={link}
+                  onLoadPreview={() => {
+                    if (isNewestMessage) {
+                      scrollToBottomOfChat(250);
+                    }
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
 

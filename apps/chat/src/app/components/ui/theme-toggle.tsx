@@ -4,15 +4,15 @@ import * as React from "react";
 import { MoonIcon, SunIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
 
-import { Button, ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/drop-down-menu";
+} from "@/components/ui/dropdown-menu";
 
-export function ThemeToggle({ buttonProps }: { buttonProps?: ButtonProps }) {
+export function ThemeToggle() {
   const { setTheme } = useTheme();
 
   return (

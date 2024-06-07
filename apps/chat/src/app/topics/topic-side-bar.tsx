@@ -1,63 +1,66 @@
+"use client";
+
 import {
   BellIcon,
   ImageIcon,
   PersonIcon,
   StarIcon,
 } from "@radix-ui/react-icons";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TopHighlights } from "@/topics/top-highlights";
 import { MediaList } from "@/topics/media-list";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CircleMembersList } from "@/topics/circle-members-list";
+import { ReactNode, useState } from "react";
+
+type Tab = "highlights" | "media" | "members" | "notifications";
+
+const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
+  highlights: {
+    header: "Top highlights",
+    node: <TopHighlights />,
+    icon: <StarIcon />,
+  },
+  media: { header: "Media", node: <MediaList />, icon: <ImageIcon /> },
+  members: {
+    header: "Circle members",
+    node: <CircleMembersList />,
+    icon: <PersonIcon />,
+  },
+  notifications: {
+    header: "Notifications",
+    node: <div>Notifications here</div>,
+    icon: <BellIcon />,
+  },
+} as const;
 
 export function TopicSideBar() {
+  const [activeTab, setActiveTab] = useState<Tab>("highlights");
+
   return (
-    <div className="flex flex-col shadow-md border-l max-w-[360px] min-w-[360px] basis-full h-full overflow-hidden">
-      <Tabs defaultValue="highlights" className="h-full">
-        <div className="p-3">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="highlights">
-              <StarIcon />
-            </TabsTrigger>
+    <Tabs
+      defaultValue="highlights"
+      className="flex flex-col shadow-md border-l max-w-[340px] min-w-[340px]"
+      onValueChange={(tab) => {
+        setActiveTab(tab as Tab);
+      }}
+    >
+      <div className="p-3">
+        <TabsList className="grid w-full grid-cols-4">
+          {Object.keys(tabMap).map((tabKey) => {
+            return (
+              <TabsTrigger key={tabKey} value={tabKey}>
+                {tabMap[tabKey as Tab].icon}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </div>
 
-            <TabsTrigger value="media">
-              <ImageIcon />
-            </TabsTrigger>
-
-            <TabsTrigger value="members">
-              <PersonIcon />
-            </TabsTrigger>
-
-            <TabsTrigger value="notifications">
-              <BellIcon />
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="highlights" className="h-full">
-          <div className="text-center pb-3">Top highlights</div>
-          <ScrollArea className="h-full">
-            <TopHighlights />
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="media" className="h-full">
-          <div className="text-center pb-3">Media</div>
-          <MediaList />
-        </TabsContent>
-
-        <TabsContent value="members" className="h-full">
-          <div className="text-center pb-3">Circle members</div>
-          <ScrollArea className="h-full">
-            <CircleMembersList />
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="h-full">
-          <div className="text-center pb-3">Notifications</div>
-          <ScrollArea className="h-full">Notifications here</ScrollArea>
-        </TabsContent>
-      </Tabs>
-    </div>
+      <div className="flex flex-1 flex-col overflow-y-hidden basis-full">
+        <div className="text-center pb-3">{tabMap[activeTab].header}</div>
+        <ScrollArea>{tabMap[activeTab].node}</ScrollArea>
+      </div>
+    </Tabs>
   );
 }

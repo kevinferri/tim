@@ -68,11 +68,11 @@ export const messageModel = {
       take: MESSAGE_LIMIT,
       where: { topicId },
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
     });
 
-    return normalizeMessages(messages);
+    return normalizeMessages([...messages].reverse());
   },
 
   async getTopHighlightedMessagesForTopic({ topicId, select }: MessageArgs) {

@@ -11,14 +11,16 @@ import {
   TOP_HIGHLIGHTS_LIMIT,
 } from "@/lib/prisma/message-model";
 import { CurrentTopicProvider } from "@/topics/current-topic-provider";
+import { cache } from "react";
+import { DEFAULT_TITLE } from "@/layout";
 
 type Props = {
   params: { id: string };
 };
 
-export default async function TopicsPage({ params }: Props) {
+const getTopic = cache(async (id: string) => {
   const topic = await prismaClient.topic.getMeTopicById({
-    topicId: params.id,
+    topicId: id,
     select: {
       id: true,
       name: true,
@@ -32,6 +34,22 @@ export default async function TopicsPage({ params }: Props) {
       },
     },
   });
+
+  return topic;
+});
+
+export async function generateMetadata({ params }: Props) {
+  const topic = await getTopic(params.id);
+
+  return {
+    title: !topic
+      ? DEFAULT_TITLE
+      : `${topic.parentCircle.name} - ${topic.name}`,
+  };
+}
+
+export default async function TopicsPage({ params }: Props) {
+  const topic = await getTopic(params.id);
 
   const messages = await prismaClient.message.getMessagesForTopic({
     topicId: topic?.id,
@@ -76,16 +94,21 @@ export default async function TopicsPage({ params }: Props) {
             messagesLimit={MESSAGE_LIMIT}
             topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
             existingCircleMemebers={circleMembers}
+            // @ts-expect-error
             existingMessages={messages}
+            // @ts-expect-error
             existingTopHighlights={topHighlights}
+            // @ts-expect-error
             existingMediaMessages={mediaMessages}
           >
             <div className="flex flex-1 flex-row overflow-y-hidden">
-              <div className="flex flex-1 flex-col">
+              <div className="flex flex-1 flex-col overflow-x-hidden">
                 <TopicChat />
                 <TopicMessageBar />
               </div>
-              <TopicSideBar />
+              <div className="flex overflow-y-hidden">
+                <TopicSideBar />
+              </div>
             </div>
           </CurrentTopicProvider>
         </>
