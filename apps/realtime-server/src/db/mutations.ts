@@ -1,5 +1,5 @@
 import { v4 } from "uuid";
-import { encrypt } from "./encryption";
+import { encrypt } from "../lib/encryption";
 
 type WriteMessageArgs = {
   userId: string;

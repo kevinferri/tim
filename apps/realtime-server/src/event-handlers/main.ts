@@ -16,6 +16,7 @@ import { handleCreatedTopic } from "./topics";
 import { handleToggleHighlight } from "./highlights";
 import { handleCreatedCircle } from "./circles";
 import {
+  handleUserExpandedImage,
   handleUserStartedTyping,
   handleUserStoppedTyping,
   handleUserTabBlurred,
@@ -62,6 +63,10 @@ export enum SocketEvent {
   UserTabBlurred = "user:tabBlurred",
   UserStartedTyping = "user:startedTyping",
   UserStoppedTyping = "user:stoppedTyping",
+  UserExpandedImage = "user:expandedImage",
+
+  // notifications
+  CreateNotification = "notification:create",
 }
 
 export function registerEventHandlers(server: Server) {
@@ -107,5 +112,6 @@ export function registerEventHandlers(server: Server) {
     handleUserTabBlurred({ socket, server });
     handleUserStartedTyping({ socket, server });
     handleUserStoppedTyping({ socket, server });
+    handleUserExpandedImage({ socket, server });
   });
 }

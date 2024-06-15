@@ -1,3 +1,4 @@
+import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 
@@ -61,6 +62,27 @@ export function handleUserStoppedTyping({ socket, server }: HandlerArgs) {
       server,
       topicId,
       event: SocketEvent.UserStoppedTyping,
+    });
+  });
+}
+
+export function handleUserExpandedImage({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.UserExpandedImage, async ({ topicId, messageId }) => {
+    const roomKey = getRoomKeyOrFail({
+      socket,
+      id: topicId,
+      roomType: RoomType.Topic,
+    });
+
+    if (!roomKey) return;
+
+    await emitNotification({
+      server,
+      roomKey,
+      messageId,
+      topicId,
+      actor: socket.data.user,
+      notificationType: NotificationType.ExpandedImage,
     });
   });
 }

@@ -1,4 +1,4 @@
-import { decrypt } from "../db/encryption";
+import { decrypt } from "../lib/encryption";
 import { deleteMessage, editMessage, writeMessage } from "../db/mutations";
 import { getRandomGif, getYoutubeVideo } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
