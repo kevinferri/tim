@@ -20,6 +20,7 @@ const getLoggedInUser = cache(async () => {
       name: true,
       email: true,
       imageUrl: true,
+      createdAt: true,
     },
   });
 

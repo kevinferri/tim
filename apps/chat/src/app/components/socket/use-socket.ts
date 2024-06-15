@@ -24,6 +24,9 @@ export enum SocketEvent {
   UserTabBlurred = "user:tabBlurred",
   UserStartedTyping = "user:startedTyping",
   UserStoppedTyping = "user:stoppedTyping",
+  UserExpandedImage = "user:expandedImage",
+
+  CreateNotification = "notification:create",
 }
 
 export function useSocketHandler<T>(

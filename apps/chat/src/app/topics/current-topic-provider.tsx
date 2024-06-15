@@ -9,6 +9,8 @@ import {
   useRef,
   MutableRefObject,
 } from "react";
+import keyBy from "lodash.keyby";
+import { useRouter } from "next/navigation";
 import { MessageProps } from "@/topics/message";
 import {
   SocketEvent,
@@ -19,7 +21,6 @@ import { Highlight, User } from "@prisma/client";
 import { getTopHighlightsAction } from "@/actions/messages";
 import { WithRelation } from "../../../types/prisma";
 import { useEffectOnce, useWindowFocus } from "@/lib/hooks";
-import { useRouter } from "next/navigation";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
 
@@ -58,7 +59,7 @@ export function CurrentTopicProvider(props: Props) {
   const scrollToBottomOfChat = useCallback((timeout?: number) => {
     setTimeout(() => {
       scrollRef?.current?.scrollIntoView();
-    }, timeout ?? 0);
+    }, timeout ?? 1);
   }, []);
 
   // next caches server data (messages) by default,
@@ -128,13 +129,15 @@ export function CurrentTopicProvider(props: Props) {
   useSocketHandler<MessageProps>(
     SocketEvent.SendMessage,
     (newMessage: MessageProps) => {
-      setMessages([
-        ...messages,
-        {
-          ...newMessage,
-          createdAt: new Date(newMessage.createdAt),
-        },
-      ]);
+      setMessages(
+        [
+          ...messages,
+          {
+            ...newMessage,
+            createdAt: new Date(newMessage.createdAt),
+          },
+        ].slice(Math.max(messages.length + 1 - props.messagesLimit, 0)) // TODO: revisit me
+      );
 
       if (newMessage.mediaUrl) {
         setMediaMessages([
@@ -153,6 +156,8 @@ export function CurrentTopicProvider(props: Props) {
           return newCount;
         });
       }
+
+      scrollToBottomOfChat();
     }
   );
 
@@ -337,7 +342,10 @@ export function CurrentTopicProvider(props: Props) {
       scrollToBottomOfChat,
       shufflingGifs,
       addShufflingGif,
-      topHighlights: sanitize(topHighlights, props.topHighlightsLimit),
+      topHighlights: sanitizeTopHighlights(
+        topHighlights,
+        props.topHighlightsLimit
+      ),
       topicId: props.topicId,
       circleId: props.circleId,
     }),
@@ -351,7 +359,6 @@ export function CurrentTopicProvider(props: Props) {
       props.topicId,
       props.circleId,
       props.topHighlightsLimit,
-      scrollRef,
       scrollToBottomOfChat,
     ]
   );
@@ -375,7 +382,7 @@ export function useCurrentTopicContext() {
   return context;
 }
 
-function sanitize(messages: MessageProps[], limit: number) {
+function sanitizeTopHighlights(messages: MessageProps[], limit: number) {
   return messages
     .sort((a, b) => {
       if (b.highlights.length === a.highlights.length) {

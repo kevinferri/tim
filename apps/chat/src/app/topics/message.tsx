@@ -1,7 +1,7 @@
 import { ChangeEvent, useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
-import { cn } from "@/lib/utils";
+import { cn, hydrateUrl, isValidUrl } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "@/topics/highlight-tooltip";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
@@ -11,6 +11,7 @@ import { AutoResizeTextarea } from "./auto-resize-textarea";
 import { MessageActions } from "./message-actions";
 import { MessageText } from "./message-text";
 import { LinkPreview } from "./link-preview";
+import { useTimeZone } from "@/lib/hooks";
 
 function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
   target.style.height = "";
@@ -28,15 +29,10 @@ function getLinksFromMessage(message?: string) {
 
   const links = [];
   const words = message.split(/\s+/);
-  let url = null;
 
   for (let word of words) {
-    try {
-      const potentialUrl = new URL(word);
-      url = potentialUrl.href;
-
-      if (url) links.push(url);
-    } catch (e) {}
+    const url = hydrateUrl(word);
+    if (isValidUrl(url)) links.push(url);
   }
 
   return links;
@@ -55,9 +51,11 @@ export type MessageProps = {
   text?: DbMessage["text"];
   mediaUrl?: DbMessage["mediaUrl"];
   createdAt: DbMessage["createdAt"];
-  sentBy: Pick<User, "id" | "name" | "imageUrl">;
+  sentBy: Pick<User, "id" | "name" | "imageUrl" | "createdAt">;
   highlights: Highlights;
   variant: "default" | "minimal";
+  className?: string;
+  hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
 };
 
 const baseStyles = [
@@ -96,11 +94,11 @@ export const Message = (props: MessageProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingText, setEditingText] = useState(props.text);
   const [shuffledGifLoading, setShuffledGifLoading] = useState(false);
-
+  const createdAt = new Date(props.createdAt);
   const sentBySelf = props.sentBy.id === self.id;
   const isNewestMessage = messages[messages.length - 1].id === props.id;
   const isShufflingGif = shufflingGifs.includes(props.id) || shuffledGifLoading;
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { timeZone } = useTimeZone();
   const highlightedBySelf = !!props.highlights.find(
     (highlight) => self.id === highlight.userId
   );
@@ -123,6 +121,10 @@ export const Message = (props: MessageProps) => {
     messageId: string;
     topicId: string;
   }>(SocketEvent.ShuffleGifMessage);
+
+  const expandImage = useSocketEmit<{ messageId: string; topicId: string }>(
+    SocketEvent.UserExpandedImage
+  );
 
   const handleToggleHighlight = () => {
     toggleHighlight.emit({
@@ -157,10 +159,11 @@ export const Message = (props: MessageProps) => {
         highlightedBySelf ? highlightStyles : "",
         props.variant === "minimal"
           ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
-          : ""
+          : "",
+        props.className
       )}
       onDoubleClick={(e) => {
-        handleToggleHighlight();
+        if (props.variant !== "minimal") handleToggleHighlight();
 
         const element = e.target as HTMLElement;
         if (element.tagName !== "TEXTAREA" && typeof window !== "undefined") {
@@ -171,32 +174,49 @@ export const Message = (props: MessageProps) => {
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex gap-3 items-start overflow-hidden leading-tight">
-        <UserAvatar name={props.sentBy.name} imageUrl={props.sentBy.imageUrl} />
+        {!props.hiddenElements?.includes("sentBy") && (
+          <UserAvatar
+            id={props.sentBy.id}
+            name={props.sentBy.name}
+            imageUrl={props.sentBy.imageUrl}
+            createdAt={props.sentBy.createdAt}
+            topicId={topicId}
+          />
+        )}
+
         <div className="flex flex-col flex-1">
           <div className="flex gap-3 items-center">
-            <span
-              className={cn(
-                `font-semibold ${
-                  props.sentBy.id === self.id &&
-                  "text-purple-700 dark:text-purple-500"
-                }`
-              )}
-            >
-              {props.sentBy.name}
-            </span>
-            <time suppressHydrationWarning className="text-slate-300 text-xs">
-              {props.createdAt.toLocaleDateString("en-US", {
-                timeZone,
-                day: "numeric",
-                month: "short",
-              })}
-              {", "}
-              {props.createdAt.toLocaleTimeString("en-US", {
-                timeZone,
-                hour: "numeric",
-                minute: "numeric",
-              })}
-            </time>
+            {!props.hiddenElements?.includes("sentBy") && (
+              <span
+                className={cn(
+                  `font-semibold ${
+                    props.sentBy.id === self.id &&
+                    "text-purple-700 dark:text-purple-500"
+                  }`
+                )}
+              >
+                {props.sentBy.name}
+              </span>
+            )}
+
+            {!props.hiddenElements?.includes("sentAt") && (
+              <>
+                {" "}
+                <time
+                  suppressHydrationWarning
+                  className="text-slate-300 text-xs"
+                >
+                  {createdAt.toLocaleDateString("en-US", {
+                    timeZone,
+                    day: "numeric",
+                    month: "short",
+                    hour: "numeric",
+                    minute: "numeric",
+                  })}
+                </time>
+              </>
+            )}
+
             {showActions && sentBySelf && props.variant !== "minimal" && (
               <MessageActions
                 messageId={props.id}
@@ -239,7 +259,7 @@ export const Message = (props: MessageProps) => {
                   <span>
                     esc to{" "}
                     <span
-                      className="cursor-pointer text-purple-700 font-semibold"
+                      className="cursor-pointer text-purple-700"
                       onClick={onEditCancel}
                     >
                       cancel
@@ -249,7 +269,7 @@ export const Message = (props: MessageProps) => {
                   <span>
                     enter to{" "}
                     <span
-                      className="cursor-pointer text-purple-700 font-semibold"
+                      className="cursor-pointer text-purple-700"
                       onClick={onEditConfirm}
                     >
                       save changes
@@ -273,6 +293,9 @@ export const Message = (props: MessageProps) => {
               <MediaViewer
                 variant={props.variant}
                 url={props.mediaUrl}
+                onImageExpanded={() => {
+                  expandImage.emit({ topicId, messageId: props.id });
+                }}
                 onPreviewLoad={() => {
                   if (shuffledGifLoading) {
                     setShuffledGifLoading(false);
@@ -285,28 +308,31 @@ export const Message = (props: MessageProps) => {
               />
             )}
 
-            {links.map((link, i) => {
-              return (
-                <LinkPreview
-                  key={`${props.id}${link}${i}`}
-                  link={link}
-                  onLoadPreview={() => {
-                    if (isNewestMessage) {
-                      scrollToBottomOfChat(250);
-                    }
-                  }}
-                />
-              );
-            })}
+            {props.variant !== "minimal" &&
+              links.map((link, i) => {
+                return (
+                  <LinkPreview
+                    key={`${props.id}${link}${i}`}
+                    link={link}
+                    onLoadPreview={() => {
+                      if (isNewestMessage) {
+                        scrollToBottomOfChat(250);
+                      }
+                    }}
+                  />
+                );
+              })}
           </div>
         </div>
 
-        <HighlightTooltip
-          highlightedBySelf={highlightedBySelf}
-          highlights={props.highlights}
-          messageId={props.id}
-          onHighlight={handleToggleHighlight}
-        />
+        {!props.hiddenElements?.includes("highlights") && (
+          <HighlightTooltip
+            highlightedBySelf={highlightedBySelf}
+            highlights={props.highlights}
+            messageId={props.id}
+            onHighlight={handleToggleHighlight}
+          />
+        )}
       </div>
     </div>
   );

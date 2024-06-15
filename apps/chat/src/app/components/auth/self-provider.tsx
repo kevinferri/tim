@@ -3,7 +3,10 @@
 import { createContext, useContext } from "react";
 import { User } from "@prisma/client";
 
-export type Self = Pick<User, "id" | "name" | "email" | "imageUrl">;
+export type Self = Pick<
+  User,
+  "id" | "name" | "email" | "imageUrl" | "createdAt"
+>;
 const SelfContext = createContext<Self | undefined>(undefined);
 
 export function SelfProvider({

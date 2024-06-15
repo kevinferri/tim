@@ -11,13 +11,17 @@ import {
 import keyBy from "lodash.keyby";
 
 type MemberProps = {
+  id: string;
   name: string;
   isOnline: boolean;
   imageUrl: string;
   isAdmin: boolean;
+  createdAt?: Date;
 };
 
 function Member(props: MemberProps) {
+  const { topicId } = useCurrentTopicContext();
+
   return (
     <div
       className={`flex gap-3 items-center ${
@@ -26,12 +30,15 @@ function Member(props: MemberProps) {
     >
       <div className="relative">
         <UserAvatar
+          id={props.id}
+          topicId={topicId}
           name={props.name}
           imageUrl={props.imageUrl}
           variant={props.isOnline ? "default" : "idle"}
+          createdAt={props.createdAt}
         />
         <div
-          className={`absolute right-0 bottom-0 rounded-full h-3 w-3 border ${
+          className={`absolute right-0 bottom-1.5 rounded-full h-3 w-3 border ${
             props.isOnline ? "bg-green-500" : "bg-slate-400"
           }`}
         />
@@ -89,10 +96,12 @@ export function CircleMembersList() {
         return (
           <Member
             key={user.id}
+            id={user.id}
             name={user.name ?? ""}
             imageUrl={user.imageUrl ?? ""}
             isOnline
             isAdmin={user.isCreator}
+            createdAt={user.createdAt}
           />
         );
       })}
@@ -102,10 +111,12 @@ export function CircleMembersList() {
         return (
           <Member
             key={user.id}
+            id={user.id}
             name={user.name ?? ""}
             imageUrl={user.imageUrl ?? ""}
             isOnline={false}
             isAdmin={user.isCreator}
+            createdAt={user.createdAt}
           />
         );
       })}

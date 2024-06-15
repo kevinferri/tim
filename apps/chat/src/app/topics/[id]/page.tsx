@@ -74,6 +74,7 @@ export default async function TopicsPage({ params }: Props) {
           id: true,
           name: true,
           imageUrl: true,
+          createdAt: true,
           createdCircles: {
             select: {
               id: true,
@@ -87,7 +88,6 @@ export default async function TopicsPage({ params }: Props) {
     <DashboardLayout circleId={topic?.parentCircle.id} topicId={topic?.id}>
       {topic ? (
         <>
-          <TopicHeader topic={topic} />
           <CurrentTopicProvider
             topicId={topic.id}
             circleId={topic.parentCircle.id}
@@ -101,6 +101,7 @@ export default async function TopicsPage({ params }: Props) {
             // @ts-expect-error
             existingMediaMessages={mediaMessages}
           >
+            <TopicHeader topic={topic} />
             <div className="flex flex-1 flex-row overflow-y-hidden">
               <div className="flex flex-1 flex-col overflow-x-hidden">
                 <TopicChat />

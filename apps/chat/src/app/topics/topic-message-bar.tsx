@@ -5,7 +5,11 @@ import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { MediaUploader } from "@/topics/media-uploader";
 import { uploadMedia } from "@/actions/media";
-import { MediaViewer, extractMediaFromMessage } from "@/topics/media-viewer";
+import {
+  MediaViewer,
+  extractMediaFromMessage,
+  getYoutubeVideoFromUrl,
+} from "@/topics/media-viewer";
 import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Progress } from "@/components/ui/progress";
@@ -49,11 +53,8 @@ export function TopicMessageBar() {
   const stoppedTyping = useSocketEmit<TypingPayload>(
     SocketEvent.UserStoppedTyping
   );
-
   const uploadText = uploadProgress >= 100 ? "FINALIZING..." : "UPLOADING...";
-
   const previousMessage = usePrevious(message);
-
   const mediaBlobUrl = useMemo(
     () => (media ? URL.createObjectURL(media) : undefined),
     [media]
@@ -61,9 +62,14 @@ export function TopicMessageBar() {
 
   const emitMessage = async (message: string) => {
     if (!media && !message.trim()) return;
-    let _media = media ?? (await extractMediaFromMessage(message));
+    let _media = media ?? extractMediaFromMessage(message);
+    const youtubeVideo = getYoutubeVideoFromUrl(message);
     let _message = message;
     let mediaUrl = undefined;
+
+    if (youtubeVideo) {
+      mediaUrl = youtubeVideo.videoUrl;
+    }
 
     if (_media) {
       setIsUploadingMedia(true);
@@ -111,6 +117,19 @@ export function TopicMessageBar() {
       <div className="shadow-sm rounded-md border border-input bg-transparent shadow-sm">
         <div className="flex items-center">
           <AutoResizeTextarea
+            onPaste={(event) => {
+              const items = event.clipboardData?.items;
+              if (!items) return;
+
+              for (const key in items) {
+                const item = items[key];
+
+                if (item.kind === "file") {
+                  const blob = item.getAsFile();
+                  if (blob) setMedia(blob);
+                }
+              }
+            }}
             disabled={isUploadingMedia}
             className="border-none"
             onChange={(e) => {

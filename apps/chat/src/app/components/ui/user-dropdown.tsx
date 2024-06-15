@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { UserAvatar } from "@/components/shared/user-avatar";
 
 type Props = {
+  id: string;
   avatarUrl?: string;
   name?: string;
   email?: string;
@@ -27,7 +28,11 @@ export function UserDropDown(props: Props) {
           variant="ghost"
           className="p-0 rounded-full hover:opacity-80 shadow-sm"
         >
-          <UserAvatar name={props.name} imageUrl={props.avatarUrl} />
+          <UserAvatar
+            id={props.id}
+            name={props.name}
+            imageUrl={props.avatarUrl}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>

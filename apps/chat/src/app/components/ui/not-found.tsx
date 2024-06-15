@@ -8,9 +8,12 @@ export function NotFound({ copy }: { copy?: string }) {
   return (
     <div className="flex flex-1 flex-basis-full items-center justify-center">
       <div className="flex flex-col items-center gap-3">
-        <div>{copy ? copy : "Page not found"}</div>
+        <div className="text-2xl">{copy ? copy : "Page not found"}</div>
         <Link href={Routes.Home}>
-          <Button variant="secondary" className="flex gap-3">
+          <Button
+            variant="secondary"
+            className="flex gap-3 text-lg font-normal"
+          >
             <HomeIcon /> Go home
           </Button>
         </Link>

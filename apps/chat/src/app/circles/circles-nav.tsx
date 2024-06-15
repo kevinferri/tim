@@ -48,8 +48,9 @@ export const CirclesNav = async ({ circleId }: { circleId?: string }) => {
 
       <div className="flex flex-col items-center mt-auto gap-3 p-3">
         <ThemeToggle />
-        {user && (
+        {user?.id && (
           <UserDropDown
+            id={user.id}
             avatarUrl={user.imageUrl ?? undefined}
             email={user.email ?? undefined}
           />

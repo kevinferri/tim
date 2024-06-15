@@ -63,9 +63,12 @@ export function TopicActiveUsers(props: Props) {
         return (
           <UserAvatar
             key={user.id}
+            id={user.id}
             name={user.name}
             imageUrl={user.imageUrl}
+            createdAt={user.createdAt}
             variant={variant()}
+            topicId={props.topicId}
           />
         );
       })}

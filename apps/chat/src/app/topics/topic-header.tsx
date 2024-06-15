@@ -26,7 +26,7 @@ export function TopicHeader(props: Props) {
             <Button
               variant="ghost"
               size="iconSm"
-              className="absolute top-[9px]"
+              className="absolute top-[12px]"
             >
               <InfoCircledIcon className="h-4 w-4" />
             </Button>

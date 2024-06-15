@@ -83,15 +83,17 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
             <Link href={getLinkForTopic(topic.id)} key={topic.id}>
               <Button
                 variant={topic.id === topicId ? "secondary" : "ghost"}
-                className="w-full flex justify-start text-base font-normal"
+                className="w-full flex justify-start text-base font-normal p-3"
               >
                 {topic.name}
                 <div className="flex gap-1 ml-auto">
                   {activeUsers.map((user) => (
                     <UserAvatar
                       key={user.id}
+                      id={user.id}
                       name={user.name}
                       imageUrl={user.imageUrl}
+                      createdAt={user.createdAt}
                       size="xs"
                     />
                   ))}

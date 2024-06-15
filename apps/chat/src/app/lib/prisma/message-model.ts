@@ -38,6 +38,7 @@ export const DEFAULT_MESSAGE_SELECT = {
       id: true,
       name: true,
       imageUrl: true,
+      createdAt: true,
     },
   },
 };
@@ -75,13 +76,17 @@ export const messageModel = {
     return normalizeMessages([...messages].reverse());
   },
 
-  async getTopHighlightedMessagesForTopic({ topicId, select }: MessageArgs) {
-    const userId = getLoggedInUserId();
-    if (!topicId || !userId) return [];
+  async getTopHighlightedMessagesForTopic({
+    topicId,
+    userId,
+    select,
+  }: MessageArgs & { userId?: string }) {
+    const loggedInUser = getLoggedInUserId();
+    if (!topicId || !loggedInUser) return [];
 
     const messages = await prismaClient.message.findMany({
       select,
-      where: { topicId },
+      where: { topicId, userId },
       take: TOP_HIGHLIGHTS_LIMIT,
       orderBy: [
         {

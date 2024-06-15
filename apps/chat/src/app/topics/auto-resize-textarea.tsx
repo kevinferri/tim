@@ -11,6 +11,7 @@ type Props = {
   onKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   value: string;
   className?: string;
+  onPaste?: (e: ClipboardEvent) => void;
 };
 
 function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
@@ -20,6 +21,9 @@ function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
 
 export function AutoResizeTextarea(props: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  ref.current && props.onPaste
+    ? (ref.current.onpaste = props.onPaste)
+    : undefined;
 
   useEffectOnce(() => {
     if (!ref.current) return;
