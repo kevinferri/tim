@@ -37,7 +37,7 @@ type Props = {
 
 export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
   const self = useSelf();
-  const createdCircleEmitter = useSocketEmit(SocketEvent.CreatedCircle);
+  const upsertedCircle = useSocketEmit(SocketEvent.UpsertedCircle);
 
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState(existingCircle?.name ?? "");
@@ -114,14 +114,15 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
 
               if (resp) {
                 const members = resp.data.members ?? [];
+                const prevMembers = existingCircle?.members ?? [];
 
-                createdCircleEmitter.emit({
+                upsertedCircle.emit({
                   id: resp.data.id,
                   name: resp.data.name,
-                  imageUrl: resp.data.imageUrl,
-                  defaultTopicId: resp.data.defaultTopicId,
                   createdBy: resp.data.createdBy,
+                  prevMembers: prevMembers.map(({ id }) => id),
                   members: members.map(({ id }) => id),
+                  defaultTopicId: resp.data.defaultTopicId,
                   isEdit,
                 });
               }

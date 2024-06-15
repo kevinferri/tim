@@ -1,6 +1,7 @@
-import { DashboardLayout } from "@/components/layouts/dashboard/dashboard-layout";
 import { NotFound } from "@/components/ui/not-found";
 import { prismaClient } from "@/lib/prisma/client";
+import { getLinkForTopic } from "@/routes";
+import { redirect } from "next/navigation";
 
 export default async function GroupPage({
   params,
@@ -12,19 +13,10 @@ export default async function GroupPage({
     select: {
       id: true,
       name: true,
+      defaultTopicId: true,
     },
   });
 
-  return (
-    <DashboardLayout circleId={circle?.id}>
-      {circle ? (
-        <>
-          <h1>{circle.name}</h1>
-          <div>Will list the topics for group id {params.id}</div>
-        </>
-      ) : (
-        <NotFound copy="Topic not found" />
-      )}
-    </DashboardLayout>
-  );
+  if (!circle?.defaultTopicId) return <NotFound copy="Topic not found" />;
+  redirect(getLinkForTopic(circle.defaultTopicId));
 }

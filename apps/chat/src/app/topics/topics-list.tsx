@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Topic } from "@prisma/client";
 
@@ -21,7 +21,10 @@ type Props = {
   circleName?: string;
 };
 
-type NewTopicHandlerProps = Topic & {
+type NewTopicHandlerProps = {
+  id: string;
+  name: string;
+  isEdit: boolean;
   createdBy: {
     name: string;
     id: string;
@@ -30,20 +33,19 @@ type NewTopicHandlerProps = Topic & {
 
 export const TopicsList = ({ topics, topicId, circleName }: Props) => {
   const self = useSelf();
-  const [currentTopics, setCurrentTopics] = useState(topics);
   const { toast } = useToast();
   const router = useRouter();
   const { getActiveMembersInTopic } = useActiveCircleMembers();
 
-  const createdTopicProcessedHandler = useCallback(
+  useSocketHandler<NewTopicHandlerProps>(
+    SocketEvent.UpsertedTopic,
     (payload: NewTopicHandlerProps) => {
+      router.refresh();
+
+      if (payload.isEdit) return;
+
       const createdBySelf = payload.createdBy.id === self.id;
       const name = createdBySelf ? "You" : payload.createdBy.name;
-
-      setCurrentTopics((topics) => {
-        const _topics = topics ?? [];
-        return [..._topics, payload];
-      });
 
       toast({
         title: `New topic created in ${circleName}`,
@@ -60,23 +62,17 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
           </ToastAction>
         ),
       });
-    },
-    [toast, circleName, self.id, router]
+    }
   );
 
-  useSocketHandler<NewTopicHandlerProps>(
-    SocketEvent.CreatedTopic,
-    createdTopicProcessedHandler
-  );
-
-  if (!currentTopics) {
+  if (!topics) {
     return <>No topics yet...</>;
   }
 
   return (
     <ScrollArea>
       <div className="flex flex-col gap-2 p-3">
-        {currentTopics.map((topic) => {
+        {topics.map((topic) => {
           const activeUsers = getActiveMembersInTopic(topic.id);
 
           return (

@@ -21,7 +21,6 @@ import { upsertTopic } from "@/actions/topics";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { getLinkForTopic } from "@/routes";
 
 type Props = {
   existingTopic?: Pick<Topic, "id" | "name" | "description" | "userId">;
@@ -37,11 +36,10 @@ export const UpsertTopicForm = ({
   trigger,
 }: Props) => {
   const self = useSelf();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [nameCheck, setNameCheck] = useState(existingTopic?.name ?? "");
   const [submitting, setSubmitting] = useState(false);
-  const createdTopicEmitter = useSocketEmit(SocketEvent.CreatedTopic);
+  const upsertedTopic = useSocketEmit(SocketEvent.UpsertedTopic);
   const isCreator = !existingTopic || existingTopic.userId === self.id;
 
   return (
@@ -105,7 +103,8 @@ export const UpsertTopicForm = ({
               event.preventDefault();
               setSubmitting(true);
 
-              const resp = await upsertTopic(new FormData(event.currentTarget));
+              const formData = new FormData(event.currentTarget);
+              const resp = await upsertTopic(formData);
 
               setSubmitting(false);
               setOpen(false);
@@ -113,16 +112,12 @@ export const UpsertTopicForm = ({
               if (resp && resp.data) {
                 const { id, name, createdBy } = resp.data;
 
-                if (existingTopic) {
-                  router.push(getLinkForTopic(id));
-                  return;
-                }
-
-                createdTopicEmitter.emit({
+                upsertedTopic.emit({
                   circleId,
                   id,
                   name,
                   createdBy,
+                  isEdit: !!existingTopic,
                 });
               }
             }}

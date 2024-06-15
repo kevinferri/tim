@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message, MessageProps } from "@/topics/message";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { useEffectOnce } from "@/lib/hooks";
-import { EnvelopeClosedIcon, EnvelopeOpenIcon } from "@radix-ui/react-icons";
+import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 
 export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
@@ -30,9 +30,9 @@ export function TopicChat() {
           <EnvelopeClosedIcon height={80} width={80} />
         </div>
 
-        <div className="text-2xl">No messages yet</div>
+        <div className="text-xl">No messages yet</div>
 
-        <div className="text-muted-foreground text-lg">
+        <div className="text-muted-foreground text-base">
           Send a message to get the conversation going
         </div>
       </div>

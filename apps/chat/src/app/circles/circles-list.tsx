@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCallback, useState } from "react";
-import { Circle } from "@prisma/client";
+import { Circle, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { toast } from "@/components/ui/use-toast";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
@@ -24,8 +24,12 @@ type Props = {
   existingCircles?: Circle[];
 };
 
-type NewCircleHandlerProps = Circle & {
+type NewCircleHandlerProps = {
+  id: string;
+  defaultTopicId?: string;
+  name: string;
   isEdit: boolean;
+  prevMembers: string[];
   members: string[];
   createdBy: {
     name: string;
@@ -36,60 +40,47 @@ type NewCircleHandlerProps = Circle & {
 export function CirclesList({ existingCircles, currentCircleId }: Props) {
   const self = useSelf();
   const router = useRouter();
-  const [circles, setCircles] = useState(existingCircles);
-
-  const createdCircleProcessedHandler = useCallback(
-    (payload: NewCircleHandlerProps) => {
-      const createdBySelf = payload.createdBy.id === self.id;
-
-      setCircles((circles) => {
-        const _circles = circles ?? [];
-
-        if (payload.isEdit) {
-          return _circles.map((c) => {
-            if (c.id !== payload.id) return c;
-            return payload;
-          });
-        }
-
-        return [..._circles, payload];
-      });
-
-      if (payload.isEdit && createdBySelf) {
-        return;
-      }
-
-      toast({
-        title: payload.isEdit ? "Circle updated" : `New circle created`,
-        description: createdBySelf
-          ? `You created a new circle called "${payload.name}"`
-          : `${payload.createdBy.name} invited you to a new circle called "${payload.name}"`,
-        duration: 10000,
-        action: (
-          <ToastAction
-            altText="Go there now"
-            onClick={() => {
-              router.push(
-                getLinkForTopic(payload.defaultTopicId ?? payload.id)
-              );
-            }}
-          >
-            Go there now
-          </ToastAction>
-        ),
-      });
-    },
-    [self.id, router]
-  );
 
   useSocketHandler<NewCircleHandlerProps>(
-    SocketEvent.CreatedCircle,
-    createdCircleProcessedHandler
+    SocketEvent.UpsertedCircle,
+    (payload: NewCircleHandlerProps) => {
+      router.refresh();
+
+      const createdBySelf = payload.createdBy.id === self.id;
+      const name = createdBySelf ? "You" : payload.createdBy.name;
+      const link = payload.defaultTopicId
+        ? getLinkForTopic(payload.defaultTopicId)
+        : `/circles/${payload.id}`;
+
+      if (payload.isEdit && createdBySelf) return;
+
+      if (
+        !payload.isEdit ||
+        (payload.members.includes(self.id) &&
+          !payload.prevMembers.includes(self.id))
+      ) {
+        toast({
+          title: `New circle created`,
+          description: `${name} created a new circle called "${payload.name}"`,
+          duration: 10000,
+          action: (
+            <ToastAction
+              altText="Go there now"
+              onClick={() => {
+                router.push(link);
+              }}
+            >
+              Go there now
+            </ToastAction>
+          ),
+        });
+      }
+    }
   );
 
   return (
     <>
-      {circles?.map((circle) => {
+      {existingCircles?.map((circle) => {
         const link = circle.defaultTopicId
           ? getLinkForTopic(circle.defaultTopicId)
           : Routes.TopicsForCircle.replace(":id", circle.id);

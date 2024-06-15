@@ -10,10 +10,10 @@ export enum SocketEvent {
   JoinRoom = "room:join",
   LeaveRoom = "room:leave",
 
-  CreatedTopic = "topic:created",
+  UpsertedTopic = "topic:upserted",
   UserJoinedOrLeftTopic = "topic:userJoinedOrLeft",
 
-  CreatedCircle = "circle:created",
+  UpsertedCircle = "circle:upserted",
   UserJoinedCircle = "circle:userJoined",
 
   ToggleHighlight = "highlight:toggle",
