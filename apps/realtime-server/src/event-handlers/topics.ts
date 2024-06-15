@@ -1,8 +1,8 @@
 import { SocketEvent, HandlerArgs } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 
-export function handleCreatedTopic({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.CreatedTopic, async (payload) => {
+export function handleUpsertedTopic({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.UpsertedTopic, async (payload) => {
     const roomKey = getRoomKeyOrFail({
       socket,
       id: payload.circleId,
@@ -11,6 +11,6 @@ export function handleCreatedTopic({ socket, server }: HandlerArgs) {
 
     if (!roomKey) return;
 
-    server.to(roomKey).emit(SocketEvent.CreatedTopic, payload);
+    server.to(roomKey).emit(SocketEvent.UpsertedTopic, payload);
   });
 }

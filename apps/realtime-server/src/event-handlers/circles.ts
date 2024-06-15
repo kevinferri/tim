@@ -1,8 +1,8 @@
 import { SocketEvent, HandlerArgs } from "./main";
 import { RoomType, toRoomKey } from "./rooms";
 
-export function handleCreatedCircle({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.CreatedCircle, async (payload) => {
+export function handleUpsertedCircle({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.UpsertedCircle, async (payload) => {
     payload.members.forEach((userId: string) => {
       const roomKey = toRoomKey({
         id: userId,
@@ -10,7 +10,7 @@ export function handleCreatedCircle({ socket, server }: HandlerArgs) {
       });
 
       if (roomKey) {
-        server.to(roomKey).emit(SocketEvent.CreatedCircle, payload);
+        server.to(roomKey).emit(SocketEvent.UpsertedCircle, payload);
       }
     });
   });

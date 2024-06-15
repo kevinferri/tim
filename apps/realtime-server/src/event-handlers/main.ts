@@ -12,9 +12,9 @@ import {
 } from "./socket";
 import { handleJoinRoom, handleLeaveRoom } from "./rooms";
 import { handleOnAny, handleOnAnyOutgoing } from "./any";
-import { handleCreatedTopic } from "./topics";
+import { handleUpsertedTopic } from "./topics";
 import { handleToggleHighlight } from "./highlights";
-import { handleCreatedCircle } from "./circles";
+import { handleUpsertedCircle } from "./circles";
 import {
   handleUserExpandedImage,
   handleUserStartedTyping,
@@ -45,11 +45,11 @@ export enum SocketEvent {
   LeaveRoom = "room:leave",
 
   // topics
-  CreatedTopic = "topic:created",
+  UpsertedTopic = "topic:upserted",
   UserJoinedOrLeftTopic = "topic:userJoinedOrLeft",
 
   // circles
-  CreatedCircle = "circle:created",
+  UpsertedCircle = "circle:upserted",
   UserJoinedCircle = "circle:userJoined",
   UserLeftCircle = "circle:userLeft",
 
@@ -99,10 +99,10 @@ export function registerEventHandlers(server: Server) {
     handleShuffleGif({ socket, server });
 
     // Circle action handlers
-    handleCreatedCircle({ socket, server });
+    handleUpsertedCircle({ socket, server });
 
     // Topic action handlers
-    handleCreatedTopic({ socket, server });
+    handleUpsertedTopic({ socket, server });
 
     // Highlights
     handleToggleHighlight({ socket, server });
