@@ -14,3 +14,17 @@ export function handleUpsertedTopic({ socket, server }: HandlerArgs) {
     server.to(roomKey).emit(SocketEvent.UpsertedTopic, payload);
   });
 }
+
+export function handleDeletedTopic({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.DeletedTopic, async (payload) => {
+    const roomKey = getRoomKeyOrFail({
+      socket,
+      id: payload.circleId,
+      roomType: RoomType.Circle,
+    });
+
+    if (!roomKey) return;
+
+    server.to(roomKey).emit(SocketEvent.DeletedTopic, payload);
+  });
+}

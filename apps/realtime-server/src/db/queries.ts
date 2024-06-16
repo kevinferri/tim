@@ -12,6 +12,8 @@ export async function isUserInTopic({
     .where("id", topicId)
     .first();
 
+  if (!topic) return false;
+
   return await isUserInCircle({ userId, circleId: topic.circleId });
 }
 

@@ -149,13 +149,15 @@ export async function emitUserChangeInTopic({
 
   const parentCircle = await getParentCircleIdForTopic({ topicId });
 
-  server
-    .to(toRoomKey({ id: parentCircle.id, roomType: RoomType.Circle }))
-    .emit(SocketEvent.UserJoinedOrLeftTopic, {
-      topicId,
-      activeUsers,
-      actingUser: socket.data.user,
-    });
+  if (parentCircle) {
+    server
+      .to(toRoomKey({ id: parentCircle.id, roomType: RoomType.Circle }))
+      .emit(SocketEvent.UserJoinedOrLeftTopic, {
+        topicId,
+        activeUsers,
+        actingUser: socket.data.user,
+      });
+  }
 }
 
 export async function emitUserJoinedCircle({
