@@ -1,7 +1,5 @@
 "use client";
 
-import { AvatarIcon } from "@radix-ui/react-icons";
-
 import { Routes, getLinkForTopic } from "@/routes";
 import {
   Tooltip,
@@ -11,13 +9,13 @@ import {
 } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useCallback, useState } from "react";
-import { Circle, User } from "@prisma/client";
+import { Circle } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { toast } from "@/components/ui/use-toast";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { ToastAction } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
+import { getInitials } from "@/components/shared/user-avatar";
 
 type Props = {
   currentCircleId?: string;
@@ -37,13 +35,23 @@ type NewCircleHandlerProps = {
   };
 };
 
-export function CirclesList({ existingCircles, currentCircleId }: Props) {
+type DeletedCircleHandlerProps = {
+  id: string;
+  name: string;
+  members: string[];
+  deletedBy: {
+    name: string;
+    id: string;
+  };
+};
+
+export function CirclesList(props: Props) {
   const self = useSelf();
   const router = useRouter();
 
   useSocketHandler<NewCircleHandlerProps>(
     SocketEvent.UpsertedCircle,
-    (payload: NewCircleHandlerProps) => {
+    (payload) => {
       router.refresh();
 
       const createdBySelf = payload.createdBy.id === self.id;
@@ -62,7 +70,6 @@ export function CirclesList({ existingCircles, currentCircleId }: Props) {
         toast({
           title: `New circle created`,
           description: `${name} created a new circle called "${payload.name}"`,
-          duration: 10000,
           action: (
             <ToastAction
               altText="Go there now"
@@ -78,9 +85,24 @@ export function CirclesList({ existingCircles, currentCircleId }: Props) {
     }
   );
 
+  useSocketHandler<DeletedCircleHandlerProps>(
+    SocketEvent.DeletedCircle,
+    (payload) => {
+      router.refresh();
+
+      const deletedBySelf = payload.deletedBy.id === self.id;
+      const name = deletedBySelf ? "You" : payload.deletedBy.name;
+
+      toast({
+        title: `Circle deleted`,
+        description: `${name} deleted the circle called "${payload.name}"`,
+      });
+    }
+  );
+
   return (
     <>
-      {existingCircles?.map((circle) => {
+      {props.existingCircles?.map((circle) => {
         const link = circle.defaultTopicId
           ? getLinkForTopic(circle.defaultTopicId)
           : Routes.TopicsForCircle.replace(":id", circle.id);
@@ -92,7 +114,7 @@ export function CirclesList({ existingCircles, currentCircleId }: Props) {
                 <Link href={link}>
                   <Avatar
                     className={`hover:opacity-80 ${
-                      currentCircleId === circle.id
+                      props.currentCircleId === circle.id
                         ? "border shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]"
                         : "shadow-md"
                     }`}
@@ -102,7 +124,7 @@ export function CirclesList({ existingCircles, currentCircleId }: Props) {
                       alt={circle.name}
                     />
                     <AvatarFallback>
-                      <AvatarIcon height={22} width={22} />
+                      <div className="mt-[1px]">{getInitials(circle.name)}</div>
                     </AvatarFallback>
                   </Avatar>
                 </Link>

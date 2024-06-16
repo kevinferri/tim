@@ -30,6 +30,7 @@ const getTopic = cache(async (id: string) => {
         select: {
           id: true,
           name: true,
+          defaultTopicId: true,
         },
       },
     },

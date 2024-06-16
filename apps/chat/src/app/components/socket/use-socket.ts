@@ -11,9 +11,11 @@ export enum SocketEvent {
   LeaveRoom = "room:leave",
 
   UpsertedTopic = "topic:upserted",
+  DeletedTopic = "topic:deleted",
   UserJoinedOrLeftTopic = "topic:userJoinedOrLeft",
 
   UpsertedCircle = "circle:upserted",
+  DeletedCircle = "circle:deleted",
   UserJoinedCircle = "circle:userJoined",
 
   ToggleHighlight = "highlight:toggle",

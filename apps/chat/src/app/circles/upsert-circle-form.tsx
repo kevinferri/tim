@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { LockClosedIcon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  ExclamationTriangleIcon,
+  LockClosedIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { upsertCircle } from "@/actions/circles";
+import { deleteCircle, upsertCircle } from "@/actions/circles";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import {
   Tooltip,
@@ -25,7 +29,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Circle, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
-import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 
 type Props = {
@@ -38,8 +42,10 @@ type Props = {
 export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
   const self = useSelf();
   const upsertedCircle = useSocketEmit(SocketEvent.UpsertedCircle);
+  const deletedCircle = useSocketEmit(SocketEvent.DeletedCircle);
 
   const [open, setOpen] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [nameCheck, setNameCheck] = useState(existingCircle?.name ?? "");
   const [submitting, setSubmitting] = useState(false);
 
@@ -101,97 +107,168 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
               </AlertTitle>
             </Alert>
           )}
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setSubmitting(true);
+          {isCreator && existingCircle && showDeleteWarning ? (
+            <>
+              <Alert variant="destructive" className="flex flex-col">
+                <ExclamationTriangleIcon />
+                <AlertTitle className="mb-0 leading-relaxed">
+                  Are you sure you want to delete{" "}
+                  <span className="underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700">
+                    {existingCircle.name}
+                  </span>
+                  ?
+                </AlertTitle>
+                <AlertDescription>
+                  This will also delete all the topics, messages, and highlights
+                  within the circle.
+                </AlertDescription>
+              </Alert>
+              <div className="flex gap-1 mt-3 ml-auto">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDeleteWarning(false)}
+                >
+                  Cancel
+                </Button>
+                <form
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    setSubmitting(true);
 
-              const formData = new FormData(event.currentTarget);
-              const resp = await upsertCircle(formData);
+                    const resp = await deleteCircle({
+                      circleId: existingCircle.id,
+                    });
 
-              setSubmitting(false);
-              setOpen(false);
+                    setSubmitting(false);
+                    setOpen(false);
 
-              if (resp) {
-                const members = resp.data.members ?? [];
-                const prevMembers = existingCircle?.members ?? [];
-
-                upsertedCircle.emit({
-                  id: resp.data.id,
-                  name: resp.data.name,
-                  createdBy: resp.data.createdBy,
-                  prevMembers: prevMembers.map(({ id }) => id),
-                  members: members.map(({ id }) => id),
-                  defaultTopicId: resp.data.defaultTopicId,
-                  isEdit,
-                });
-              }
-            }}
-          >
-            <Input
-              id="circleId"
-              name="circleId"
-              value={existingCircle?.id}
-              type="hidden"
-            />
-            <div className="grid gap-4 py-4">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  disabled={!isCreator}
-                  id="name"
-                  name="name"
-                  onChange={(e) => setNameCheck(e.target.value)}
-                  defaultValue={existingCircle?.name}
-                />
+                    if (resp && resp.data) {
+                      const members = resp.data.members.map(({ id }) => id);
+                      deletedCircle.emit({
+                        id: resp.data.id,
+                        name: resp.data.name,
+                        deletedBy: resp.data.createdBy,
+                        members,
+                      });
+                    }
+                  }}
+                >
+                  <Button variant="destructive" disabled={submitting}>
+                    Delete circle
+                  </Button>
+                </form>
               </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  disabled={!isCreator}
-                  id="description"
-                  name="description"
-                  defaultValue={existingCircle?.description ?? undefined}
-                />
-              </div>
-              {!isEdit && (
+            </>
+          ) : (
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                setSubmitting(true);
+
+                const formData = new FormData(event.currentTarget);
+                const resp = await upsertCircle(formData);
+
+                setSubmitting(false);
+                setOpen(false);
+
+                if (resp) {
+                  const members = resp.data.members ?? [];
+                  const prevMembers = existingCircle?.members ?? [];
+
+                  upsertedCircle.emit({
+                    id: resp.data.id,
+                    name: resp.data.name,
+                    createdBy: resp.data.createdBy,
+                    prevMembers: prevMembers.map(({ id }) => id),
+                    members: members.map(({ id }) => id),
+                    defaultTopicId: resp.data.defaultTopicId,
+                    isEdit,
+                  });
+                }
+              }}
+            >
+              <Input
+                id="circleId"
+                name="circleId"
+                value={existingCircle?.id}
+                type="hidden"
+              />
+              <div className="grid gap-4 py-4">
                 <div>
-                  <Label htmlFor="defaultTopicName">
-                    The name for your circle&rsquo;s default topic (will default
-                    to General)
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    disabled={!isCreator}
+                    id="name"
+                    name="name"
+                    onChange={(e) => setNameCheck(e.target.value)}
+                    defaultValue={existingCircle?.name}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    disabled={!isCreator}
+                    id="description"
+                    name="description"
+                    defaultValue={existingCircle?.description ?? undefined}
+                  />
+                </div>
+                {!isEdit && (
+                  <div>
+                    <Label htmlFor="defaultTopicName">
+                      The name for your circle&rsquo;s default topic (will
+                      default to General)
+                    </Label>
+                    <Input
+                      disabled={!isCreator}
+                      id="defaultTopicName"
+                      name="defaultTopicName"
+                      defaultValue="General"
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="members">
+                    Invite your friends via email (seperate by comma)
                   </Label>
                   <Input
                     disabled={!isCreator}
-                    id="defaultTopicName"
-                    name="defaultTopicName"
-                    defaultValue="General"
+                    id="members"
+                    name="members"
+                    placeholder="name@gmail.com, name2@gmail.com"
+                    defaultValue={existingMembers}
                   />
                 </div>
-              )}
-              <div>
-                <Label htmlFor="members">
-                  Invite your friends via email (seperate by comma)
-                </Label>
-                <Input
-                  disabled={!isCreator}
-                  id="members"
-                  name="members"
-                  placeholder="name@gmail.com, name2@gmail.com"
-                  defaultValue={existingMembers}
-                />
               </div>
-            </div>
-            <DialogFooter>
-              <DialogClose>
-                <Button variant="ghost" type="button">
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button disabled={submitting || !nameCheck.trim() || !isCreator}>
-                Save circle
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter>
+                {isCreator && existingCircle && (
+                  <Button
+                    className="mr-auto"
+                    variant="destructive"
+                    disabled={submitting}
+                    onClick={() => setShowDeleteWarning(true)}
+                    type="button"
+                  >
+                    Delete circle
+                  </Button>
+                )}
+                <DialogClose>
+                  <Button variant="ghost" type="button">
+                    {isCreator ? "Cancel" : "Close"}
+                  </Button>
+                </DialogClose>
+                {isCreator && (
+                  <Button
+                    disabled={submitting || !nameCheck.trim()}
+                    autoFocus
+                    type="submit"
+                  >
+                    Save circle
+                  </Button>
+                )}
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </>

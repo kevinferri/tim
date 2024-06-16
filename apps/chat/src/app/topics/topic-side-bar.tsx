@@ -52,10 +52,10 @@ export function TopicSideBar() {
       ),
       node: <NotificationsList notifications={notificationList} />,
       icon: (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 w-fu">
           <BellIcon />
           {activeTab !== "notifications" && unreadCount > 0 && (
-            <Badge className="flex font-normal text-xs rounded-xl  hover:bg-succes px-2 bg-purple-400">
+            <Badge className="flex font-normal text-xs rounded-xl  hover:bg-succes px-2 bg-purple-400 min-w-7 justify-center">
               {unreadCount}
             </Badge>
           )}
@@ -70,19 +70,17 @@ export function TopicSideBar() {
       className="flex flex-col shadow-md border-l max-w-[340px] min-w-[340px]"
       onValueChange={(tab) => {
         setActiveTab(tab as Tab);
+
+        if (tab === "notifications") {
+          clearUnreadNotifications();
+        }
       }}
     >
       <div className="p-3">
         <TabsList className="grid w-full grid-cols-4 h-[38px]">
           {Object.keys(tabMap).map((tabKey) => {
             return (
-              <TabsTrigger
-                key={tabKey}
-                value={tabKey}
-                onClick={() => {
-                  if (tabKey === "notifications") clearUnreadNotifications();
-                }}
-              >
+              <TabsTrigger key={tabKey} value={tabKey}>
                 {tabMap[tabKey as Tab].icon}
               </TabsTrigger>
             );

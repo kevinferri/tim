@@ -195,7 +195,7 @@ export const Message = (props: MessageProps) => {
                   }`
                 )}
               >
-                {props.sentBy.name}
+                {props.sentBy.name?.split(" ")[0]}
               </span>
             )}
 
@@ -327,6 +327,7 @@ export const Message = (props: MessageProps) => {
 
         {!props.hiddenElements?.includes("highlights") && (
           <HighlightTooltip
+            className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
             highlightedBySelf={highlightedBySelf}
             highlights={props.highlights}
             messageId={props.id}

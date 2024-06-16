@@ -10,8 +10,10 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 type Props = {
+  className?: string;
   messageId: string;
   highlights: Highlights;
   highlightedBySelf: boolean;
@@ -31,7 +33,12 @@ export const HighlightTooltip = (props: Props) => {
           className="text-xs cursor-default"
           onClick={(event) => event.preventDefault()}
         >
-          <div className="flex gap-0.5 items-center w-9 mt-2">
+          <div
+            className={cn(
+              "flex gap-0.5 items-center w-9 mt-2",
+              props.className
+            )}
+          >
             <Button
               variant="ghost"
               size="iconSm"

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Topic } from "@prisma/client";
 
@@ -31,6 +30,16 @@ type NewTopicHandlerProps = {
   };
 };
 
+type DeletedTopicHandlerProps = {
+  id: string;
+  name: string;
+  circleId: string;
+  deletedBy: {
+    name: string;
+    id: string;
+  };
+};
+
 export const TopicsList = ({ topics, topicId, circleName }: Props) => {
   const self = useSelf();
   const { toast } = useToast();
@@ -39,7 +48,7 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
 
   useSocketHandler<NewTopicHandlerProps>(
     SocketEvent.UpsertedTopic,
-    (payload: NewTopicHandlerProps) => {
+    (payload) => {
       router.refresh();
 
       if (payload.isEdit) return;
@@ -50,7 +59,6 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
       toast({
         title: `New topic created in ${circleName}`,
         description: `${name} created a new topic called "${payload.name}"`,
-        duration: 10000,
         action: (
           <ToastAction
             altText="Go there now"
@@ -61,6 +69,25 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
             Go there now
           </ToastAction>
         ),
+      });
+    }
+  );
+
+  useSocketHandler<DeletedTopicHandlerProps>(
+    SocketEvent.DeletedTopic,
+    (payload) => {
+      router.refresh();
+
+      if (payload.id === topicId) {
+        router.push(`/circles/${payload.circleId}`);
+      }
+
+      const deletedBySelf = payload.deletedBy.id === self.id;
+      const name = deletedBySelf ? "You" : payload.deletedBy.name;
+
+      toast({
+        title: `Topic deleted in ${circleName}`,
+        description: `${name} deleted the topic called "${payload.name}"`,
       });
     }
   );

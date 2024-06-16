@@ -3,13 +3,12 @@ export enum Routes {
   Home = "/",
   TopicsForCircle = "/circles/:id",
   Topic = "/topics/:id",
-  SignIn = "/signin",
-  Terms = "/static/terms",
-  Privacy = "/static/privacy",
-}
 
-const generateTopicHash = () =>
-  btoa(Math.random().toString()).substring(10, 15);
+  // Statics
+  SignIn = "/signin",
+  Terms = "/terms",
+  Privacy = "/privacy",
+}
 
 export function getLinkForTopic(id: string) {
   return Routes.Topic.replace(":id", id);

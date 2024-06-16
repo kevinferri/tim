@@ -9,6 +9,7 @@ type Props = {
     parentCircle: {
       id: string;
       name: string;
+      defaultTopicId?: string | null;
     };
   };
 };
@@ -22,6 +23,9 @@ export function TopicHeader(props: Props) {
           existingTopic={props.topic}
           circleId={props.topic.parentCircle.id}
           circleName={props.topic.parentCircle.name}
+          isDefaultTopic={
+            props.topic.id === props.topic.parentCircle.defaultTopicId
+          }
           trigger={
             <Button
               variant="ghost"

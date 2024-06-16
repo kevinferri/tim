@@ -87,3 +87,55 @@ export async function upsertTopic(formData: FormData) {
     data,
   };
 }
+
+export async function deleteTopic({ topicId }: { topicId: string }) {
+  const userId = await getLoggedInUserId();
+  if (!userId || !topicId) return false;
+
+  const topic = await prismaClient.topic.getMeTopicById({
+    topicId,
+    select: {
+      id: true,
+      userId: true,
+      parentCircle: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  if (!topic) return false;
+
+  const isInCircle = await prismaClient.circle.isUserInCirle({
+    userId,
+    circleId: topic?.parentCircle.id,
+  });
+
+  if (!isInCircle || topic.userId !== userId) return false;
+
+  const data = await prismaClient.topic.delete({
+    where: {
+      id: topicId,
+    },
+    select: {
+      id: true,
+      name: true,
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      parentCircle: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  return {
+    data,
+  };
+}

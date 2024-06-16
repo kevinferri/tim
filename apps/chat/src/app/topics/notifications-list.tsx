@@ -73,7 +73,7 @@ export function NotificationsList(props: Props) {
                         {...message}
                         variant="minimal"
                         className="hover:bg-inherit"
-                        hiddenElements={["sentBy", "sentAt", "highlights"]}
+                        hiddenElements={["sentBy", "sentAt"]}
                       />
                     </CardContent>
                   ) : (

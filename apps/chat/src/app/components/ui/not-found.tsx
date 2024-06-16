@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { HomeIcon, QuestionMarkIcon } from "@radix-ui/react-icons";
-
 import { Button } from "@/components/ui/button";
 import { Routes } from "@/routes";
 

@@ -132,3 +132,44 @@ export async function upsertCircle(formData: FormData) {
     },
   };
 }
+
+export async function deleteCircle({ circleId }: { circleId: string }) {
+  const userId = await getLoggedInUserId();
+  if (!userId || !circleId) return false;
+
+  const circle = await prismaClient.circle.findUnique({
+    where: {
+      id: circleId,
+      userId,
+    },
+    select: {
+      id: true,
+      userId: true,
+    },
+  });
+
+  if (!circle || circle.userId !== userId) return false;
+
+  const data = await prismaClient.circle.delete({
+    where: {
+      id: circleId,
+    },
+    select: {
+      id: true,
+      name: true,
+      members: {
+        select: {
+          id: true,
+        },
+      },
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  return { data };
+}
