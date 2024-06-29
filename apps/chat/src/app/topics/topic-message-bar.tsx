@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { MediaUploader } from "@/topics/media-uploader";
@@ -14,17 +14,13 @@ import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Progress } from "@/components/ui/progress";
 import { useUploadProgres } from "@/topics/use-upload-progress";
-import { usePrevious } from "@/lib/hooks";
+import { useUserTypingEmitter } from "@/lib/hooks";
 import { AutoResizeTextarea } from "@/topics/auto-resize-textarea";
 
 type MessagePayload = {
   message: string;
   topicId: string;
   mediaUrl?: string;
-};
-
-type TypingPayload = {
-  topicId: string;
 };
 
 function toBase64(file: File) {
@@ -43,19 +39,10 @@ export function TopicMessageBar() {
   const [media, setMedia] = useState<File>();
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const { topicId, scrollToBottomOfChat } = useCurrentTopicContext();
-  const { uploadProgress } = useUploadProgres({
-    media,
-    isUploadingMedia,
-  });
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
-  const startedTyping = useSocketEmit<TypingPayload>(
-    SocketEvent.UserStartedTyping
-  );
-  const stoppedTyping = useSocketEmit<TypingPayload>(
-    SocketEvent.UserStoppedTyping
-  );
+  const { uploadProgress } = useUploadProgres({ media, isUploadingMedia });
   const uploadText = uploadProgress >= 100 ? "FINALIZING..." : "UPLOADING...";
-  const previousMessage = usePrevious(message);
+
   const mediaBlobUrl = useMemo(
     () => (media ? URL.createObjectURL(media) : undefined),
     [media]
@@ -97,17 +84,7 @@ export function TopicMessageBar() {
     setMedia(undefined);
   };
 
-  useEffect(() => {
-    if (previousMessage?.length === 0 && message.length > 0) {
-      startedTyping.emit({ topicId });
-      return;
-    }
-
-    if (previousMessage && previousMessage.length > 0 && message.length === 0) {
-      stoppedTyping.emit({ topicId });
-      return;
-    }
-  }, [message.length, previousMessage, startedTyping, stoppedTyping, topicId]);
+  useUserTypingEmitter({ topicId, message });
 
   return (
     <div className="p-3">
