@@ -3,7 +3,14 @@
 import { Textarea } from "@/components/ui/textarea";
 import { useEffectOnce } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
-import { ChangeEvent, KeyboardEvent, useRef } from "react";
+import {
+  ChangeEvent,
+  KeyboardEvent,
+  useRef,
+  forwardRef,
+  ForwardedRef,
+  RefObject,
+} from "react";
 
 type Props = {
   disabled?: boolean;
@@ -19,8 +26,10 @@ function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
   target.style.height = `${target.scrollHeight + 0.5}px`;
 }
 
-export function AutoResizeTextarea(props: Props) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+export const AutoResizeTextarea = forwardRef((props: Props, refProp) => {
+  const _ref = useRef<HTMLTextAreaElement>(null);
+  const ref = (refProp as React.RefObject<HTMLTextAreaElement>) ?? _ref;
+
   ref.current && props.onPaste
     ? (ref.current.onpaste = props.onPaste)
     : undefined;
@@ -60,4 +69,6 @@ export function AutoResizeTextarea(props: Props) {
       value={props.value ?? ""}
     />
   );
-}
+});
+
+AutoResizeTextarea.displayName = "AutoResizeTextarea";

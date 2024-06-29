@@ -72,9 +72,7 @@ export const UpsertTopicForm = ({
               {existingTopic ? (
                 <>
                   Settings for{" "}
-                  <span className="underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700">
-                    {existingTopic.name}
-                  </span>{" "}
+                  <span className="font-pronounced">{existingTopic.name}</span>{" "}
                   in <span>{circleName}</span>
                 </>
               ) : (
@@ -82,9 +80,7 @@ export const UpsertTopicForm = ({
                   {circleName ? (
                     <>
                       Create a new topic in{" "}
-                      <span className="underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700">
-                        {circleName}
-                      </span>
+                      <span className="font-pronounced">{circleName}</span>
                     </>
                   ) : (
                     "Create a new topic"
@@ -109,11 +105,9 @@ export const UpsertTopicForm = ({
             <>
               <Alert variant="destructive" className="flex flex-col">
                 <ExclamationTriangleIcon />
-                <AlertTitle className="mb-0 leading-relaxed">
+                <AlertTitle className="mb-0">
                   Are you sure you want to delete{" "}
-                  <span className="underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700">
-                    {existingTopic?.name}
-                  </span>
+                  <span className="font-pronounced">{existingTopic?.name}</span>
                   ?
                 </AlertTitle>
                 <AlertDescription>

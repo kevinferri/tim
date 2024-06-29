@@ -56,6 +56,7 @@ export type MessageProps = {
   variant: "default" | "minimal";
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
+  context?: "topic" | "sidebar" | "user-sheet";
 };
 
 const baseStyles = [
@@ -181,6 +182,7 @@ export const Message = (props: MessageProps) => {
             imageUrl={props.sentBy.imageUrl}
             createdAt={props.sentBy.createdAt}
             topicId={topicId}
+            disableSheet={props.context === "user-sheet"}
           />
         )}
 
@@ -219,6 +221,7 @@ export const Message = (props: MessageProps) => {
 
             {showActions && sentBySelf && props.variant !== "minimal" && (
               <MessageActions
+                className={messages[0].id === props.id ? "top-0" : ""}
                 messageId={props.id}
                 text={props.text ?? ""}
                 mediaUrl={props.mediaUrl ?? ""}

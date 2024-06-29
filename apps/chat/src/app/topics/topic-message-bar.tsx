@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { MediaUploader } from "@/topics/media-uploader";
@@ -39,6 +39,7 @@ function toBase64(file: File) {
 
 export function TopicMessageBar() {
   const [message, setMessage] = useState("");
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [media, setMedia] = useState<File>();
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const { topicId, scrollToBottomOfChat } = useCurrentTopicContext();
@@ -102,11 +103,7 @@ export function TopicMessageBar() {
       return;
     }
 
-    if (
-      previousMessage &&
-      previousMessage?.length > 0 &&
-      message.length === 0
-    ) {
+    if (previousMessage && previousMessage.length > 0 && message.length === 0) {
       stoppedTyping.emit({ topicId });
       return;
     }
@@ -117,6 +114,7 @@ export function TopicMessageBar() {
       <div className="shadow-sm rounded-md border border-input bg-transparent shadow-sm">
         <div className="flex items-center">
           <AutoResizeTextarea
+            ref={textAreaRef}
             onPaste={(event) => {
               const items = event.clipboardData?.items;
               if (!items) return;
@@ -149,6 +147,7 @@ export function TopicMessageBar() {
               onFileChange={(file) => {
                 setMedia(file);
                 scrollToBottomOfChat(250);
+                textAreaRef.current?.focus();
               }}
               onFileRemove={() => setMedia(undefined)}
             />
@@ -157,12 +156,12 @@ export function TopicMessageBar() {
 
         {media && (
           <div
-            className={`p-2 border-t flex flex-col gap-1 ${
+            className={`p-2 border-t flex flex-col gap-2 ${
               isUploadingMedia ? "bg-secondary" : ""
             }`}
           >
             <div className="flex items-center gap-1">
-              <code className="text-sm">{media.name}</code>
+              <span className="text-sm">{media.name}</span>
               <Button
                 variant="ghost"
                 size="iconSm"

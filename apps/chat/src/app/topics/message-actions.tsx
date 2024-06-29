@@ -9,6 +9,7 @@ import { DeleteMessageModal } from "./delete-message-modal";
 import { isGiphy, getYoutubeVideoFromUrl } from "./media-viewer";
 import { Pencil1Icon, UpdateIcon } from "@radix-ui/react-icons";
 import { useCurrentTopicContext } from "./current-topic-provider";
+import { cn } from "@/lib/utils";
 
 type Props = {
   messageId: string;
@@ -17,6 +18,7 @@ type Props = {
   onEditMessage?: () => void;
   onShuffleGif?: () => void;
   isShufflingGif?: boolean;
+  className?: string;
 };
 
 export function MessageActions(props: Props) {
@@ -27,7 +29,12 @@ export function MessageActions(props: Props) {
     props.text?.split(" ")[0] === "/giphy";
 
   return (
-    <div className="absolute top-[-8px] right-[10px] text-primary">
+    <div
+      className={cn(
+        "absolute top-[-8px] right-[10px] text-primary",
+        props.className
+      )}
+    >
       <div className="flex gap-1">
         <TooltipProvider>
           <Tooltip delayDuration={100}>

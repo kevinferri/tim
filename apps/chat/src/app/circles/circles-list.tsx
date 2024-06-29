@@ -113,7 +113,7 @@ export function CirclesList(props: Props) {
               <TooltipTrigger>
                 <Link href={link}>
                   <Avatar
-                    className={`hover:opacity-80 ${
+                    className={`hover:opacity-70 ${
                       props.currentCircleId === circle.id
                         ? "border shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]"
                         : "shadow-md"
@@ -124,7 +124,9 @@ export function CirclesList(props: Props) {
                       alt={circle.name}
                     />
                     <AvatarFallback>
-                      <div className="mt-[1px]">{getInitials(circle.name)}</div>
+                      <div className="mt-[1.5px]">
+                        {getInitials(circle.name)}
+                      </div>
                     </AvatarFallback>
                   </Avatar>
                 </Link>

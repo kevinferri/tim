@@ -42,7 +42,7 @@ export function TopicChat() {
   return (
     <ScrollArea className="flex flex-col basis-full">
       {messages.map((message: MessageProps) => {
-        return <Message key={message.id} {...message} />;
+        return <Message key={message.id} {...message} context="topic" />;
       })}
       <div ref={scrollRef} />
     </ScrollArea>

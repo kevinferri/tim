@@ -87,9 +87,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
               {isEdit ? (
                 <>
                   Settings for{" "}
-                  <span className="underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700">
-                    {existingCircle.name}
-                  </span>
+                  <div className="font-pronounced">{existingCircle.name}</div>
                 </>
               ) : (
                 "Create new circle"
@@ -113,9 +111,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                 <ExclamationTriangleIcon />
                 <AlertTitle className="mb-0 leading-relaxed">
                   Are you sure you want to delete{" "}
-                  <span className="underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700">
-                    {existingCircle.name}
-                  </span>
+                  <span className="font-pronounced">{existingCircle.name}</span>
                   ?
                 </AlertTitle>
                 <AlertDescription>
@@ -263,7 +259,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                     autoFocus
                     type="submit"
                   >
-                    Save circle
+                    {existingCircle ? "Save circle" : "Create circle"}
                   </Button>
                 )}
               </DialogFooter>

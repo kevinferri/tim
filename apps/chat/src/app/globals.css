@@ -79,4 +79,7 @@
   body {
     @apply bg-background text-foreground;
   }
+  .font-pronounced {
+    @apply underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700;
+  }
 }

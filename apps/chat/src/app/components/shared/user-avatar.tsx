@@ -65,6 +65,7 @@ type Props = VariantProps<typeof variants> & {
   name?: string | null;
   imageUrl?: string | null;
   createdAt?: Date;
+  disableSheet?: boolean;
 };
 
 const variants = cva("shadow-md", {
@@ -124,7 +125,7 @@ export function UserAvatar(props: Props) {
     </Avatar>
   );
 
-  if (!props.topicId) return trigger;
+  if (!props.topicId || !!props.disableSheet) return trigger;
 
   return (
     <Sheet onOpenChange={setOpen}>
@@ -217,9 +218,7 @@ export function UserAvatar(props: Props) {
             {data?.topicName && (
               <>
                 Top highlights in{" "}
-                <span className="underline decoration-2 underline-offset-4 hover:text-primary decoration-purple-700">
-                  {data?.topicName}
-                </span>
+                <span className="font-pronounced">{data?.topicName}</span>
               </>
             )}
           </div>
@@ -239,6 +238,7 @@ export function UserAvatar(props: Props) {
                   key={`${message.id}-user-avatar`}
                   {...message}
                   variant="minimal"
+                  context="user-sheet"
                 />
               );
             })}
