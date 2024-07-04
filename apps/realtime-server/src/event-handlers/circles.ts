@@ -3,7 +3,9 @@ import { RoomType, toRoomKey } from "./rooms";
 
 export function handleUpsertedCircle({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.UpsertedCircle, async (payload) => {
-    payload.members.forEach((userId: string) => {
+    const members = [...new Set([...payload.prevMembers, ...payload.members])];
+
+    members.forEach((userId: string) => {
       const roomKey = toRoomKey({
         id: userId,
         roomType: RoomType.User,

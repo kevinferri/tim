@@ -50,3 +50,11 @@ export async function getTopicIdsForCircle({ circleId }: { circleId: string }) {
     .select("topics.id")
     .where("topics.circleId", circleId);
 }
+
+export async function getMembersForCircle({ circleId }: { circleId: string }) {
+  return await pgClient("_circleMembershipsForUser").where("A", circleId);
+}
+
+export async function getAllCirclesForUser({ userId }: { userId: string }) {
+  // todo
+}
