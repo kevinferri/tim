@@ -56,17 +56,16 @@ export function CirclesList(props: Props) {
 
       const createdBySelf = payload.createdBy.id === self.id;
       const name = createdBySelf ? "You" : payload.createdBy.name;
+      const isInCircle = payload.members.includes(self.id);
+      const wasInCircle = payload.prevMembers.includes(self.id);
       const link = payload.defaultTopicId
         ? getLinkForTopic(payload.defaultTopicId)
         : `/circles/${payload.id}`;
 
       if (payload.isEdit && createdBySelf) return;
+      if (wasInCircle && !isInCircle) return;
 
-      if (
-        !payload.isEdit ||
-        (payload.members.includes(self.id) &&
-          !payload.prevMembers.includes(self.id))
-      ) {
+      if (!payload.isEdit || (isInCircle && !wasInCircle)) {
         toast({
           title: `New circle created`,
           description: `${name} created a new circle called "${payload.name}"`,

@@ -10,13 +10,18 @@ import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
-  const { messages, topicId, scrollRef, scrollToBottomOfChat } =
-    useCurrentTopicContext();
+  const {
+    messages,
+    topicId,
+    scrollRef,
+    messagesListRef,
+    scrollToBottomOfChat,
+  } = useCurrentTopicContext();
+  const payload = { id: topicId, roomType: "topic" };
 
   useEffectOnce(() => {
-    const payload = { id: topicId, roomType: "topic" };
     joinRoom.emit(payload);
-    scrollToBottomOfChat(250);
+    scrollToBottomOfChat({ timeout: 250, force: true });
 
     return () => {
       leaveRoom.emit(payload);
@@ -40,7 +45,7 @@ export function TopicChat() {
   }
 
   return (
-    <ScrollArea className="flex flex-col basis-full">
+    <ScrollArea className="flex flex-col basis-full" ref={messagesListRef}>
       {messages.map((message: MessageProps) => {
         return <Message key={message.id} {...message} context="topic" />;
       })}

@@ -19,12 +19,12 @@ const ActiveCircleMembersContext = createContext<ReturnType<
 type Props = { children: React.ReactNode };
 
 function useContextValue() {
-  const [activeCircleMembers, setActiveCircleMembers] =
+  const [activeMembersByTopic, setActiveMembersByTopic] =
     useState<Record<string, Self[]>>();
 
   const getActiveMembersInTopic = useCallback(
-    (topicId: string) => activeCircleMembers?.[topicId] ?? [],
-    [activeCircleMembers]
+    (topicId: string) => activeMembersByTopic?.[topicId] ?? [],
+    [activeMembersByTopic]
   );
 
   // When a user joines a circle, hydrate all existing active sockets for each topic
@@ -33,8 +33,8 @@ function useContextValue() {
     actingUser: Self;
     circleId: string;
   }>(SocketEvent.UserJoinedCircle, (payload) => {
-    setActiveCircleMembers({
-      ...activeCircleMembers,
+    setActiveMembersByTopic({
+      ...activeMembersByTopic,
       ...payload.topicMap,
     });
   });
@@ -42,8 +42,8 @@ function useContextValue() {
   useSocketHandler<{ activeUsers: User[]; actingUser: User; topicId: string }>(
     SocketEvent.UserJoinedOrLeftTopic,
     (payload) => {
-      setActiveCircleMembers({
-        ...activeCircleMembers,
+      setActiveMembersByTopic({
+        ...activeMembersByTopic,
         [payload.topicId]: uniqBy(payload.activeUsers, "id"),
       });
     }
@@ -51,10 +51,10 @@ function useContextValue() {
 
   return useMemo(
     () => ({
-      activeCircleMembers,
+      activeMembersByTopic,
       getActiveMembersInTopic,
     }),
-    [activeCircleMembers, getActiveMembersInTopic]
+    [activeMembersByTopic, getActiveMembersInTopic]
   );
 }
 

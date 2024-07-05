@@ -123,7 +123,7 @@ export function TopicMessageBar() {
               file={media}
               onFileChange={(file) => {
                 setMedia(file);
-                scrollToBottomOfChat(250);
+                scrollToBottomOfChat({ timeout: 250 });
                 textAreaRef.current?.focus();
               }}
               onFileRemove={() => setMedia(undefined)}

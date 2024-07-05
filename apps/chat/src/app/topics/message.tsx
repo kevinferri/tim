@@ -7,10 +7,10 @@ import { HighlightTooltip } from "@/topics/highlight-tooltip";
 import { useCurrentTopicContext } from "@/topics/current-topic-provider";
 import { MediaViewer } from "@/topics/media-viewer";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { AutoResizeTextarea } from "./auto-resize-textarea";
-import { MessageActions } from "./message-actions";
-import { MessageText } from "./message-text";
-import { LinkPreview } from "./link-preview";
+import { AutoResizeTextarea } from "@/topics/auto-resize-textarea";
+import { MessageActions } from "@/topics/message-actions";
+import { MessageText } from "@/topics/message-text";
+import { LinkPreview } from "@/topics/link-preview";
 import { useTimeZone } from "@/lib/hooks";
 
 function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
@@ -100,6 +100,7 @@ export const Message = (props: MessageProps) => {
   const isNewestMessage = messages[messages.length - 1].id === props.id;
   const isShufflingGif = shufflingGifs.includes(props.id) || shuffledGifLoading;
   const { timeZone } = useTimeZone();
+  const shouldScroll = isNewestMessage && props.context === "topic";
   const highlightedBySelf = !!props.highlights.find(
     (highlight) => self.id === highlight.userId
   );
@@ -228,7 +229,6 @@ export const Message = (props: MessageProps) => {
                 isShufflingGif={isShufflingGif}
                 onEditMessage={() => {
                   setIsEditing(true);
-                  if (isNewestMessage) scrollToBottomOfChat();
                 }}
                 onShuffleGif={() => {
                   addShufflingGif(props.id);
@@ -304,8 +304,8 @@ export const Message = (props: MessageProps) => {
                     setShuffledGifLoading(false);
                   }
 
-                  if (isNewestMessage) {
-                    scrollToBottomOfChat();
+                  if (shouldScroll) {
+                    scrollToBottomOfChat({ force: true });
                   }
                 }}
               />
@@ -317,9 +317,9 @@ export const Message = (props: MessageProps) => {
                   <LinkPreview
                     key={`${props.id}${link}${i}`}
                     link={link}
-                    onLoadPreview={() => {
-                      if (isNewestMessage) {
-                        scrollToBottomOfChat(250);
+                    onEmbedMediaLoad={() => {
+                      if (shouldScroll) {
+                        scrollToBottomOfChat({ force: true });
                       }
                     }}
                   />

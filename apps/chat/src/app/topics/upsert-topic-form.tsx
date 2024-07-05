@@ -65,7 +65,13 @@ export const UpsertTopicForm = ({
           <PlusIcon />
         </Button>
       )}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(_open) => {
+          setOpen(_open);
+          setShowDeleteWarning(false);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>

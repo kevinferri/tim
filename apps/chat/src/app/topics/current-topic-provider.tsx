@@ -23,6 +23,13 @@ import { useEffectOnce, useWindowFocus } from "@/lib/hooks";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
 
+type ScrollArgs =
+  | {
+      timeout?: number;
+      force?: boolean;
+    }
+  | undefined;
+
 type ContextValue = {
   topicId: string;
   circleId: string;
@@ -31,7 +38,8 @@ type ContextValue = {
   mediaMessages: MessageProps[];
   circleMembers: CircleMember[];
   scrollRef: MutableRefObject<HTMLDivElement | null>;
-  scrollToBottomOfChat: (timeout?: number) => void;
+  messagesListRef: MutableRefObject<HTMLDivElement | null>;
+  scrollToBottomOfChat: (args?: ScrollArgs) => void;
   addShufflingGif: (id: string) => void;
   shufflingGifs: string[];
 };
@@ -49,17 +57,30 @@ type Props = {
 };
 
 const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
+const SCROLL_THRESHOLD = 1000;
 
 export function CurrentTopicProvider(props: Props) {
   const scrollRef = useRef<null | HTMLDivElement>(null);
+  const messagesListRef = useRef<null | HTMLDivElement>(null);
   const router = useRouter();
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
-  const scrollToBottomOfChat = useCallback((timeout?: number) => {
-    setTimeout(() => {
-      scrollRef?.current?.scrollIntoView();
-    }, timeout ?? 1);
-  }, []);
+  const scrollToBottomOfChat = useCallback(
+    ({ timeout, force }: ScrollArgs = {}) => {
+      const _ref = messagesListRef.current;
+      if (!_ref) return;
+
+      const isNearBottom =
+        _ref.scrollHeight - SCROLL_THRESHOLD <= _ref.scrollTop;
+
+      setTimeout(() => {
+        if (isNearBottom || force) {
+          scrollRef?.current?.scrollIntoView();
+        }
+      }, timeout ?? 1);
+    },
+    []
+  );
 
   // next caches server data (messages) by default,
   // this ensures when the user switches
@@ -79,10 +100,6 @@ export function CurrentTopicProvider(props: Props) {
 
   const [mediaMessages, setMediaMessages] = useState<MessageProps[]>(
     props.existingMediaMessages
-  );
-
-  const [circleMembers, setCircleMembers] = useState<CircleMember[]>(
-    props.existingCircleMemebers
   );
 
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
@@ -336,8 +353,9 @@ export function CurrentTopicProvider(props: Props) {
     () => ({
       messages,
       mediaMessages,
-      circleMembers,
+      circleMembers: props.existingCircleMemebers,
       scrollRef,
+      messagesListRef,
       scrollToBottomOfChat,
       shufflingGifs,
       addShufflingGif,
@@ -352,7 +370,7 @@ export function CurrentTopicProvider(props: Props) {
       messages,
       mediaMessages,
       topHighlights,
-      circleMembers,
+      props.existingCircleMemebers,
       shufflingGifs,
       addShufflingGif,
       props.topicId,

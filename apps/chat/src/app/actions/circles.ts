@@ -85,7 +85,17 @@ export async function upsertCircle(formData: FormData) {
   let defaultTopic: Partial<Topic> = {};
 
   try {
+    const where = { id: circleId ?? undefined };
+
     await prismaClient.$transaction(async () => {
+      if (existingCirle) {
+        // Remove existing members to be updated with new payload
+        await prismaClient.circle.update({
+          where,
+          data: { members: { set: [] } },
+        });
+      }
+
       const data = {
         userId,
         name: validatedFields.data.name,
@@ -98,9 +108,7 @@ export async function upsertCircle(formData: FormData) {
       };
 
       newCircle = await prismaClient.circle.upsert({
-        where: {
-          id: circleId ?? undefined,
-        },
+        where,
         create: data,
         update: data,
         select: CIRCLE_SELECT,

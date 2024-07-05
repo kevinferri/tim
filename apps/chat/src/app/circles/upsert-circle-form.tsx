@@ -80,14 +80,20 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
         </TooltipProvider>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(_open) => {
+          setOpen(_open);
+          setShowDeleteWarning(false);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {isEdit ? (
                 <>
                   Settings for{" "}
-                  <div className="font-pronounced">{existingCircle.name}</div>
+                  <span className="font-pronounced">{existingCircle.name}</span>
                 </>
               ) : (
                 "Create new circle"

@@ -16,19 +16,19 @@ export const DashboardLayout = ({ circleId, topicId, children }: Props) => {
     <UserRoomConnect>
       <div className="flex flex-col h-screen">
         <div className="flex overflow-hidden basis-full">
-          <CirclesNav circleId={circleId} />
-          {circleId ? (
-            <CircleRoomConnect circleId={circleId}>
-              <ActiveCircleMembersProvider>
+          <ActiveCircleMembersProvider>
+            <CirclesNav circleId={circleId} />
+            {circleId ? (
+              <CircleRoomConnect circleId={circleId}>
                 <TopicsNav topicId={topicId} circleId={circleId} />
                 <Content>{children}</Content>
-              </ActiveCircleMembersProvider>
-            </CircleRoomConnect>
-          ) : (
-            <div className="flex basis-full justify-center items-center">
-              {children}
-            </div>
-          )}
+              </CircleRoomConnect>
+            ) : (
+              <div className="flex basis-full justify-center items-center">
+                {children}
+              </div>
+            )}
+          </ActiveCircleMembersProvider>
         </div>
       </div>
     </UserRoomConnect>

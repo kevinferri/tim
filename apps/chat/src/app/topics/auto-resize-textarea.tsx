@@ -3,14 +3,7 @@
 import { Textarea } from "@/components/ui/textarea";
 import { useEffectOnce } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
-import {
-  ChangeEvent,
-  KeyboardEvent,
-  useRef,
-  forwardRef,
-  ForwardedRef,
-  RefObject,
-} from "react";
+import { ChangeEvent, KeyboardEvent, useRef, forwardRef } from "react";
 
 type Props = {
   disabled?: boolean;

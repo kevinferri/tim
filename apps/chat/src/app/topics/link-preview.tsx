@@ -1,6 +1,6 @@
 "use client";
 
-import { useFetch, usePrevious } from "@/lib/hooks";
+import { useFetch } from "@/lib/hooks";
 import {
   Card,
   CardDescription,
@@ -12,26 +12,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/api/link-metadata/route";
-import { useEffect } from "react";
 import { ResponsiveVideoPlayer, getYoutubeVideoFromUrl } from "./media-viewer";
 
 type Props = {
   link: string;
-  onLoadPreview?: () => void;
+  onEmbedMediaLoad?: () => void;
 };
 
 export function LinkPreview(props: Props) {
-  const { data, error, loading } = useFetch<LinkMetadataResponse>(
+  const { data, error } = useFetch<LinkMetadataResponse>(
     `/api/link-metadata?url=${encodeURIComponent(props.link)}`
   );
-  const prevLoading = usePrevious(loading);
-  const { onLoadPreview } = props;
-
-  useEffect(() => {
-    if (prevLoading && !loading) {
-      onLoadPreview?.();
-    }
-  }, [loading, prevLoading, onLoadPreview]);
 
   if (error) return null;
 
@@ -40,7 +31,7 @@ export function LinkPreview(props: Props) {
       {data?.ogVideo && !getYoutubeVideoFromUrl(data?.ogVideo) && (
         <ResponsiveVideoPlayer
           src={data.ogVideo}
-          onPreviewLoad={props.onLoadPreview}
+          onPreviewLoad={props.onEmbedMediaLoad}
         />
       )}
       <Link target="_blank" href={props.link}>

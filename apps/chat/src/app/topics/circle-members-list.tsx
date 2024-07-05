@@ -56,8 +56,8 @@ type MembersWithStatus = (CircleMember & { isCreator: boolean })[];
 
 export function CircleMembersList() {
   const { circleMembers, circleId } = useCurrentTopicContext();
-  const { activeCircleMembers } = useActiveCircleMembers();
-  const debounced = useDebounce(activeCircleMembers, 250);
+  const { activeMembersByTopic } = useActiveCircleMembers();
+  const debounced = useDebounce(activeMembersByTopic, 250);
   const allActiveMembers = debounced
     ? keyBy(Object.values(debounced).flat(), "id")
     : {};
