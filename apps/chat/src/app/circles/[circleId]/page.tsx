@@ -1,9 +1,9 @@
-import { NotFound } from "@/components/ui/not-found";
 import { prismaClient } from "@/lib/prisma/client";
 import { redirect } from "next/navigation";
 
 type Props = {
   params: { circleId: string };
+  children: React.ReactNode;
 };
 
 export default async function CirclePage(props: Props) {
@@ -11,12 +11,14 @@ export default async function CirclePage(props: Props) {
     circleId: props.params.circleId,
     select: {
       id: true,
-      name: true,
       defaultTopicId: true,
     },
   });
 
-  // Todo: landing page for circles
-  if (!circle?.defaultTopicId) return <NotFound copy="Topic not found" />;
+  // TODO: landing page for circles
+  if (!circle?.defaultTopicId) {
+    return props.children;
+  }
+
   redirect(`/circles/${circle.id}/topics/${circle.defaultTopicId}`);
 }

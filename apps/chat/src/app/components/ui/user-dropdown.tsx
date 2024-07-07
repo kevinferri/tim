@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { signOut } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
-import { UserAvatar } from "@/components/shared/user-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useSelf } from "../auth/self-provider";
 
 export function UserDropDown() {

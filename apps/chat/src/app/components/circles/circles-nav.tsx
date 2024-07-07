@@ -1,11 +1,11 @@
 import { Routes } from "@/routes";
-import { UpsertCircleForm } from "@/circles/upsert-circle-form";
+import { UpsertCircleForm } from "@/components/circles/upsert-circle-form";
 import Link from "next/link";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserDropDown } from "@/components/ui/user-dropdown";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { CirclesList } from "@/circles/circles-list";
+import { CirclesList } from "@/components/circles/circles-list";
 import { Circle } from "@prisma/client";
 
 type Props = {

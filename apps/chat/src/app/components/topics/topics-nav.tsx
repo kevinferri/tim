@@ -3,13 +3,14 @@ import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { Button } from "@/components/ui/button";
 import { GearIcon } from "@radix-ui/react-icons";
 import { TopicsList } from "@/components/topics/topics-list";
-import { UpsertCircleForm } from "@/circles/upsert-circle-form";
+import { UpsertCircleForm } from "@/components/circles/upsert-circle-form";
 
 type Props = {
   circleId: string;
 };
 
 export async function TopicsNav({ circleId }: Props) {
+  // TODO: use promise.all here
   const parentCircle = await prismaClient.circle.getMeCircleById({
     circleId,
     select: {

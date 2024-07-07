@@ -6,7 +6,7 @@ import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "@/components/topics/highlight-tooltip";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { MediaViewer } from "@/components/topics/media-viewer";
-import { UserAvatar } from "@/components/shared/user-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
 import { MessageActions } from "@/components/topics/message-actions";
 import { MessageText } from "@/components/topics/message-text";

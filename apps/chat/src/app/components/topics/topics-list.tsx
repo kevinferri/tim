@@ -10,8 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useSelf } from "@/components/auth/self-provider";
-import { UserAvatar } from "@/components/shared/user-avatar";
-import { useActiveCircleMembers } from "@/components/layouts/dashboard/active-circle-members-provider";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-provider";
 
 type Props = {
   topics?: Topic[];

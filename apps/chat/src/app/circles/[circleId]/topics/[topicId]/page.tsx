@@ -13,7 +13,6 @@ import {
 } from "@/lib/prisma/message-model";
 import { CurrentTopicProvider } from "@/components/topics/current-topic-provider";
 import { DEFAULT_TITLE } from "@/layout";
-import { Content } from "@/components/layouts/dashboard/content";
 
 type Props = {
   params: { topicId: string };
@@ -53,41 +52,43 @@ export async function generateMetadata({ params }: Props) {
 export default async function TopicPage({ params }: Props) {
   const topic = await getTopic(params.topicId);
 
-  const messages = await prismaClient.message.getMessagesForTopic({
-    topicId: topic?.id,
-    select: DEFAULT_MESSAGE_SELECT,
-  });
-
-  const topHighlights =
-    await prismaClient.message.getTopHighlightedMessagesForTopic({
+  const queries = [
+    prismaClient.message.getMessagesForTopic({
       topicId: topic?.id,
       select: DEFAULT_MESSAGE_SELECT,
-    });
+    }),
 
-  const mediaMessages = await prismaClient.message.getMediaMessagesForTopic({
-    topicId: topic?.id,
-    select: DEFAULT_MESSAGE_SELECT,
-  });
+    prismaClient.message.getTopHighlightedMessagesForTopic({
+      topicId: topic?.id,
+      select: DEFAULT_MESSAGE_SELECT,
+    }),
 
-  const circleMembers = topic?.parentCircle.id
-    ? await prismaClient.user.getMembersForCircle({
-        circleId: topic.parentCircle.id,
-        select: {
-          id: true,
-          name: true,
-          imageUrl: true,
-          createdAt: true,
-          createdCircles: {
-            select: {
-              id: true,
-            },
+    prismaClient.message.getMediaMessagesForTopic({
+      topicId: topic?.id,
+      select: DEFAULT_MESSAGE_SELECT,
+    }),
+
+    prismaClient.user.getMembersForCircle({
+      circleId: topic?.parentCircle.id ?? "",
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        createdAt: true,
+        createdCircles: {
+          select: {
+            id: true,
           },
         },
-      })
-    : [];
+      },
+    }),
+  ];
+
+  const [messages, topHighlights, mediaMessages, circleMembers] =
+    await Promise.all(queries);
 
   return (
-    <Content>
+    <div className="flex flex-col overflow-y-auto basis-full h-full">
       {topic ? (
         <CurrentTopicProvider
           topicId={topic.id}
@@ -116,6 +117,6 @@ export default async function TopicPage({ params }: Props) {
       ) : (
         <NotFound copy="Topic not found" />
       )}
-    </Content>
+    </div>
   );
 }

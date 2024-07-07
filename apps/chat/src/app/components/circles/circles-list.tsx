@@ -19,8 +19,8 @@ import {
 } from "@/components/socket/use-socket";
 import { ToastAction } from "@/components/ui/toast";
 import { useParams, useRouter } from "next/navigation";
-import { getInitials, UserAvatar } from "@/components/shared/user-avatar";
-import { useActiveCircleMembers } from "@/components/layouts/dashboard/active-circle-members-provider";
+import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
+import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-provider";
 
 type Props = {
   existingCircles?: Circle[];

@@ -1,10 +1,5 @@
 "use client";
 
-import { Self } from "@/components/auth/self-provider";
-import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
-import { useDebounce } from "@/lib/hooks";
-import { User } from "@prisma/client";
-import uniqBy from "lodash.uniqby";
 import {
   createContext,
   useContext,
@@ -12,7 +7,11 @@ import {
   useMemo,
   useCallback,
 } from "react";
-
+import uniqBy from "lodash.uniqby";
+import { Self } from "@/components/auth/self-provider";
+import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { useDebounce } from "@/lib/hooks";
+import { User } from "@prisma/client";
 const ActiveCircleMembersContext = createContext<ReturnType<
   typeof useContextValue
 > | null>(null);

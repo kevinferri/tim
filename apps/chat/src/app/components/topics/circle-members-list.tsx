@@ -1,8 +1,8 @@
 "use client";
 
 import keyBy from "lodash.keyby";
-import { useActiveCircleMembers } from "@/components/layouts/dashboard/active-circle-members-provider";
-import { UserAvatar } from "@/components/shared/user-avatar";
+import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-provider";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   CircleMember,

@@ -9,11 +9,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { prismaClient } from "@/lib/prisma/client";
 import { SelfProvider } from "@/components/auth/self-provider";
 
+import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
+import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
+import { ActiveCircleMembersProvider } from "@/components/dashboard/active-circle-members-provider";
+import { CirclesNav } from "@/components/circles/circles-nav";
+
 import "@/globals.css";
-import { UserRoomConnect } from "./components/layouts/dashboard/user-room-connect";
-import { CircleRoomConnect } from "./components/layouts/dashboard/circle-room-connect";
-import { ActiveCircleMembersProvider } from "./components/layouts/dashboard/active-circle-members-provider";
-import { CirclesNav } from "./circles/circles-nav";
 
 export const DEFAULT_TITLE = "Tim";
 
