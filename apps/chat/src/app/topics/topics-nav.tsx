@@ -49,6 +49,7 @@ export async function TopicsNav({ circleId, topicId }: Props) {
         topics={topics}
         topicId={topicId}
         circleName={parentCircle?.name}
+        circleId={parentCircle?.id}
       />
 
       <div className="flex flex-col items-center mt-auto gap-3 p-3">

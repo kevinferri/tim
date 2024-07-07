@@ -97,7 +97,8 @@ export const Message = (props: MessageProps) => {
   const [shuffledGifLoading, setShuffledGifLoading] = useState(false);
   const createdAt = new Date(props.createdAt);
   const sentBySelf = props.sentBy.id === self.id;
-  const isNewestMessage = messages[messages.length - 1].id === props.id;
+  const isNewestMessage =
+    messages.length > 0 && messages[messages.length - 1].id === props.id;
   const isShufflingGif = shufflingGifs.includes(props.id) || shuffledGifLoading;
   const { timeZone } = useTimeZone();
   const shouldScroll = isNewestMessage && props.context === "topic";

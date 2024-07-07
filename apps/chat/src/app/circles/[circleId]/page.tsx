@@ -1,15 +1,14 @@
 import { NotFound } from "@/components/ui/not-found";
 import { prismaClient } from "@/lib/prisma/client";
-import { getLinkForTopic } from "@/routes";
 import { redirect } from "next/navigation";
 
-export default async function GroupPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+type Props = {
+  params: { circleId: string };
+};
+
+export default async function CirclePage(props: Props) {
   const circle = await prismaClient.circle.getMeCircleById({
-    circleId: params.id,
+    circleId: props.params.circleId,
     select: {
       id: true,
       name: true,
@@ -17,6 +16,7 @@ export default async function GroupPage({
     },
   });
 
+  // Todo: landing page for circles
   if (!circle?.defaultTopicId) return <NotFound copy="Topic not found" />;
-  redirect(getLinkForTopic(circle.defaultTopicId));
+  redirect(`/circles/${circle.id}/topics/${circle.defaultTopic}`);
 }

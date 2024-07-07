@@ -15,7 +15,7 @@ import { cache } from "react";
 import { DEFAULT_TITLE } from "@/layout";
 
 type Props = {
-  params: { id: string };
+  params: { topicId: string };
 };
 
 const getTopic = cache(async (id: string) => {
@@ -40,7 +40,7 @@ const getTopic = cache(async (id: string) => {
 });
 
 export async function generateMetadata({ params }: Props) {
-  const topic = await getTopic(params.id);
+  const topic = await getTopic(params.topicId);
 
   return {
     title: !topic
@@ -49,8 +49,8 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function TopicsPage({ params }: Props) {
-  const topic = await getTopic(params.id);
+export default async function TopicPage({ params }: Props) {
+  const topic = await getTopic(params.topicId);
 
   const messages = await prismaClient.message.getMessagesForTopic({
     topicId: topic?.id,
@@ -86,37 +86,35 @@ export default async function TopicsPage({ params }: Props) {
     : [];
 
   return (
-    <DashboardLayout circleId={topic?.parentCircle.id} topicId={topic?.id}>
+    <>
       {topic ? (
-        <>
-          <CurrentTopicProvider
-            topicId={topic.id}
-            circleId={topic.parentCircle.id}
-            messagesLimit={MESSAGE_LIMIT}
-            topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
-            existingCircleMemebers={circleMembers}
-            // @ts-expect-error
-            existingMessages={messages}
-            // @ts-expect-error
-            existingTopHighlights={topHighlights}
-            // @ts-expect-error
-            existingMediaMessages={mediaMessages}
-          >
-            <TopicHeader topic={topic} />
-            <div className="flex flex-1 flex-row overflow-y-hidden">
-              <div className="flex flex-1 flex-col overflow-x-hidden">
-                <TopicChat />
-                <TopicMessageBar />
-              </div>
-              <div className="flex overflow-y-hidden">
-                <TopicSideBar />
-              </div>
+        <CurrentTopicProvider
+          topicId={topic.id}
+          circleId={topic.parentCircle.id}
+          messagesLimit={MESSAGE_LIMIT}
+          topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
+          existingCircleMemebers={circleMembers}
+          // @ts-expect-error
+          existingMessages={messages}
+          // @ts-expect-error
+          existingTopHighlights={topHighlights}
+          // @ts-expect-error
+          existingMediaMessages={mediaMessages}
+        >
+          <TopicHeader topic={topic} />
+          <div className="flex flex-1 flex-row overflow-y-hidden">
+            <div className="flex flex-1 flex-col overflow-x-hidden">
+              <TopicChat />
+              <TopicMessageBar />
             </div>
-          </CurrentTopicProvider>
-        </>
+            <div className="flex overflow-y-hidden">
+              <TopicSideBar />
+            </div>
+          </div>
+        </CurrentTopicProvider>
       ) : (
         <NotFound copy="Topic not found" />
       )}
-    </DashboardLayout>
+    </>
   );
 }

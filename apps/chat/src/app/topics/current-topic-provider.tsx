@@ -70,6 +70,7 @@ export function CurrentTopicProvider(props: Props) {
       const _ref = messagesListRef.current;
       if (!_ref) return;
 
+      // well this is broken now idk why
       const isNearBottom =
         _ref.scrollHeight - SCROLL_THRESHOLD <= _ref.scrollTop;
 

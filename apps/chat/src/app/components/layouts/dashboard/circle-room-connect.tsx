@@ -5,19 +5,22 @@ import { useEffectOnce } from "@/lib/hooks";
 
 type Props = {
   children: React.ReactNode;
-  circleId: string;
+  circleIds: string[];
 };
 
-export function CircleRoomConnect({ children, circleId }: Props) {
+export function CircleRoomConnect({ children, circleIds }: Props) {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
 
   useEffectOnce(() => {
-    const payload = { id: circleId, roomType: "circle" };
-    joinRoom.emit(payload);
+    circleIds.forEach((id) => {
+      joinRoom.emit({ id, roomType: "circle" });
+    });
 
     return () => {
-      leaveRoom.emit(payload);
+      circleIds.forEach((id) => {
+        leaveRoom.emit({ id, roomType: "circle" });
+      });
     };
   });
 

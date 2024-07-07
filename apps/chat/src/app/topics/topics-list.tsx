@@ -8,7 +8,6 @@ import { useSocketHandler, SocketEvent } from "@/components/socket/use-socket";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
-import { getLinkForTopic } from "@/routes";
 import { ToastAction } from "@/components/ui/toast";
 import { useSelf } from "@/components/auth/self-provider";
 import { UserAvatar } from "@/components/shared/user-avatar";
@@ -18,12 +17,14 @@ type Props = {
   topics?: Topic[];
   topicId?: string;
   circleName?: string;
+  circleId?: string;
 };
 
 type NewTopicHandlerProps = {
   id: string;
   name: string;
   isEdit: boolean;
+  circleId: string;
   createdBy: {
     name: string;
     id: string;
@@ -40,7 +41,12 @@ type DeletedTopicHandlerProps = {
   };
 };
 
-export const TopicsList = ({ topics, topicId, circleName }: Props) => {
+export const TopicsList = ({
+  topics,
+  topicId,
+  circleName,
+  circleId,
+}: Props) => {
   const self = useSelf();
   const { toast } = useToast();
   const router = useRouter();
@@ -51,6 +57,7 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
     (payload) => {
       router.refresh();
 
+      if (payload.circleId !== circleId) return;
       if (payload.isEdit) return;
 
       const createdBySelf = payload.createdBy.id === self.id;
@@ -63,7 +70,7 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
           <ToastAction
             altText="Go there now"
             onClick={() => {
-              router.push(getLinkForTopic(payload.id));
+              router.push(`/circles/${payload.circleId}/topics/${payload.id}`);
             }}
           >
             Go there now
@@ -81,6 +88,8 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
       if (payload.id === topicId) {
         router.push(`/circles/${payload.circleId}`);
       }
+
+      if (payload.circleId !== circleId) return;
 
       const deletedBySelf = payload.deletedBy.id === self.id;
       const name = deletedBySelf ? "You" : payload.deletedBy.name;
@@ -103,7 +112,10 @@ export const TopicsList = ({ topics, topicId, circleName }: Props) => {
           const activeUsers = getActiveMembersInTopic(topic.id);
 
           return (
-            <Link href={getLinkForTopic(topic.id)} key={topic.id}>
+            <Link
+              href={`/circles/${circleId}/topics/${topic.id}`}
+              key={topic.id}
+            >
               <Button
                 variant={topic.id === topicId ? "secondary" : "ghost"}
                 className="w-full flex justify-start text-base font-normal p-3"

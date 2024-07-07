@@ -1,6 +1,6 @@
 "use client";
 
-import { Routes, getLinkForTopic } from "@/routes";
+import { useMemo } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -12,13 +12,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Circle } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { toast } from "@/components/ui/use-toast";
-import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import {
+  SocketEvent,
+  useSocketEmit,
+  useSocketHandler,
+} from "@/components/socket/use-socket";
 import { ToastAction } from "@/components/ui/toast";
-import { useRouter } from "next/navigation";
-import { getInitials } from "@/components/shared/user-avatar";
+import { useParams, useRouter } from "next/navigation";
+import { getInitials, UserAvatar } from "@/components/shared/user-avatar";
+import { useActiveCircleMembers } from "@/components/layouts/dashboard/active-circle-members-provider";
 
 type Props = {
-  currentCircleId?: string;
   existingCircles?: Circle[];
 };
 
@@ -48,6 +52,25 @@ type DeletedCircleHandlerProps = {
 export function CirclesList(props: Props) {
   const self = useSelf();
   const router = useRouter();
+  const params = useParams();
+  const { topicMap } = useActiveCircleMembers();
+  const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
+  const activeMembersByCircle = useMemo(() => {
+    if (!topicMap) return undefined;
+
+    return Object.values(topicMap).reduce((acc, cur) => {
+      return {
+        ...acc,
+        [cur.circleId]: {
+          circleId: cur.circleId,
+          activeUsers: [
+            ...(acc[cur.circleId]?.activeUsers ?? []),
+            ...cur.activeUsers,
+          ],
+        },
+      };
+    }, {} as typeof topicMap);
+  }, [topicMap]);
 
   useSocketHandler<NewCircleHandlerProps>(
     SocketEvent.UpsertedCircle,
@@ -58,9 +81,11 @@ export function CirclesList(props: Props) {
       const name = createdBySelf ? "You" : payload.createdBy.name;
       const isInCircle = payload.members.includes(self.id);
       const wasInCircle = payload.prevMembers.includes(self.id);
-      const link = payload.defaultTopicId
-        ? getLinkForTopic(payload.defaultTopicId)
-        : `/circles/${payload.id}`;
+      const link = `/circles/${payload.id}/topics/${payload.defaultTopicId}`;
+
+      if (!payload.isEdit) {
+        joinRoom.emit({ id: payload.id, roomType: "circle" });
+      }
 
       if (payload.isEdit && createdBySelf) return;
       if (wasInCircle && !isInCircle) return;
@@ -102,18 +127,20 @@ export function CirclesList(props: Props) {
   return (
     <>
       {props.existingCircles?.map((circle) => {
-        const link = circle.defaultTopicId
-          ? getLinkForTopic(circle.defaultTopicId)
-          : Routes.TopicsForCircle.replace(":id", circle.id);
+        const activeUsers =
+          activeMembersByCircle?.[circle.id]?.activeUsers ?? [];
 
         return (
           <TooltipProvider key={circle.id}>
             <Tooltip delayDuration={100}>
               <TooltipTrigger>
-                <Link href={link}>
+                <Link
+                  href={`/circles/${circle.id}/topics/${circle.defaultTopicId}`}
+                  className="relative"
+                >
                   <Avatar
                     className={`hover:opacity-70 ${
-                      props.currentCircleId === circle.id
+                      params.circleId === circle.id
                         ? "border shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]"
                         : "shadow-md"
                     }`}
@@ -128,10 +155,33 @@ export function CirclesList(props: Props) {
                       </div>
                     </AvatarFallback>
                   </Avatar>
+                  {activeUsers.length > 0 && (
+                    <div className="absolute top-[-7px] right-[-3px] w-[18px] h-[18px] text-[11px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
+                      {activeUsers.length}
+                    </div>
+                  )}
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                <div>{circle.name}</div>
+              <TooltipContent side="right" className="p-2">
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm leading-none">{circle.name}</div>
+                  {activeUsers.length > 0 && (
+                    <div className="flex gap-1">
+                      {activeUsers.map((user) => {
+                        return (
+                          <UserAvatar
+                            key={user.id}
+                            id={user.id}
+                            name={user.name}
+                            imageUrl={user.imageUrl}
+                            createdAt={user.createdAt}
+                            size="xs"
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

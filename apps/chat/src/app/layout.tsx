@@ -10,6 +10,10 @@ import { prismaClient } from "@/lib/prisma/client";
 import { SelfProvider } from "@/components/auth/self-provider";
 
 import "@/globals.css";
+import { UserRoomConnect } from "./components/layouts/dashboard/user-room-connect";
+import { CircleRoomConnect } from "./components/layouts/dashboard/circle-room-connect";
+import { ActiveCircleMembersProvider } from "./components/layouts/dashboard/active-circle-members-provider";
+import { CirclesNav } from "./circles/circles-nav";
 
 export const DEFAULT_TITLE = "Tim";
 
@@ -47,14 +51,7 @@ async function getSocketConfig(user?: User) {
   };
 }
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const user = await getLoggedInUser();
-  const socketConfig = await getSocketConfig(user);
-
+function BaseLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={GeistSans.className}>
       <head />
@@ -65,12 +62,67 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Toaster />
-          <SelfProvider user={user}>
-            <SocketProvider {...socketConfig}>{children}</SocketProvider>
-          </SelfProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>
   );
+}
+
+function LoggedOutLayout({ children }: { children: React.ReactNode }) {
+  return <BaseLayout>{children}</BaseLayout>;
+}
+
+async function LoggedInLayout({ children }: { children: React.ReactNode }) {
+  const user = await getLoggedInUser();
+  const socketConfig = await getSocketConfig(user);
+  const circles = await prismaClient.circle.getMeCircles({
+    select: {
+      id: true,
+      name: true,
+      defaultTopicId: true,
+      imageUrl: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  const circleIds = circles?.map(({ id }) => id);
+
+  return (
+    <BaseLayout>
+      <Toaster />
+      <SelfProvider user={user}>
+        <SocketProvider {...socketConfig}>
+          <UserRoomConnect>
+            <CircleRoomConnect circleIds={circleIds ?? []}>
+              <div className="flex flex-col h-screen">
+                <div className="flex overflow-hidden basis-full">
+                  <ActiveCircleMembersProvider>
+                    <CirclesNav circles={circles} />
+                    {children}
+                  </ActiveCircleMembersProvider>
+                </div>
+              </div>
+            </CircleRoomConnect>
+          </UserRoomConnect>
+        </SocketProvider>
+      </SelfProvider>
+    </BaseLayout>
+  );
+}
+
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const user = await getLoggedInUser();
+
+  if (!user) {
+    return <LoggedOutLayout>{children}</LoggedOutLayout>;
+  }
+
+  return <LoggedInLayout>{children}</LoggedInLayout>;
 }

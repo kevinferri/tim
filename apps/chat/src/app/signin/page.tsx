@@ -10,10 +10,8 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 
 export default async function LogInPage({
-  params,
   searchParams,
 }: {
-  params: { slug: string };
   searchParams?: { [key: string]: string | undefined };
 }) {
   const session = await getServerSession();

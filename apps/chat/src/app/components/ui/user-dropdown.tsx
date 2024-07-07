@@ -11,15 +11,11 @@ import { Button } from "@/components/ui/button";
 import { signOut } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
 import { UserAvatar } from "@/components/shared/user-avatar";
+import { useSelf } from "../auth/self-provider";
 
-type Props = {
-  id: string;
-  avatarUrl?: string;
-  name?: string;
-  email?: string;
-};
+export function UserDropDown() {
+  const self = useSelf();
 
-export function UserDropDown(props: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -28,15 +24,11 @@ export function UserDropDown(props: Props) {
           variant="ghost"
           className="p-0 rounded-full hover:opacity-80 shadow-sm"
         >
-          <UserAvatar
-            id={props.id}
-            name={props.name}
-            imageUrl={props.avatarUrl}
-          />
+          <UserAvatar id={self.id} name={self.name} imageUrl={self.imageUrl} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem disabled>{props.email}</DropdownMenuItem>
+        <DropdownMenuItem disabled>{self.email}</DropdownMenuItem>
         <Separator />
         <DropdownMenuItem onClick={() => signOut()} className="flex gap-3">
           <ExitIcon /> Sign out

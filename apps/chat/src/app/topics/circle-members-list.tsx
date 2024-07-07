@@ -1,14 +1,13 @@
 "use client";
 
+import keyBy from "lodash.keyby";
 import { useActiveCircleMembers } from "@/components/layouts/dashboard/active-circle-members-provider";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
-import { useDebounce } from "@/lib/hooks";
 import {
   CircleMember,
   useCurrentTopicContext,
 } from "@/topics/current-topic-provider";
-import keyBy from "lodash.keyby";
 
 type MemberProps = {
   id: string;
@@ -56,10 +55,12 @@ type MembersWithStatus = (CircleMember & { isCreator: boolean })[];
 
 export function CircleMembersList() {
   const { circleMembers, circleId } = useCurrentTopicContext();
-  const { activeMembersByTopic } = useActiveCircleMembers();
-  const debounced = useDebounce(activeMembersByTopic, 250);
-  const allActiveMembers = debounced
-    ? keyBy(Object.values(debounced).flat(), "id")
+  const { topicMap } = useActiveCircleMembers();
+  const allActiveMembers = topicMap
+    ? keyBy(
+        Object.values(topicMap).flatMap(({ activeUsers }) => activeUsers),
+        "id"
+      )
     : {};
 
   const onlineMembers: MembersWithStatus = [];

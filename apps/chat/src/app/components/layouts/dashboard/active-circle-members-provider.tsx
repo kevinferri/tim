@@ -2,6 +2,7 @@
 
 import { Self } from "@/components/auth/self-provider";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { useDebounce } from "@/lib/hooks";
 import { User } from "@prisma/client";
 import uniqBy from "lodash.uniqby";
 import {
@@ -17,44 +18,50 @@ const ActiveCircleMembersContext = createContext<ReturnType<
 > | null>(null);
 
 type Props = { children: React.ReactNode };
+type TopicMap = Record<string, { activeUsers: Self[]; circleId: string }>;
 
 function useContextValue() {
-  const [activeMembersByTopic, setActiveMembersByTopic] =
-    useState<Record<string, Self[]>>();
+  const [topicMap, setTopicMap] =
+    useState<Record<string, { activeUsers: Self[]; circleId: string }>>();
+
+  const debounced = useDebounce(topicMap, 200);
 
   const getActiveMembersInTopic = useCallback(
-    (topicId: string) => activeMembersByTopic?.[topicId] ?? [],
-    [activeMembersByTopic]
+    (topicId: string) => topicMap?.[topicId]?.activeUsers ?? [],
+    [topicMap]
   );
 
-  // When a user joines a circle, hydrate all existing active sockets for each topic
   useSocketHandler<{
-    topicMap: Record<string, Self[]>;
-    actingUser: Self;
-    circleId: string;
+    topicMap: TopicMap;
   }>(SocketEvent.UserJoinedCircle, (payload) => {
-    setActiveMembersByTopic({
-      ...activeMembersByTopic,
+    setTopicMap({
+      ...topicMap,
       ...payload.topicMap,
     });
   });
 
-  useSocketHandler<{ activeUsers: User[]; actingUser: User; topicId: string }>(
+  useSocketHandler<{ activeUsers: User[]; topicId: string; circleId: string }>(
     SocketEvent.UserJoinedOrLeftTopic,
     (payload) => {
-      setActiveMembersByTopic({
-        ...activeMembersByTopic,
-        [payload.topicId]: uniqBy(payload.activeUsers, "id"),
+      if (!topicMap) return;
+
+      setTopicMap({
+        ...topicMap,
+        [payload.topicId]: {
+          ...topicMap[payload.topicId],
+          circleId: payload.circleId,
+          activeUsers: uniqBy(payload.activeUsers, "id"),
+        },
       });
     }
   );
 
   return useMemo(
     () => ({
-      activeMembersByTopic,
+      topicMap: debounced,
       getActiveMembersInTopic,
     }),
-    [activeMembersByTopic, getActiveMembersInTopic]
+    [debounced, getActiveMembersInTopic]
   );
 }
 
