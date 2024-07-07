@@ -1,10 +1,9 @@
 import { badRequest, unauthorized, notFound } from "@/api/error-responses";
 import { getLoggedInUserId } from "@/lib/session";
-import { Message } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prismaClient } from "@/lib/prisma/client";
 import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
-import { MessageProps } from "@/topics/message";
+import { MessageProps } from "@/components/topics/message";
 
 export type UserStatsForTopicResponse = {
   topicName: string;

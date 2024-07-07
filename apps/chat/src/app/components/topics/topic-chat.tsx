@@ -2,8 +2,8 @@
 
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Message, MessageProps } from "@/topics/message";
-import { useCurrentTopicContext } from "@/topics/current-topic-provider";
+import { Message, MessageProps } from "@/components/topics/message";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { useEffectOnce } from "@/lib/hooks";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 

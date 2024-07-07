@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { UpsertTopicForm } from "@/topics/upsert-topic-form";
+import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { Topic } from "@prisma/client";
-import { TopicActiveUsers } from "@/topics/topic-active-users";
+import { TopicActiveUsers } from "@/components/topics/topic-active-users";
 
 type Props = {
   topic: Pick<Topic, "id" | "name" | "userId" | "description"> & {

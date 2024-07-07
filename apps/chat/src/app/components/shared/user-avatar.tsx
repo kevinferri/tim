@@ -12,7 +12,7 @@ import {
 } from "@radix-ui/react-icons";
 import { UserStatsForTopicResponse } from "@/api/topics/[topicId]/user-stats/[userId]/route";
 import { useState } from "react";
-import { Message, MessageProps } from "@/topics/message";
+import { Message, MessageProps } from "@/components/topics/message";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { Skeleton } from "../ui/skeleton";

@@ -3,14 +3,14 @@ import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn, hydrateUrl, isValidUrl } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { HighlightTooltip } from "@/topics/highlight-tooltip";
-import { useCurrentTopicContext } from "@/topics/current-topic-provider";
-import { MediaViewer } from "@/topics/media-viewer";
+import { HighlightTooltip } from "@/components/topics/highlight-tooltip";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import { MediaViewer } from "@/components/topics/media-viewer";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { AutoResizeTextarea } from "@/topics/auto-resize-textarea";
-import { MessageActions } from "@/topics/message-actions";
-import { MessageText } from "@/topics/message-text";
-import { LinkPreview } from "@/topics/link-preview";
+import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
+import { MessageActions } from "@/components/topics/message-actions";
+import { MessageText } from "@/components/topics/message-text";
+import { LinkPreview } from "@/components/topics/link-preview";
 import { useTimeZone } from "@/lib/hooks";
 
 function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {

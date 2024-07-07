@@ -2,20 +2,20 @@
 
 import { useMemo, useRef, useState } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { useCurrentTopicContext } from "@/topics/current-topic-provider";
-import { MediaUploader } from "@/topics/media-uploader";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import { MediaUploader } from "@/components/topics/media-uploader";
 import { uploadMedia } from "@/actions/media";
 import {
   MediaViewer,
   extractMediaFromMessage,
   getYoutubeVideoFromUrl,
-} from "@/topics/media-viewer";
+} from "@/components/topics/media-viewer";
 import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Progress } from "@/components/ui/progress";
-import { useUploadProgres } from "@/topics/use-upload-progress";
+import { useUploadProgres } from "@/components/topics/use-upload-progress";
 import { useUserTypingEmitter } from "@/lib/hooks";
-import { AutoResizeTextarea } from "@/topics/auto-resize-textarea";
+import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
 
 type MessagePayload = {
   message: string;

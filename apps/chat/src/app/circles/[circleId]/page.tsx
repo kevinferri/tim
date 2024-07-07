@@ -18,5 +18,5 @@ export default async function CirclePage(props: Props) {
 
   // Todo: landing page for circles
   if (!circle?.defaultTopicId) return <NotFound copy="Topic not found" />;
-  redirect(`/circles/${circle.id}/topics/${circle.defaultTopic}`);
+  redirect(`/circles/${circle.id}/topics/${circle.defaultTopicId}`);
 }

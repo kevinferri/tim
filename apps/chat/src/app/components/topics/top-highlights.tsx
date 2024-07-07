@@ -1,7 +1,7 @@
 "use client";
 
-import { useCurrentTopicContext } from "@/topics/current-topic-provider";
-import { Message, MessageProps } from "@/topics/message";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import { Message, MessageProps } from "@/components/topics/message";
 
 export function TopHighlights() {
   const { topHighlights } = useCurrentTopicContext();

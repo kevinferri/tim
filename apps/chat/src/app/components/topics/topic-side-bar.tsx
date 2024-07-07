@@ -7,10 +7,10 @@ import {
   StarIcon,
 } from "@radix-ui/react-icons";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TopHighlights } from "@/topics/top-highlights";
-import { MediaList } from "@/topics/media-list";
+import { TopHighlights } from "@/components/topics/top-highlights";
+import { MediaList } from "@/components/topics/media-list";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CircleMembersList } from "@/topics/circle-members-list";
+import { CircleMembersList } from "@/components/topics/circle-members-list";
 import { useState } from "react";
 import { NotificationsList } from "./notifications-list";
 import { useTopicNotifications } from "./use-topic-notifications";

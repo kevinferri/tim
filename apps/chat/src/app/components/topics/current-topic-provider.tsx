@@ -10,7 +10,7 @@ import {
   MutableRefObject,
 } from "react";
 import { useRouter } from "next/navigation";
-import { MessageProps } from "@/topics/message";
+import { MessageProps } from "@/components/topics/message";
 import {
   SocketEvent,
   useSocketEmit,

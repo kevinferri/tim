@@ -1,7 +1,7 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useCurrentTopicContext } from "@/topics/current-topic-provider";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { Message } from "./message";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Card, CardContent } from "@/components/ui/card";

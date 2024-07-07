@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Topic } from "@prisma/client";
 
 import { useSocketHandler, SocketEvent } from "@/components/socket/use-socket";
@@ -15,7 +15,6 @@ import { useActiveCircleMembers } from "@/components/layouts/dashboard/active-ci
 
 type Props = {
   topics?: Topic[];
-  topicId?: string;
   circleName?: string;
   circleId?: string;
 };
@@ -41,12 +40,8 @@ type DeletedTopicHandlerProps = {
   };
 };
 
-export const TopicsList = ({
-  topics,
-  topicId,
-  circleName,
-  circleId,
-}: Props) => {
+export const TopicsList = ({ topics, circleName, circleId }: Props) => {
+  const params = useParams();
   const self = useSelf();
   const { toast } = useToast();
   const router = useRouter();
@@ -85,7 +80,7 @@ export const TopicsList = ({
     (payload) => {
       router.refresh();
 
-      if (payload.id === topicId) {
+      if (payload.id === params.topicId) {
         router.push(`/circles/${payload.circleId}`);
       }
 
@@ -117,7 +112,7 @@ export const TopicsList = ({
               key={topic.id}
             >
               <Button
-                variant={topic.id === topicId ? "secondary" : "ghost"}
+                variant={topic.id === params.topicId ? "secondary" : "ghost"}
                 className="w-full flex justify-start text-base font-normal p-3"
               >
                 {topic.name}

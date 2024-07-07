@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   CircleMember,
   useCurrentTopicContext,
-} from "@/topics/current-topic-provider";
+} from "@/components/topics/current-topic-provider";
 
 type MemberProps = {
   id: string;

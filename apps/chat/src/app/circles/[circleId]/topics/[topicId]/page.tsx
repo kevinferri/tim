@@ -1,18 +1,19 @@
-import { DashboardLayout } from "@/components/layouts/dashboard/dashboard-layout";
+import { cache } from "react";
+
 import { prismaClient } from "@/lib/prisma/client";
-import { TopicHeader } from "@/topics/topic-header";
-import { TopicChat } from "@/topics/topic-chat";
-import { TopicMessageBar } from "@/topics/topic-message-bar";
+import { TopicHeader } from "@/components/topics/topic-header";
+import { TopicChat } from "@/components/topics/topic-chat";
+import { TopicMessageBar } from "@/components/topics/topic-message-bar";
 import { NotFound } from "@/components/ui/not-found";
-import { TopicSideBar } from "@/topics/topic-side-bar";
+import { TopicSideBar } from "@/components/topics/topic-side-bar";
 import {
   DEFAULT_MESSAGE_SELECT,
   MESSAGE_LIMIT,
   TOP_HIGHLIGHTS_LIMIT,
 } from "@/lib/prisma/message-model";
-import { CurrentTopicProvider } from "@/topics/current-topic-provider";
-import { cache } from "react";
+import { CurrentTopicProvider } from "@/components/topics/current-topic-provider";
 import { DEFAULT_TITLE } from "@/layout";
+import { Content } from "@/components/layouts/dashboard/content";
 
 type Props = {
   params: { topicId: string };
@@ -86,7 +87,7 @@ export default async function TopicPage({ params }: Props) {
     : [];
 
   return (
-    <>
+    <Content>
       {topic ? (
         <CurrentTopicProvider
           topicId={topic.id}
@@ -115,6 +116,6 @@ export default async function TopicPage({ params }: Props) {
       ) : (
         <NotFound copy="Topic not found" />
       )}
-    </>
+    </Content>
   );
 }

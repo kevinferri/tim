@@ -1,16 +1,15 @@
 import { prismaClient } from "@/lib/prisma/client";
-import { UpsertTopicForm } from "@/topics/upsert-topic-form";
+import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { Button } from "@/components/ui/button";
 import { GearIcon } from "@radix-ui/react-icons";
-import { TopicsList } from "@/topics/topics-list";
+import { TopicsList } from "@/components/topics/topics-list";
 import { UpsertCircleForm } from "@/circles/upsert-circle-form";
 
 type Props = {
   circleId: string;
-  topicId?: string;
 };
 
-export async function TopicsNav({ circleId, topicId }: Props) {
+export async function TopicsNav({ circleId }: Props) {
   const parentCircle = await prismaClient.circle.getMeCircleById({
     circleId,
     select: {
@@ -47,7 +46,6 @@ export async function TopicsNav({ circleId, topicId }: Props) {
 
       <TopicsList
         topics={topics}
-        topicId={topicId}
         circleName={parentCircle?.name}
         circleId={parentCircle?.id}
       />
