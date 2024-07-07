@@ -134,7 +134,7 @@ export function CirclesList(props: Props) {
                   className="relative"
                 >
                   <Avatar
-                    className={`hover:opacity-70 ${
+                    className={`active:border ${
                       params.circleId === circle.id
                         ? "border shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]"
                         : "shadow-md"
