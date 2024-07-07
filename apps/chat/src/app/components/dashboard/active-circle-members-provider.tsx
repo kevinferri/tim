@@ -23,7 +23,7 @@ function useContextValue() {
   const [topicMap, setTopicMap] =
     useState<Record<string, { activeUsers: Self[]; circleId: string }>>();
 
-  const debounced = useDebounce(topicMap, 200);
+  const debounced = useDebounce(topicMap, 175);
 
   const getActiveMembersInTopic = useCallback(
     (topicId: string) => topicMap?.[topicId]?.activeUsers ?? [],

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import uniqBy from "lodash.uniqby";
 import {
   Tooltip,
   TooltipContent,
@@ -10,7 +11,7 @@ import {
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Circle } from "@prisma/client";
-import { useSelf } from "@/components/auth/self-provider";
+import { Self, useSelf } from "@/components/auth/self-provider";
 import { toast } from "@/components/ui/use-toast";
 import {
   SocketEvent,
@@ -58,18 +59,13 @@ export function CirclesList(props: Props) {
   const activeMembersByCircle = useMemo(() => {
     if (!topicMap) return undefined;
 
-    return Object.values(topicMap).reduce((acc, cur) => {
-      return {
+    return Object.values(topicMap).reduce(
+      (acc, { circleId, activeUsers }) => ({
         ...acc,
-        [cur.circleId]: {
-          circleId: cur.circleId,
-          activeUsers: [
-            ...(acc[cur.circleId]?.activeUsers ?? []),
-            ...cur.activeUsers,
-          ],
-        },
-      };
-    }, {} as typeof topicMap);
+        [circleId]: uniqBy([...(acc[circleId] ?? []), ...activeUsers], "id"),
+      }),
+      {} as Record<string, Self[]>
+    );
   }, [topicMap]);
 
   useSocketHandler<NewCircleHandlerProps>(
@@ -127,8 +123,7 @@ export function CirclesList(props: Props) {
   return (
     <>
       {props.existingCircles?.map((circle) => {
-        const activeUsers =
-          activeMembersByCircle?.[circle.id]?.activeUsers ?? [];
+        const activeUsers = activeMembersByCircle?.[circle.id] ?? [];
 
         return (
           <TooltipProvider key={circle.id}>
