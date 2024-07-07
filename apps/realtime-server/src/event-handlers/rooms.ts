@@ -114,7 +114,6 @@ export function handleLeaveRoom({ socket, server }: HandlerArgs) {
 
     if (roomType === RoomType.Circle) {
       server.to(roomKey).emit(SocketEvent.UserLeftCircle, {
-        actingUser: socket.data.user,
         circleId: id,
       });
     }
@@ -128,9 +127,8 @@ export async function emitUserChangeInTopic({
   disconnectingUser,
 }: HandlerArgs & { topicId: string; disconnectingUser?: string }) {
   let hasDisconnected = false;
-  const sockets = await server
-    .in(toRoomKey({ id: topicId, roomType: RoomType.Topic }))
-    .fetchSockets();
+  const topicKey = toRoomKey({ id: topicId, roomType: RoomType.Topic });
+  const sockets = await server.in(topicKey).fetchSockets();
 
   const activeUsers = sockets
     .map(({ data }) => data.user)
@@ -150,13 +148,16 @@ export async function emitUserChangeInTopic({
   const parentCircle = await getParentCircleIdForTopic({ topicId });
 
   if (parentCircle) {
-    server
-      .to(toRoomKey({ id: parentCircle.id, roomType: RoomType.Circle }))
-      .emit(SocketEvent.UserJoinedOrLeftTopic, {
-        topicId,
-        activeUsers,
-        actingUser: socket.data.user,
-      });
+    const circleKey = toRoomKey({
+      id: parentCircle.id,
+      roomType: RoomType.Circle,
+    });
+
+    server.to(circleKey).emit(SocketEvent.UserJoinedOrLeftTopic, {
+      circleId: parentCircle.id,
+      topicId,
+      activeUsers,
+    });
   }
 }
 
@@ -167,24 +168,25 @@ export async function emitUserJoinedCircle({
 }: HandlerArgs & { circleId: string }) {
   const topicMap = {};
   const topicsInCircle = await getTopicIdsForCircle({ circleId });
+  const userId = socket.data.user.id;
 
   await Promise.all(
     topicsInCircle.map(async ({ id }) => {
-      const socketsInTopic = await server
-        .in(toRoomKey({ id, roomType: RoomType.Topic }))
-        .fetchSockets();
+      const topicKey = toRoomKey({ id, roomType: RoomType.Topic });
+      const socketsInTopic = await server.in(topicKey).fetchSockets();
+      const activeUsers = socketsInTopic.map(({ data }) => ({
+        ...data.user,
+        circleId,
+      }));
 
-      const activeUsers = socketsInTopic.map(({ data }) => data.user);
-      topicMap[id] = activeUsers;
+      topicMap[id] = {
+        activeUsers,
+        circleId,
+      };
     })
   );
 
-  // Gives the joining client the state of all the topics within the circle
-  server
-    .to(toRoomKey({ id: circleId, roomType: RoomType.Circle }))
-    .emit(SocketEvent.UserJoinedCircle, {
-      topicMap,
-      circleId,
-      actingUser: socket.data.user,
-    });
+  // Gives the joining user the state of all the topics within the circle
+  const userKey = toRoomKey({ id: userId, roomType: RoomType.User });
+  server.to(userKey).emit(SocketEvent.UserJoinedCircle, { topicMap });
 }
