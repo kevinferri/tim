@@ -16,22 +16,14 @@ import { Progress } from "@/components/ui/progress";
 import { useUploadProgres } from "@/components/topics/use-upload-progress";
 import { useUserTypingEmitter } from "@/lib/hooks";
 import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
+import { toBase64 } from "@/lib/utils";
+import { EmojiPicker } from "@/components/topics/emoji-picker";
 
 type MessagePayload = {
   message: string;
   topicId: string;
   mediaUrl?: string;
 };
-
-function toBase64(file: File) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-  });
-}
 
 export function TopicMessageBar() {
   const [message, setMessage] = useState("");
@@ -117,7 +109,7 @@ export function TopicMessageBar() {
             }}
             value={message}
           />
-          <div className="pr-1">
+          <div className="flex pr-1 items-center">
             <MediaUploader
               disabled={isUploadingMedia}
               file={media}
@@ -127,6 +119,15 @@ export function TopicMessageBar() {
                 textAreaRef.current?.focus();
               }}
               onFileRemove={() => setMedia(undefined)}
+            />
+
+            <EmojiPicker
+              onEmojiSelect={(emoji) => {
+                const i = textAreaRef.current?.selectionStart;
+
+                setMessage(message.slice(0, i) + emoji + message.slice(i));
+                textAreaRef.current?.focus();
+              }}
             />
           </div>
         </div>

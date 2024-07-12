@@ -10,6 +10,7 @@ import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
+
   const {
     messages,
     topicId,
@@ -17,6 +18,7 @@ export function TopicChat() {
     messagesListRef,
     scrollToBottomOfChat,
   } = useCurrentTopicContext();
+
   const payload = { id: topicId, roomType: "topic" };
 
   useEffectOnce(() => {

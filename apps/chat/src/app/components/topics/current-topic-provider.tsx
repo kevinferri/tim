@@ -18,8 +18,8 @@ import {
 } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
 import { getTopHighlightsAction } from "@/actions/messages";
-import { WithRelation } from "../../../types/prisma";
 import { useEffectOnce, useWindowFocus } from "@/lib/hooks";
+import { WithRelation } from "../../../../types/prisma";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
 

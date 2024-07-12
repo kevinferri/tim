@@ -22,6 +22,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { useParams, useRouter } from "next/navigation";
 import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-provider";
+import { Routes } from "@/routes";
 
 type Props = {
   existingCircles?: Circle[];
@@ -56,6 +57,8 @@ export function CirclesList(props: Props) {
   const params = useParams();
   const { topicMap } = useActiveCircleMembers();
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
+  const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
+
   const activeMembersByCircle = useMemo(() => {
     if (!topicMap) return undefined;
 
@@ -79,14 +82,16 @@ export function CirclesList(props: Props) {
       const wasInCircle = payload.prevMembers.includes(self.id);
       const link = `/circles/${payload.id}/topics/${payload.defaultTopicId}`;
 
-      if (!payload.isEdit) {
-        joinRoom.emit({ id: payload.id, roomType: "circle" });
+      if (payload.isEdit && createdBySelf) return;
+
+      if (wasInCircle && !isInCircle) {
+        leaveRoom.emit({ id: payload.id, roomType: "circle" });
+        return;
       }
 
-      if (payload.isEdit && createdBySelf) return;
-      if (wasInCircle && !isInCircle) return;
-
       if (!payload.isEdit || (isInCircle && !wasInCircle)) {
+        joinRoom.emit({ id: payload.id, roomType: "circle" });
+
         toast({
           title: `New circle created`,
           description: `${name} created a new circle called "${payload.name}"`,
@@ -108,7 +113,7 @@ export function CirclesList(props: Props) {
   useSocketHandler<DeletedCircleHandlerProps>(
     SocketEvent.DeletedCircle,
     (payload) => {
-      router.refresh();
+      leaveRoom.emit({ id: payload.id, roomType: "circle" });
 
       const deletedBySelf = payload.deletedBy.id === self.id;
       const name = deletedBySelf ? "You" : payload.deletedBy.name;
@@ -117,6 +122,12 @@ export function CirclesList(props: Props) {
         title: `Circle deleted`,
         description: `${name} deleted the circle called "${payload.name}"`,
       });
+
+      if (payload.id === params.circleId) {
+        router.push(Routes.Home);
+      }
+
+      router.refresh();
     }
   );
 
@@ -151,13 +162,13 @@ export function CirclesList(props: Props) {
                     </AvatarFallback>
                   </Avatar>
                   {activeUsers.length > 0 && (
-                    <div className="absolute top-[-7px] right-[-3px] w-[18px] h-[18px] text-[11px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
+                    <div className="shadow-lg absolute top-[-6px] right-[-2px] w-[18px] h-[18px] text-[11px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
                       {activeUsers.length}
                     </div>
                   )}
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right" className="p-2">
+              <TooltipContent side="right" className="p-2" sideOffset={8}>
                 <div className="flex flex-col gap-2">
                   <div className="text-sm leading-none">{circle.name}</div>
                   {activeUsers.length > 0 && (

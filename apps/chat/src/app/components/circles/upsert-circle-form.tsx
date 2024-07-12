@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ExclamationTriangleIcon,
   LockClosedIcon,
@@ -26,15 +26,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Circle, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
+import { getInitials } from "../ui/user-avatar";
+import { uploadMedia } from "@/actions/media";
+import { toBase64 } from "@/lib/utils";
 
 type Props = {
   trigger?: React.ReactNode;
-  existingCircle?: Pick<Circle, "id" | "name" | "description" | "userId"> & {
+  existingCircle?: Pick<
+    Circle,
+    "id" | "name" | "description" | "userId" | "imageUrl"
+  > & {
     members: Pick<User, "id" | "email">[];
   };
 };
@@ -43,11 +49,18 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
   const self = useSelf();
   const upsertedCircle = useSocketEmit(SocketEvent.UpsertedCircle);
   const deletedCircle = useSocketEmit(SocketEvent.DeletedCircle);
-
   const [open, setOpen] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [nameCheck, setNameCheck] = useState(existingCircle?.name ?? "");
   const [submitting, setSubmitting] = useState(false);
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const [avatar, setAvatar] = useState<File | string | undefined>(
+    existingCircle?.imageUrl ?? undefined
+  );
+  const avatarBlobUrl = useMemo(() => {
+    if (typeof avatar === "string") return avatar;
+    if (avatar) return URL.createObjectURL(avatar);
+  }, [avatar]);
 
   const isEdit = !!existingCircle;
   const isCreator = !existingCircle || existingCircle.userId === self.id;
@@ -168,6 +181,20 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                 setSubmitting(true);
 
                 const formData = new FormData(event.currentTarget);
+
+                if (typeof avatar === "string") {
+                  formData.append("imageUrl", avatar);
+                }
+
+                if (typeof avatar === "object") {
+                  const file = (await toBase64(avatar)) as string;
+                  const resp = await uploadMedia({ file });
+
+                  if (resp && typeof resp.mediaUrl === "string") {
+                    formData.append("imageUrl", resp.mediaUrl);
+                  }
+                }
+
                 const resp = await upsertCircle(formData);
 
                 setSubmitting(false);
@@ -240,6 +267,47 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                     placeholder="name@gmail.com, name2@gmail.com"
                     defaultValue={existingMembers}
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="members">Avatar</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      ref={avatarRef}
+                      className="hidden"
+                      disabled={!isCreator}
+                      type="file"
+                      accept="image/*"
+                      onChange={({ target }) => {
+                        if (target.files) {
+                          setAvatar(target.files[0]);
+                        }
+                      }}
+                    />
+                    <Avatar>
+                      <AvatarImage src={avatarBlobUrl} alt={""} />
+                      <AvatarFallback>
+                        <div className="mt-[1.5px]">
+                          {getInitials(nameCheck)}
+                        </div>
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => {
+                        if (avatar) {
+                          setAvatar(undefined);
+                          return;
+                        }
+
+                        avatarRef.current?.click();
+                      }}
+                    >
+                      {avatar ? "Clear" : "Upload custom"}
+                    </Button>
+                  </div>
                 </div>
               </div>
               <DialogFooter>

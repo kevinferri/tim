@@ -55,7 +55,7 @@ export function TopicSideBar() {
         <div className="flex items-center gap-1.5 w-fu">
           <BellIcon />
           {activeTab !== "notifications" && unreadCount > 0 && (
-            <Badge className="flex font-normal text-xs rounded-xl  hover:bg-succes px-2 bg-purple-400 min-w-7 justify-center">
+            <Badge className="flex font-normal text-xs rounded-xl  hover:bg-succes px-2 bg-purple-500 min-w-7 justify-center">
               {unreadCount}
             </Badge>
           )}
