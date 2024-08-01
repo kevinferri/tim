@@ -6,3 +6,4 @@ export * from "./use-previous";
 export * from "./use-timezone";
 export * from "./use-window-focus";
 export * from "./use-user-typing-emitter";
+export * from "./use-intersection";
