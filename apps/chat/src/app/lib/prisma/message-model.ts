@@ -11,6 +11,7 @@ import { decrypt } from "@/lib/decryption";
 
 type MessageArgs = {
   topicId?: string;
+  after?: string;
   select: Prisma.MessageSelect;
 };
 
@@ -60,14 +61,18 @@ function getReadableMessage(text?: string | null) {
 }
 
 export const messageModel = {
-  async getMessagesForTopic({ topicId, select }: MessageArgs) {
+  async getMessagesForTopic({ topicId, select, after }: MessageArgs) {
     const userId = getLoggedInUserId();
+    const cursor = after ? { id: after } : undefined;
+
     if (!topicId || !userId) return [];
 
     const messages = await prismaClient.message.findMany({
       select,
-      take: MESSAGE_LIMIT,
+      cursor,
       where: { topicId },
+      take: MESSAGE_LIMIT,
+      skip: cursor ? 1 : undefined,
       orderBy: {
         createdAt: "desc",
       },

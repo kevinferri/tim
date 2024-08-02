@@ -83,7 +83,6 @@ const highlightStyles = [
 ];
 
 export const Message = (props: MessageProps) => {
-  const self = useSelf();
   const {
     topicId,
     scrollToBottomOfChat,
@@ -91,6 +90,8 @@ export const Message = (props: MessageProps) => {
     addShufflingGif,
     shufflingGifs,
   } = useCurrentTopicContext();
+
+  const self = useSelf();
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingText, setEditingText] = useState(props.text);

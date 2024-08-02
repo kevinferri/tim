@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message, MessageProps } from "@/components/topics/message";
@@ -7,9 +8,12 @@ import { useCurrentTopicContext } from "@/components/topics/current-topic-provid
 import { useEffectOnce } from "@/lib/hooks";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 
+const SCROLL_TIMEOUT = 250;
+
 export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
+  const [hasScrolled, setHasScrolled] = useState(false);
 
   const {
     messages,
@@ -23,7 +27,11 @@ export function TopicChat() {
 
   useEffectOnce(() => {
     joinRoom.emit(payload);
-    scrollToBottomOfChat({ timeout: 250, force: true });
+    scrollToBottomOfChat({ timeout: SCROLL_TIMEOUT, force: true });
+
+    setTimeout(() => {
+      setHasScrolled(true);
+    }, SCROLL_TIMEOUT * 2);
 
     return () => {
       leaveRoom.emit(payload);
@@ -45,6 +53,16 @@ export function TopicChat() {
       </div>
     );
   }
+
+  // {
+  //   hasScrolled && (
+  //     <InfiniteLoader
+  //       loading={isLoadingMoreMessages}
+  //       fetchNextPage={loadMoreMessages}
+  //       containerRef={messagesListRef}
+  //     />
+  //   );
+  // }
 
   return (
     <ScrollArea className="flex flex-col basis-full" ref={messagesListRef}>

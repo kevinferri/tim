@@ -60,9 +60,9 @@ const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 const SCROLL_THRESHOLD = 1000;
 
 export function CurrentTopicProvider(props: Props) {
+  const router = useRouter();
   const scrollRef = useRef<null | HTMLDivElement>(null);
   const messagesListRef = useRef<null | HTMLDivElement>(null);
-  const router = useRouter();
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
   const scrollToBottomOfChat = useCallback(
@@ -104,7 +104,6 @@ export function CurrentTopicProvider(props: Props) {
   );
 
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-
   const [shufflingGifs, setShufflingGifs] = useState<string[]>([]);
 
   const baseTitle = useMemo(
@@ -146,14 +145,20 @@ export function CurrentTopicProvider(props: Props) {
   useSocketHandler<MessageProps>(
     SocketEvent.SendMessage,
     (newMessage: MessageProps) => {
+      const withNewMessage = [
+        ...messages,
+        {
+          ...newMessage,
+          createdAt: new Date(newMessage.createdAt),
+        },
+      ];
+
+      const slicer = Math.max(messages.length + 1 - props.messagesLimit, 0);
+
       setMessages(
-        [
-          ...messages,
-          {
-            ...newMessage,
-            createdAt: new Date(newMessage.createdAt),
-          },
-        ].slice(Math.max(messages.length + 1 - props.messagesLimit, 0)) // TODO: revisit me
+        withNewMessage.length > props.messagesLimit
+          ? withNewMessage.slice(slicer)
+          : withNewMessage
       );
 
       if (newMessage.mediaUrl) {
