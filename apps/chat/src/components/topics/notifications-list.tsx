@@ -87,7 +87,7 @@ export function NotificationsList(props: Props) {
                         onClick={() => {
                           setMessageId(notification.messageId);
                         }}
-                        className="cursor:pointer underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
+                        className="cursor-pointer underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
                       >
                         See message
                       </span>
