@@ -1,4 +1,4 @@
-import { badRequest, unauthorized, notFound } from "@/api/error-responses";
+import { badRequest, unauthorized, notFound } from "@/app/api/error-responses";
 import { getLoggedInUserId } from "@/lib/session";
 import { NextResponse } from "next/server";
 import { prismaClient } from "@/lib/prisma/client";
