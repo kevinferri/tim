@@ -12,7 +12,7 @@ import {
   TOP_HIGHLIGHTS_LIMIT,
 } from "@/lib/prisma/message-model";
 import { CurrentTopicProvider } from "@/components/topics/current-topic-provider";
-import { DEFAULT_TITLE } from "@/layout";
+import { DEFAULT_TITLE } from "@/app/layout";
 
 type Props = {
   params: { topicId: string };
