@@ -78,7 +78,7 @@ export async function GET(
     return NextResponse.json(
       {
         topicName: topicWithCircleMembers.name,
-        highlightScore,
+        highlightScore: highlightScore || 0,
         messagesSent,
         highlightsGiven,
         highlightsRecieved,

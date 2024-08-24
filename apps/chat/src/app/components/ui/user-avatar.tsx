@@ -28,34 +28,13 @@ export function getInitials(name?: string) {
 }
 
 function getHlScoreEmoji(score?: number) {
-  if (!score) {
-    return ["0️⃣", "No"];
-  }
-
-  if (score > 120) {
-    return ["🦄", "Legendary"];
-  }
-
-  if (score > 100) {
-    return ["🏆", "Elite"];
-  }
-
-  if (score > 80) {
-    return ["🔥", "Great"];
-  }
-
-  if (score > 60) {
-    return ["👍", "Good"];
-  }
-
-  if (score > 40) {
-    return ["😐", "Average"];
-  }
-
-  if (score > 20) {
-    return ["😬", "Poor"];
-  }
-
+  if (!score) return ["0️⃣", "No"];
+  if (score > 120) return ["🦄", "Legendary"];
+  if (score > 100) return ["🏆", "Elite"];
+  if (score > 80) return ["🔥", "Great"];
+  if (score > 60) return ["👍", "Good"];
+  if (score > 40) return ["😐", "Average"];
+  if (score > 20) return ["😬", "Poor"];
   return ["😭", "Pathetic"];
 }
 
@@ -167,7 +146,7 @@ export function UserAvatar(props: Props) {
 
             <div className="flex justify-between mt-3 w-full">
               <div className="flex flex-col items-center flex-1">
-                <div className="text-xl">
+                <div className="text-2xl">
                   <div
                     className={`text 2xl ${
                       data?.highlightScore

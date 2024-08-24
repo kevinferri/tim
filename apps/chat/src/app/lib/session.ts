@@ -41,7 +41,6 @@ export const authOptions: AuthOptions = {
             email: email,
             googleId: user.id,
             name: user.name,
-            imageUrl: user.image,
           },
           select: {
             id: true,
@@ -54,7 +53,9 @@ export const authOptions: AuthOptions = {
       }
 
       if (user.image) {
-        const avatarImage = await uploadImage(user.image);
+        const avatarImage = await uploadImage(
+          user.image.replace("s96-c", "s384-c")
+        );
 
         if (avatarImage) {
           await prismaClient.user.update({

@@ -18,7 +18,7 @@ import {
 } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
 import { getTopHighlightsAction } from "@/actions/messages";
-import { useEffectOnce, useWindowFocus } from "@/lib/hooks";
+import { useEffectOnce, useLazyFetch, useWindowFocus } from "@/lib/hooks";
 import { WithRelation } from "../../../../types/prisma";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
@@ -27,6 +27,7 @@ type ScrollArgs =
   | {
       timeout?: number;
       force?: boolean;
+      padding?: number;
     }
   | undefined;
 
@@ -42,6 +43,11 @@ type ContextValue = {
   scrollToBottomOfChat: (args?: ScrollArgs) => void;
   addShufflingGif: (id: string) => void;
   shufflingGifs: string[];
+  loadMoreMessages: () => void;
+  loadingMoreMessages: boolean;
+  hasMoreMessages: boolean;
+  loadMoreAnchorRef: MutableRefObject<HTMLDivElement | null>;
+  loadMoreAnchorId: string;
 };
 
 type Props = {
@@ -57,26 +63,35 @@ type Props = {
 };
 
 const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
-const SCROLL_THRESHOLD = 1000;
+
+export enum ScrollPaddings {
+  Default = 120,
+  Media = 250,
+}
+
+function isNearBottom(
+  ref: MutableRefObject<HTMLDivElement | null>,
+  padding = ScrollPaddings.Default
+) {
+  const _ref = ref.current;
+  if (!_ref) return;
+
+  return _ref.scrollHeight - _ref.scrollTop <= _ref.clientHeight + padding;
+}
 
 export function CurrentTopicProvider(props: Props) {
   const router = useRouter();
   const scrollRef = useRef<null | HTMLDivElement>(null);
   const messagesListRef = useRef<null | HTMLDivElement>(null);
+  const loadMoreAnchorRef = useRef<null | HTMLDivElement>(null);
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
+
   const scrollToBottomOfChat = useCallback(
-    ({ timeout, force }: ScrollArgs = {}) => {
-      const _ref = messagesListRef.current;
-      if (!_ref) return;
-
-      // well this is broken now idk why
-      const isNearBottom =
-        _ref.scrollHeight - SCROLL_THRESHOLD <= _ref.scrollTop;
-
+    ({ timeout, force, padding }: ScrollArgs = {}) => {
       setTimeout(() => {
-        if (isNearBottom || force) {
-          scrollRef?.current?.scrollIntoView();
+        if (isNearBottom(messagesListRef, padding) || force) {
+          scrollRef?.current?.scrollIntoView({ block: "center" });
         }
       }, timeout ?? 1);
     },
@@ -105,6 +120,10 @@ export function CurrentTopicProvider(props: Props) {
 
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [shufflingGifs, setShufflingGifs] = useState<string[]>([]);
+  const [loadMoreAnchorId, setLoadMoreAnchorId] = useState(messages?.[0]?.id);
+  const [hasMoreMessages, setHasMoreMessages] = useState(
+    messages.length >= props.messagesLimit
+  );
 
   const baseTitle = useMemo(
     () => (typeof document !== "undefined" ? document.title : ""),
@@ -154,12 +173,12 @@ export function CurrentTopicProvider(props: Props) {
       ];
 
       const slicer = Math.max(messages.length + 1 - props.messagesLimit, 0);
+      const needsSlice =
+        withNewMessage.length > props.messagesLimit &&
+        isNearBottom(messagesListRef);
 
-      setMessages(
-        withNewMessage.length > props.messagesLimit
-          ? withNewMessage.slice(slicer)
-          : withNewMessage
-      );
+      if (needsSlice && !hasMoreMessages) setHasMoreMessages(true);
+      setMessages(needsSlice ? withNewMessage.slice(slicer) : withNewMessage);
 
       if (newMessage.mediaUrl) {
         setMediaMessages([
@@ -355,6 +374,22 @@ export function CurrentTopicProvider(props: Props) {
     }
   );
 
+  const { fetchData: loadMoreMessages, loading: loadingMoreMessages } =
+    useLazyFetch<MessageProps[]>(
+      `/api/topics/${props.topicId}/messages?after=${messages?.[0]?.id}`,
+      (newMessages) => {
+        if (newMessages.length < props.messagesLimit) {
+          setHasMoreMessages(false);
+        }
+
+        setMessages([...newMessages, ...messages]);
+        setLoadMoreAnchorId(newMessages[newMessages.length - 1].id);
+        setTimeout(() => {
+          loadMoreAnchorRef?.current?.scrollIntoView({ block: "end" });
+        }, 1);
+      }
+    );
+
   const contextValue = useMemo(
     () => ({
       messages,
@@ -371,6 +406,11 @@ export function CurrentTopicProvider(props: Props) {
       ),
       topicId: props.topicId,
       circleId: props.circleId,
+      loadMoreMessages,
+      loadingMoreMessages,
+      hasMoreMessages,
+      loadMoreAnchorRef,
+      loadMoreAnchorId,
     }),
     [
       messages,
@@ -383,6 +423,11 @@ export function CurrentTopicProvider(props: Props) {
       props.circleId,
       props.topHighlightsLimit,
       scrollToBottomOfChat,
+      loadMoreMessages,
+      loadingMoreMessages,
+      hasMoreMessages,
+      loadMoreAnchorRef,
+      loadMoreAnchorId,
     ]
   );
 

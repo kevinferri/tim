@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export function useFetch<T>(url: string, opts: { skip?: boolean } = {}) {
+export function useFetch<T>(
+  url: string,
+  opts: { skip?: boolean; onLoad?: () => void } = {}
+) {
   const [data, setData] = useState<T>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -23,6 +26,7 @@ export function useFetch<T>(url: string, opts: { skip?: boolean } = {}) {
         const json = await resp.json();
 
         setData(json);
+        opts.onLoad?.();
       } catch (e) {
         setError(true);
       } finally {
@@ -31,12 +35,13 @@ export function useFetch<T>(url: string, opts: { skip?: boolean } = {}) {
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, opts.skip]);
 
   return useMemo(() => ({ data, loading, error }), [data, loading, error]);
 }
 
-export function useLazyFetch<T>(url: string) {
+export function useLazyFetch<T>(url: string, onLoadMore?: (data: T) => void) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -50,6 +55,7 @@ export function useLazyFetch<T>(url: string) {
       }
 
       const json = await resp.json();
+      onLoadMore?.(json);
 
       return json as T;
     } catch (e) {
@@ -57,7 +63,10 @@ export function useLazyFetch<T>(url: string) {
     } finally {
       setLoading(false);
     }
-  }, [url]);
+  }, [url, onLoadMore]);
 
-  return { loading, error, fetchData };
+  return useMemo(
+    () => ({ fetchData, loading, error }),
+    [fetchData, loading, error]
+  );
 }

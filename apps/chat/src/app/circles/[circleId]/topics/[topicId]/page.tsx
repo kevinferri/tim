@@ -4,7 +4,7 @@ import { prismaClient } from "@/lib/prisma/client";
 import { TopicHeader } from "@/components/topics/topic-header";
 import { TopicChat } from "@/components/topics/topic-chat";
 import { TopicMessageBar } from "@/components/topics/topic-message-bar";
-import { NotFound } from "@/components/ui/not-found";
+import { NotFound } from "@/components/dashboard/not-found";
 import { TopicSideBar } from "@/components/topics/topic-side-bar";
 import {
   DEFAULT_MESSAGE_SELECT,
@@ -95,6 +95,7 @@ export default async function TopicPage({ params }: Props) {
           circleId={topic.parentCircle.id}
           messagesLimit={MESSAGE_LIMIT}
           topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
+          // @ts-expect-error
           existingCircleMemebers={circleMembers}
           // @ts-expect-error
           existingMessages={messages}

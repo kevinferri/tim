@@ -7,6 +7,8 @@ import { Message, MessageProps } from "@/components/topics/message";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { useEffectOnce } from "@/lib/hooks";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
+import { InfiniteLoader } from "@/components/ui/infinite-loader";
+import { Spinner } from "@/components/ui/spinner";
 
 const SCROLL_TIMEOUT = 250;
 
@@ -21,6 +23,9 @@ export function TopicChat() {
     scrollRef,
     messagesListRef,
     scrollToBottomOfChat,
+    loadMoreMessages,
+    loadingMoreMessages,
+    hasMoreMessages,
   } = useCurrentTopicContext();
 
   const payload = { id: topicId, roomType: "topic" };
@@ -31,7 +36,7 @@ export function TopicChat() {
 
     setTimeout(() => {
       setHasScrolled(true);
-    }, SCROLL_TIMEOUT * 2);
+    }, SCROLL_TIMEOUT + 1);
 
     return () => {
       leaveRoom.emit(payload);
@@ -54,21 +59,31 @@ export function TopicChat() {
     );
   }
 
-  // {
-  //   hasScrolled && (
-  //     <InfiniteLoader
-  //       loading={isLoadingMoreMessages}
-  //       fetchNextPage={loadMoreMessages}
-  //       containerRef={messagesListRef}
-  //     />
-  //   );
-  // }
-
   return (
     <ScrollArea className="flex flex-col basis-full" ref={messagesListRef}>
-      {messages.map((message: MessageProps) => {
-        return <Message key={message.id} {...message} context="topic" />;
+      {hasScrolled && hasMoreMessages && (
+        <InfiniteLoader
+          loading={loadingMoreMessages}
+          fetchNextPage={loadMoreMessages}
+          containerRef={messagesListRef}
+        >
+          <div className="flex flex-col items-center p-2">
+            <Spinner />
+          </div>
+        </InfiniteLoader>
+      )}
+
+      {messages.map((message: MessageProps, index) => {
+        return (
+          <Message
+            key={message.id}
+            {...message}
+            context="topic"
+            index={index}
+          />
+        );
       })}
+
       <div ref={scrollRef} />
     </ScrollArea>
   );

@@ -6,6 +6,7 @@ type Props = {
   variant?: "default" | "minimal";
   onPreviewLoad?: () => void;
   onImageExpanded?: () => void;
+  priority?: boolean;
 };
 
 export function isGiphy(url?: string) {
@@ -35,9 +36,9 @@ export function extractMediaFromMessage(text: string) {
 }
 
 export function getYoutubeVideoFromUrl(url: string) {
-  const regExp =
-    /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;
-  const match = url.match(regExp);
+  const match = url.match(
+    /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/
+  );
   const id = match && match[7].length == 11 ? match[7] : false;
 
   if (!id) return undefined;
@@ -71,6 +72,7 @@ export function MediaViewer(props: Props) {
   const imageProps = {
     src: props.url,
     alt: props.url,
+    priority: props.priority,
     sizes: "100vw",
     width: 0,
     height: 0,
@@ -102,7 +104,7 @@ export function MediaViewer(props: Props) {
         </div>
       </DialogTrigger>
       <DialogContent className="p-0 max-w-xl">
-        <div className="relative cursor-pointer">
+        <div className="relative">
           <Image
             {...imageProps}
             alt={props.url}

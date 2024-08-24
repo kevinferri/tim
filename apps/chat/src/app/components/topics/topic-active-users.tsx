@@ -1,9 +1,9 @@
 "use client";
 
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-provider";
 import { useState } from "react";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 
 type Props = {
   topicId: string;

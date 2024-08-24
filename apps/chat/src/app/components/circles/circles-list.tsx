@@ -21,7 +21,7 @@ import {
 import { ToastAction } from "@/components/ui/toast";
 import { useParams, useRouter } from "next/navigation";
 import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
-import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-provider";
+import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 import { Routes } from "@/routes";
 
 type Props = {
@@ -55,9 +55,9 @@ export function CirclesList(props: Props) {
   const self = useSelf();
   const router = useRouter();
   const params = useParams();
-  const { topicMap } = useActiveCircleMembers();
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
+  const { topicMap } = useActiveCircleMembers();
 
   const activeMembersByCircle = useMemo(() => {
     if (!topicMap) return undefined;

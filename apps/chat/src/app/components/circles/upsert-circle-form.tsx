@@ -109,7 +109,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                   <span className="font-pronounced">{existingCircle.name}</span>
                 </>
               ) : (
-                "Create new circle"
+                "Create a new circle"
               )}
             </DialogTitle>
             <DialogDescription>

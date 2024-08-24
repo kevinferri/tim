@@ -21,7 +21,10 @@ type Props = {
 
 export function LinkPreview(props: Props) {
   const { data, error } = useFetch<LinkMetadataResponse>(
-    `/api/link-metadata?url=${encodeURIComponent(props.link)}`
+    `/api/link-metadata?url=${encodeURIComponent(props.link)}`,
+    {
+      onLoad: props.onEmbedMediaLoad,
+    }
   );
 
   if (error) return null;

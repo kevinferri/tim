@@ -1,7 +1,7 @@
 import { badRequest, notFound, unauthorized } from "@/api/error-responses";
 import { getLoggedInUserId } from "@/lib/session";
 import { prismaClient } from "@/lib/prisma/client";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
 
 export async function GET(

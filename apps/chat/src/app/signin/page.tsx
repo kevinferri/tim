@@ -59,7 +59,7 @@ export default async function LogInPage({
           <h2 className={cn("text-2xl font-semibold")}>Create an account</h2>
           <SignUp />
           <p className={cn("text-muted-foreground text-center")}>
-            By clicking continue, you agree to our{" "}
+            By clicking Create an account, you agree to our{" "}
             <Link
               className={cn("underline underline-offset-4 hover:text-primary")}
               href={Routes.Terms}

@@ -4,7 +4,10 @@ import { useSelf } from "@/components/auth/self-provider";
 import { cn, hydrateUrl, isValidUrl } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "@/components/topics/highlight-tooltip";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import {
+  ScrollPaddings,
+  useCurrentTopicContext,
+} from "@/components/topics/current-topic-provider";
 import { MediaViewer } from "@/components/topics/media-viewer";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
@@ -31,8 +34,10 @@ function getLinksFromMessage(message?: string) {
   const words = message.split(/\s+/);
 
   for (let word of words) {
-    const url = hydrateUrl(word);
-    if (isValidUrl(url)) links.push(url);
+    if (word.match(/[A-Za-z]+/)) {
+      const url = hydrateUrl(word);
+      if (isValidUrl(url)) links.push(url);
+    }
   }
 
   return links;
@@ -57,6 +62,7 @@ export type MessageProps = {
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
   context?: "topic" | "sidebar" | "user-sheet";
+  index?: number;
 };
 
 const baseStyles = [
@@ -89,6 +95,8 @@ export const Message = (props: MessageProps) => {
     messages,
     addShufflingGif,
     shufflingGifs,
+    loadMoreAnchorRef,
+    loadMoreAnchorId,
   } = useCurrentTopicContext();
 
   const self = useSelf();
@@ -158,6 +166,7 @@ export const Message = (props: MessageProps) => {
 
   return (
     <div
+      ref={loadMoreAnchorId === props.id ? loadMoreAnchorRef : undefined}
       className={cn(
         baseStyles,
         highlightedBySelf ? highlightStyles : "",
@@ -177,7 +186,7 @@ export const Message = (props: MessageProps) => {
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <div className="flex gap-3 items-start overflow-hidden leading-tight">
+      <div className="flex gap-3 items-start overflow-hidden leading-none">
         {!props.hiddenElements?.includes("sentBy") && (
           <UserAvatar
             id={props.sentBy.id}
@@ -231,6 +240,7 @@ export const Message = (props: MessageProps) => {
                 isShufflingGif={isShufflingGif}
                 onEditMessage={() => {
                   setIsEditing(true);
+                  if (isNewestMessage) scrollToBottomOfChat({ force: true });
                 }}
                 onShuffleGif={() => {
                   addShufflingGif(props.id);
@@ -296,6 +306,7 @@ export const Message = (props: MessageProps) => {
 
             {props.mediaUrl && (
               <MediaViewer
+                priority={props.context === "topic"}
                 variant={props.variant}
                 url={props.mediaUrl}
                 onImageExpanded={() => {
@@ -307,7 +318,7 @@ export const Message = (props: MessageProps) => {
                   }
 
                   if (shouldScroll) {
-                    scrollToBottomOfChat({ force: true });
+                    scrollToBottomOfChat({ padding: ScrollPaddings.Media });
                   }
                 }}
               />
@@ -321,7 +332,7 @@ export const Message = (props: MessageProps) => {
                     link={link}
                     onEmbedMediaLoad={() => {
                       if (shouldScroll) {
-                        scrollToBottomOfChat({ force: true });
+                        scrollToBottomOfChat({ padding: ScrollPaddings.Media });
                       }
                     }}
                   />

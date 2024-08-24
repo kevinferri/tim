@@ -11,7 +11,6 @@ import { SelfProvider } from "@/components/auth/self-provider";
 
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
-import { ActiveCircleMembersProvider } from "@/components/dashboard/active-circle-members-provider";
 import { CirclesNav } from "@/components/circles/circles-nav";
 
 import "@/globals.css";
@@ -54,7 +53,7 @@ async function getSocketConfig(user?: User) {
 
 function BaseLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={GeistSans.className}>
+    <html lang="en" className={GeistSans.className} suppressHydrationWarning>
       <head />
       <body>
         <ThemeProvider
@@ -100,10 +99,8 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
             <CircleRoomConnect circleIds={circleIds ?? []}>
               <div className="flex flex-col h-screen">
                 <div className="flex overflow-hidden basis-full">
-                  <ActiveCircleMembersProvider>
-                    <CirclesNav circles={circles} />
-                    {children}
-                  </ActiveCircleMembersProvider>
+                  <CirclesNav circles={circles} />
+                  {children}
                 </div>
               </div>
             </CircleRoomConnect>
