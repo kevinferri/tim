@@ -5,10 +5,13 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { DeleteMessageModal } from "./delete-message-modal";
-import { isGiphy, getYoutubeVideoFromUrl } from "./media-viewer";
+import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
+import {
+  isGiphy,
+  getYoutubeVideoFromUrl,
+} from "@/components/topics/media-viewer";
 import { Pencil1Icon, UpdateIcon } from "@radix-ui/react-icons";
-import { useCurrentTopicContext } from "./current-topic-provider";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
 
 type Props = {

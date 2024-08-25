@@ -162,7 +162,7 @@ export function CirclesList(props: Props) {
                     </AvatarFallback>
                   </Avatar>
                   {activeUsers.length > 0 && (
-                    <div className="shadow-lg absolute top-[-6px] right-[-2px] w-[18px] h-[18px] text-[11px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
+                    <div className="border absolute top-[-4px] right-[-4px] w-[16px] h-[16px] text-[10px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
                       {activeUsers.length}
                     </div>
                   )}

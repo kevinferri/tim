@@ -98,7 +98,6 @@ export const Message = (props: MessageProps) => {
     loadMoreAnchorRef,
     loadMoreAnchorId,
   } = useCurrentTopicContext();
-
   const self = useSelf();
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
