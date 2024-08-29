@@ -35,8 +35,7 @@ export function useIslandMessage({
         },
       ]);
     },
-    skip,
-    `${SocketEvent.AddedHighlight}:island`
+    skip
   );
 
   useSocketHandler<{ messageId: string; userId: string }>(
@@ -48,8 +47,7 @@ export function useIslandMessage({
         prevHighlights.filter(({ userId }) => userId !== payload.userId)
       );
     },
-    skip,
-    `${SocketEvent.RemovedHighlight}:island`
+    skip
   );
 
   return { highlights };

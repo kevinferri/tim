@@ -27,7 +27,7 @@ export function useFetch<T>(
         const json = await resp.json();
 
         setData(json);
-        opts.onSuccess?.();
+        opts.onSuccess?.(json);
       } catch (e) {
         setError(true);
       } finally {

@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 
 type Props = {
   params: { circleId: string };
-  children: React.ReactNode;
 };
 
 export default async function CirclePage(props: Props) {
@@ -17,7 +16,7 @@ export default async function CirclePage(props: Props) {
 
   // TODO: landing page for circles
   if (!circle?.defaultTopicId) {
-    return props.children;
+    redirect("/");
   }
 
   redirect(`/circles/${circle.id}/topics/${circle.defaultTopicId}`);

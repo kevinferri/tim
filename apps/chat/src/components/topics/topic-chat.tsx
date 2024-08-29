@@ -74,14 +74,7 @@ export function TopicChat() {
       )}
 
       {messages.map((message: MessageProps, index) => {
-        return (
-          <Message
-            key={message.id}
-            {...message}
-            context="topic"
-            index={index}
-          />
-        );
+        return <Message key={message.id} {...message} context="topic" />;
       })}
 
       <div ref={scrollRef} />
