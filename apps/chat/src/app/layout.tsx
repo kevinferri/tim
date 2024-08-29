@@ -36,7 +36,7 @@ export async function generateMetadata() {
   const user = await getLoggedInUser();
 
   return {
-    title: `${DEFAULT_TITLE} - ${user?.email ?? "Dashboard"}`,
+    title: `${DEFAULT_TITLE} - ${user?.email ?? "Welcome"}`,
   };
 }
 
@@ -121,7 +121,7 @@ export default async function RootLayout({
   const cookieStore = cookies();
   const headerList = headers();
   const pathname = headerList.get("x-current-path");
-  const sessionToken = cookieStore.get("next-auth.session-token");
+  const sessionToken = cookieStore.get(process.env.NEXTAUTH_COOKIE_KEY ?? "");
 
   // next-auth cookie in a bad state, sign out the user
   if (!user && sessionToken?.value && pathname !== Routes.ForceSignout) {
