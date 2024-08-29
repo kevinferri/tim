@@ -3,6 +3,7 @@ import { deleteMessage, editMessage, writeMessage } from "../db/mutations";
 import { getRandomGif, getYoutubeVideo } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
+import { pgClient } from "../db/client";
 
 function getCommandTokens(text: string) {
   const words = text.split(" ");

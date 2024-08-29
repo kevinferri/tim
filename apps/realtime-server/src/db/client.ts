@@ -1,5 +1,9 @@
 import knex from "knex";
 
+declare global {
+  var pgClient: undefined | ReturnType<typeof pgClientSingleton>;
+}
+
 const pgClientSingleton = () => {
   const client = knex({
     client: "pg",
@@ -10,10 +14,6 @@ const pgClientSingleton = () => {
 
   return client;
 };
-
-declare global {
-  var pgClient: undefined | ReturnType<typeof pgClientSingleton>;
-}
 
 const pgClient = globalThis.pgClient ?? pgClientSingleton();
 

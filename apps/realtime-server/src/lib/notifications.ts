@@ -1,5 +1,6 @@
 import { type Server } from "socket.io";
 import { SocketEvent } from "../event-handlers/main";
+import { pgClient } from "../db/client";
 
 export enum NotificationType {
   HighlightRecieved = "highlight:recieved",

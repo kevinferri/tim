@@ -4,7 +4,8 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "start": "tsc && node --env-file=.env.local dist/app.js",
+    "build": "rm -rf node_modules && yarn --only=dev && npx tsc",
+    "start": "node dist/app.js",
     "watch": "env $(cat .env.local) nodemon src/app.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,5 +1,6 @@
 import { v4 } from "uuid";
 import { encrypt } from "../lib/encryption";
+import { pgClient } from "./client";
 
 type WriteMessageArgs = {
   userId: string;
