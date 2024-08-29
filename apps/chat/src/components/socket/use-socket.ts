@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useEffect } from "react";
 import { useSocketContext } from "@/components/socket/socket-provider";
 
@@ -31,6 +33,8 @@ export enum SocketEvent {
   CreateNotification = "notification:create",
 }
 
+const cache = new Map();
+
 export function useSocketHandler<T>(
   eventName: SocketEvent,
   handler: (args: T) => void,
@@ -39,15 +43,16 @@ export function useSocketHandler<T>(
   const { socket } = useSocketContext();
 
   useEffect(() => {
-    if (skip) return;
+    if (skip || cache.has(eventName)) return;
 
     socket.on(eventName, handler);
+    cache.set(eventName, true);
 
     return () => {
+      cache.delete(eventName);
       socket.off(eventName, handler);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventName, handler, skip]);
+  }, [eventName, handler, skip, socket]);
 
   return socket;
 }
