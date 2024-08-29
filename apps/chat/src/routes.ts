@@ -3,4 +3,5 @@ export enum Routes {
   SignIn = "/signin",
   Terms = "/terms",
   Privacy = "/privacy",
+  ForceSignout = "/force-signout",
 }

@@ -226,7 +226,7 @@ export const UpsertTopicForm = ({
                     Delete topic
                   </Button>
                 )}
-                <DialogClose>
+                <DialogClose asChild>
                   <Button variant="ghost" type="button">
                     {isCreator ? "Cancel" : "Close"}
                   </Button>

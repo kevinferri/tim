@@ -81,7 +81,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
             <TooltipTrigger>
               <Avatar>
                 <AvatarFallback
-                  className="bg-secondary border"
+                  className="bg-secondary border hover:opacity-80"
                   onClick={() => setOpen(true)}
                 >
                   <PlusIcon height={18} width={18} />
@@ -322,7 +322,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                     Delete circle
                   </Button>
                 )}
-                <DialogClose>
+                <DialogClose asChild>
                   <Button variant="ghost" type="button">
                     {isCreator ? "Cancel" : "Close"}
                   </Button>

@@ -33,29 +33,34 @@ export enum SocketEvent {
 
 export function useSocketHandler<T>(
   eventName: SocketEvent,
-  handler: (args: T) => void
+  handler: (args: T) => void,
+  skip = false
 ) {
-  const socket = useSocketContext();
+  const { socket } = useSocketContext();
 
   useEffect(() => {
+    if (skip) return;
+
     socket.on(eventName, handler);
 
     return () => {
       socket.off(eventName, handler);
     };
-  }, [eventName, handler, socket]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventName, handler, skip]);
 
   return socket;
 }
 
 export function useSocketEmit<T>(eventName: SocketEvent) {
-  const socket = useSocketContext();
+  const { socket } = useSocketContext();
 
   const emit = useCallback(
     (payload: T) => {
       socket.emit(eventName, payload);
     },
-    [socket, eventName]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [eventName]
   );
 
   return { emit };

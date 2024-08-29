@@ -20,6 +20,7 @@ export default async function LogInPage({
     const redirectTo = searchParams?.callbackUrl
       ? searchParams.callbackUrl
       : Routes.Home;
+
     return redirect(redirectTo);
   }
 

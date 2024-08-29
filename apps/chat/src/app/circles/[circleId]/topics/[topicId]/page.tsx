@@ -13,6 +13,7 @@ import {
 } from "@/lib/prisma/message-model";
 import { CurrentTopicProvider } from "@/components/topics/current-topic-provider";
 import { DEFAULT_TITLE } from "@/app/layout";
+import { MessageModal } from "@/components/topics/message-modal";
 
 type Props = {
   params: { topicId: string };
@@ -95,6 +96,7 @@ export default async function TopicPage({ params }: Props) {
           circleId={topic.parentCircle.id}
           messagesLimit={MESSAGE_LIMIT}
           topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
+          // @ts-expect-error
           existingCircleMemebers={circleMembers}
           // @ts-expect-error
           existingMessages={messages}
@@ -106,6 +108,7 @@ export default async function TopicPage({ params }: Props) {
           <TopicHeader topic={topic} />
           <div className="flex flex-1 flex-row overflow-y-hidden">
             <div className="flex flex-1 flex-col overflow-x-hidden">
+              <MessageModal />
               <TopicChat />
               <TopicMessageBar />
             </div>

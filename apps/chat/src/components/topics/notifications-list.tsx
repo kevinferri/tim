@@ -12,12 +12,11 @@ import {
 } from "./use-topic-notifications";
 import { useMemo } from "react";
 import {
-  ExternalLinkIcon,
   MagnifyingGlassIcon,
   StarFilledIcon,
   StarIcon,
 } from "@radix-ui/react-icons";
-import Link from "next/link";
+import { useQueryState } from "nuqs";
 
 type Props = {
   notifications: TopicNotification[];
@@ -39,6 +38,7 @@ const copyMap = {
 };
 
 export function NotificationsList(props: Props) {
+  const [messageId, setMessageId] = useQueryState("messageId");
   const { messages, topHighlights, mediaMessages, topicId } =
     useCurrentTopicContext();
 
@@ -78,14 +78,14 @@ export function NotificationsList(props: Props) {
                     </CardContent>
                   ) : (
                     <CardContent className="p-3 m-0">
-                      <Link
-                        target="_blank"
-                        href={`/messages/${notification.messageId}`}
-                        className="underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80 flex gap-1 items-center"
+                      <span
+                        onClick={() => {
+                          setMessageId(notification.messageId);
+                        }}
+                        className="cursor:pointer underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
                       >
                         <span>See message</span>
-                        <ExternalLinkIcon />
-                      </Link>
+                      </span>
                     </CardContent>
                   )}
                 </Card>

@@ -7,6 +7,7 @@ export type Self = Pick<
   User,
   "id" | "name" | "email" | "imageUrl" | "createdAt"
 >;
+
 const SelfContext = createContext<Self | undefined>(undefined);
 
 export function SelfProvider({

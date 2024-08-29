@@ -10,8 +10,6 @@ export async function GET(
 ) {
   const userId = await getLoggedInUserId();
   const topicId = route.params.topicId;
-  const url = new URL(req.url);
-  const after = url.searchParams.get("after") ?? undefined;
 
   if (!userId) return unauthorized;
 
@@ -37,13 +35,13 @@ export async function GET(
 
     if (!isInCircle) return notFound;
 
-    const messages = await prismaClient.message.getMessagesForTopic({
-      topicId,
-      after,
-      select: DEFAULT_MESSAGE_SELECT,
-    });
+    const highlights =
+      await prismaClient.message.getTopHighlightedMessagesForTopic({
+        topicId,
+        select: DEFAULT_MESSAGE_SELECT,
+      });
 
-    return NextResponse.json(messages, { status: 200 });
+    return NextResponse.json(highlights, { status: 200 });
   } catch (e) {
     return badRequest;
   }

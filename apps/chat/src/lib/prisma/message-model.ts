@@ -44,13 +44,11 @@ export const DEFAULT_MESSAGE_SELECT = {
   },
 };
 
-export function normalizeMessage(message: Partial<Message>) {
-  return { ...message, text: getReadableMessage(message.text) };
-}
-
-function normalizeMessages(messages: Partial<Message>[]) {
-  return messages.map((m) => normalizeMessage(m));
-}
+export const normalizeMessages = (messages: Partial<Message>[]) =>
+  messages.map((message) => ({
+    ...message,
+    text: getReadableMessage(message.text),
+  }));
 
 function getReadableMessage(text?: string | null) {
   if (!text) return undefined;

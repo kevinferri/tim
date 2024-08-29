@@ -10,12 +10,13 @@ import {
   EnvelopeClosedIcon,
   StarIcon,
 } from "@radix-ui/react-icons";
-import { UserStatsForTopicResponse } from "@/api/topics/[topicId]/user-stats/[userId]/route";
+import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats/[userId]/route";
 import { useState } from "react";
 import { Message, MessageProps } from "@/components/topics/message";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
-import { Skeleton } from "./skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function getInitials(name?: string) {
   if (!name) return "?";
@@ -75,10 +76,10 @@ export function UserAvatar(props: Props) {
   const initials = getInitials(props.name ?? undefined);
   const { timeZone } = useTimeZone();
   const [open, setOpen] = useState(false);
-  const { data } = useFetch<UserStatsForTopicResponse>(
-    `/api/topics/${props.topicId}/user-stats/${props.id}`,
-    { skip: !props.topicId || !open }
-  );
+  const { data } = useFetch<UserStatsForTopicResponse>({
+    url: `/api/topics/${props.topicId}/user-stats/${props.id}`,
+    skip: !props.topicId || !open,
+  });
 
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
 
@@ -210,7 +211,7 @@ export function UserAvatar(props: Props) {
             </div>
           )}
 
-          <div className="basis-full overflow-y-scroll">
+          <ScrollArea className="basis-full overflow-y-scroll no-scrollbar">
             {data?.topHighlights.map((message: MessageProps) => {
               return (
                 <Message
@@ -221,7 +222,7 @@ export function UserAvatar(props: Props) {
                 />
               );
             })}
-          </div>
+          </ScrollArea>
         </div>
       </SheetContent>
     </Sheet>

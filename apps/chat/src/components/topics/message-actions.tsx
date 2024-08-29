@@ -41,7 +41,7 @@ export function MessageActions(props: Props) {
       <div className="flex gap-1">
         <TooltipProvider>
           <Tooltip delayDuration={100}>
-            <TooltipTrigger>
+            <TooltipTrigger asChild>
               {isRandomGif ? (
                 <Button
                   className="font-normal"

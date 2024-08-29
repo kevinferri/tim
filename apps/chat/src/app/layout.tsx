@@ -2,16 +2,17 @@ import React, { cache } from "react";
 import { GeistSans } from "geist/font/sans";
 import jwt from "jsonwebtoken";
 import { User } from "@prisma/client";
-
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { SocketProvider } from "@/components/socket/socket-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { prismaClient } from "@/lib/prisma/client";
 import { SelfProvider } from "@/components/auth/self-provider";
-
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
+import { redirect } from "next/navigation";
+import { cookies, headers } from "next/headers";
+import { Routes } from "@/routes";
 
 import "@/globals.css";
 
@@ -117,6 +118,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getLoggedInUser();
+  const cookieStore = cookies();
+  const headerList = headers();
+  const pathname = headerList.get("x-current-path");
+  const sessionToken = cookieStore.get("next-auth.session-token");
+
+  // next-auth cookie in a bad state, sign out the user
+  if (!user && sessionToken?.value && pathname !== Routes.ForceSignout) {
+    redirect(Routes.ForceSignout);
+  }
 
   if (!user) {
     return <LoggedOutLayout>{children}</LoggedOutLayout>;

@@ -38,7 +38,7 @@ function Member(props: MemberProps) {
         />
         <div
           className={`absolute right-0 bottom-1.5 rounded-full h-3 w-3 border ${
-            props.isOnline ? "bg-green-500" : "bg-slate-400"
+            props.isOnline ? "bg-green-600" : "bg-slate-400"
           }`}
         />
       </div>

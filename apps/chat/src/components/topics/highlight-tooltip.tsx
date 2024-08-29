@@ -1,16 +1,16 @@
 "use client";
 import uniqBy from "lodash.uniqby";
 import { Button } from "@/components/ui/button";
-import { Highlights } from "./message";
+import { Highlights } from "@/components/topics/message";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { StarFilledIcon, StarIcon } from "@radix-ui/react-icons";
+import { cn } from "@/lib/utils";
 import {
   TooltipProvider,
   Tooltip,
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 type Props = {
   className?: string;
@@ -24,7 +24,7 @@ const DELAY = 100;
 const HIGHLIGHT_ICON_COLOR = "#dfa0a1";
 
 export const HighlightTooltip = (props: Props) => {
-  const _highlights = uniqBy(props.highlights, "userId");
+  const highlights = uniqBy(props.highlights, "userId");
 
   return (
     <TooltipProvider>
@@ -45,6 +45,7 @@ export const HighlightTooltip = (props: Props) => {
               asChild
               className="cursor-pointer h-6 w-6 p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
               onClick={props.onHighlight}
+              type="button"
             >
               {props.highlightedBySelf ? (
                 <StarFilledIcon color={HIGHLIGHT_ICON_COLOR} />
@@ -52,16 +53,16 @@ export const HighlightTooltip = (props: Props) => {
                 <StarIcon color={HIGHLIGHT_ICON_COLOR} />
               )}
             </Button>
-            {_highlights.length}
+            {highlights.length}
           </div>
         </TooltipTrigger>
         <TooltipContent
           side="left"
           onPointerDownOutside={(e) => e.preventDefault()}
-          className={`px-2 ${_highlights.length === 0 ? "hidden" : ""}`}
+          className={`px-2 ${highlights.length === 0 ? "hidden" : ""}`}
         >
           <div className="flex gap-1.5">
-            {_highlights.map(({ createdBy, id }) => {
+            {highlights.map(({ createdBy, id }) => {
               return (
                 <Avatar key={id} className="h-7 w-7">
                   <AvatarImage

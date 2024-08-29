@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,9 +24,11 @@ export const DeleteMessageModal = ({ messageId, topicId }: Props) => {
 
   return (
     <Dialog>
-      <DialogTrigger>
-        <Button className="font-normal" size="iconSm" variant="outline">
-          <TrashIcon />
+      <DialogTrigger asChild>
+        <Button className="font-normal" size="iconSm" variant="outline" asChild>
+          <div>
+            <TrashIcon />
+          </div>
         </Button>
       </DialogTrigger>
       <DialogContent>

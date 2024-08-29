@@ -1,5 +1,6 @@
 "use client";
 
+import { signOut } from "next-auth/react";
 import { ExitIcon } from "@radix-ui/react-icons";
 import {
   DropdownMenu,
@@ -8,10 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { signOut } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { useSelf } from "../auth/self-provider";
+import { useSelf } from "@/components/auth/self-provider";
+import { ConnectionStatus } from "@/components/socket/connection-status";
 
 export function UserDropDown() {
   const self = useSelf();
@@ -19,13 +20,21 @@ export function UserDropDown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="p-0 rounded-full hover:opacity-80 shadow-sm"
-        >
-          <UserAvatar id={self.id} name={self.name} imageUrl={self.imageUrl} />
-        </Button>
+        <div className="relative">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="p-0 rounded-full hover:opacity-80 shadow-sm"
+          >
+            <UserAvatar
+              size="sm"
+              id={self.id}
+              name={self.name}
+              imageUrl={self.imageUrl}
+            />
+          </Button>
+          <ConnectionStatus />
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem disabled>{self.email}</DropdownMenuItem>

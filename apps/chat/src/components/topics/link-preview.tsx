@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
-import { LinkMetadataResponse } from "@/api/link-metadata/route";
+import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
 import { ResponsiveVideoPlayer, getYoutubeVideoFromUrl } from "./media-viewer";
 
 type Props = {
@@ -20,12 +20,10 @@ type Props = {
 };
 
 export function LinkPreview(props: Props) {
-  const { data, error } = useFetch<LinkMetadataResponse>(
-    `/api/link-metadata?url=${encodeURIComponent(props.link)}`,
-    {
-      onLoad: props.onEmbedMediaLoad,
-    }
-  );
+  const { data, error } = useFetch<LinkMetadataResponse>({
+    url: `/api/link-metadata?url=${encodeURIComponent(props.link)}`,
+    onSuccess: props.onEmbedMediaLoad,
+  });
 
   if (error) return null;
 

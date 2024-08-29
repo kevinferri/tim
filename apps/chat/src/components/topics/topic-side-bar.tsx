@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   BellIcon,
   ImageIcon,
@@ -11,9 +12,8 @@ import { TopHighlights } from "@/components/topics/top-highlights";
 import { MediaList } from "@/components/topics/media-list";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CircleMembersList } from "@/components/topics/circle-members-list";
-import { useState } from "react";
-import { NotificationsList } from "./notifications-list";
-import { useTopicNotifications } from "./use-topic-notifications";
+import { NotificationsList } from "@/components/topics/notifications-list";
+import { useTopicNotifications } from "@/components/topics/use-topic-notifications";
 import { Badge } from "@/components/ui/badge";
 
 type Tab = "highlights" | "media" | "members" | "notifications";

@@ -1,7 +1,7 @@
-import { ChangeEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
-import { cn, hydrateUrl, isValidUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "@/components/topics/highlight-tooltip";
 import {
@@ -10,38 +10,21 @@ import {
 } from "@/components/topics/current-topic-provider";
 import { MediaViewer } from "@/components/topics/media-viewer";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
 import { MessageActions } from "@/components/topics/message-actions";
 import { MessageText } from "@/components/topics/message-text";
 import { LinkPreview } from "@/components/topics/link-preview";
-import { useTimeZone } from "@/lib/hooks";
-
-function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
-  target.style.height = "";
-  target.style.height = `${target.scrollHeight + 0.5}px`;
-}
-
-function truncateText(str: string, maxLength = 50) {
-  const words = str.split(/\s+/);
-  if (words.length <= maxLength) return str;
-  return `${str.split(" ").splice(0, maxLength).join(" ")}...`;
-}
-
-function getLinksFromMessage(message?: string) {
-  if (!message) return [];
-
-  const links = [];
-  const words = message.split(/\s+/);
-
-  for (let word of words) {
-    if (word.match(/[A-Za-z]+/)) {
-      const url = hydrateUrl(word);
-      if (isValidUrl(url)) links.push(url);
-    }
-  }
-
-  return links;
-}
+import {
+  baseStyles,
+  highlightStyles,
+} from "@/components/topics/message-styles";
+import { MessageEdit } from "@/components/topics/message-edit";
+import {
+  adjustHeight,
+  getLinksFromMessage,
+  truncateText,
+} from "@/components/topics/message-utils";
+import { MessageSentAt } from "./message-sent-at";
+import { useIslandMessage } from "./use-island-message";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -61,32 +44,8 @@ export type MessageProps = {
   variant: "default" | "minimal";
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
-  context?: "topic" | "sidebar" | "user-sheet";
-  index?: number;
+  context?: "topic" | "sidebar" | "user-sheet" | "modal";
 };
-
-const baseStyles = [
-  "z-0",
-  "p-3",
-  "relative",
-  "hover:bg-slate-50",
-  "dark:hover:bg-slate-900",
-  "after:content-['']",
-  "after:h-full",
-  "after:absolute",
-  "after:left-[0]",
-  "after:top-[0]",
-  "after:w-[0]",
-  "after:-z-10",
-];
-
-const highlightStyles = [
-  "after:-z-10",
-  "after:w-full",
-  "after:bg-highlight",
-  "after:[transition:500ms]",
-  "dark:after:bg-purple-950",
-];
 
 export const Message = (props: MessageProps) => {
   const {
@@ -105,14 +64,25 @@ export const Message = (props: MessageProps) => {
   const [shuffledGifLoading, setShuffledGifLoading] = useState(false);
   const createdAt = new Date(props.createdAt);
   const sentBySelf = props.sentBy.id === self.id;
-  const isNewestMessage =
-    messages.length > 0 && messages[messages.length - 1].id === props.id;
+  const mLength = messages.length;
+  const isIsland = props.context === "modal" || props.context === "user-sheet";
+  const isNewestMessage = mLength > 0 && messages[mLength - 1].id === props.id;
   const isShufflingGif = shufflingGifs.includes(props.id) || shuffledGifLoading;
-  const { timeZone } = useTimeZone();
   const shouldScroll = isNewestMessage && props.context === "topic";
-  const highlightedBySelf = !!props.highlights.find(
+  const isActionEligable = sentBySelf && props.variant !== "minimal";
+
+  const islandMessage = useIslandMessage({
+    messageId: props.id,
+    existingHighlights: props.highlights,
+    skip: !isIsland,
+  });
+
+  const highlights = isIsland ? islandMessage.highlights : props.highlights;
+
+  const highlightedBySelf = !!highlights.find(
     (highlight) => self.id === highlight.userId
   );
+
   const links = useMemo(
     () => getLinksFromMessage(props.text ?? undefined),
     [props.text]
@@ -182,8 +152,12 @@ export const Message = (props: MessageProps) => {
           window.getSelection()?.removeAllRanges();
         }
       }}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onMouseEnter={() => {
+        if (isActionEligable) setShowActions(true);
+      }}
+      onMouseLeave={() => {
+        if (isActionEligable) setShowActions(false);
+      }}
     >
       <div className="flex gap-3 items-start overflow-hidden leading-none">
         {!props.hiddenElements?.includes("sentBy") && (
@@ -213,24 +187,10 @@ export const Message = (props: MessageProps) => {
             )}
 
             {!props.hiddenElements?.includes("sentAt") && (
-              <>
-                {" "}
-                <time
-                  suppressHydrationWarning
-                  className="text-slate-300 text-xs"
-                >
-                  {createdAt.toLocaleDateString("en-US", {
-                    timeZone,
-                    day: "numeric",
-                    month: "short",
-                    hour: "numeric",
-                    minute: "numeric",
-                  })}
-                </time>
-              </>
+              <MessageSentAt sentAt={createdAt} />
             )}
 
-            {showActions && sentBySelf && props.variant !== "minimal" && (
+            {showActions && isActionEligable && (
               <MessageActions
                 className={messages[0].id === props.id ? "top-0" : ""}
                 messageId={props.id}
@@ -252,45 +212,15 @@ export const Message = (props: MessageProps) => {
 
           <div className="flex flex-col gap-1.5">
             {isEditing ? (
-              <div>
-                <AutoResizeTextarea
-                  onChange={(e) => {
-                    setEditingText(e.target.value);
-                    adjustHeight(e.target);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      onEditConfirm();
-                    }
-
-                    if (e.key === "Escape") {
-                      onEditCancel();
-                    }
-                  }}
-                  value={editingText ?? ""}
-                />
-                <div className="flex gap-1 text-xs">
-                  <span>
-                    esc to{" "}
-                    <span
-                      className="cursor-pointer text-purple-700"
-                      onClick={onEditCancel}
-                    >
-                      cancel
-                    </span>
-                  </span>
-                  <span>•</span>
-                  <span>
-                    enter to{" "}
-                    <span
-                      className="cursor-pointer text-purple-700"
-                      onClick={onEditConfirm}
-                    >
-                      save changes
-                    </span>
-                  </span>
-                </div>
-              </div>
+              <MessageEdit
+                onEditCancel={onEditCancel}
+                onEditConfirm={onEditConfirm}
+                editingText={editingText ?? ""}
+                onChange={(e) => {
+                  setEditingText(e.target.value);
+                  adjustHeight(e.target);
+                }}
+              />
             ) : (
               <MessageText
                 id={props.id}
@@ -344,7 +274,7 @@ export const Message = (props: MessageProps) => {
           <HighlightTooltip
             className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
             highlightedBySelf={highlightedBySelf}
-            highlights={props.highlights}
+            highlights={highlights}
             messageId={props.id}
             onHighlight={handleToggleHighlight}
           />

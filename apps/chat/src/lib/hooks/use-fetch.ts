@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useFetch<T>(
-  url: string,
-  opts: { skip?: boolean; onLoad?: () => void } = {}
+  opts: { url: string; skip?: boolean; onSuccess?: (data: T) => void } = {
+    url: "",
+  }
 ) {
   const [data, setData] = useState<T>();
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export function useFetch<T>(
     const fetchData = async () => {
       try {
         setLoading(true);
-        const resp = await fetch(url);
+        const resp = await fetch(opts.url);
 
         if (!resp.ok) {
           setError(true);
@@ -26,7 +27,7 @@ export function useFetch<T>(
         const json = await resp.json();
 
         setData(json);
-        opts.onLoad?.();
+        opts.onSuccess?.();
       } catch (e) {
         setError(true);
       } finally {
@@ -36,14 +37,19 @@ export function useFetch<T>(
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, opts.skip]);
+  }, [opts.url, opts.skip]);
 
   return useMemo(() => ({ data, loading, error }), [data, loading, error]);
 }
 
-export function useLazyFetch<T>(url: string, onLoadMore?: (data: T) => void) {
+export function useLazyFetch<T>(
+  opts: { url: string; onSuccess?: (data: T) => void } = {
+    url: "",
+  }
+) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const { url, onSuccess } = opts;
 
   const fetchData = useCallback(async () => {
     try {
@@ -55,7 +61,7 @@ export function useLazyFetch<T>(url: string, onLoadMore?: (data: T) => void) {
       }
 
       const json = await resp.json();
-      onLoadMore?.(json);
+      onSuccess?.(json);
 
       return json as T;
     } catch (e) {
@@ -63,7 +69,7 @@ export function useLazyFetch<T>(url: string, onLoadMore?: (data: T) => void) {
     } finally {
       setLoading(false);
     }
-  }, [url, onLoadMore]);
+  }, [url, onSuccess]);
 
   return useMemo(
     () => ({ fetchData, loading, error }),

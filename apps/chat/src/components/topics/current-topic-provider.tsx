@@ -17,9 +17,8 @@ import {
   useSocketHandler,
 } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
-import { getTopHighlightsAction } from "@/actions/messages";
 import { useEffectOnce, useLazyFetch, useWindowFocus } from "@/lib/hooks";
-import { WithRelation } from "../../../../types/prisma";
+import { WithRelation } from "../../../types/prisma";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
 
@@ -66,7 +65,7 @@ const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 
 export enum ScrollPaddings {
   Default = 120,
-  Media = 250,
+  Media = 500,
 }
 
 function isNearBottom(
@@ -86,6 +85,11 @@ export function CurrentTopicProvider(props: Props) {
   const loadMoreAnchorRef = useRef<null | HTMLDivElement>(null);
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
+
+  const { fetchData: refreshTopHighlights } = useLazyFetch<MessageProps[]>({
+    url: `/api/topics/${props.topicId}/top-highlights`,
+    onSuccess: (refreshed) => setTopHighlights(refreshed),
+  });
 
   const scrollToBottomOfChat = useCallback(
     ({ timeout, force, padding }: ScrollArgs = {}) => {
@@ -214,13 +218,11 @@ export function CurrentTopicProvider(props: Props) {
         prevMessages.filter(({ id }) => id !== payload.deletedMessageId)
       );
 
-      if (wasTopHighlight) {
-        const refreshed = await getTopHighlightsAction({
-          topicId: props.topicId,
-          circleId: props.circleId,
-        });
-
-        setTopHighlights(refreshed as MessageProps[]);
+      if (
+        wasTopHighlight &&
+        topHighlights.length === props.topHighlightsLimit
+      ) {
+        refreshTopHighlights();
       }
     }
   );
@@ -341,13 +343,10 @@ export function CurrentTopicProvider(props: Props) {
             )
           );
 
-          // Get top highlight from server to replace the removed one
-          const refreshed = await getTopHighlightsAction({
-            topicId: props.topicId,
-            circleId: props.circleId,
-          });
-
-          setTopHighlights(refreshed as MessageProps[]);
+          // Get top highlight from server to replace the removed one if at capacity
+          if (topHighlights.length >= props.topHighlightsLimit) {
+            refreshTopHighlights();
+          }
         }
       }
     }
@@ -375,9 +374,9 @@ export function CurrentTopicProvider(props: Props) {
   );
 
   const { fetchData: loadMoreMessages, loading: loadingMoreMessages } =
-    useLazyFetch<MessageProps[]>(
-      `/api/topics/${props.topicId}/messages?after=${messages?.[0]?.id}`,
-      (newMessages) => {
+    useLazyFetch<MessageProps[]>({
+      url: `/api/topics/${props.topicId}/messages?after=${messages?.[0]?.id}`,
+      onSuccess: (newMessages) => {
         if (newMessages.length < props.messagesLimit) {
           setHasMoreMessages(false);
         }
@@ -387,8 +386,8 @@ export function CurrentTopicProvider(props: Props) {
         setTimeout(() => {
           loadMoreAnchorRef?.current?.scrollIntoView({ block: "end" });
         }, 1);
-      }
-    );
+      },
+    });
 
   const contextValue = useMemo(
     () => ({
@@ -454,7 +453,9 @@ function sanitizeTopHighlights(messages: MessageProps[], limit: number) {
   return messages
     .sort((a, b) => {
       if (b.highlights.length === a.highlights.length) {
-        return b.createdAt.getTime() - a.createdAt.getTime();
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       } else {
         return b.highlights.length - a.highlights.length;
       }
