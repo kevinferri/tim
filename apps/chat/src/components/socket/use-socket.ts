@@ -38,21 +38,23 @@ const cache = new Map();
 export function useSocketHandler<T>(
   eventName: SocketEvent,
   handler: (args: T) => void,
-  skip = false
+  skip = false,
+  cacheKey?: string
 ) {
   const { socket } = useSocketContext();
+  const key = cacheKey ?? eventName.toString();
 
   useEffect(() => {
-    if (skip || cache.has(eventName)) return;
+    if (skip || cache.has(key)) return;
 
     socket.on(eventName, handler);
-    cache.set(eventName, true);
+    cache.set(key, true);
 
     return () => {
-      cache.delete(eventName);
+      cache.delete(key);
       socket.off(eventName, handler);
     };
-  }, [eventName, handler, skip, socket]);
+  }, [eventName, handler, skip, socket, key]);
 
   return socket;
 }
