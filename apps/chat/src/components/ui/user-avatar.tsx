@@ -1,10 +1,10 @@
 "use client";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { cn, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { VariantProps, cva } from "class-variance-authority";
 import { Sheet, SheetContent, SheetTrigger } from "./sheet";
-import { useFetch } from "@/lib/hooks";
+import { useDateFormatter, useFetch } from "@/lib/hooks";
 import {
   CalendarIcon,
   EnvelopeClosedIcon,
@@ -75,15 +75,13 @@ function StatsLoader() {
 export function UserAvatar(props: Props) {
   const initials = getInitials(props.name ?? undefined);
   const [open, setOpen] = useState(false);
+  const since = useDateFormatter(props.createdAt);
   const { data } = useFetch<UserStatsForTopicResponse>({
     url: `/api/topics/${props.topicId}/user-stats/${props.id}`,
     skip: !props.topicId || !open,
   });
 
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
-  const since = props.createdAt
-    ? formatDate(new Date(props.createdAt))
-    : undefined;
 
   const trigger = (
     <Avatar

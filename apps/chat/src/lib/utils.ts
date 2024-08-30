@@ -36,14 +36,3 @@ export function toBase64(file: File) {
     reader.onerror = reject;
   });
 }
-
-export function formatDate(date: Date) {
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return date.toLocaleDateString("en-US", {
-    timeZone,
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "numeric",
-  });
-}

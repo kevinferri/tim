@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useEffectOnce } from "./use-effect-once";
 
-function format(date: Date) {
+function format(date?: Date) {
+  if (!date) return undefined;
+
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return date.toLocaleDateString("en-US", {
     timeZone,
@@ -17,7 +19,7 @@ function format(date: Date) {
 /**
  * Forces the date to be formatted client side
  */
-export function useDateFormatter(date: Date) {
+export function useDateFormatter(date?: Date) {
   const [d, setD] = useState<string>();
   useEffectOnce(() => setD(format(date)));
   return d;
