@@ -1,10 +1,10 @@
 "use client";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+import { cn, getTimeZone } from "@/lib/utils";
 import { VariantProps, cva } from "class-variance-authority";
 import { Sheet, SheetContent, SheetTrigger } from "./sheet";
-import { useFetch, useTimeZone } from "@/lib/hooks";
+import { useFetch } from "@/lib/hooks";
 import {
   CalendarIcon,
   EnvelopeClosedIcon,
@@ -74,7 +74,7 @@ function StatsLoader() {
 
 export function UserAvatar(props: Props) {
   const initials = getInitials(props.name ?? undefined);
-  const { timeZone } = useTimeZone();
+  const timeZone = getTimeZone();
   const [open, setOpen] = useState(false);
   const { data } = useFetch<UserStatsForTopicResponse>({
     url: `/api/topics/${props.topicId}/user-stats/${props.id}`,

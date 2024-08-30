@@ -36,3 +36,8 @@ export function toBase64(file: File) {
     reader.onerror = reject;
   });
 }
+
+export function getTimeZone() {
+  if (typeof window === "undefined") return undefined;
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}

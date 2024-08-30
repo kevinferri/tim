@@ -1,13 +1,11 @@
-"use client";
-
-import { useTimeZone } from "@/lib/hooks";
+import { getTimeZone } from "@/lib/utils";
 
 type Props = {
   sentAt: Date;
 };
 
 export function MessageSentAt(props: Props) {
-  const { timeZone } = useTimeZone();
+  const timeZone = getTimeZone();
 
   return (
     <>
