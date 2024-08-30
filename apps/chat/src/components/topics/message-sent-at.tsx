@@ -1,3 +1,5 @@
+"use client";
+
 import { useTimeZone } from "@/lib/hooks";
 
 type Props = {

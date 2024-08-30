@@ -20,7 +20,7 @@ export function useSocketState(socket: Socket) {
     setTimeout(() => {
       setIsConnected(socket.connected);
       if (!socket.connected) showDisconnectedToast();
-    }, 500);
+    }, 3000);
 
     function showDisconnectedToast() {
       toast({
