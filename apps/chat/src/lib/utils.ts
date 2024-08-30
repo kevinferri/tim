@@ -40,7 +40,9 @@ export function toBase64(file: File) {
 export function formatDate(d: Date) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const utc = new Date(d.toISOString());
-  return utc.toLocaleDateString("en-US", {
+
+  return utc.toString();
+  return d.toLocaleDateString("en-US", {
     timeZone,
     day: "numeric",
     month: "short",
