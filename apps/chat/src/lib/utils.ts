@@ -39,21 +39,12 @@ export function toBase64(file: File) {
 
 export function formatDate(date: Date) {
   if (typeof window === "undefined") {
-    console.log("on server", date)
+    console.log("on server", date);
     return undefined;
   }
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return date.toLocaleDateString("en-US", {
-    timeZone,
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "numeric",
-  });
-}
-
-  return utc.toLocaleDateString("en-US", {
     timeZone,
     day: "numeric",
     month: "short",
