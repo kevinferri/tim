@@ -37,12 +37,20 @@ export function toBase64(file: File) {
   });
 }
 
-export function formatDate(d: Date) {
+export function formatDate(date: Date) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const utc = new Date(d.toISOString());
+  const utc = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds()
+    )
+  );
 
-  return utc.toString();
-  return d.toLocaleDateString("en-US", {
+  return utc.toLocaleDateString("en-US", {
     timeZone,
     day: "numeric",
     month: "short",
