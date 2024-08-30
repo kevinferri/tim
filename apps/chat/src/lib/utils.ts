@@ -37,7 +37,14 @@ export function toBase64(file: File) {
   });
 }
 
-export function getTimeZone() {
-  if (typeof window === "undefined") return undefined;
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function formatDate(d: Date) {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const utc = new Date(d.toISOString());
+  return utc.toLocaleDateString("en-US", {
+    timeZone,
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "numeric",
+  });
 }
