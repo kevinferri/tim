@@ -4,7 +4,7 @@ import { registerEventHandlers } from "./event-handlers/main";
 import { middleware } from "./middleware";
 import { parse } from "url";
 
-const port = process.env.PORT;
+const port = process.env.WS_PORT;
 const httpServer = createServer((req, res) => {
   // Health check TODO: log somewhere?
   if (req.method === "GET" && parse(req.url, true).pathname === "/api/ping") {
