@@ -47,8 +47,8 @@ async function getSocketConfig(user?: User) {
 
   return {
     jwt: token,
-    endpoint: process.env.CHAT_SERVER_URL ?? "",
-    path: process.env.CHAT_SERVER_PATH ?? "",
+    endpoint: process.env.WS_SERVER_URL ?? "",
+    path: process.env.WS_SERVER_PATH ?? "",
   };
 }
 
