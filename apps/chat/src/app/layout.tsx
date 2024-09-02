@@ -42,7 +42,7 @@ export async function generateMetadata() {
 
 async function getSocketConfig(user?: User) {
   const token = user
-    ? jwt.sign(JSON.stringify(user), process.env.CHAT_SERVER_AUTH_SECRET ?? "")
+    ? jwt.sign(JSON.stringify(user), process.env.JWT_SECRET ?? "")
     : undefined;
 
   return {
