@@ -14,7 +14,7 @@ export function middleware(
   if (!token) return invalidCredentialsError(next);
 
   try {
-    const user = jwt.verify(token, process.env.NEXTAUTH_SECRET) as JwtPayload;
+    const user = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
     socket.data.user = user;
   } catch (err) {
     return invalidCredentialsError(next);
