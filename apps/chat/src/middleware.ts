@@ -18,7 +18,7 @@ export function middleware(req: NextRequest) {
   }
 
   if (!sessionToken) {
-    return NextResponse.redirect(`${process.env.BASE_URL}${Routes.SignIn}`);
+    return NextResponse.redirect(`${process.env.FRONTEND_URL}${Routes.SignIn}`);
   }
 
   headers.set("x-current-path", req.nextUrl.pathname);

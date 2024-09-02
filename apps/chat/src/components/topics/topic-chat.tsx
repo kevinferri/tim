@@ -73,8 +73,15 @@ export function TopicChat() {
         </InfiniteLoader>
       )}
 
-      {messages.map((message: MessageProps, index) => {
-        return <Message key={message.id} {...message} context="topic" />;
+      {messages.map((message: MessageProps) => {
+        return (
+          <Message
+            key={message.id}
+            {...message}
+            context="topic"
+            className={!hasScrolled ? "invisible" : ""}
+          />
+        );
       })}
 
       <div ref={scrollRef} />
