@@ -23,8 +23,8 @@ function getActiveAndNonActiveUsers({
   );
 
   return {
-    inTopic: filteredActiveUsers.map((user) => `"${user.name.split(" ")[0]}"`),
-    notInTopic: nonActiveUsers.map((user) => `"${user.name.split(" ")[0]}"`),
+    inTopic: filteredActiveUsers.map((user) => `${toFirstName(user.name)}`),
+    notInTopic: nonActiveUsers.map((user) => `${toFirstName(user.name)}`),
   };
 }
 
@@ -51,9 +51,9 @@ function generatePrompt({
     `Within the chat, users prompt you with the command "/tim"`,
     `Only summarize the messages when you are explicity asked to, otherwise just respond to the prompt`,
     `The topic of the group chat is "${topicName}"`,
-    `The person who just sent you a message is named "${
-      currentUserName.split(" ")[0]
-    }"`,
+    `The person who just sent you a message is named "${toFirstName(
+      currentUserName
+    )}"`,
   ];
 
   if (inTopic.length > 0) {
@@ -114,9 +114,9 @@ export async function getChatGpt({
 
       messagePrompts.push({
         role: "developer",
-        content: `Here is message number ${messageCount}, it was sent by ${
-          m.name.split(" ")[0]
-        }: ${text}`,
+        content: `Here is message number ${messageCount}, it was sent by ${toFirstName(
+          m.name
+        )}: ${text}`,
       });
 
       messageCount++;
@@ -172,4 +172,8 @@ export async function getChatGpt({
   const json = await resp.json();
 
   return json.choices[0].message.content;
+}
+
+function toFirstName(name: string) {
+  return name.split(" ")[0];
 }
