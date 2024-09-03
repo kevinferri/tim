@@ -270,7 +270,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                 </div>
 
                 <div>
-                  <Label htmlFor="members">Avatar</Label>
+                  <Label htmlFor="avatar">Avatar</Label>
                   <div className="flex gap-2 items-center">
                     <Input
                       ref={avatarRef}
@@ -292,21 +292,23 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
                         </div>
                       </AvatarFallback>
                     </Avatar>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      onClick={() => {
-                        if (avatar) {
-                          setAvatar(undefined);
-                          return;
-                        }
+                    {isCreator && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => {
+                          if (avatar) {
+                            setAvatar(undefined);
+                            return;
+                          }
 
-                        avatarRef.current?.click();
-                      }}
-                    >
-                      {avatar ? "Clear" : "Upload custom"}
-                    </Button>
+                          avatarRef.current?.click();
+                        }}
+                      >
+                        {avatar ? "Clear" : "Upload custom"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
