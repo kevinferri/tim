@@ -6,7 +6,7 @@ export async function getRandomGif(query: string) {
 
   // fallback when no gif is found
   if (!json.data || json.data.length === 0) {
-    return "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDN4cnBldTRmb3I4ZHNxMmM3bTJxbGwycG81c2MzZHhqcm90aTJucCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/YJBNjrvG5Ctmo/giphy.gif";
+    return "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM20xeXZpdndla29jYnd3eWFrdDlkOWlrNTFiZzNrczU0YmFlYzNmeiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FUKCPzVj0GGrCsdsmP/giphy.gif";
   }
 
   return json.data.images.original.url;
