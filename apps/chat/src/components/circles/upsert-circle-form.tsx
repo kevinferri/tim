@@ -79,14 +79,17 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
         <TooltipProvider>
           <Tooltip delayDuration={100}>
             <TooltipTrigger>
-              <Avatar>
-                <AvatarFallback
-                  className="bg-secondary border hover:opacity-80"
-                  onClick={() => setOpen(true)}
-                >
-                  <PlusIcon height={18} width={18} />
-                </AvatarFallback>
-              </Avatar>
+              <Button
+                asChild
+                variant="secondary"
+                size="icon"
+                className="rounded-full"
+                onClick={() => setOpen(true)}
+              >
+                <div>
+                  <PlusIcon />
+                </div>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="right">Create a circle</TooltipContent>
           </Tooltip>

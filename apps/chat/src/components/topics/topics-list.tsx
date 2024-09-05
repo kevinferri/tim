@@ -120,7 +120,7 @@ export const TopicsList = ({ topics, circle }: Props) => {
     <div
       className={cn(
         `flex flex-col shadow-md border-r`,
-        isMinimized ? "" : "w-[340px]"
+        isMinimized ? "" : "w-[360px]"
       )}
     >
       <div
@@ -240,11 +240,13 @@ export const TopicsList = ({ topics, circle }: Props) => {
               <TooltipProvider>
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger>
-                    <Avatar>
-                      <AvatarFallback className="bg-secondary border hover:opacity-80">
-                        <PlusIcon height={18} width={18} />
-                      </AvatarFallback>
-                    </Avatar>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="rounded-full"
+                    >
+                      <PlusIcon />
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">New topic</TooltipContent>
                 </Tooltip>
@@ -259,11 +261,13 @@ export const TopicsList = ({ topics, circle }: Props) => {
               <TooltipProvider>
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger>
-                    <Avatar>
-                      <AvatarFallback className="bg-secondary border hover:opacity-80">
-                        <GearIcon height={18} width={18} />
-                      </AvatarFallback>
-                    </Avatar>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="rounded-full"
+                    >
+                      <GearIcon />
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">Circle settings</TooltipContent>
                 </Tooltip>
