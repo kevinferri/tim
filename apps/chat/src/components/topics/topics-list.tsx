@@ -261,7 +261,7 @@ export const TopicsList = ({ topics, circle }: Props) => {
                   <TooltipTrigger>
                     <Avatar>
                       <AvatarFallback className="bg-secondary border hover:opacity-80">
-                        <GearIcon />
+                        <GearIcon height={18} width={18} />
                       </AvatarFallback>
                     </Avatar>
                   </TooltipTrigger>
