@@ -7,3 +7,4 @@ export * from "./use-window-focus";
 export * from "./use-user-typing-emitter";
 export * from "./use-intersection";
 export * from "./use-date-formatter";
+export * from "./use-local-storage";

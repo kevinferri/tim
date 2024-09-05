@@ -24,6 +24,7 @@ import { deleteTopic, upsertTopic } from "@/actions/topics";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLocalStorage } from "@/lib/hooks";
 
 type Props = {
   existingTopic?: Pick<Topic, "id" | "name" | "description" | "userId">;
