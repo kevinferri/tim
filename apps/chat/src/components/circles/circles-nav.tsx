@@ -30,7 +30,7 @@ export const CirclesNav = async ({ circles }: Props) => {
         </div>
       </ScrollArea>
 
-      <div className="flex flex-col items-center mt-auto gap-2 p-3">
+      <div className="flex flex-col items-center mt-auto gap-2 px-3 py-2">
         <ThemeToggle />
         <UserDropDown />
       </div>
