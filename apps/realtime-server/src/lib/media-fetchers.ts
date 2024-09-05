@@ -9,7 +9,7 @@ export async function getRandomGif(query: string) {
     return "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM20xeXZpdndla29jYnd3eWFrdDlkOWlrNTFiZzNrczU0YmFlYzNmeiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FUKCPzVj0GGrCsdsmP/giphy.gif";
   }
 
-  return json.data.images.original.url;
+  return `${json.data.images.original.url}`;
 }
 
 export async function getYoutubeVideo(query: string) {
