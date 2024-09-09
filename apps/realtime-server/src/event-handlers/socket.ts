@@ -17,8 +17,6 @@ export function handleClientDisconnecting({ socket, server }: HandlerArgs) {
       const [roomType, roomId] = roomKey.split(ROOM_KEY_INDICATOR);
 
       if (roomType === RoomType.Topic) {
-        console.log("DISCONNECT:", socket.data);
-
         emitUserChangeInTopic({
           server,
           topicId: roomId,

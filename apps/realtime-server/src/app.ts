@@ -15,6 +15,8 @@ const httpServer = createServer((req, res) => {
 
 const wsServer = new Server(httpServer, {
   path: "/ws/",
+  pingInterval: 1000 * 60 * 5,
+  pingTimeout: 1000 * 60 * 3,
   cors: {
     origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST"],
