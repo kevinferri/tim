@@ -13,7 +13,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
 import { ResponsiveVideoPlayer, getYoutubeVideoFromUrl } from "./media-viewer";
-import Linkify from "react-linkify";
 
 type Props = {
   link: string;
@@ -22,6 +21,7 @@ type Props = {
 
 export function LinkPreview(props: Props) {
   const { data, error } = useFetch<LinkMetadataResponse>({
+    skip: props.link.includes("youtube.com"),
     url: `/api/link-metadata?url=${encodeURIComponent(props.link)}`,
     onSuccess: props.onEmbedMediaLoad,
   });
@@ -59,12 +59,14 @@ export function LinkPreview(props: Props) {
                     )}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <CardTitle className="leading-snug flex flex-col mb-1 font-semibold">
+                    <CardTitle className="leading-snug flex flex-col font-semibold text-sm">
                       <div>{data.ogSiteName}</div>
                       <div>{data.ogTitle}</div>
                     </CardTitle>
                     {data.ogDescription && (
-                      <CardDescription>{data.ogDescription}</CardDescription>
+                      <CardDescription className="text-xs">
+                        {data.ogDescription}
+                      </CardDescription>
                     )}
                   </div>
                 </div>
