@@ -1,4 +1,6 @@
+import { cn, isEmojiOnly } from "@/lib/utils";
 import Link from "next/link";
+import { useMemo } from "react";
 import Linkify from "react-linkify";
 
 type Props = {
@@ -8,6 +10,11 @@ type Props = {
 };
 
 export function MessageText(props: Props) {
+  const isOnlyEmoji = useMemo(
+    () => (props.text ? isEmojiOnly(props.text) : false),
+    [props.text]
+  );
+
   return (
     <Linkify
       componentDecorator={(decoratedHref, decoratedText, key) => (
@@ -22,7 +29,10 @@ export function MessageText(props: Props) {
       )}
     >
       <div
-        className="whitespace-pre-line break-word leading-normal"
+        className={cn(
+          "whitespace-pre-line break-word leading-normal",
+          isOnlyEmoji ? "text-3xl" : ""
+        )}
         style={{ overflowWrap: "anywhere" }}
       >
         {props.text}
