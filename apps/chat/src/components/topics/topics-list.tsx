@@ -164,7 +164,9 @@ export const TopicsList = ({ topics, circle }: Props) => {
                           >
                             <AvatarFallback>
                               <div className="mt-[1.5px]">
-                                {getInitials(topic.name)}
+                                {topic.id === circle.defaultTopicId
+                                  ? "🏠"
+                                  : getInitials(topic.name)}
                               </div>
                             </AvatarFallback>
                           </Avatar>

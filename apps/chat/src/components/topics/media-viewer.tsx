@@ -103,7 +103,7 @@ export function MediaViewer(props: Props) {
           />
         </div>
       </DialogTrigger>
-      <DialogContent className="w-max max-w-full min-w-[450px] min-h-[450px] p-0">
+      <DialogContent className="w-max max-w-full max-h-full min-w-[450px] min-h-[450px] p-0">
         <Image
           {...imageProps}
           alt={props.url}

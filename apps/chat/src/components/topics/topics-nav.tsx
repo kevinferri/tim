@@ -15,6 +15,7 @@ export async function TopicsNav({ circleId }: Props) {
       description: true,
       userId: true,
       imageUrl: true,
+      defaultTopicId: true,
       members: {
         select: {
           id: true,
