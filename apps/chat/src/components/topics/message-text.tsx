@@ -11,7 +11,8 @@ type Props = {
 
 export function MessageText(props: Props) {
   const isOnlyEmoji = useMemo(
-    () => (props.text ? isEmojiOnly(props.text) : false),
+    () =>
+      props.text ? isEmojiOnly(props.text) && props.text.length < 12 : false,
     [props.text]
   );
 
@@ -31,7 +32,7 @@ export function MessageText(props: Props) {
       <div
         className={cn(
           "whitespace-pre-line break-word leading-normal",
-          isOnlyEmoji ? "text-3xl" : ""
+          isOnlyEmoji ? "text-4xl" : ""
         )}
         style={{ overflowWrap: "anywhere" }}
       >
