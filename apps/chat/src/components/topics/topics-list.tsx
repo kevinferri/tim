@@ -18,6 +18,7 @@ import {
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
   GearIcon,
+  HomeIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
 import { WithRelation } from "../../../types/prisma";
@@ -164,9 +165,11 @@ export const TopicsList = ({ topics, circle }: Props) => {
                           >
                             <AvatarFallback>
                               <div className="mt-[1.5px]">
-                                {topic.id === circle.defaultTopicId
-                                  ? "🏠"
-                                  : getInitials(topic.name)}
+                                {topic.id === circle.defaultTopicId ? (
+                                  <HomeIcon height={16} width={16} />
+                                ) : (
+                                  getInitials(topic.name)
+                                )}
                               </div>
                             </AvatarFallback>
                           </Avatar>
