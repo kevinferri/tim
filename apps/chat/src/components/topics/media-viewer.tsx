@@ -94,7 +94,7 @@ export function MediaViewer(props: Props) {
   return (
     <Dialog>
       <DialogTrigger asChild onClick={props.onImageExpanded}>
-        <div className="relative cursor-zoom-in max-w-sm max-h-sm">
+        <div className="relative cursor-zoom-in w-fit max-w-sm max-h-sm">
           <Image
             {...imageProps}
             alt={props.url}
@@ -103,7 +103,7 @@ export function MediaViewer(props: Props) {
           />
         </div>
       </DialogTrigger>
-      <DialogContent className="w-max max-w-full p-0">
+      <DialogContent className="w-max max-w-full min-w-[450px] min-h-[450px] p-0">
         <Image
           {...imageProps}
           alt={props.url}
