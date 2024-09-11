@@ -1,10 +1,13 @@
+"use server";
+
 import { getLoggedInUserId } from "@/lib/session";
 import { hydrateUrl, isValidUrl } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
-import ogs from "open-graph-scraper";
+import og from "fetch-opengraph";
 import { badRequest } from "../error-responses";
 
 export type LinkMetadataResponse = {
+  ogSiteName?: string;
   ogTitle?: string;
   ogDescription?: string;
   ogImage?: string;
@@ -20,14 +23,16 @@ export async function GET(request: NextRequest) {
   if (!userId || !isValid) return badRequest;
 
   try {
-    const metadata = await ogs({ url });
+    const metadata = await og.fetch(url);
+    if (!metadata) return badRequest;
 
     return NextResponse.json(
       {
-        ogTitle: metadata.result.ogSiteName,
-        ogDescription: metadata.result.ogDescription,
-        ogImage: metadata.result.ogImage?.[0].url,
-        ogVideo: metadata.result.ogVideo?.[0].url,
+        ogSiteName: metadata["og:site_name"],
+        ogTitle: metadata["og:title"],
+        ogDescription: metadata["og:description"],
+        ogImage: metadata.image,
+        ogVideo: metadata.video,
       } as LinkMetadataResponse,
       { status: 200 }
     );

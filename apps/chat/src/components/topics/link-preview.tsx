@@ -59,35 +59,12 @@ export function LinkPreview(props: Props) {
                     )}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <CardTitle className="leading-snug">
-                      {data.ogTitle}
+                    <CardTitle className="leading-snug flex flex-col mb-1 font-semibold">
+                      <div>{data.ogSiteName}</div>
+                      <div>{data.ogTitle}</div>
                     </CardTitle>
                     {data.ogDescription && (
-                      <CardDescription>
-                        <Linkify
-                          componentDecorator={(
-                            decoratedHref,
-                            decoratedText,
-                            key
-                          ) => (
-                            <Link
-                              key={key}
-                              target="_blank"
-                              href={decoratedHref}
-                              className="underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
-                            >
-                              {decoratedText}
-                            </Link>
-                          )}
-                        >
-                          <div
-                            className="whitespace-pre-line break-word leading-normal"
-                            style={{ overflowWrap: "anywhere" }}
-                          >
-                            {data.ogDescription}
-                          </div>
-                        </Linkify>
-                      </CardDescription>
+                      <CardDescription>{data.ogDescription}</CardDescription>
                     )}
                   </div>
                 </div>
