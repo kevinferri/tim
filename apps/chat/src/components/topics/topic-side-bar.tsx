@@ -67,7 +67,7 @@ export function TopicSideBar() {
   return (
     <Tabs
       defaultValue="highlights"
-      className="flex flex-col shadow-md border-l hidden w-[220px] lg:w-[320px] md:block"
+      className="flex flex-col shadow-md border-l hidden w-[280px] lg:w-[320px] md:block"
       onValueChange={(tab) => {
         setActiveTab(tab as Tab);
 
