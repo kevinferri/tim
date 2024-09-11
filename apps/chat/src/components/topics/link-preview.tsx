@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
 import { ResponsiveVideoPlayer, getYoutubeVideoFromUrl } from "./media-viewer";
+import Linkify from "react-linkify";
 
 type Props = {
   link: string;
@@ -25,10 +26,10 @@ export function LinkPreview(props: Props) {
     onSuccess: props.onEmbedMediaLoad,
   });
 
-  if (error) return null;
+  if (error || !data) return null;
 
   return (
-    <>
+    <div className="hidden md:block">
       {data?.ogVideo && !getYoutubeVideoFromUrl(data?.ogVideo) && (
         <ResponsiveVideoPlayer
           src={data.ogVideo}
@@ -62,7 +63,31 @@ export function LinkPreview(props: Props) {
                       {data.ogTitle}
                     </CardTitle>
                     {data.ogDescription && (
-                      <CardDescription>{data.ogDescription}</CardDescription>
+                      <CardDescription>
+                        <Linkify
+                          componentDecorator={(
+                            decoratedHref,
+                            decoratedText,
+                            key
+                          ) => (
+                            <Link
+                              key={key}
+                              target="_blank"
+                              href={decoratedHref}
+                              className="underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
+                            >
+                              {decoratedText}
+                            </Link>
+                          )}
+                        >
+                          <div
+                            className="whitespace-pre-line break-word leading-normal"
+                            style={{ overflowWrap: "anywhere" }}
+                          >
+                            {data.ogDescription}
+                          </div>
+                        </Linkify>
+                      </CardDescription>
                     )}
                   </div>
                 </div>
@@ -73,7 +98,7 @@ export function LinkPreview(props: Props) {
           </CardHeader>
         </Card>
       </Link>
-    </>
+    </div>
   );
 }
 

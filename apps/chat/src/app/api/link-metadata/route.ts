@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
   if (!userId || !isValid) return badRequest;
 
   try {
-    const metadata = await urlMetadata(decodeURI(url));
+    const metadata = await urlMetadata(decodeURI(url), { mode: "cors" });
+
+    console.log(metadata);
 
     return NextResponse.json(
       {
