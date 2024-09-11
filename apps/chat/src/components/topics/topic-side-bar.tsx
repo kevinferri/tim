@@ -55,7 +55,7 @@ export function TopicSideBar() {
         <div className="flex items-center gap-1.5 w-fu">
           <BellIcon />
           {activeTab !== "notifications" && unreadCount > 0 && (
-            <Badge className="flex font-normal text-xs rounded-xl  hover:bg-succes px-2 bg-purple-500 min-w-7 justify-center">
+            <Badge className="flex font-normal text-xs rounded-xl hover:bg-succes px-2 bg-purple-500 min-w-7 justify-center">
               {unreadCount}
             </Badge>
           )}
@@ -67,7 +67,7 @@ export function TopicSideBar() {
   return (
     <Tabs
       defaultValue="highlights"
-      className="flex flex-col shadow-md border-l max-w-[320px] min-w-[320px] hidden md:block"
+      className="flex flex-col shadow-md border-l hidden w-[220px] lg:w-[320px] md:block"
       onValueChange={(tab) => {
         setActiveTab(tab as Tab);
 

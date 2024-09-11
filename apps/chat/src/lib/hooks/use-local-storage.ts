@@ -13,9 +13,7 @@ export function useLocalStorage<T>(
       if (item) {
         setValue(JSON.parse(item));
       }
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) {}
     return () => {
       isMounted.current = false;
     };

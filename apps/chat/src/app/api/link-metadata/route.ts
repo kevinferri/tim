@@ -1,7 +1,7 @@
 import { getLoggedInUserId } from "@/lib/session";
 import { hydrateUrl, isValidUrl } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
-import urlMetadata from "url-metadata";
+import ogs from "open-graph-scraper";
 import { badRequest } from "../error-responses";
 
 export type LinkMetadataResponse = {
@@ -20,18 +20,14 @@ export async function GET(request: NextRequest) {
   if (!userId || !isValid) return badRequest;
 
   try {
-    const metadata = await urlMetadata(decodeURI(url), { mode: "cors" });
-
-    console.log(metadata);
+    const metadata = await ogs({ url });
 
     return NextResponse.json(
       {
-        ogDescription: metadata.description || metadata["og:description"],
-        ogTitle: metadata.title || metadata["og:title"],
-        ogImage: isValidUrl(metadata.image)
-          ? metadata.image
-          : metadata["og:image"],
-        ogVideo: metadata["og:video:secure_url"] || metadata["og:video:url"],
+        ogTitle: metadata.result.ogSiteName,
+        ogDescription: metadata.result.ogDescription,
+        ogImage: metadata.result.ogImage?.[0].url,
+        ogVideo: metadata.result.ogVideo?.[0].url,
       } as LinkMetadataResponse,
       { status: 200 }
     );
