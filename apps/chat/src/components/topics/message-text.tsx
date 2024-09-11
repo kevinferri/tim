@@ -11,8 +11,7 @@ type Props = {
 
 export function MessageText(props: Props) {
   const isOnlyEmoji = useMemo(
-    () =>
-      props.text ? isEmojiOnly(props.text) && props.text.length < 12 : false,
+    () => (props.text ? isEmojiOnly(props.text) : false),
     [props.text]
   );
 
