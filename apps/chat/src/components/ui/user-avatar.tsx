@@ -30,12 +30,12 @@ export function getInitials(name?: string) {
 
 function getHlScoreEmoji(score?: number) {
   if (!score) return ["0️⃣", "No"];
-  if (score > 120) return ["🦄", "Legendary"];
-  if (score > 100) return ["🏆", "Elite"];
-  if (score > 80) return ["🔥", "Great"];
-  if (score > 60) return ["👍", "Good"];
-  if (score > 40) return ["😐", "Average"];
-  if (score > 20) return ["😬", "Poor"];
+  if (score > 200) return ["🦄", "Legendary"];
+  if (score > 150) return ["🏆", "Elite"];
+  if (score > 100) return ["🔥", "Great"];
+  if (score > 75) return ["👍", "Good"];
+  if (score > 50) return ["😐", "Average"];
+  if (score > 25) return ["😬", "Poor"];
   return ["😭", "Pathetic"];
 }
 
