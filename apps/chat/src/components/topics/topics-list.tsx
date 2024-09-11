@@ -121,7 +121,9 @@ export const TopicsList = ({ topics, circle }: Props) => {
     <div
       className={cn(
         `flex flex-col shadow-md border-r`,
-        isMinimized ? "" : "w-[360px]"
+        isMinimized
+          ? ""
+          : "max-w-[220px] min-w-[220px] lg:max-w-[280px] lg:min-w-[280px]"
       )}
     >
       <div
