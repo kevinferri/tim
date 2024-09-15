@@ -6,6 +6,7 @@ export enum NotificationType {
   HighlightRecieved = "highlight:recieved",
   HighlightRemoved = "highlight:removed",
   ExpandedImage = "image:expanded",
+  ClickedLink = "link:clicked",
 }
 
 type Args = {

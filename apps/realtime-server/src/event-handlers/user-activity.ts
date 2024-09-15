@@ -86,3 +86,24 @@ export function handleUserExpandedImage({ socket, server }: HandlerArgs) {
     });
   });
 }
+
+export function handleUserClickedLink({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.UserClickedLink, async ({ topicId, messageId }) => {
+    const roomKey = getRoomKeyOrFail({
+      socket,
+      id: topicId,
+      roomType: RoomType.Topic,
+    });
+
+    if (!roomKey) return;
+
+    await emitNotification({
+      server,
+      roomKey,
+      messageId,
+      topicId,
+      actor: socket.data.user,
+      notificationType: NotificationType.ClickedLink,
+    });
+  });
+}
