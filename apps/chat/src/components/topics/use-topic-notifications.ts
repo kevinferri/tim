@@ -14,6 +14,7 @@ export enum TopicNotificationType {
   HighlightRecieved = "highlight:recieved",
   HighlightRemoved = "highlight:removed",
   ImageExpanded = "image:expanded",
+  ClickedLink = "link:clicked",
 }
 
 export function useTopicNotifications({

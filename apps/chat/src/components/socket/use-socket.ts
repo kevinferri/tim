@@ -29,6 +29,7 @@ export enum SocketEvent {
   UserStartedTyping = "user:startedTyping",
   UserStoppedTyping = "user:stoppedTyping",
   UserExpandedImage = "user:expandedImage",
+  UserClickedLink = "user:clickedLink",
 
   CreateNotification = "notification:create",
 }

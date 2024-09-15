@@ -13,8 +13,10 @@ export function CircleRoomConnect({ children, circleIds }: Props) {
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
 
   useEffectOnce(() => {
-    circleIds.forEach((id) => {
-      joinRoom.emit({ id, roomType: "circle" });
+    process.nextTick(() => {
+      circleIds.forEach((id) => {
+        joinRoom.emit({ id, roomType: "circle" });
+      });
     });
 
     return () => {

@@ -224,6 +224,7 @@ export const Message = (props: MessageProps) => {
             ) : (
               <MessageText
                 id={props.id}
+                topicId={topicId}
                 text={
                   props.variant === "minimal"
                     ? truncateText(props.text ?? "")
@@ -257,6 +258,8 @@ export const Message = (props: MessageProps) => {
               links.map((link, i) => {
                 return (
                   <LinkPreview
+                    messageId={props.id}
+                    topicId={topicId}
                     key={`${props.id}${link}${i}`}
                     link={link}
                     onEmbedMediaLoad={() => {

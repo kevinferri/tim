@@ -12,6 +12,7 @@ import {
 } from "./use-topic-notifications";
 import { useMemo } from "react";
 import {
+  Link2Icon,
   MagnifyingGlassIcon,
   StarFilledIcon,
   StarIcon,
@@ -34,6 +35,10 @@ const copyMap = {
   [TopicNotificationType.ImageExpanded]: {
     text: "expanded your image",
     icon: <MagnifyingGlassIcon />,
+  },
+  [TopicNotificationType.ClickedLink]: {
+    text: "clicked your link",
+    icon: <Link2Icon />,
   },
 };
 
