@@ -99,7 +99,7 @@ export async function getChatGpt({
       .join("users", "messages.userId", "users.id")
       .where("messages.topicId", topicId)
       .orderBy("messages.createdAt", "desc")
-      .limit(10),
+      .limit(5),
   ];
 
   const me = activeUsers.find(({ id }) => id === userId);
