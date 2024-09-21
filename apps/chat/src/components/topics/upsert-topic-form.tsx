@@ -165,7 +165,7 @@ export const UpsertTopicForm = ({
 
                 const isEdit = !!existingTopic;
                 const formData = new FormData(event.currentTarget);
-                const resp = await upsertTopic(formData, isEdit);
+                const resp = await upsertTopic(formData);
 
                 setSubmitting(false);
                 setOpen(false);
