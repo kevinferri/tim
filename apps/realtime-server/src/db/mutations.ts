@@ -26,6 +26,11 @@ type ToggleHighlightArgs = {
   messageId: string;
 };
 
+type TopicHistoryArgs = {
+  userId: string;
+  topicId: string;
+};
+
 export async function writeMessage({
   userId,
   topicId,
@@ -111,4 +116,21 @@ export async function editMessage({
     );
 
   return message[0];
+}
+
+export async function saveTopicHistory({ userId, topicId }: TopicHistoryArgs) {
+  await pgClient("topic_histories")
+    .where("userId", userId)
+    .where("topicId", topicId)
+    .del();
+
+  const history = await pgClient("topic_histories")
+    .insert({
+      id: v4(),
+      topicId,
+      userId,
+    })
+    .returning(["id"]);
+
+  return history;
 }

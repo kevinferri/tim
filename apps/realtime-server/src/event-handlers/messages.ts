@@ -20,8 +20,8 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.SendMessage, async (payload) => {
     const roomKey = getRoomKeyOrFail({
       socket,
-      id: payload.topicId,
-      roomType: RoomType.Topic,
+      id: payload.circleId,
+      roomType: RoomType.Circle,
     });
 
     if (!roomKey) return;

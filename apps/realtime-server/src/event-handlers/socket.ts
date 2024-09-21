@@ -19,8 +19,9 @@ export function handleClientDisconnecting({ socket, server }: HandlerArgs) {
       if (roomType === RoomType.Topic) {
         emitUserChangeInTopic({
           server,
-          topicId: roomId,
           socket,
+          topicId: roomId,
+          recordHistory: true,
           disconnectingUser: socket.data.user.id,
         });
       }

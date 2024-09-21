@@ -6,6 +6,7 @@ import {
   isUserInTopic,
 } from "../db/queries";
 import { SocketEvent, HandlerArgs } from "./main";
+import { saveTopicHistory } from "../db/mutations";
 
 export enum RoomType {
   Topic = "topic",
@@ -109,7 +110,12 @@ export function handleLeaveRoom({ socket, server }: HandlerArgs) {
     socket.leave(roomKey);
 
     if (roomType === RoomType.Topic) {
-      emitUserChangeInTopic({ server, socket, topicId: id });
+      emitUserChangeInTopic({
+        server,
+        socket,
+        topicId: id,
+        recordHistory: true,
+      });
     }
 
     if (roomType === RoomType.Circle) {
@@ -125,7 +131,12 @@ export async function emitUserChangeInTopic({
   socket,
   topicId,
   disconnectingUser,
-}: HandlerArgs & { topicId: string; disconnectingUser?: string }) {
+  recordHistory,
+}: HandlerArgs & {
+  topicId: string;
+  disconnectingUser?: string;
+  recordHistory?: boolean;
+}) {
   let hasDisconnected = false;
   const topicKey = toRoomKey({ id: topicId, roomType: RoomType.Topic });
   const sockets = await server.in(topicKey).fetchSockets();
@@ -158,6 +169,10 @@ export async function emitUserChangeInTopic({
       topicId,
       activeUsers,
     });
+  }
+
+  if (recordHistory) {
+    await saveTopicHistory({ userId: socket.data.user.id, topicId });
   }
 }
 
