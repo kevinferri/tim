@@ -129,8 +129,8 @@ model TopicHistory {
   topicId   String
 
   // Relations
-  user     User    @relation("topicHistoryForUser", fields: [userId], references: [id])
-  topic    Topic   @relation("userHistoryForTopic", fields: [topicId], references: [id])
+  user     User    @relation("topicHistoryForUser", fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic   @relation("userHistoryForTopic", fields: [topicId], references: [id], onDelete: Cascade)
 
   @@index([userId, topicId])
   @@map(name: "topic_histories")
