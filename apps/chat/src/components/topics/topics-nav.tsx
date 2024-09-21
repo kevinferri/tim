@@ -43,7 +43,7 @@ export async function TopicsNav({ circleId }: Props) {
       },
     }),
 
-    // TODO: see if there is a way to just get histories for current circle
+    // See if there is a way to just get histories for current circle
     prismaClient.topicHistory.findMany({
       where: {
         userId,
