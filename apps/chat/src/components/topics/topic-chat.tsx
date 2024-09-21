@@ -9,6 +9,7 @@ import { useEffectOnce } from "@/lib/hooks";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Spinner } from "@/components/ui/spinner";
+import { useUnreadTopics } from "../dashboard/unread-topics-store";
 
 const SCROLL_TIMEOUT = 250;
 
@@ -16,6 +17,7 @@ export function TopicChat() {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const { markTopicAsRead } = useUnreadTopics();
 
   const {
     messages,
@@ -32,6 +34,7 @@ export function TopicChat() {
 
   useEffectOnce(() => {
     joinRoom.emit(payload);
+    markTopicAsRead(topicId);
     scrollToBottomOfChat({ timeout: SCROLL_TIMEOUT, force: true });
 
     setTimeout(() => {

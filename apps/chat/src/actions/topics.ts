@@ -74,6 +74,7 @@ export async function upsertTopic(formData: FormData) {
     select: {
       id: true,
       name: true,
+      circleId: true,
       createdBy: {
         select: {
           id: true,
@@ -82,6 +83,34 @@ export async function upsertTopic(formData: FormData) {
       },
     },
   });
+
+  // If new topic, create histories for members
+  if (!existingTopic) {
+    const circleMembers = await prismaClient.circle.findUnique({
+      where: {
+        id: data.circleId,
+      },
+      select: {
+        members: {
+          select: { id: true },
+        },
+      },
+    });
+
+    const historiesPayload = circleMembers?.members.map((member) => {
+      return {
+        topicId: data.id,
+        userId: member.id,
+      };
+    });
+
+    if (historiesPayload) {
+      await prismaClient.topicHistory.createMany({
+        data: historiesPayload,
+        skipDuplicates: true,
+      });
+    }
+  }
 
   return {
     data,

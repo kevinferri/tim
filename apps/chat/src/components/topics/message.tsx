@@ -35,6 +35,7 @@ export type Highlights = {
 }[];
 
 export type MessageProps = {
+  topicId: string;
   id: DbMessage["id"];
   text?: DbMessage["text"];
   mediaUrl?: DbMessage["mediaUrl"];

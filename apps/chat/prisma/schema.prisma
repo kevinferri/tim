@@ -22,11 +22,12 @@ model User {
   googleId String  @unique
 
   // Relations
-  createdCircles    Circle[]    @relation("circlesCreatedByUser")
-  createdTopics     Topic[]     @relation("topicsCreatedByUser")
-  circleMemberships Circle[]    @relation("circleMembershipsForUser")
-  messages          Message[]   @relation("messagesSentByUser")
-  highlights        Highlight[] @relation("highlightsByUser")
+  createdCircles    Circle[]       @relation("circlesCreatedByUser")
+  createdTopics     Topic[]        @relation("topicsCreatedByUser")
+  circleMemberships Circle[]       @relation("circleMembershipsForUser")
+  messages          Message[]      @relation("messagesSentByUser")
+  highlights        Highlight[]    @relation("highlightsByUser")
+  topicHistory      TopicHistory[] @relation("topicHistoryForUser")
 
   @@index([email])
   @@map(name: "users")
@@ -68,11 +69,13 @@ model Topic {
   circleId    String
 
   // Relations
-  createdBy        User      @relation("topicsCreatedByUser", fields: [userId], references: [id])
-  parentCircle     Circle    @relation("topicsInCircle", fields: [circleId], references: [id], onDelete: Cascade)
-  defaultForCircle Circle?   @relation("defaultTopicForCircle")
-  messages         Message[] @relation("messagesInTopic")
+  createdBy        User           @relation("topicsCreatedByUser", fields: [userId], references: [id])
+  parentCircle     Circle         @relation("topicsInCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  defaultForCircle Circle?        @relation("defaultTopicForCircle")
+  messages         Message[]      @relation("messagesInTopic")
+  history          TopicHistory[] @relation("userHistoryForTopic")
 
+  @@index([userId, circleId])
   @@map(name: "topics")
 }
 
@@ -93,6 +96,7 @@ model Message {
   topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
   highlights Highlight[] @relation("highlightsForMessage")
 
+  @@index([userId, topicId])
   @@map(name: "messages")
 }
 
@@ -110,5 +114,24 @@ model Highlight {
   createdBy     User    @relation("highlightsByUser", fields: [userId], references: [id])
   message       Message @relation("highlightsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
 
+  @@index([userId, messageId])
   @@map(name: "highlights")
+}
+
+model TopicHistory {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specific 
+  userId    String
+  topicId   String
+
+  // Relations
+  user     User    @relation("topicHistoryForUser", fields: [userId], references: [id])
+  topic    Topic   @relation("userHistoryForTopic", fields: [topicId], references: [id])
+
+  @@index([userId, topicId])
+  @@map(name: "topic_histories")
 }

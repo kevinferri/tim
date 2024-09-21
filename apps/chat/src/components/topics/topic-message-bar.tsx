@@ -22,6 +22,7 @@ import { EmojiPicker } from "@/components/topics/emoji-picker";
 type MessagePayload = {
   message: string;
   topicId: string;
+  circleId: string;
   mediaUrl?: string;
 };
 
@@ -30,7 +31,7 @@ export function TopicMessageBar() {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [media, setMedia] = useState<File>();
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const { topicId, scrollToBottomOfChat } = useCurrentTopicContext();
+  const { topicId, scrollToBottomOfChat, circleId } = useCurrentTopicContext();
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
   const { uploadProgress } = useUploadProgres({ media, isUploadingMedia });
   const uploadText = uploadProgress >= 100 ? "FINALIZING..." : "UPLOADING...";
@@ -69,6 +70,7 @@ export function TopicMessageBar() {
     sendMessage.emit({
       message: _message,
       topicId,
+      circleId,
       mediaUrl,
     });
 

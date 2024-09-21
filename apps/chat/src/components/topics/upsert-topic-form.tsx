@@ -163,8 +163,9 @@ export const UpsertTopicForm = ({
                 event.preventDefault();
                 setSubmitting(true);
 
+                const isEdit = !!existingTopic;
                 const formData = new FormData(event.currentTarget);
-                const resp = await upsertTopic(formData);
+                const resp = await upsertTopic(formData, isEdit);
 
                 setSubmitting(false);
                 setOpen(false);
@@ -177,7 +178,7 @@ export const UpsertTopicForm = ({
                     id,
                     name,
                     createdBy,
-                    isEdit: !!existingTopic,
+                    isEdit,
                   });
                 }
               }}

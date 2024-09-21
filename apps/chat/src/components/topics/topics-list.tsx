@@ -11,7 +11,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { useSelf } from "@/components/auth/self-provider";
 import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
-import { useLocalStorage } from "@/lib/hooks";
+import { useEffectOnce, useLocalStorage } from "@/lib/hooks";
 import { UpsertTopicForm } from "./upsert-topic-form";
 import { UpsertCircleForm } from "../circles/upsert-circle-form";
 import {
@@ -23,12 +23,15 @@ import {
 } from "@radix-ui/react-icons";
 import { WithRelation } from "../../../types/prisma";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipProvider } from "@radix-ui/react-tooltip";
-import { TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
+import { Badge } from "@/components/ui/badge";
 
 type Props = {
   topics?: Topic[];
+  unreadTopicIds: Record<string, boolean>;
   circle: WithRelation<"Circle", "members">;
 };
 
@@ -53,16 +56,21 @@ type DeletedTopicHandlerProps = {
   };
 };
 
-export const TopicsList = ({ topics, circle }: Props) => {
+export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
   const params = useParams();
   const self = useSelf();
   const router = useRouter();
   const { toast } = useToast();
   const { getActiveMembersInTopic } = useActiveCircleMembers();
+  const { unreadTopics, hydrateUnreadTopics } = useUnreadTopics();
   const [isMinimized, setIsMinimized] = useLocalStorage(
     "tim:topics-nav-minimized",
     false
   );
+
+  useEffectOnce(() => {
+    hydrateUnreadTopics(unreadTopicIds);
+  });
 
   useSocketHandler<NewTopicHandlerProps>(
     SocketEvent.UpsertedTopic,
@@ -147,6 +155,8 @@ export const TopicsList = ({ topics, circle }: Props) => {
         <div className="flex flex-col gap-3 p-3">
           {topics.map((topic) => {
             const activeUsers = getActiveMembersInTopic(topic.id);
+            const isUnread =
+              unreadTopics[topic.id] && params.topicId !== topic.id;
 
             return (
               <Link
@@ -165,12 +175,20 @@ export const TopicsList = ({ topics, circle }: Props) => {
                                 : "shadow-lg hover:opacity-80"
                             }`}
                           >
-                            <AvatarFallback>
+                            <AvatarFallback
+                              className={
+                                isUnread
+                                  ? "bg-highlight dark:bg-purple-900 border"
+                                  : ""
+                              }
+                            >
                               <div className="mt-[1.5px]">
                                 {topic.id === circle.defaultTopicId ? (
                                   <HomeIcon height={16} width={16} />
                                 ) : (
-                                  getInitials(topic.name)
+                                  <span className={isUnread ? "" : ""}>
+                                    {getInitials(topic.name)}
+                                  </span>
                                 )}
                               </div>
                             </AvatarFallback>
@@ -188,8 +206,16 @@ export const TopicsList = ({ topics, circle }: Props) => {
                         sideOffset={8}
                       >
                         <div className="flex flex-col gap-2">
-                          <div className="text-sm leading-none">
-                            {topic.name}
+                          <div className="text-sm leading-none flex items-center gap-1">
+                            <span>{topic.name}</span>
+                            {isUnread && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] p-1 tracking-wide dark:bg-purple-900"
+                              >
+                                New messages
+                              </Badge>
+                            )}
                           </div>
                           {activeUsers.length > 0 && (
                             <div className="flex gap-1">
@@ -218,7 +244,15 @@ export const TopicsList = ({ topics, circle }: Props) => {
                     }
                     className="w-full flex justify-start text-base font-normal p-3"
                   >
-                    {topic.name}
+                    <span
+                      className={
+                        isUnread
+                          ? "underline decoration-wavy decoration-purple-700 underline-offset-4"
+                          : ""
+                      }
+                    >
+                      {topic.name}
+                    </span>
                     <div className="flex gap-1 ml-auto">
                       {activeUsers.map((user) => (
                         <UserAvatar

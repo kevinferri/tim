@@ -19,6 +19,7 @@ import {
 import { Highlight, User } from "@prisma/client";
 import { useEffectOnce, useLazyFetch, useWindowFocus } from "@/lib/hooks";
 import { WithRelation } from "../../../types/prisma";
+import { useUnreadTopics } from "../dashboard/unread-topics-store";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
 
@@ -85,6 +86,7 @@ export function CurrentTopicProvider(props: Props) {
   const loadMoreAnchorRef = useRef<null | HTMLDivElement>(null);
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
+  const { markTopicAsUnread } = useUnreadTopics();
 
   const { fetchData: refreshTopHighlights } = useLazyFetch<MessageProps[]>({
     url: `/api/topics/${props.topicId}/top-highlights`,
@@ -168,6 +170,11 @@ export function CurrentTopicProvider(props: Props) {
   useSocketHandler<MessageProps>(
     SocketEvent.SendMessage,
     (newMessage: MessageProps) => {
+      if (newMessage.topicId !== props.topicId) {
+        markTopicAsUnread(newMessage.topicId);
+        return;
+      }
+
       const withNewMessage = [
         ...messages,
         {
