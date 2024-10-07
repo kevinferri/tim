@@ -114,7 +114,7 @@ export const messageModel = {
 
     const messages = await prismaClient.message.findMany({
       select,
-      take: MESSAGE_LIMIT,
+      take: TOP_HIGHLIGHTS_LIMIT,
       where: {
         topicId,
         NOT: {
