@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useFetch } from "@/lib/hooks";
 import {
   Card,
@@ -12,12 +13,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
-import {
-  ResponsiveVideoPlayer,
-  getYoutubeVideoFromUrl,
-} from "@/components/topics/media-viewer";
+import { ResponsiveVideoPlayer } from "@/components/topics/media-viewer";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { useMemo } from "react";
+import { getYoutubeVideoFromUrl } from "@/components/topics/message-utils";
 
 type Props = {
   link: string;
