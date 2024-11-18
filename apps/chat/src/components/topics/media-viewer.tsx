@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { useIntersection } from "@/lib/hooks";
+import { useRef } from "react";
 
 type Props = {
   url: string;
@@ -52,16 +54,23 @@ export function ResponsiveVideoPlayer({
   src: string;
   onPreviewLoad?: () => void;
 }) {
+  const intersectionRef = useRef(null);
+  const intersection = useIntersection(intersectionRef, {
+    rootMargin: "20px",
+  });
+
   return (
-    <div className="max-w-[640px] shadow-lg">
+    <div className="max-w-[640px] shadow-lg" ref={intersectionRef}>
       <div className="relative pt-[56.25%]">
-        <iframe
-          onLoad={onPreviewLoad}
-          className="rounded-sm absolute top-0 left-0 w-full h-full"
-          width="640"
-          height="360"
-          src={src}
-        />
+        {intersection?.isIntersecting && (
+          <iframe
+            onLoad={onPreviewLoad}
+            className="rounded-sm absolute top-0 left-0 w-full h-full"
+            width="640"
+            height="360"
+            src={src}
+          />
+        )}
       </div>
     </div>
   );
