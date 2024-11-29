@@ -9,7 +9,7 @@ import { useEffectOnce } from "@/lib/hooks";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Spinner } from "@/components/ui/spinner";
-import { useUnreadTopics } from "../dashboard/unread-topics-store";
+import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 
 const SCROLL_TIMEOUT = 250;
 

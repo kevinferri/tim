@@ -1,7 +1,7 @@
-import { Avatar } from "@radix-ui/react-avatar";
-import { Card, CardContent } from "../ui/card";
-import { AvatarFallback, AvatarImage } from "../ui/avatar";
 import Markdown from "react-markdown";
+import { Avatar } from "@radix-ui/react-avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Props = {
   content: string;

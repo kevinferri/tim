@@ -1,23 +1,23 @@
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
-import { Message } from "./message";
-import { UserAvatar } from "@/components/ui/user-avatar";
-import { Card, CardContent } from "@/components/ui/card";
-import keyBy from "lodash.keyby";
-import {
-  TopicNotification,
-  TopicNotificationType,
-} from "./use-topic-notifications";
 import { useMemo } from "react";
+import { useQueryState } from "nuqs";
+import keyBy from "lodash.keyby";
 import {
   Link2Icon,
   MagnifyingGlassIcon,
   StarFilledIcon,
   StarIcon,
 } from "@radix-ui/react-icons";
-import { useQueryState } from "nuqs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import { Message } from "@/components/topics/message";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  TopicNotification,
+  TopicNotificationType,
+} from "@/components/topics/use-topic-notifications";
 
 type Props = {
   notifications: TopicNotification[];

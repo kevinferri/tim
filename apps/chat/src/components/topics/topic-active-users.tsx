@@ -1,7 +1,7 @@
 "use client";
 
-import { UserAvatar } from "@/components/ui/user-avatar";
 import { useState } from "react";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 

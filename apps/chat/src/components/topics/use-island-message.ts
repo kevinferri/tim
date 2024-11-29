@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SocketEvent, useSocketHandler } from "../socket/use-socket";
 import { Highlight, User } from "@prisma/client";
-import { Highlights } from "./message";
+import { Highlights } from "@/components/topics/message";
 
 type Args = {
   messageId: string;

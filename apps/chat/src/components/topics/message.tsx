@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
@@ -20,9 +20,9 @@ import {
   getLinksFromMessage,
   truncateText,
 } from "@/components/topics/message-utils";
-import { MessageSentAt } from "./message-sent-at";
-import { useIslandMessage } from "./use-island-message";
-import { OpenAiViewer } from "./open-ai-viewer";
+import { MessageSentAt } from "@/components/topics/message-sent-at";
+import { useIslandMessage } from "@/components/topics/use-island-message";
+import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
 
 export type Highlights = {
   id: Highlight["id"];
