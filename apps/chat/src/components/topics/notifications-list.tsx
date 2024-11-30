@@ -72,7 +72,7 @@ export function NotificationsList(props: Props) {
                   {copyMap[notification.type].text}
                 </div>
                 <Card>
-                  {message ? (
+                  {false ? (
                     <CardContent className="p-0 m-0">
                       <Message
                         {...message}
@@ -89,7 +89,7 @@ export function NotificationsList(props: Props) {
                         }}
                         className="cursor:pointer underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
                       >
-                        <span>See message</span>
+                        See message
                       </span>
                     </CardContent>
                   )}
