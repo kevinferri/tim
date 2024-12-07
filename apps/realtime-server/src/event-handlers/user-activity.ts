@@ -3,7 +3,6 @@ import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 
-// TODO: consider adding socket.data.user.state to Redis if we ever need to
 function respondHandler({
   socket,
   server,

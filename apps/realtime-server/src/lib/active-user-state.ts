@@ -1,5 +1,6 @@
 import { Socket } from "socket.io";
 
+// TODO: consider using Redis to manage this if we ever need to.
 export type ActiveUserState = {
   isIdle: boolean;
   isTyping: boolean;
