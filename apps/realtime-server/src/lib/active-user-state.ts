@@ -6,6 +6,13 @@ export type ActiveUserState = {
   isTyping: boolean;
 };
 
+export function getInitialActiveUserState(): ActiveUserState {
+  return {
+    isIdle: false,
+    isTyping: false,
+  };
+}
+
 export function handleActiveUserStateChange(
   socket: Socket,
   next: Partial<ActiveUserState>
