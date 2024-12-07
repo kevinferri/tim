@@ -4,6 +4,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { useState } from "react";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
+import { useSelf } from "../auth/self-provider";
 
 type Props = {
   topicId: string;
@@ -12,6 +13,7 @@ type Props = {
 type ActivityPayload = { userId: string };
 
 export function TopicActiveUsers(props: Props) {
+  const self = useSelf();
   const { getActiveMembersInTopic } = useActiveCircleMembers();
   const activeUsers = getActiveMembersInTopic(props.topicId);
   const [idleMap, setIdleMap] = useState<Record<string, boolean>>({});
@@ -55,8 +57,20 @@ export function TopicActiveUsers(props: Props) {
     <div className="flex gap-2">
       {activeUsers.map((user) => {
         const variant = () => {
-          if (typingMap[user.id]) return "typing";
-          if (idleMap[user.id]) return "idle";
+          if (
+            typingMap[user.id] ||
+            (user.state.isTyping && typingMap[user.id] !== false)
+          ) {
+            return "typing";
+          }
+
+          if (
+            idleMap[user.id] ||
+            (user.state.isIdle && idleMap[user.id] !== false)
+          ) {
+            return "idle";
+          }
+
           return "default";
         };
 
