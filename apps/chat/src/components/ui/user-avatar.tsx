@@ -75,7 +75,11 @@ function StatsLoader() {
 export function UserAvatar(props: Props) {
   const initials = getInitials(props.name ?? undefined);
   const [open, setOpen] = useState(false);
-  const since = useDateFormatter(props.createdAt);
+  const since = useDateFormatter(props.createdAt, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
   const { data } = useFetch<UserStatsForTopicResponse>({
     url: `/api/topics/${props.topicId}/user-stats/${props.id}`,
     skip: !props.topicId || !open,
