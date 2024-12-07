@@ -1,10 +1,9 @@
+import { handleActiveUserStateChange } from "../lib/active-user-state";
 import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 
-// TODO: need to persist focused/blurred state on the server
-// so when user joins they see the real state instead of everyone being focused
-// maybe attach the state to socket.data and emit that when a user joins a circle/topic
+// TODO: consider adding socket.data.user.state to Redis if we ever need to
 function respondHandler({
   socket,
   server,
@@ -19,11 +18,16 @@ function respondHandler({
 
   if (!roomKey) return;
 
-  server.to(roomKey).emit(event, { userId: socket.data.user.id });
+  server.to(roomKey).emit(event, {
+    userId: socket.data.user.id,
+    state: socket.data.user.state,
+  });
 }
 
 export function handleUserTabFocused({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.UserTabFocused, async ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isIdle: false });
+
     respondHandler({
       socket,
       server,
@@ -35,6 +39,8 @@ export function handleUserTabFocused({ socket, server }: HandlerArgs) {
 
 export function handleUserTabBlurred({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.UserTabBlurred, async ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isIdle: true });
+
     respondHandler({
       socket,
       server,
@@ -46,6 +52,8 @@ export function handleUserTabBlurred({ socket, server }: HandlerArgs) {
 
 export function handleUserStartedTyping({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.UserStartedTyping, async ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isTyping: true });
+
     respondHandler({
       socket,
       server,
@@ -57,6 +65,8 @@ export function handleUserStartedTyping({ socket, server }: HandlerArgs) {
 
 export function handleUserStoppedTyping({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.UserStoppedTyping, async ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isTyping: false });
+
     respondHandler({
       socket,
       server,
