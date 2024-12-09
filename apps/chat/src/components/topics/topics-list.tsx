@@ -187,7 +187,12 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                                   <HomeIcon height={16} width={16} />
                                 ) : (
                                   <span className={isUnread ? "" : ""}>
-                                    {getInitials(topic.name)}
+                                    {getInitials(
+                                      topic.name.replace(
+                                        /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
+                                        ""
+                                      )
+                                    )}
                                   </span>
                                 )}
                               </div>
