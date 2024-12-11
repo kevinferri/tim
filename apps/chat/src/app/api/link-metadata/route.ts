@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
         ogSiteName: metadata["og:site_name"],
         ogTitle: metadata["og:title"],
         ogDescription: metadata["og:description"],
-        ogImage: metadata.image,
-        ogVideo: metadata.video,
+        ogImage: isValidUrl(metadata.image) ? metadata.image : undefined,
+        ogVideo: isValidUrl(metadata.video) ? metadata.video : undefined,
       } as LinkMetadataResponse,
       { status: 200 }
     );
