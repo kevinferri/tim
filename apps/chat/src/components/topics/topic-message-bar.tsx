@@ -8,6 +8,7 @@ import { uploadMedia } from "@/actions/media";
 import {
   MediaViewer,
   extractMediaFromMessage,
+  getTwitchStreamFromUrl,
   getYoutubeVideoFromUrl,
 } from "@/components/topics/media-viewer";
 import { Button } from "@/components/ui/button";
@@ -45,11 +46,17 @@ export function TopicMessageBar() {
     if (!media && !message.trim()) return;
     let _media = media ?? extractMediaFromMessage(message);
     const youtubeVideo = getYoutubeVideoFromUrl(message);
+    const twitchStream = getTwitchStreamFromUrl(message);
+
     let _message = message;
     let mediaUrl = undefined;
 
     if (youtubeVideo) {
       mediaUrl = youtubeVideo.videoUrl;
+    }
+
+    if (twitchStream) {
+      mediaUrl = twitchStream.videoUrl;
     }
 
     if (_media) {

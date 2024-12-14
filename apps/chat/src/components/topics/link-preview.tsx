@@ -14,6 +14,7 @@ import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
 import { ResponsiveVideoPlayer, getYoutubeVideoFromUrl } from "./media-viewer";
 import { SocketEvent, useSocketEmit } from "../socket/use-socket";
+import { useMemo } from "react";
 
 type Props = {
   link: string;
@@ -22,9 +23,20 @@ type Props = {
   onEmbedMediaLoad?: () => void;
 };
 
+function shouldSkip(link: string) {
+  const domains = ["youtube.com", "twitch.tv"];
+
+  for (let i = 0; i < domains.length; i++) {
+    if (link.includes(domains[i])) return true;
+  }
+
+  return false;
+}
+
 export function LinkPreview(props: Props) {
+  const skip = useMemo(() => shouldSkip(props.link), [props.link]);
   const { data, error } = useFetch<LinkMetadataResponse>({
-    skip: props.link.includes("youtube.com"),
+    skip,
     url: `/api/link-metadata?url=${encodeURIComponent(props.link)}`,
     onSuccess: props.onEmbedMediaLoad,
   });

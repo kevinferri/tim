@@ -38,13 +38,27 @@ export function extractMediaFromMessage(text: string) {
 }
 
 export function getYoutubeVideoFromUrl(url: string) {
+  if (!url.includes("youtube.com")) return undefined;
+
   const match = url.match(
     /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/
   );
+
   const id = match && match[7].length == 11 ? match[7] : false;
 
   if (!id) return undefined;
   return { id, videoUrl: `https://youtube.com/watch?v=${id}` };
+}
+
+export function getTwitchStreamFromUrl(url: string) {
+  if (!url.includes("twitch.tv")) return undefined;
+
+  const match = url.match(/^.*(twitch\.tv\/)([a-zA-Z0-9_]+)(\/.*)?$/);
+
+  const id = match && match[2] ? match[2] : false;
+  if (!id) return undefined;
+
+  return { id, videoUrl: `https://twitch.tv/${id}` };
 }
 
 export function ResponsiveVideoPlayer({
@@ -78,6 +92,7 @@ export function ResponsiveVideoPlayer({
 
 export function MediaViewer(props: Props) {
   const youtubeVideo = getYoutubeVideoFromUrl(props.url);
+  const twitchStream = getTwitchStreamFromUrl(props.url);
   const imageProps = {
     src: props.url,
     alt: props.url,
@@ -96,6 +111,15 @@ export function MediaViewer(props: Props) {
         }?color=white&disablekb=1&rel=1${
           props.variant === "minimal" && `&controls=0`
         }`}
+      />
+    );
+  }
+
+  if (twitchStream) {
+    return (
+      <ResponsiveVideoPlayer
+        onPreviewLoad={props.onPreviewLoad}
+        src={`https://player.twitch.tv/?channel=${twitchStream.id}&parent=${window.location.hostname}`}
       />
     );
   }
