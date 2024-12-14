@@ -28,6 +28,13 @@ export function getInitials(name?: string) {
     .toUpperCase();
 }
 
+function formatNumber(num: number): string {
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return num.toString();
+}
+
 function getHlScoreEmoji(score?: number) {
   if (!score) return ["0️⃣", "No"];
   if (score > 200) return ["🦄", "Legendary"];
@@ -150,7 +157,11 @@ export function UserAvatar(props: Props) {
                         : ""
                     }`}
                   >
-                    {data?.highlightScore ?? <StatsLoader />}
+                    {data?.highlightScore ? (
+                      formatNumber(data?.highlightScore)
+                    ) : (
+                      <StatsLoader />
+                    )}
                   </div>
                 </div>
                 <div className="text-sm flex items-center gap-1">
@@ -161,7 +172,11 @@ export function UserAvatar(props: Props) {
               <div className="flex flex-col items-center flex-1">
                 <div className="text-2xl">
                   <div className="text-2xl">
-                    {data?.messagesSent ?? <StatsLoader />}
+                    {data?.messagesSent ? (
+                      formatNumber(data?.messagesSent)
+                    ) : (
+                      <StatsLoader />
+                    )}
                   </div>
                 </div>
                 <div className="text-sm flex items-center gap-1.5">
@@ -171,7 +186,11 @@ export function UserAvatar(props: Props) {
 
               <div className="flex flex-col items-center flex-1">
                 <div className="text-2xl">
-                  {data?.highlightsRecieved ?? <StatsLoader />}
+                  {data?.highlightsRecieved ? (
+                    formatNumber(data?.highlightsRecieved)
+                  ) : (
+                    <StatsLoader />
+                  )}
                 </div>
                 <div className="text-sm flex items-center gap-1">
                   <StarIcon /> Recieved
@@ -180,7 +199,11 @@ export function UserAvatar(props: Props) {
 
               <div className="flex flex-col items-center flex-1">
                 <div className="text-2xl">
-                  {data?.highlightsGiven ?? <StatsLoader />}
+                  {data?.highlightsGiven ? (
+                    formatNumber(data?.highlightsGiven)
+                  ) : (
+                    <StatsLoader />
+                  )}
                 </div>
                 <div className="text-sm flex items-center gap-1">
                   <StarIcon /> Given
