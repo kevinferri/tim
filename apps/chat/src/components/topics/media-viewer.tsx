@@ -91,6 +91,7 @@ export function ResponsiveVideoPlayer({
 }
 
 export function MediaViewer(props: Props) {
+  let iframeSrc;
   const youtubeVideo = getYoutubeVideoFromUrl(props.url);
   const twitchStream = getTwitchStreamFromUrl(props.url);
   const imageProps = {
@@ -103,23 +104,22 @@ export function MediaViewer(props: Props) {
   };
 
   if (youtubeVideo) {
-    return (
-      <ResponsiveVideoPlayer
-        onPreviewLoad={props.onPreviewLoad}
-        src={`https://www.youtube.com/embed/${
-          youtubeVideo.id
-        }?color=white&disablekb=1&rel=1${
-          props.variant === "minimal" && `&controls=0`
-        }`}
-      />
-    );
+    iframeSrc = `https://www.youtube.com/embed/${
+      youtubeVideo.id
+    }?color=white&disablekb=1&rel=1${
+      props.variant === "minimal" && `&controls=0`
+    }`;
   }
 
   if (twitchStream) {
+    iframeSrc = `https://player.twitch.tv/?channel=${twitchStream.id}&parent=${window.location.hostname}`;
+  }
+
+  if (iframeSrc) {
     return (
       <ResponsiveVideoPlayer
         onPreviewLoad={props.onPreviewLoad}
-        src={`https://player.twitch.tv/?channel=${twitchStream.id}&parent=${window.location.hostname}`}
+        src={iframeSrc}
       />
     );
   }
