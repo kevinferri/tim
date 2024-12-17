@@ -6,11 +6,10 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
-import { isGiphy } from "@/components/topics/media-viewer";
+import { isGiphy, isValidCommand } from "@/components/topics/message-utils";
 import { Pencil1Icon, UpdateIcon } from "@radix-ui/react-icons";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
-import { isValidCommand } from "./topic-message-bar";
 
 type Props = {
   messageId: string;

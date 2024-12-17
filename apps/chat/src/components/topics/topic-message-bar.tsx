@@ -5,12 +5,7 @@ import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { MediaUploader } from "@/components/topics/media-uploader";
 import { uploadMedia } from "@/actions/media";
-import {
-  MediaViewer,
-  extractImageFromMessage,
-  getTwitchStreamFromUrl,
-  getYoutubeVideoFromUrl,
-} from "@/components/topics/media-viewer";
+import { MediaViewer } from "@/components/topics/media-viewer";
 import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Progress } from "@/components/ui/progress";
@@ -19,6 +14,12 @@ import { useUserTypingEmitter } from "@/lib/hooks";
 import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
 import { cn, toBase64 } from "@/lib/utils";
 import { EmojiPicker } from "@/components/topics/emoji-picker";
+import {
+  extractImageFromMessage,
+  getTwitchStreamFromUrl,
+  getYoutubeVideoFromUrl,
+  isValidCommand,
+} from "@/components/topics/message-utils";
 
 type MessagePayload = {
   message: string;
@@ -26,11 +27,6 @@ type MessagePayload = {
   circleId: string;
   mediaUrl?: string;
 };
-
-export function isValidCommand(message: string) {
-  const command = message.split(" ")[0].toLowerCase();
-  return ["/youtube", "/giphy", "/yt", "/tim"].includes(command);
-}
 
 export function TopicMessageBar() {
   const [message, setMessage] = useState("");

@@ -2,7 +2,7 @@ import { cn, isEmojiOnly } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo } from "react";
 import Linkify from "react-linkify";
-import { SocketEvent, useSocketEmit } from "../socket/use-socket";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 
 type Props = {
   id: string;
