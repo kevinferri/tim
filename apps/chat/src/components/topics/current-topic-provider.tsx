@@ -19,7 +19,7 @@ import {
 import { Highlight, User } from "@prisma/client";
 import { useEffectOnce, useLazyFetch, useWindowFocus } from "@/lib/hooks";
 import { WithRelation } from "../../../types/prisma";
-import { useUnreadTopics } from "../dashboard/unread-topics-store";
+import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
 

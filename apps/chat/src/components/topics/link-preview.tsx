@@ -12,8 +12,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
-import { ResponsiveVideoPlayer, getYoutubeVideoFromUrl } from "./media-viewer";
-import { SocketEvent, useSocketEmit } from "../socket/use-socket";
+import {
+  ResponsiveVideoPlayer,
+  getYoutubeVideoFromUrl,
+} from "@/components/topics/media-viewer";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useMemo } from "react";
 
 type Props = {
