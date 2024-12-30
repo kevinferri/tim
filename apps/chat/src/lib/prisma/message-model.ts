@@ -11,11 +11,11 @@ import { decrypt } from "@/lib/decryption";
 
 type MessageArgs = {
   topicId?: string;
-  after?: string;
+  before?: string;
   select: Prisma.MessageSelect;
 };
 
-export const MESSAGE_LIMIT = 70;
+export const MESSAGE_LIMIT = 50;
 export const TOP_HIGHLIGHTS_LIMIT = 20;
 export const DEFAULT_MESSAGE_SELECT = {
   id: true,
@@ -61,16 +61,24 @@ function getReadableMessage(text?: string | null) {
 }
 
 export const messageModel = {
-  async getMessagesForTopic({ topicId, select, after }: MessageArgs) {
+  async getMessagesForTopic({ topicId, select, before }: MessageArgs) {
     const userId = getLoggedInUserId();
-    const cursor = after ? { id: after } : undefined;
+    const cursor = before
+      ? {
+          createdAt: {
+            lt: before,
+          },
+        }
+      : undefined;
 
     if (!topicId || !userId) return [];
 
     const messages = await prismaClient.message.findMany({
       select,
-      cursor,
-      where: { topicId },
+      where: {
+        topicId,
+        ...cursor,
+      },
       take: MESSAGE_LIMIT,
       orderBy: { createdAt: "desc" },
     });

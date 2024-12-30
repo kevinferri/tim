@@ -11,7 +11,7 @@ export async function GET(
   const userId = await getLoggedInUserId();
   const topicId = route.params.topicId;
   const url = new URL(req.url);
-  const after = url.searchParams.get("after") ?? undefined;
+  const before = url.searchParams.get("before") ?? undefined;
 
   if (!userId) return unauthorized;
 
@@ -39,7 +39,7 @@ export async function GET(
 
     const messages = await prismaClient.message.getMessagesForTopic({
       topicId,
-      after,
+      before,
       select: DEFAULT_MESSAGE_SELECT,
     });
 

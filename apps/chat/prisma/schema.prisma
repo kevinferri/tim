@@ -98,10 +98,11 @@ model Message {
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
   topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
   highlights Highlight[] @relation("highlightsForMessage")
-  
+
+  @@index([id])
   @@index([userId])
   @@index([topicId, createdAt(sort: Desc)])
-  @@index([userId, topicId, createdAt(sort: Desc)])
+  @@index([userId, topicId])
 
   @@map(name: "messages")
 }
@@ -140,8 +141,7 @@ model TopicHistory {
   user     User    @relation("topicHistoryForUser", fields: [userId], references: [id], onDelete: Cascade)
   topic    Topic   @relation("userHistoryForTopic", fields: [topicId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
 
   @@map(name: "topic_histories")
 }
