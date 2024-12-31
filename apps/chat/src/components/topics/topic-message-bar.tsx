@@ -28,7 +28,7 @@ type MessagePayload = {
 };
 
 export function isValidCommand(message: string) {
-  const command = message.split(" ")[0];
+  const command = message.split(" ")[0].toLowerCase();
   return ["/youtube", "/giphy", "/yt", "/tim"].includes(command);
 }
 

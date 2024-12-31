@@ -249,7 +249,7 @@ export const Message = (props: MessageProps) => {
             )}
 
             {props.mediaUrl &&
-              (props.text?.startsWith("/tim") ? (
+              (props.text?.toLowerCase().startsWith("/tim") ? (
                 <OpenAiViewer content={props.mediaUrl} />
               ) : (
                 <MediaViewer
