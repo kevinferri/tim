@@ -88,24 +88,20 @@ export async function getChatGpt({
       .where("_circleMembershipsForUser.A", circleId)
       .join("users", "_circleMembershipsForUser.B", "users.id"),
     pgClient("messages")
-      .select(
-        "messages.id",
-        "messages.text",
-        "messages.userId",
-        "messages.mediaUrl",
-        "users.name"
-      )
+      .select("messages.id", "messages.text", "messages.userId", "users.name")
       .join("users", "messages.userId", "users.id")
       .where("messages.topicId", topicId)
+      .orderBy("messages.createdAt", "desc")
       .limit(10),
   ];
 
   const me = activeUsers.find(({ id }) => id === userId);
   const [topic, members, messages] = await Promise.all(queries);
   const messagePrompts = [];
+  const reversed = messages.reverse();
   let messageCount = 1;
 
-  (messages as { text: string; mediaUrl: string; name: string }[]).forEach(
+  (reversed as { text: string; mediaUrl: string; name: string }[]).forEach(
     (m) => {
       const text = decrypt(m.text);
 
