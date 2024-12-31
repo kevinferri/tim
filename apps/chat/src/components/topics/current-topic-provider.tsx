@@ -48,7 +48,7 @@ type ContextValue = {
   hasMoreMessages: boolean;
   loadMoreAnchorRef: MutableRefObject<HTMLDivElement | null>;
   loadMoreAnchorId: string;
-  generatingCommand: string;
+  generatingCommand?: string;
   setGeneratingCommand: (command: string) => void;
 };
 
