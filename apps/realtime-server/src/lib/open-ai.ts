@@ -23,8 +23,8 @@ function getActiveAndNonActiveUsers({
   );
 
   return {
-    inTopic: filteredActiveUsers.map((user) => `"${user.name}"`),
-    notInTopic: nonActiveUsers.map((user) => `"${user.name}"`),
+    inTopic: filteredActiveUsers.map((user) => `"${user.name.split(" ")[0]}"`),
+    notInTopic: nonActiveUsers.map((user) => `"${user.name.split(" ")[0]}"`),
   };
 }
 
