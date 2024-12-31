@@ -27,7 +27,6 @@ type ScrollArgs =
   | {
       timeout?: number;
       force?: boolean;
-      padding?: number;
     }
   | undefined;
 
@@ -39,6 +38,7 @@ type ContextValue = {
   mediaMessages: MessageProps[];
   circleMembers: CircleMember[];
   scrollRef: MutableRefObject<HTMLDivElement | null>;
+  newestMessageRef: MutableRefObject<HTMLDivElement | null>;
   messagesListRef: MutableRefObject<HTMLDivElement | null>;
   scrollToBottomOfChat: (args?: ScrollArgs) => void;
   addShufflingGif: (id: string) => void;
@@ -48,6 +48,8 @@ type ContextValue = {
   hasMoreMessages: boolean;
   loadMoreAnchorRef: MutableRefObject<HTMLDivElement | null>;
   loadMoreAnchorId: string;
+  generatingCommand: string;
+  setGeneratingCommand: (command: string) => void;
 };
 
 type Props = {
@@ -64,14 +66,9 @@ type Props = {
 
 const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 
-export enum ScrollPaddings {
-  Default = 120,
-  Media = 500,
-}
-
 function isNearBottom(
   ref: MutableRefObject<HTMLDivElement | null>,
-  padding = ScrollPaddings.Default
+  padding = 120
 ) {
   const _ref = ref.current;
   if (!_ref) return;
@@ -82,6 +79,7 @@ function isNearBottom(
 export function CurrentTopicProvider(props: Props) {
   const router = useRouter();
   const scrollRef = useRef<null | HTMLDivElement>(null);
+  const newestMessageRef = useRef<null | HTMLDivElement>(null);
   const messagesListRef = useRef<null | HTMLDivElement>(null);
   const loadMoreAnchorRef = useRef<null | HTMLDivElement>(null);
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
@@ -94,8 +92,9 @@ export function CurrentTopicProvider(props: Props) {
   });
 
   const scrollToBottomOfChat = useCallback(
-    ({ timeout, force, padding }: ScrollArgs = {}) => {
+    ({ timeout, force }: ScrollArgs = {}) => {
       setTimeout(() => {
+        const padding = newestMessageRef.current?.clientHeight;
         if (isNearBottom(messagesListRef, padding) || force) {
           scrollRef?.current?.scrollIntoView({ block: "center" });
         }
@@ -115,21 +114,19 @@ export function CurrentTopicProvider(props: Props) {
   const [messages, setMessages] = useState<MessageProps[]>(
     props.existingMessages
   );
-
   const [topHighlights, setTopHighlights] = useState<MessageProps[]>(
     props.existingTopHighlights
   );
-
   const [mediaMessages, setMediaMessages] = useState<MessageProps[]>(
     props.existingMediaMessages
   );
-
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [shufflingGifs, setShufflingGifs] = useState<string[]>([]);
   const [loadMoreAnchorId, setLoadMoreAnchorId] = useState(messages?.[0]?.id);
   const [hasMoreMessages, setHasMoreMessages] = useState(
     messages.length >= props.messagesLimit
   );
+  const [generatingCommand, _setGeneratingCommand] = useState<string>();
 
   const baseTitle = useMemo(
     () => (typeof document !== "undefined" ? document.title : ""),
@@ -142,6 +139,10 @@ export function CurrentTopicProvider(props: Props) {
     },
     [shufflingGifs]
   );
+
+  const setGeneratingCommand = useCallback((str: string) => {
+    _setGeneratingCommand(str);
+  }, []);
 
   const windowFocused = useWindowFocus({
     onFocus: () => {
@@ -199,6 +200,10 @@ export function CurrentTopicProvider(props: Props) {
           },
           ...mediaMessages,
         ]);
+      }
+
+      if (Boolean(generatingCommand)) {
+        _setGeneratingCommand(undefined);
       }
 
       if (!windowFocused) {
@@ -417,6 +422,9 @@ export function CurrentTopicProvider(props: Props) {
       hasMoreMessages,
       loadMoreAnchorRef,
       loadMoreAnchorId,
+      newestMessageRef,
+      generatingCommand,
+      setGeneratingCommand,
     }),
     [
       messages,
@@ -434,6 +442,9 @@ export function CurrentTopicProvider(props: Props) {
       hasMoreMessages,
       loadMoreAnchorRef,
       loadMoreAnchorId,
+      newestMessageRef,
+      generatingCommand,
+      setGeneratingCommand,
     ]
   );
 

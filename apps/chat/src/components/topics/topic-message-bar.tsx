@@ -7,7 +7,7 @@ import { MediaUploader } from "@/components/topics/media-uploader";
 import { uploadMedia } from "@/actions/media";
 import {
   MediaViewer,
-  extractMediaFromMessage,
+  extractImageFromMessage,
   getTwitchStreamFromUrl,
   getYoutubeVideoFromUrl,
 } from "@/components/topics/media-viewer";
@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { useUploadProgres } from "@/components/topics/use-upload-progress";
 import { useUserTypingEmitter } from "@/lib/hooks";
 import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
-import { toBase64 } from "@/lib/utils";
+import { cn, toBase64 } from "@/lib/utils";
 import { EmojiPicker } from "@/components/topics/emoji-picker";
 
 type MessagePayload = {
@@ -27,24 +27,39 @@ type MessagePayload = {
   mediaUrl?: string;
 };
 
+export function isValidCommand(message: string) {
+  const command = message.split(" ")[0];
+  return ["/youtube", "/giphy", "/yt", "/tim"].includes(command);
+}
+
 export function TopicMessageBar() {
   const [message, setMessage] = useState("");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const [media, setMedia] = useState<File>();
-  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const { topicId, scrollToBottomOfChat, circleId } = useCurrentTopicContext();
+  const [image, setImage] = useState<File>();
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const {
+    topicId,
+    scrollToBottomOfChat,
+    circleId,
+    generatingCommand,
+    setGeneratingCommand,
+  } = useCurrentTopicContext();
+  const isGenerating = isUploadingImage || Boolean(generatingCommand);
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
-  const { uploadProgress } = useUploadProgres({ media, isUploadingMedia });
+  const { uploadProgress } = useUploadProgres({
+    file: image,
+    isUploading: isUploadingImage,
+  });
   const uploadText = uploadProgress >= 100 ? "FINALIZING..." : "UPLOADING...";
 
   const mediaBlobUrl = useMemo(
-    () => (media ? URL.createObjectURL(media) : undefined),
-    [media]
+    () => (image ? URL.createObjectURL(image) : undefined),
+    [image]
   );
 
   const emitMessage = async (message: string) => {
-    if (!media && !message.trim()) return;
-    let _media = media ?? extractMediaFromMessage(message);
+    if (!image && !message.trim()) return;
+    let _media = image ?? extractImageFromMessage(message);
     const youtubeVideo = getYoutubeVideoFromUrl(message);
     const twitchStream = getTwitchStreamFromUrl(message);
 
@@ -59,8 +74,12 @@ export function TopicMessageBar() {
       mediaUrl = twitchStream.videoUrl;
     }
 
+    if (isValidCommand(message)) {
+      setGeneratingCommand(message);
+    }
+
     if (_media) {
-      setIsUploadingMedia(true);
+      setIsUploadingImage(true);
 
       const uri =
         typeof _media === "string"
@@ -71,7 +90,7 @@ export function TopicMessageBar() {
       const resp = await uploadMedia({ file: uri });
       if (resp) mediaUrl = resp.mediaUrl;
 
-      setIsUploadingMedia(false);
+      setIsUploadingImage(false);
     }
 
     sendMessage.emit({
@@ -82,7 +101,7 @@ export function TopicMessageBar() {
     });
 
     setMessage("");
-    setMedia(undefined);
+    setImage(undefined);
   };
 
   useUserTypingEmitter({ topicId, message });
@@ -90,7 +109,12 @@ export function TopicMessageBar() {
   return (
     <div className="p-3">
       <div className="shadow-sm rounded-md border border-input bg-transparent shadow-sm">
-        <div className="flex items-center">
+        <div
+          className={cn(
+            "flex items-center rounded-md",
+            isGenerating ? "bg-slate-100 dark:bg-slate-900" : ""
+          )}
+        >
           <AutoResizeTextarea
             ref={textAreaRef}
             onPaste={(event) => {
@@ -102,12 +126,15 @@ export function TopicMessageBar() {
 
                 if (item.kind === "file") {
                   const blob = item.getAsFile();
-                  if (blob) setMedia(blob);
+                  if (blob) setImage(blob);
                 }
               }
             }}
-            disabled={isUploadingMedia}
-            className="border-none"
+            disabled={isGenerating}
+            className={cn(
+              "border-none",
+              isGenerating ? "bg-slate-100 dark:bg-slate-900" : ""
+            )}
             onChange={(e) => {
               setMessage(e.target.value);
             }}
@@ -117,20 +144,22 @@ export function TopicMessageBar() {
               }
             }}
             value={message}
+            placeholder={generatingCommand}
           />
           <div className="flex pr-1 items-center">
             <MediaUploader
-              disabled={isUploadingMedia}
-              file={media}
+              disabled={isGenerating}
+              file={image}
               onFileChange={(file) => {
-                setMedia(file);
-                scrollToBottomOfChat({ timeout: 250 });
+                setImage(file);
+                scrollToBottomOfChat();
                 textAreaRef.current?.focus();
               }}
-              onFileRemove={() => setMedia(undefined)}
+              onFileRemove={() => setImage(undefined)}
             />
 
             <EmojiPicker
+              disabled={isGenerating}
               onEmojiSelect={(emoji) => {
                 const i = textAreaRef.current?.selectionStart;
 
@@ -141,25 +170,25 @@ export function TopicMessageBar() {
           </div>
         </div>
 
-        {media && (
+        {image && (
           <div
             className={`p-2 border-t flex flex-col gap-2 ${
-              isUploadingMedia ? "bg-secondary" : ""
+              isUploadingImage ? "bg-secondary" : ""
             }`}
           >
             <div className="flex items-center gap-1">
-              <span className="text-sm">{media.name}</span>
+              <span className="text-sm">{image.name}</span>
               <Button
                 variant="ghost"
                 size="iconSm"
-                onClick={() => setMedia(undefined)}
-                disabled={isUploadingMedia}
+                onClick={() => setImage(undefined)}
+                disabled={isUploadingImage}
               >
                 <CrossCircledIcon />
               </Button>
             </div>
             <MediaViewer url={mediaBlobUrl ?? ""} />
-            {isUploadingMedia && (
+            {isUploadingImage && (
               <>
                 <span className="text-xs">{uploadText}</span>
                 <Progress value={uploadProgress} />

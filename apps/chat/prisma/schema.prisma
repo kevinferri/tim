@@ -96,7 +96,7 @@ model Message {
   topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
   highlights Highlight[] @relation("highlightsForMessage")
 
-  @@index([userId, topicId])
+  @@index([userId, topicId, createdAt])
   @@map(name: "messages")
 }
 

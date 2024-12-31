@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
 
 type Props = {
-  media?: File;
-  isUploadingMedia: boolean;
+  file?: File;
+  isUploading: boolean;
 };
 
-export function useUploadProgres({ media, isUploadingMedia }: Props) {
+export function useUploadProgres({ file, isUploading }: Props) {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    if (!isUploadingMedia || !media) {
+    if (!isUploading || !file) {
       setUploadProgress(0);
       return;
     }
 
     const timer = setInterval(() => {
-      let n = media.size / 500;
+      let n = file.size / 500;
       if (n > 100) n = 1;
 
       setUploadProgress((uploadProgress) => {
@@ -27,7 +27,7 @@ export function useUploadProgres({ media, isUploadingMedia }: Props) {
     }, 30);
 
     return () => clearTimeout(timer);
-  }, [isUploadingMedia, media]);
+  }, [isUploading, file]);
 
   return { uploadProgress };
 }

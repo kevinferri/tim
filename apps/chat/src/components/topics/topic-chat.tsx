@@ -35,7 +35,7 @@ export function TopicChat() {
   useEffectOnce(() => {
     joinRoom.emit(payload);
     markTopicAsRead(topicId);
-    scrollToBottomOfChat({ timeout: SCROLL_TIMEOUT, force: true });
+    scrollToBottomOfChat({ force: true });
 
     setTimeout(() => {
       setHasScrolled(true);

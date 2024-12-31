@@ -28,7 +28,7 @@ export async function getFileFromUrl(
   });
 }
 
-export function extractMediaFromMessage(text: string) {
+export function extractImageFromMessage(text: string) {
   const imageMatch = text.match(
     /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|png|svg|webp))/i
   );
@@ -112,7 +112,9 @@ export function MediaViewer(props: Props) {
   }
 
   if (twitchStream) {
-    iframeSrc = `https://player.twitch.tv/?channel=${twitchStream.id}&parent=${window.location.hostname}`;
+    iframeSrc = `https://player.twitch.tv/?channel=${twitchStream.id}&parent=${
+      process.env.FRONTEND_URL ?? window.location.hostname
+    }`;
   }
 
   if (iframeSrc) {

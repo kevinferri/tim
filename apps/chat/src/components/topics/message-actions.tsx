@@ -6,13 +6,11 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
-import {
-  isGiphy,
-  getYoutubeVideoFromUrl,
-} from "@/components/topics/media-viewer";
+import { isGiphy } from "@/components/topics/media-viewer";
 import { Pencil1Icon, UpdateIcon } from "@radix-ui/react-icons";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
+import { isValidCommand } from "./topic-message-bar";
 
 type Props = {
   messageId: string;
@@ -26,7 +24,7 @@ type Props = {
 
 export function MessageActions(props: Props) {
   const { topicId } = useCurrentTopicContext();
-  const showEdit = !getYoutubeVideoFromUrl(props.mediaUrl);
+  const showEdit = !isValidCommand(props.text);
   const isRandomGif =
     isGiphy(props.mediaUrl ?? undefined) &&
     props.text?.split(" ")[0] === "/giphy";

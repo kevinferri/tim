@@ -12,6 +12,7 @@ type Props = {
   value: string;
   className?: string;
   onPaste?: (e: ClipboardEvent) => void;
+  placeholder?: string;
 };
 
 function adjustHeight(target: ChangeEvent<HTMLTextAreaElement>["target"]) {
@@ -43,6 +44,7 @@ export const AutoResizeTextarea = forwardRef((props: Props, refProp) => {
       disabled={props.disabled}
       rows={1}
       autoFocus
+      placeholder={props.placeholder}
       className={cn(
         "bg-background focus-visible:ring-transparent focus-visible:transparent resize-none text-base shadow-none overflow-hidden",
         props.className

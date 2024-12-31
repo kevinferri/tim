@@ -72,10 +72,7 @@ export const messageModel = {
       cursor,
       where: { topicId },
       take: MESSAGE_LIMIT,
-      skip: cursor ? 1 : undefined,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
 
     return normalizeMessages([...messages].reverse());

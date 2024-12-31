@@ -1,13 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "@/components/topics/highlight-tooltip";
-import {
-  ScrollPaddings,
-  useCurrentTopicContext,
-} from "@/components/topics/current-topic-provider";
+import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { MediaViewer } from "@/components/topics/media-viewer";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MessageActions } from "@/components/topics/message-actions";
@@ -25,6 +22,7 @@ import {
 } from "@/components/topics/message-utils";
 import { MessageSentAt } from "./message-sent-at";
 import { useIslandMessage } from "./use-island-message";
+import { OpenAiViewer } from "./open-ai-viewer";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -48,6 +46,8 @@ export type MessageProps = {
   context?: "topic" | "sidebar" | "user-sheet" | "modal";
 };
 
+function getRef() {}
+
 export const Message = (props: MessageProps) => {
   const {
     topicId,
@@ -57,6 +57,7 @@ export const Message = (props: MessageProps) => {
     shufflingGifs,
     loadMoreAnchorRef,
     loadMoreAnchorId,
+    newestMessageRef,
   } = useCurrentTopicContext();
   const self = useSelf();
   const [showActions, setShowActions] = useState(false);
@@ -134,9 +135,21 @@ export const Message = (props: MessageProps) => {
     setEditingText(props.text);
   };
 
+  const getRef = () => {
+    if (loadMoreAnchorId === props.id) {
+      return loadMoreAnchorRef;
+    }
+
+    if (isNewestMessage) {
+      return newestMessageRef;
+    }
+
+    return undefined;
+  };
+
   return (
     <div
-      ref={loadMoreAnchorId === props.id ? loadMoreAnchorRef : undefined}
+      ref={getRef()}
       className={cn(
         baseStyles,
         highlightedBySelf ? highlightStyles : "",
@@ -235,25 +248,28 @@ export const Message = (props: MessageProps) => {
               />
             )}
 
-            {props.mediaUrl && (
-              <MediaViewer
-                priority={props.context === "topic"}
-                variant={props.variant}
-                url={props.mediaUrl}
-                onImageExpanded={() => {
-                  expandImage.emit({ topicId, messageId: props.id });
-                }}
-                onPreviewLoad={() => {
-                  if (shuffledGifLoading) {
-                    setShuffledGifLoading(false);
-                  }
+            {props.mediaUrl &&
+              (props.text?.startsWith("/tim") ? (
+                <OpenAiViewer content={props.mediaUrl} />
+              ) : (
+                <MediaViewer
+                  priority={props.context === "topic"}
+                  variant={props.variant}
+                  url={props.mediaUrl}
+                  onImageExpanded={() => {
+                    expandImage.emit({ topicId, messageId: props.id });
+                  }}
+                  onPreviewLoad={() => {
+                    if (shuffledGifLoading) {
+                      setShuffledGifLoading(false);
+                    }
 
-                  if (shouldScroll) {
-                    scrollToBottomOfChat({ padding: ScrollPaddings.Media });
-                  }
-                }}
-              />
-            )}
+                    if (shouldScroll) {
+                      scrollToBottomOfChat();
+                    }
+                  }}
+                />
+              ))}
 
             {props.variant !== "minimal" &&
               links.map((link, i) => {
@@ -265,7 +281,7 @@ export const Message = (props: MessageProps) => {
                     link={link}
                     onEmbedMediaLoad={() => {
                       if (shouldScroll) {
-                        scrollToBottomOfChat({ padding: ScrollPaddings.Media });
+                        scrollToBottomOfChat();
                       }
                     }}
                   />

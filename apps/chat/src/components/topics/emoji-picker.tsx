@@ -13,6 +13,7 @@ import { useTheme } from "next-themes";
 
 type Props = {
   onEmojiSelect: (emoji: string) => void;
+  disabled?: boolean;
 };
 
 export function EmojiPicker(props: Props) {
@@ -27,7 +28,12 @@ export function EmojiPicker(props: Props) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="iconSm" className="mb-[2px]">
+        <Button
+          variant="ghost"
+          size="iconSm"
+          className="mb-[2px]"
+          disabled={props.disabled}
+        >
           <FaceIcon />
         </Button>
       </PopoverTrigger>
