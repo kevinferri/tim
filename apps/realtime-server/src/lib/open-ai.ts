@@ -1,4 +1,5 @@
 import { decrypt } from "./encryption";
+import { pgClient } from "../db/client";
 
 type User = { id: string; name: string };
 
