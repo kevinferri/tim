@@ -95,8 +95,8 @@ model Message {
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
   topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
   highlights Highlight[] @relation("highlightsForMessage")
-
-  @@index([userId, topicId, createdAt])
+  
+  @@index([userId, topicId, createdAt(sort: Desc)])
   @@map(name: "messages")
 }
 
