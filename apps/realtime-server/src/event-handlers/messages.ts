@@ -2,8 +2,9 @@ import { decrypt } from "../lib/encryption";
 import { deleteMessage, editMessage, writeMessage } from "../db/mutations";
 import { getRandomGif, getYoutubeVideo } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
-import { RoomType, getRoomKeyOrFail } from "./rooms";
+import { RoomType, getRoomKeyOrFail, toRoomKey } from "./rooms";
 import { pgClient } from "../db/client";
+import { getChatGpt } from "../lib/open-ai";
 
 function getCommandTokens(text: string) {
   const words = text.split(" ");
@@ -38,6 +39,23 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
 
       if (commandType === "youtube" || commandType === "yt") {
         _mediaUrl = await getYoutubeVideo(commandPrompt);
+      }
+
+      if (commandType === "tim") {
+        const topicKey = toRoomKey({
+          id: payload.topicId,
+          roomType: RoomType.Topic,
+        });
+        const sockets = await server.in(topicKey).fetchSockets();
+        const activeUsers = sockets.map(({ data }) => data.user);
+
+        _mediaUrl = await getChatGpt({
+          query: commandPrompt,
+          userId: socket.data.user.id,
+          topicId: payload.topicId,
+          circleId: payload.circleId,
+          activeUsers,
+        });
       }
     }
 
