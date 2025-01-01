@@ -8,6 +8,9 @@ export default async function HomePage() {
     orderBy: {
       createdAt: "desc",
     },
+    where: {
+      userId,
+    },
     select: {
       id: true,
       topicId: true,
