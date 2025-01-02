@@ -39,7 +39,14 @@ function generatePrompt({
   inTopic: string[];
   notInTopic: string[];
 }) {
+  const today = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   const prompts = [
+    `Today is ${today}`,
     `You are a bot named "Tim" in a real time group chat with friends`,
     `Within the chat, users prompt you with the command "/tim"`,
     `Only summarize the messages when you are explicity asked to, otherwise just respond to the prompt`,
