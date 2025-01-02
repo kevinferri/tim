@@ -30,6 +30,7 @@ model User {
   topicHistory      TopicHistory[] @relation("topicHistoryForUser")
 
   @@index([email])
+  
   @@map(name: "users")
 }
 
@@ -53,6 +54,7 @@ model Circle {
   defaultTopic Topic?  @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
 
   @@index([userId])
+
   @@map(name: "circles")
 }
 
@@ -76,6 +78,7 @@ model Topic {
   history          TopicHistory[] @relation("userHistoryForTopic")
 
   @@index([userId, circleId])
+
   @@map(name: "topics")
 }
 
@@ -98,6 +101,8 @@ model Message {
   
   @@index([userId])
   @@index([topicId, createdAt(sort: Desc)])
+  @@index([userId, topicId, createdAt(sort: Desc)])
+
   @@map(name: "messages")
 }
 
@@ -117,6 +122,7 @@ model Highlight {
 
   @@index([userId])
   @@index([messageId])
+
   @@map(name: "highlights")
 }
 
@@ -136,5 +142,6 @@ model TopicHistory {
 
   @@index([userId])
   @@index([createdAt(sort: Desc)])
+
   @@map(name: "topic_histories")
 }
