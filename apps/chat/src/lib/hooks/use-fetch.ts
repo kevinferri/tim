@@ -43,15 +43,18 @@ export function useFetch<T>(
 }
 
 export function useLazyFetch<T>(
-  opts: { url: string; onSuccess?: (data: T) => void } = {
+  opts: { url: string; onSuccess?: (data: T) => void; skip?: boolean } = {
     url: "",
+    skip: false,
   }
 ) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const { url, onSuccess } = opts;
+  const { url, onSuccess, skip } = opts;
 
   const fetchData = useCallback(async () => {
+    if (skip) return;
+
     try {
       setLoading(true);
       const resp = await fetch(url);
@@ -69,7 +72,7 @@ export function useLazyFetch<T>(
     } finally {
       setLoading(false);
     }
-  }, [url, onSuccess]);
+  }, [url, onSuccess, skip]);
 
   return useMemo(
     () => ({ fetchData, loading, error }),
