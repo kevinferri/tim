@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Topic } from "@prisma/client";
@@ -15,11 +16,15 @@ import { useEffectOnce, useLocalStorage } from "@/lib/hooks";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { UpsertCircleForm } from "@/components/circles/upsert-circle-form";
 import {
+  ArrowRightIcon,
+  CopyIcon,
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
   GearIcon,
   HomeIcon,
   PlusIcon,
+  SpeakerLoudIcon,
+  SpeakerOffIcon,
 } from "@radix-ui/react-icons";
 import { WithRelation } from "../../../types/prisma";
 import { cn } from "@/lib/utils";
@@ -28,6 +33,13 @@ import { Tooltip, TooltipProvider } from "@radix-ui/react-tooltip";
 import { TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 import { Badge } from "@/components/ui/badge";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 type Props = {
   topics?: Topic[];
@@ -62,15 +74,40 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
   const router = useRouter();
   const { toast } = useToast();
   const { getActiveMembersInTopic } = useActiveCircleMembers();
+  const [showTopics, setShowTopics] = useState(false);
   const { unreadTopics, hydrateUnreadTopics } = useUnreadTopics();
   const [isMinimized, setIsMinimized] = useLocalStorage(
-    "tim:topics-nav-minimized",
+    `tim:topics-nav-minimized:${self.id}`,
     false
+  );
+  const [mutedTopics, setMutedTopics] = useLocalStorage<string[]>(
+    `tim:muted-topics:${self.id}`,
+    []
   );
 
   useEffectOnce(() => {
     hydrateUnreadTopics(unreadTopicIds);
+    setShowTopics(true);
   });
+
+  const topicsWithMuted = useMemo(() => {
+    if (!topics) return [];
+
+    return topics
+      .map((topic) => {
+        return {
+          ...topic,
+          isMuted: mutedTopics.includes(topic.id),
+        };
+      })
+      .sort((a, b) => {
+        if (a.isMuted === b.isMuted) {
+          return 0;
+        }
+
+        return a.isMuted ? 1 : -1;
+      });
+  }, [topics, mutedTopics]);
 
   useSocketHandler<NewTopicHandlerProps>(
     SocketEvent.UpsertedTopic,
@@ -153,128 +190,172 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
 
       <ScrollArea>
         <div className="flex flex-col gap-3 p-3">
-          {topics.map((topic) => {
-            const activeUsers = getActiveMembersInTopic(topic.id);
-            const isUnread =
-              unreadTopics[topic.id] && params.topicId !== topic.id;
+          {showTopics &&
+            topicsWithMuted.map((topic) => {
+              const activeUsers = getActiveMembersInTopic(topic.id);
+              const link = `/circles/${circle.id}/topics/${topic.id}`;
+              const isMuted = mutedTopics.includes(topic.id);
+              const isUnread =
+                !isMuted &&
+                unreadTopics[topic.id] &&
+                params.topicId !== topic.id;
 
-            return (
-              <Link
-                href={`/circles/${circle.id}/topics/${topic.id}`}
-                key={topic.id}
-              >
-                {isMinimized ? (
-                  <TooltipProvider>
-                    <Tooltip delayDuration={100}>
-                      <TooltipTrigger>
-                        <div className="relative">
-                          <Avatar
-                            className={`active:border ${
-                              params.topicId === topic.id
-                                ? "border shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]"
-                                : "shadow-lg hover:opacity-80"
-                            }`}
-                          >
-                            <AvatarFallback
-                              className={
-                                isUnread
-                                  ? "bg-highlight dark:bg-purple-900 border"
-                                  : ""
-                              }
-                            >
-                              <div className="mt-[1.5px]">
-                                {topic.id === circle.defaultTopicId ? (
-                                  <HomeIcon height={16} width={16} />
-                                ) : (
-                                  <span className={isUnread ? "" : ""}>
-                                    {getInitials(
-                                      topic.name.replace(
-                                        /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
-                                        ""
-                                      )
+              return (
+                <ContextMenu key={topic.id}>
+                  <Link href={link}>
+                    {isMinimized ? (
+                      <TooltipProvider>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <div className="relative">
+                              <Avatar
+                                className={`active:border ${
+                                  params.topicId === topic.id
+                                    ? "border shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]"
+                                    : "shadow-lg hover:opacity-80"
+                                }`}
+                              >
+                                <AvatarFallback
+                                  className={
+                                    isUnread
+                                      ? "bg-highlight dark:bg-purple-900 border"
+                                      : ""
+                                  }
+                                >
+                                  <div className="mt-[1.5px]">
+                                    {topic.id === circle.defaultTopicId ? (
+                                      <HomeIcon height={16} width={16} />
+                                    ) : (
+                                      <span>
+                                        {getInitials(
+                                          topic.name.replace(
+                                            /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
+                                            ""
+                                          )
+                                        )}
+                                      </span>
                                     )}
-                                  </span>
+                                  </div>
+                                </AvatarFallback>
+                              </Avatar>
+                              {activeUsers.length > 0 && (
+                                <div className="border absolute top-[-4px] right-[-4px] w-[16px] h-[16px] text-[10px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
+                                  {activeUsers.length}
+                                </div>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="right"
+                            className="p-2"
+                            sideOffset={8}
+                          >
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm leading-none flex items-center gap-1">
+                                <span>{topic.name}</span>
+                                {isUnread && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] p-1 tracking-wide dark:bg-purple-900"
+                                  >
+                                    New messages
+                                  </Badge>
                                 )}
                               </div>
-                            </AvatarFallback>
-                          </Avatar>
-                          {activeUsers.length > 0 && (
-                            <div className="border absolute top-[-4px] right-[-4px] w-[16px] h-[16px] text-[10px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
-                              {activeUsers.length}
+                              {activeUsers.length > 0 && (
+                                <div className="flex gap-1">
+                                  {activeUsers.map((user) => {
+                                    return (
+                                      <UserAvatar
+                                        key={user.id}
+                                        id={user.id}
+                                        name={user.name}
+                                        imageUrl={user.imageUrl}
+                                        createdAt={user.createdAt}
+                                        size="xs"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="right"
-                        className="p-2"
-                        sideOffset={8}
-                      >
-                        <div className="flex flex-col gap-2">
-                          <div className="text-sm leading-none flex items-center gap-1">
-                            <span>{topic.name}</span>
-                            {isUnread && (
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] p-1 tracking-wide dark:bg-purple-900"
-                              >
-                                New messages
-                              </Badge>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <ContextMenuTrigger>
+                        <Button
+                          variant={
+                            topic.id === params.topicId ? "secondary" : "ghost"
+                          }
+                          className="w-full flex justify-start text-base font-normal p-3"
+                        >
+                          <span
+                            className={cn(
+                              isUnread &&
+                                "underline decoration-wavy decoration-purple-700 underline-offset-4",
+                              isMuted && "text-slate-400 dark:text-slate-500"
                             )}
+                          >
+                            {topic.name}
+                          </span>
+                          <div className="flex gap-1 ml-auto">
+                            {activeUsers.map((user) => (
+                              <UserAvatar
+                                key={user.id}
+                                id={user.id}
+                                name={user.name}
+                                imageUrl={user.imageUrl}
+                                createdAt={user.createdAt}
+                                size="xs"
+                              />
+                            ))}
                           </div>
-                          {activeUsers.length > 0 && (
-                            <div className="flex gap-1">
-                              {activeUsers.map((user) => {
-                                return (
-                                  <UserAvatar
-                                    key={user.id}
-                                    id={user.id}
-                                    name={user.name}
-                                    imageUrl={user.imageUrl}
-                                    createdAt={user.createdAt}
-                                    size="xs"
-                                  />
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  <Button
-                    variant={
-                      topic.id === params.topicId ? "secondary" : "ghost"
-                    }
-                    className="w-full flex justify-start text-base font-normal p-3"
-                  >
-                    <span
-                      className={
-                        isUnread
-                          ? "underline decoration-wavy decoration-purple-700 underline-offset-4"
-                          : ""
-                      }
+                        </Button>
+                      </ContextMenuTrigger>
+                    )}
+                  </Link>
+                  <ContextMenuContent className="w-30">
+                    <ContextMenuItem onClick={() => router.push(link)}>
+                      Go to topic
+                      <ContextMenuShortcut>
+                        <ArrowRightIcon />
+                      </ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={() => {
+                        setMutedTopics((mutedTopicIds) => {
+                          return isMuted
+                            ? mutedTopicIds.filter((id) => id !== topic.id)
+                            : [...mutedTopicIds, topic.id];
+                        });
+                      }}
                     >
-                      {topic.name}
-                    </span>
-                    <div className="flex gap-1 ml-auto">
-                      {activeUsers.map((user) => (
-                        <UserAvatar
-                          key={user.id}
-                          id={user.id}
-                          name={user.name}
-                          imageUrl={user.imageUrl}
-                          createdAt={user.createdAt}
-                          size="xs"
-                        />
-                      ))}
-                    </div>
-                  </Button>
-                )}
-              </Link>
-            );
-          })}
+                      {isMuted ? "Unmute" : "Mute"}
+                      <ContextMenuShortcut>
+                        {isMuted ? <SpeakerLoudIcon /> : <SpeakerOffIcon />}
+                      </ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${window.location.host}${link}`
+                        );
+                        toast({
+                          duration: 3000,
+                          title: `Link copied`,
+                        });
+                      }}
+                    >
+                      Copy link
+                      <ContextMenuShortcut>
+                        <CopyIcon />
+                      </ContextMenuShortcut>
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              );
+            })}
         </div>
       </ScrollArea>
       <div className="flex flex-col items-center mt-auto gap-3 p-3">
