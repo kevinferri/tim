@@ -19,7 +19,7 @@ const pgClientSingleton = () => {
     client: "pg",
     connection: {
       connectionString: process.env.DATABASE_URL,
-      ssl,
+      //ssl,
     },
     searchPath: ["knex", "public"],
     useNullAsDefault: true,
@@ -30,6 +30,15 @@ const pgClientSingleton = () => {
 
 const pgClient = globalThis.pgClient ?? pgClientSingleton();
 
+if (process.env.NODE_ENV !== "production") {
+  globalThis.pgClient = pgClient;
+}
+
 export { pgClient };
 
-if (process.env.NODE_ENV !== "production") globalThis.pgClient = pgClient;
+process.on("SIGTERM", async () => {
+  if (pgClient) {
+    await pgClient.destroy();
+  }
+  process.exit(0);
+});
