@@ -4,13 +4,8 @@ import { circleModel } from "@/lib/prisma/circle-model";
 import { topicModel } from "@/lib/prisma/topic-model";
 import { messageModel } from "@/lib/prisma/message-model";
 
-let prismaClient: PrismaClient;
-
-const prismaClientSingleton = () => {
-  if (prismaClient) return prismaClient;
-
-  // @ts-expect-error
-  prismaClient = new PrismaClient({
+const createClient = () => {
+  return new PrismaClient({
     log: ["error"],
   }).$extends({
     model: {
@@ -20,12 +15,19 @@ const prismaClientSingleton = () => {
       message: messageModel,
     },
   });
+};
+
+let prismaClient: ReturnType<typeof createClient>;
+
+const prismaClientSingleton = () => {
+  if (prismaClient) return prismaClient;
+  prismaClient = createClient();
 
   return prismaClient;
 };
 
 declare const globalThis: {
-  prismaClient: PrismaClient | undefined;
+  prismaClient: ReturnType<typeof prismaClientSingleton>;
 } & typeof global;
 
 if (process.env.NODE_ENV !== "production") {
