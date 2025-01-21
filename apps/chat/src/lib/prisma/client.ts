@@ -37,3 +37,8 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export { prismaClient };
+
+process.on("SIGTERM", async () => {
+  await prismaClient.$disconnect();
+  process.exit(0);
+});
