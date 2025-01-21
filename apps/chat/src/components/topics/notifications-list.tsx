@@ -72,7 +72,7 @@ export function NotificationsList(props: Props) {
                   {copyMap[notification.type].text}
                 </div>
                 <Card>
-                  {false ? (
+                  {message ? (
                     <CardContent className="p-0 m-0">
                       <Message
                         {...message}
