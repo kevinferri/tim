@@ -46,8 +46,6 @@ export type MessageProps = {
   context?: "topic" | "sidebar" | "user-sheet" | "modal";
 };
 
-function getRef() {}
-
 export const Message = (props: MessageProps) => {
   const {
     topicId,
