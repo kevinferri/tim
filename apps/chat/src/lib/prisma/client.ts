@@ -5,7 +5,7 @@ import { topicModel } from "@/lib/prisma/topic-model";
 import { messageModel } from "@/lib/prisma/message-model";
 
 declare global {
-  var prismaClient: PrismaClient | undefined;
+  var prismaClient: ReturnType<typeof createClient> | undefined;
 }
 
 const createClient = () => {
@@ -20,10 +20,10 @@ const createClient = () => {
       topic: topicModel,
       message: messageModel,
     },
-  }) as unknown as PrismaClient;
+  });
 };
 
-let prismaClient: PrismaClient;
+let prismaClient: ReturnType<typeof createClient>;
 
 if (process.env.NODE_ENV === "production") {
   prismaClient = createClient();
