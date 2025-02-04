@@ -157,7 +157,7 @@ export function UserAvatar(props: Props) {
                         : ""
                     }`}
                   >
-                    {data?.highlightScore ? (
+                    {typeof data?.highlightScore !== "undefined" ? (
                       formatNumber(data?.highlightScore)
                     ) : (
                       <StatsLoader />
@@ -172,7 +172,7 @@ export function UserAvatar(props: Props) {
               <div className="flex flex-col items-center flex-1">
                 <div className="text-2xl">
                   <div className="text-2xl">
-                    {data?.messagesSent ? (
+                    {typeof data?.messagesSent !== "undefined" ? (
                       formatNumber(data?.messagesSent)
                     ) : (
                       <StatsLoader />
@@ -186,7 +186,7 @@ export function UserAvatar(props: Props) {
 
               <div className="flex flex-col items-center flex-1">
                 <div className="text-2xl">
-                  {data?.highlightsRecieved ? (
+                  {typeof data?.highlightsRecieved !== "undefined" ? (
                     formatNumber(data?.highlightsRecieved)
                   ) : (
                     <StatsLoader />
@@ -199,7 +199,7 @@ export function UserAvatar(props: Props) {
 
               <div className="flex flex-col items-center flex-1">
                 <div className="text-2xl">
-                  {data?.highlightsGiven ? (
+                  {typeof data?.highlightsGiven !== "undefined" ? (
                     formatNumber(data?.highlightsGiven)
                   ) : (
                     <StatsLoader />
