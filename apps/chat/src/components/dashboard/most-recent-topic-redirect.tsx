@@ -2,7 +2,7 @@
 
 import { useEffectOnce } from "@/lib/hooks";
 import { useRouter } from "next/navigation";
-import { Spinner } from "../ui/spinner";
+import { Spinner } from "@/components/ui/spinner";
 
 type Props = {
   redirect: string;
