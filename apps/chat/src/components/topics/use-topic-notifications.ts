@@ -1,8 +1,8 @@
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { User } from "@prisma/client";
 import { useLocalStorage } from "@/lib/hooks";
-import { useSelf } from "../auth/self-provider";
+import { useSelf } from "@/components/auth/self-provider";
 
 type NotificationActor = Pick<User, "id" | "name" | "imageUrl">;
 
@@ -32,10 +32,10 @@ export function useTopicNotifications({
 
   const [notificationList, setNotificationList] = useLocalStorage<
     TopicNotification[]
-  >(`tim:topic-notifications:${self.id}:${topicId}`, []);
+  >(`tim:topic-notifications-list:${self.id}:${topicId}`, []);
 
   const [unreadCount, setUnreadCount] = useLocalStorage<number>(
-    `tim:topic-notifications-unread:${self.id}:${topicId}`,
+    `tim:topic-unread-notifications-count:${self.id}:${topicId}`,
     0
   );
 
