@@ -172,7 +172,11 @@ export async function emitUserChangeInTopic({
   }
 
   if (recordHistory) {
-    await saveTopicHistory({ userId: socket.data.user.id, topicId });
+    try {
+      await saveTopicHistory({ userId: socket.data.user.id, topicId });
+    } catch (e) {
+      // On topic delete, topic doesn't exist anymore
+    }
   }
 }
 
