@@ -15,5 +15,5 @@ export function MostRecentTopicRedirect(props: Props) {
     router.replace(props.redirect);
   });
 
-  return <Spinner />;
+  return <Spinner className="w-10 h-10" />;
 }
