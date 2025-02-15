@@ -43,7 +43,7 @@ const copyMap = {
 };
 
 export function NotificationsList(props: Props) {
-  const [messageId, setMessageId] = useQueryState("messageId");
+  const [_, setMessageId] = useQueryState("messageId");
   const { messages, topHighlights, mediaMessages, topicId } =
     useCurrentTopicContext();
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useEffect } from "react";
+import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { usePrevious } from "./use-previous";
 
 type Args = {

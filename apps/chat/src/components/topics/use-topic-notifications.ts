@@ -1,6 +1,8 @@
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useCallback, useMemo, useState } from "react";
 import { User } from "@prisma/client";
+import { useLocalStorage } from "@/lib/hooks";
+import { useSelf } from "../auth/self-provider";
 
 type NotificationActor = Pick<User, "id" | "name" | "imageUrl">;
 
@@ -17,20 +19,29 @@ export enum TopicNotificationType {
   ClickedLink = "link:clicked",
 }
 
+const NOTIFICATION_LIMIT = 20;
+
 export function useTopicNotifications({
+  topicId,
   skipIncrementUnread = false,
 }: {
+  topicId: string;
   skipIncrementUnread?: boolean;
 }) {
-  const [notificationList, setNotificationList] = useState<TopicNotification[]>(
-    []
+  const self = useSelf();
+
+  const [notificationList, setNotificationList] = useLocalStorage<
+    TopicNotification[]
+  >(`tim:topic-notifications:${self.id}:${topicId}`, []);
+
+  const [unreadCount, setUnreadCount] = useLocalStorage<number>(
+    `tim:topic-notifications-unread:${self.id}:${topicId}`,
+    0
   );
-  const [unreadCount, setUnreadCount] = useState(0);
-  const asOf = useMemo(() => new Date(), []);
 
   const clearUnreadNotifications = useCallback(() => {
     setUnreadCount(0);
-  }, []);
+  }, [setUnreadCount]);
 
   // Handle created notification
   useSocketHandler<{
@@ -44,7 +55,15 @@ export function useTopicNotifications({
       actor: payload.actor,
     };
 
-    setNotificationList([newNotification, ...notificationList]);
+    setNotificationList((notifications) => {
+      const updatedNotifications = [...notifications];
+
+      if (updatedNotifications.length >= NOTIFICATION_LIMIT) {
+        updatedNotifications.shift();
+      }
+
+      return [...updatedNotifications, newNotification];
+    });
 
     if (!skipIncrementUnread) {
       setUnreadCount((_count) => _count + 1);
@@ -56,8 +75,7 @@ export function useTopicNotifications({
       notificationList,
       unreadCount,
       clearUnreadNotifications,
-      asOf,
     }),
-    [notificationList, unreadCount, clearUnreadNotifications, asOf]
+    [notificationList, unreadCount, clearUnreadNotifications]
   );
 }

@@ -18,10 +18,15 @@ import { Badge } from "@/components/ui/badge";
 
 type Tab = "highlights" | "media" | "members" | "notifications";
 
-export function TopicSideBar() {
+type Props = {
+  topicId: string;
+};
+
+export function TopicSideBar(props: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("highlights");
-  const { notificationList, clearUnreadNotifications, unreadCount, asOf } =
+  const { notificationList, clearUnreadNotifications, unreadCount } =
     useTopicNotifications({
+      topicId: props.topicId,
       skipIncrementUnread: activeTab === "notifications",
     });
 
@@ -38,18 +43,7 @@ export function TopicSideBar() {
       icon: <PersonIcon />,
     },
     notifications: {
-      header: (
-        <>
-          Notifications{" "}
-          <span className="text-muted-foreground text-sm">
-            as of{" "}
-            {asOf.toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "numeric",
-            })}
-          </span>
-        </>
-      ),
+      header: <>Notifications</>,
       node: <NotificationsList notifications={notificationList} />,
       icon: (
         <div className="flex items-center gap-1.5 w-fu">

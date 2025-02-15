@@ -113,7 +113,7 @@ export default async function TopicPage({ params }: Props) {
               <TopicMessageBar />
             </div>
             <div className="flex overflow-y-hidden">
-              <TopicSideBar />
+              <TopicSideBar topicId={topic.id} />
             </div>
           </div>
         </CurrentTopicProvider>
