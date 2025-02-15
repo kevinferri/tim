@@ -1,3 +1,4 @@
+import { MostRecentTopicRedirect } from "@/components/dashboard/most-recent-topic-redirect";
 import { prismaClient } from "@/lib/prisma/client";
 import { getLoggedInUserId } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -57,7 +58,13 @@ export default async function HomePage() {
 
   return (
     <div className="flex basis-full justify-center items-center">
-      Welcome to Tim
+      {mostRecentTopic ? (
+        <MostRecentTopicRedirect
+          redirect={`/circles/${mostRecentTopic.topic.circleId}/topics/${mostRecentTopic?.topicId}`}
+        />
+      ) : (
+        <>Welcome to Tim</>
+      )}
     </div>
   );
 }

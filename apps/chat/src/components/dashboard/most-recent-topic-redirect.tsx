@@ -1,0 +1,18 @@
+"use client";
+
+import { useEffectOnce } from "@/lib/hooks";
+import { useRouter } from "next/navigation";
+
+type Props = {
+  redirect: string;
+};
+
+export function MostRecentTopicRedirect(props: Props) {
+  const router = useRouter();
+
+  useEffectOnce(() => {
+    router.replace(props.redirect);
+  });
+
+  return <></>;
+}
