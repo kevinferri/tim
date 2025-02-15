@@ -1,7 +1,6 @@
 import { MostRecentTopicRedirect } from "@/components/dashboard/most-recent-topic-redirect";
 import { prismaClient } from "@/lib/prisma/client";
 import { getLoggedInUserId } from "@/lib/session";
-import { redirect } from "next/navigation";
 
 export default async function HomePage() {
   const userId = await getLoggedInUserId();
@@ -36,16 +35,6 @@ export default async function HomePage() {
   const isStillInCircle = mostRecentTopic?.topic.parentCircle.members.find(
     ({ id }) => id === userId
   );
-
-  // if (
-  //   mostRecentTopic?.topicId &&
-  //   mostRecentTopic?.topic.circleId &&
-  //   isStillInCircle
-  // ) {
-  //   redirect(
-  //     `/circles/${mostRecentTopic.topic.circleId}/topics/${mostRecentTopic?.topicId}`
-  //   );
-  // }
 
   if (mostRecentTopic && !isStillInCircle) {
     prismaClient.topicHistory.deleteMany({

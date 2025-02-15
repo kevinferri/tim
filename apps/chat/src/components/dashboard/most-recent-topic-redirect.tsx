@@ -12,6 +12,7 @@ export function MostRecentTopicRedirect(props: Props) {
   const router = useRouter();
 
   useEffectOnce(() => {
+    router.prefetch(props.redirect);
     router.replace(props.redirect);
   });
 
