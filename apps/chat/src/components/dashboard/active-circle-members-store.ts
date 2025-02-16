@@ -25,7 +25,7 @@ export function useActiveCircleMembers() {
   const setTopicMap = useStore((state) => state.setTopicMap);
   const debounced = useDebounce(topicMap, 250);
   const getActiveMembersInTopic = (topicId: string) =>
-    topicMap?.[topicId]?.activeUsers ?? [];
+    uniqBy(topicMap?.[topicId]?.activeUsers ?? [], "id");
 
   useSocketHandler<{
     topicMap: TopicMap;
