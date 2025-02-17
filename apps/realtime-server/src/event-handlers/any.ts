@@ -1,5 +1,7 @@
 import { HandlerArgs } from "./main";
 
+const debug = process.env.DEBUG === "true";
+
 function toLogPaylod(eventName: string, args: unknown[], userId: string) {
   return {
     eventName,
@@ -9,13 +11,17 @@ function toLogPaylod(eventName: string, args: unknown[], userId: string) {
 }
 
 export function handleOnAny({ socket }: HandlerArgs) {
-  socket.onAny((event, ...args) => {
-    console.log("incoming: ", toLogPaylod(event, args, socket.data.user.id));
-  });
+  if (debug) {
+    socket.onAny((event, ...args) => {
+      console.log("incoming: ", toLogPaylod(event, args, socket.data.user.id));
+    });
+  }
 }
 
 export function handleOnAnyOutgoing({ socket }: HandlerArgs) {
-  socket.onAnyOutgoing((event, ...args) => {
-    console.log("outgoing: ", toLogPaylod(event, args, socket.data.user.id));
-  });
+  if (debug) {
+    socket.onAnyOutgoing((event, ...args) => {
+      console.log("outgoing: ", toLogPaylod(event, args, socket.data.user.id));
+    });
+  }
 }

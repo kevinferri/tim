@@ -7,6 +7,7 @@ import {
 } from "../db/queries";
 import { SocketEvent, HandlerArgs } from "./main";
 import { saveTopicHistory } from "../db/mutations";
+//import { handleJoinCircleNotify } from "../lib/join-circle-notifier";
 
 export enum RoomType {
   Topic = "topic",
@@ -95,6 +96,7 @@ export function handleJoinRoom({ socket, server }: HandlerArgs) {
 
       if (roomType === RoomType.Circle) {
         emitUserJoinedCircle({ server, socket, circleId: id });
+        //handleJoinCircleNotify({ server, socket, roomKey, circleId: id });
       }
     }
   );
