@@ -56,13 +56,13 @@ export function useTopicNotifications({
     };
 
     setNotificationList((notifications) => {
-      const updatedNotifications = [...notifications];
+      const updatedNotifications = [newNotification, ...notifications];
 
-      if (updatedNotifications.length >= NOTIFICATION_LIMIT) {
-        updatedNotifications.shift();
+      if (updatedNotifications.length > NOTIFICATION_LIMIT) {
+        updatedNotifications.pop();
       }
 
-      return [...updatedNotifications, newNotification];
+      return updatedNotifications;
     });
 
     if (!skipIncrementUnread) {
