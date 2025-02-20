@@ -53,18 +53,27 @@ export async function TopicsNav({ circleId }: Props) {
         topicId: true,
       },
     }),
-
-    prismaClient.$queryRaw`
-      SELECT DISTINCT "topicId", "createdAt"
-      FROM "public"."messages"
-      ORDER BY "createdAt" DESC;
-    `,
   ];
 
-  const [topics, parentCircle, histories, recentMessageByTopic] =
-    await Promise.all(queries);
+  const [topics, parentCircle, histories] = await Promise.all(queries);
+  const topicList = topics as Topic[];
+  const topicIds = topicList.map(({ id }) => id);
+  const recentMessageByTopic = await prismaClient.message.findMany({
+    where: {
+      topicId: {
+        in: topicIds,
+      },
+    },
+    select: {
+      topicId: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    distinct: ["topicId"],
+  });
 
-  // @ts-expect-error
   const historyMap: Record<string, TopicHistory> = keyBy(histories, "topicId");
 
   const unreadTopicIds = (recentMessageByTopic as Message[]).reduce(
@@ -86,7 +95,7 @@ export async function TopicsNav({ circleId }: Props) {
   if (parentCircle) {
     return (
       <TopicsList
-        topics={topics as Topic[]}
+        topics={topicList}
         unreadTopicIds={unreadTopicIds}
         circle={parentCircle as WithRelation<"Circle", "members">}
       />
