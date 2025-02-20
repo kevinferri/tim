@@ -4,6 +4,7 @@ import { Message, Topic, TopicHistory } from "@prisma/client";
 import { WithRelation } from "../../../types/prisma";
 import { getLoggedInUserId } from "@/lib/session";
 import keyBy from "lodash.keyby";
+import { TOP_HIGHLIGHTS_LIMIT } from "@/lib/prisma/message-model";
 
 type Props = {
   circleId: string;
@@ -63,6 +64,7 @@ export async function TopicsNav({ circleId }: Props) {
         createdAt: true,
         topicId: true,
       },
+      take: TOP_HIGHLIGHTS_LIMIT,
     }),
   ];
 
