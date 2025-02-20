@@ -1,6 +1,6 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { TopicsList } from "@/components/topics/topics-list";
-import { Message, Topic, TopicHistory } from "@prisma/client";
+import { Message, Prisma, Topic, TopicHistory } from "@prisma/client";
 import { WithRelation } from "../../../types/prisma";
 import { getLoggedInUserId } from "@/lib/session";
 import keyBy from "lodash.keyby";
@@ -58,21 +58,14 @@ export async function TopicsNav({ circleId }: Props) {
   const [topics, parentCircle, histories] = await Promise.all(queries);
   const topicList = topics as Topic[];
   const topicIds = topicList.map(({ id }) => id);
-  const recentMessageByTopic = await prismaClient.message.findMany({
-    where: {
-      topicId: {
-        in: topicIds,
-      },
-    },
-    select: {
-      topicId: true,
-      createdAt: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    distinct: ["topicId"],
-  });
+  const recentMessageByTopic = await prismaClient.$queryRaw`
+  SELECT "topicId", "createdAt" FROM (
+    SELECT "topicId", "createdAt", ROW_NUMBER() OVER (PARTITION BY "topicId" ORDER BY "createdAt" DESC) as row_num
+    FROM "messages"
+    WHERE "topicId" IN (${Prisma.join(topicIds)})
+  ) AS latest_messages
+  WHERE row_num = 1;
+`;
 
   const historyMap: Record<string, TopicHistory> = keyBy(histories, "topicId");
 
