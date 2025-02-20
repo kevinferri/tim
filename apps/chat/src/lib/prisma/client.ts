@@ -3,6 +3,7 @@ import { userModel } from "@/lib/prisma/user-model";
 import { circleModel } from "@/lib/prisma/circle-model";
 import { topicModel } from "@/lib/prisma/topic-model";
 import { messageModel } from "@/lib/prisma/message-model";
+import { cacheQuery, invalidateCache } from "@/lib/prisma/cache";
 
 declare global {
   var prismaClient: ReturnType<typeof createClient> | undefined;
@@ -13,6 +14,8 @@ const createClient = () => {
     log: ["error"],
   });
 
+  const cachedModels = ["user", "topic", "circle"] as const;
+
   return baseClient.$extends({
     model: {
       user: userModel,
@@ -20,6 +23,40 @@ const createClient = () => {
       topic: topicModel,
       message: messageModel,
     },
+    query: Object.fromEntries(
+      cachedModels.flatMap((model) => [
+        [
+          model,
+          {
+            async findUnique({ args, query }: unknown) {
+              return cacheQuery(model, args, query);
+            },
+            async findFirst({ args, query }: unknown) {
+              return cacheQuery(model, args, query);
+            },
+            async findMany({ args, query }: unknown) {
+              return cacheQuery(model, args, query);
+            },
+            async create({ args, query }: unknown) {
+              invalidateCache(model);
+              return query(args);
+            },
+            async upsert({ args, query }: unknown) {
+              invalidateCache(model);
+              return query(args);
+            },
+            async update({ args, query }: unknown) {
+              invalidateCache(model);
+              return query(args);
+            },
+            async delete({ args, query }: unknown) {
+              invalidateCache(model);
+              return query(args);
+            },
+          },
+        ],
+      ])
+    ) as Record<(typeof cachedModels)[number], any>,
   });
 };
 

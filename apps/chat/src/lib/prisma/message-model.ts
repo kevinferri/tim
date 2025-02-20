@@ -15,8 +15,8 @@ type MessageArgs = {
   select: Prisma.MessageSelect;
 };
 
-export const MESSAGE_LIMIT = 50;
-export const TOP_HIGHLIGHTS_LIMIT = 20;
+export const MESSAGE_LIMIT = 30;
+export const TOP_HIGHLIGHTS_LIMIT = 10;
 export const DEFAULT_MESSAGE_SELECT = {
   id: true,
   text: true,
