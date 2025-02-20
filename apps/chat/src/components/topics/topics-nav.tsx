@@ -4,7 +4,6 @@ import { Message, Topic, TopicHistory } from "@prisma/client";
 import { WithRelation } from "../../../types/prisma";
 import { getLoggedInUserId } from "@/lib/session";
 import keyBy from "lodash.keyby";
-import { TOP_HIGHLIGHTS_LIMIT } from "@/lib/prisma/message-model";
 
 type Props = {
   circleId: string;
@@ -55,22 +54,17 @@ export async function TopicsNav({ circleId }: Props) {
       },
     }),
 
-    prismaClient.message.findMany({
-      distinct: ["topicId"],
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        createdAt: true,
-        topicId: true,
-      },
-      take: TOP_HIGHLIGHTS_LIMIT,
-    }),
+    prismaClient.$queryRaw`
+      SELECT DISTINCT "topicId", "createdAt"
+      FROM "public"."messages"
+      ORDER BY "createdAt" DESC;
+    `,
   ];
 
   const [topics, parentCircle, histories, recentMessageByTopic] =
     await Promise.all(queries);
 
+  // @ts-expect-error
   const historyMap: Record<string, TopicHistory> = keyBy(histories, "topicId");
 
   const unreadTopicIds = (recentMessageByTopic as Message[]).reduce(
