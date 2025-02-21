@@ -1,8 +1,8 @@
 import crypto from "crypto";
 
 const algorithm = process.env.CRYPTO_ALGORITHM;
-const key = crypto.scryptSync(process.env.CRYPTO_SECRET, "salt", 24);
-const iv = Buffer.from(process.env.CRYPTO_IV, "utf8");
+const key = crypto.scryptSync(process.env.CRYPTO_SECRET ?? "", "salt", 24);
+const iv = Buffer.from(process.env.CRYPTO_IV ?? "", "utf8");
 
 export function encrypt(text: string) {
   const cipher = crypto.createCipheriv(algorithm, key, iv);
