@@ -1,10 +1,10 @@
 import { decrypt } from "../lib/encryption";
 import { deleteMessage, editMessage, writeMessage } from "../db/mutations";
-import { getRandomGif, getYoutubeVideo } from "../lib/media-fetchers";
+import { getRandomGif } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
-import { RoomType, getRoomKeyOrFail, toRoomKey } from "./rooms";
+import { RoomType, getRoomKeyOrFail } from "./rooms";
 import { pgClient } from "../db/client";
-import { getChatGpt } from "../lib/open-ai";
+import { commandRegistry } from "../lib/commands";
 
 function getCommandTokens(text: string) {
   const words = text.split(" ");
@@ -33,28 +33,13 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
     );
 
     if (words.length > 0 && words[0].charAt(0) === "/") {
-      if (commandType === "giphy") {
-        _mediaUrl = await getRandomGif(commandPrompt);
-      }
+      const command = commandRegistry[commandType];
 
-      if (commandType === "youtube" || commandType === "yt") {
-        _mediaUrl = await getYoutubeVideo(commandPrompt);
-      }
-
-      if (commandType === "tim") {
-        const topicKey = toRoomKey({
-          id: payload.topicId,
-          roomType: RoomType.Topic,
-        });
-        const sockets = await server.in(topicKey).fetchSockets();
-        const activeUsers = sockets.map(({ data }) => data.user);
-
-        _mediaUrl = await getChatGpt({
-          query: commandPrompt,
-          userId: socket.data.user.id,
-          topicId: payload.topicId,
-          circleId: payload.circleId,
-          activeUsers,
+      if (command) {
+        _mediaUrl = await command.execute(commandPrompt, {
+          socket,
+          server,
+          payload,
         });
       }
     }

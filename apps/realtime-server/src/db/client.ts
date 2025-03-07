@@ -4,21 +4,28 @@ declare global {
   var pgClient: undefined | ReturnType<typeof pgClientSingleton>;
 }
 
-const ssl =
-  process.env.NODE_ENV === "production"
-    ? {
-        ca: Buffer.from(process.env.DATABASE_SSL_CERT, "base64").toString(
-          "utf-8"
-        ),
-        rejectUnauthorized: true,
-      }
-    : undefined;
+const isProd = process.env.NODE_ENV === "production";
+
+const ssl = isProd
+  ? {
+      ca: Buffer.from(process.env.DATABASE_SSL_CERT, "base64").toString(
+        "utf-8"
+      ),
+      rejectUnauthorized: true,
+    }
+  : undefined;
 
 const pgClientSingleton = () => {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!isProd && !connectionString.includes("supabase")) {
+    throw new Error("Malformed database connection string");
+  }
+
   const client = knex({
     client: "pg",
     connection: {
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       ssl,
     },
     searchPath: ["knex", "public"],
