@@ -4,7 +4,10 @@ import { getRandomGif, getYoutubeVideo } from "./media-fetchers";
 import { getChatGpt } from "./open-ai";
 
 type Command = {
-  execute: (prompt: string, context: CommandContext) => Promise<string | null>;
+  execute: (
+    prompt: string,
+    context: CommandContext
+  ) => Promise<string | undefined>;
 };
 
 type MessagePayload = {
