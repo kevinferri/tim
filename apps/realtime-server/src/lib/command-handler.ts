@@ -50,3 +50,14 @@ export const commandRegistry: Record<string, Command> = {
     },
   },
 };
+
+export function getCommandTokens(text: string) {
+  const words = text.split(" ");
+  const wordsCopy = [...words];
+  const commandType = words[0].substring(1, words[0].length).toLowerCase();
+
+  wordsCopy.shift();
+  const commandPrompt = wordsCopy.join(" ");
+
+  return { words, commandType, commandPrompt };
+}

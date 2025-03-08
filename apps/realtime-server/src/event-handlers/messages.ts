@@ -4,18 +4,7 @@ import { getRandomGif } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 import { pgClient } from "../db/client";
-import { commandRegistry } from "../lib/commands";
-
-function getCommandTokens(text: string) {
-  const words = text.split(" ");
-  const wordsCopy = [...words];
-  const commandType = words[0].substring(1, words[0].length).toLowerCase();
-
-  wordsCopy.shift();
-  const commandPrompt = wordsCopy.join(" ");
-
-  return { words, commandType, commandPrompt };
-}
+import { commandRegistry, getCommandTokens } from "../lib/command-handler";
 
 export function handleSendMessage({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.SendMessage, async (payload) => {
@@ -53,6 +42,7 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
 
     const emittedMessage = {
       ...savedMessage,
+      circleId: payload.circleId,
       text: decrypt(savedMessage.text),
       sentBy: socket.data.user,
       createdAt: new Date(),
