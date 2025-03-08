@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useSocketContext } from "@/components/socket/socket-provider";
 
 export enum SocketEvent {
@@ -30,32 +30,31 @@ export enum SocketEvent {
   UserStoppedTyping = "user:stoppedTyping",
   UserExpandedImage = "user:expandedImage",
   UserClickedLink = "user:clickedLink",
-
   CreateNotification = "notification:create",
 }
-
-const cache = new Map();
 
 export function useSocketHandler<T>(
   eventName: SocketEvent,
   handler: (args: T) => void,
-  skip = false,
-  cacheKey?: string
+  skip = false
 ) {
   const { socket } = useSocketContext();
-  const key = cacheKey ?? eventName.toString();
+  const savedHandler = useRef(handler);
 
   useEffect(() => {
-    if (skip || cache.has(key)) return;
+    savedHandler.current = handler;
+  }, [handler]);
 
-    socket.on(eventName, handler);
-    cache.set(key, true);
+  useEffect(() => {
+    if (skip) return;
+
+    const listener = (args: T) => savedHandler.current(args);
+    socket.on(eventName, listener);
 
     return () => {
-      cache.delete(key);
-      socket.off(eventName, handler);
+      socket.off(eventName, listener);
     };
-  }, [eventName, handler, skip, socket, key]);
+  }, [eventName, skip, socket]);
 
   return socket;
 }
@@ -67,8 +66,7 @@ export function useSocketEmit<T>(eventName: SocketEvent) {
     (payload: T) => {
       socket.emit(eventName, payload);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eventName]
+    [eventName, socket]
   );
 
   return { emit };

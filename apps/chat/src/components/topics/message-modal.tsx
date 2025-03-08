@@ -7,7 +7,7 @@ import {
   DialogContent,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useFetch, usePrevious } from "@/lib/hooks";
+import { useFetch } from "@/lib/hooks";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Message, MessageProps } from "@/components/topics/message";
@@ -46,10 +46,7 @@ export function MessageModal() {
     skip: !messageId || Boolean(thisMessage),
   });
 
-  // avoids the message being blank while close animation
-  const _message = thisMessage ?? data;
-  const prevMessage = usePrevious(_message);
-  const message = prevMessage ?? _message;
+  const message = thisMessage ?? data;
 
   return (
     <Dialog
