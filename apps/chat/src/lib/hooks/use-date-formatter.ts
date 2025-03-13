@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useEffectOnce } from "./use-effect-once";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 
 function format(date: Date, options?: Intl.DateTimeFormatOptions) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
