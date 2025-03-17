@@ -1,3 +1,6 @@
+//export const dynamic = "force-dynamic";
+
+import { cache } from "react";
 import { prismaClient } from "@/lib/prisma/client";
 import { TopicHeader } from "@/components/topics/topic-header";
 import { TopicChat } from "@/components/topics/topic-chat";
@@ -17,31 +20,9 @@ type Props = {
   params: { topicId: string };
 };
 
-export async function generateMetadata({ params }: Props) {
+const getTopic = cache(async (id: string) => {
   const topic = await prismaClient.topic.getMeTopicById({
-    topicId: params.topicId,
-    select: {
-      id: true,
-      name: true,
-      parentCircle: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
-
-  return {
-    title: !topic
-      ? DEFAULT_TITLE
-      : `${topic.parentCircle.name} - ${topic.name}`,
-  };
-}
-
-export default async function TopicPage({ params }: Props) {
-  const topic = await prismaClient.topic.getMeTopicById({
-    topicId: params.topicId,
+    topicId: id,
     select: {
       id: true,
       name: true,
@@ -56,6 +37,22 @@ export default async function TopicPage({ params }: Props) {
       },
     },
   });
+
+  return topic;
+});
+
+export async function generateMetadata({ params }: Props) {
+  const topic = await getTopic(params.topicId);
+
+  return {
+    title: !topic
+      ? DEFAULT_TITLE
+      : `${topic.parentCircle.name} - ${topic.name}`,
+  };
+}
+
+export default async function TopicPage({ params }: Props) {
+  const topic = await getTopic(params.topicId);
 
   const queries = [
     prismaClient.message.getMessagesForTopic({
