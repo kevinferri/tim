@@ -7,6 +7,7 @@ import { UserDropDown } from "@/components/ui/user-dropdown";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { CirclesList } from "@/components/circles/circles-list";
 import { Circle } from "@prisma/client";
+import { MessageSoundToggle } from "@/components/dashboard/message-sound-toggle";
 
 type Props = {
   circles?: Circle[];
@@ -31,6 +32,7 @@ export const CirclesNav = async ({ circles }: Props) => {
       </ScrollArea>
 
       <div className="flex flex-col items-center mt-auto gap-3 px-3 py-2">
+        <MessageSoundToggle />
         <ThemeToggle />
         <UserDropDown />
       </div>

@@ -28,6 +28,7 @@ export function TopicChat() {
     loadMoreMessages,
     loadingMoreMessages,
     hasMoreMessages,
+    blopSoundRef,
   } = useCurrentTopicContext();
 
   const payload = { id: topicId, roomType: "topic" };
@@ -88,6 +89,7 @@ export function TopicChat() {
       })}
 
       <div ref={scrollRef} />
+      <audio ref={blopSoundRef} src="/sounds/blop.mp3" />
     </ScrollArea>
   );
 }

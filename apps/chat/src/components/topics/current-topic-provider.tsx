@@ -20,6 +20,7 @@ import { Highlight, User } from "@prisma/client";
 import { useEffectOnce, useLazyFetch, useWindowFocus } from "@/lib/hooks";
 import { WithRelation } from "../../../types/prisma";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
+import { useMessageSound } from "@/components/dashboard/use-message-sound";
 
 export type CircleMember = WithRelation<"User", "createdCircles">;
 
@@ -48,6 +49,7 @@ type ContextValue = {
   hasMoreMessages: boolean;
   loadMoreAnchorRef: MutableRefObject<HTMLDivElement | null>;
   loadMoreAnchorId: string;
+  blopSoundRef: MutableRefObject<HTMLAudioElement | null>;
   generatingCommand?: string;
   setGeneratingCommand: (command: string) => void;
 };
@@ -84,8 +86,10 @@ export function CurrentTopicProvider(props: Props) {
   const newestMessageRef = useRef<null | HTMLDivElement>(null);
   const messagesListRef = useRef<null | HTMLDivElement>(null);
   const loadMoreAnchorRef = useRef<null | HTMLDivElement>(null);
+  const blopSoundRef = useRef<null | HTMLAudioElement>(null);
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
+  const { isMessageSoundEnabled } = useMessageSound();
   const { markTopicAsUnread } = useUnreadTopics();
 
   const { fetchData: refreshTopHighlights } = useLazyFetch<MessageProps[]>({
@@ -214,6 +218,8 @@ export function CurrentTopicProvider(props: Props) {
           document.title = `(${newCount}) ${baseTitle}`;
           return newCount;
         });
+
+        if (isMessageSoundEnabled) blopSoundRef.current?.play();
       }
 
       scrollToBottomOfChat();
@@ -430,6 +436,7 @@ export function CurrentTopicProvider(props: Props) {
       loadingMoreMessages,
       hasMoreMessages,
       loadMoreAnchorRef,
+      blopSoundRef,
       loadMoreAnchorId,
       newestMessageRef,
       generatingCommand,
@@ -450,6 +457,7 @@ export function CurrentTopicProvider(props: Props) {
       loadingMoreMessages,
       hasMoreMessages,
       loadMoreAnchorRef,
+      blopSoundRef,
       loadMoreAnchorId,
       newestMessageRef,
       generatingCommand,
