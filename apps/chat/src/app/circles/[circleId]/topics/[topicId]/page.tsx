@@ -94,6 +94,8 @@ export default async function TopicPage({ params }: Props) {
           topicId={topic.id}
           circleId={topic.parentCircle.id}
           messagesLimit={MESSAGE_LIMIT}
+          topicName={topic.name}
+          circleName={topic.parentCircle.name}
           topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
           // @ts-expect-error
           existingCircleMemebers={circleMembers}

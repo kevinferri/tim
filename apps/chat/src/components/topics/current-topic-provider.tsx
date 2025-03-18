@@ -57,6 +57,8 @@ type ContextValue = {
 type Props = {
   topicId: string;
   circleId: string;
+  topicName: string;
+  circleName: string;
   existingMessages: MessageProps[];
   existingTopHighlights: MessageProps[];
   existingMediaMessages: MessageProps[];
@@ -133,7 +135,7 @@ export function CurrentTopicProvider(props: Props) {
     messages.length >= props.messagesLimit
   );
   const [generatingCommand, _setGeneratingCommand] = useState<string>();
-  const baseTitle = typeof document !== "undefined" ? document.title : "";
+  const baseTitle = `${props.circleName} - ${props.topicName}`;
 
   const addShufflingGif = useCallback(
     (messageId: string) => {
