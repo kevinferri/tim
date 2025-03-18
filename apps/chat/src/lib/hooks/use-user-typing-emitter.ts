@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { usePrevious } from "./use-previous";
+import { usePrevious } from "@/lib/hooks/use-previous";
 
 type Args = {
   topicId: string;

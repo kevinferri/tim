@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SocketEvent, useSocketHandler } from "../socket/use-socket";
+import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
 import { Highlights } from "@/components/topics/message";
 

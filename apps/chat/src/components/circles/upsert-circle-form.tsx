@@ -31,7 +31,7 @@ import { Circle, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { getInitials } from "../ui/user-avatar";
+import { getInitials } from "@/components/ui/user-avatar";
 import { uploadMedia } from "@/actions/media";
 import { toBase64 } from "@/lib/utils";
 
