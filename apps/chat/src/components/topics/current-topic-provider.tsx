@@ -133,11 +133,7 @@ export function CurrentTopicProvider(props: Props) {
     messages.length >= props.messagesLimit
   );
   const [generatingCommand, _setGeneratingCommand] = useState<string>();
-
-  const baseTitle = useMemo(
-    () => (typeof document !== "undefined" ? document.title : ""),
-    []
-  );
+  const baseTitle = typeof document !== "undefined" ? document.title : "";
 
   const addShufflingGif = useCallback(
     (messageId: string) => {

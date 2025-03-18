@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { cache } from "react";
 import { prismaClient } from "@/lib/prisma/client";
 import { TopicHeader } from "@/components/topics/topic-header";
