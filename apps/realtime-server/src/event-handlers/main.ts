@@ -22,6 +22,7 @@ import {
   handleUserStoppedTyping,
   handleUserTabBlurred,
   handleUserTabFocused,
+  handleUserUpdatedStatus,
 } from "./user-activity";
 
 export type HandlerArgs = {
@@ -68,7 +69,7 @@ export enum SocketEvent {
   UserStoppedTyping = "user:stoppedTyping",
   UserExpandedImage = "user:expandedImage",
   UserClickedLink = "user:clickedLink",
-
+  UserUpdatedStatus = "user:updatedStatus",
   // notifications
   CreateNotification = "notification:create",
 }
@@ -120,5 +121,6 @@ export function registerEventHandlers(server: Server) {
     handleUserStoppedTyping({ socket, server });
     handleUserExpandedImage({ socket, server });
     handleUserClickedLink({ socket, server });
+    handleUserUpdatedStatus({ socket, server });
   });
 }

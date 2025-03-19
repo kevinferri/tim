@@ -116,3 +116,17 @@ export function handleUserClickedLink({ socket, server }: HandlerArgs) {
     });
   });
 }
+
+export function handleUserUpdatedStatus({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.UserUpdatedStatus, async (payload) => {
+    const roomKey = getRoomKeyOrFail({
+      socket,
+      id: payload.circleId,
+      roomType: RoomType.Circle,
+    });
+
+    if (!roomKey) return;
+
+    server.to(roomKey).emit(SocketEvent.UserUpdatedStatus, payload);
+  });
+}
