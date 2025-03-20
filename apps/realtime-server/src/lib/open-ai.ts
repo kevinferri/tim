@@ -1,5 +1,6 @@
 import { decrypt } from "./encryption";
 import { pgClient } from "../db/client";
+import { commandRegistry } from "./command-handler";
 
 type User = { id: string; name: string };
 
@@ -45,10 +46,14 @@ function generatePrompt({
     day: "numeric",
   });
 
+  const timCommand = Object.keys(commandRegistry).find(
+    (key) => commandRegistry[key].execute === commandRegistry.tim.execute
+  );
+
   const prompts = [
     `Today is ${today}`,
     `You are a bot named "Tim" in a real time group chat with friends`,
-    `Within the chat, users prompt you with the command "/tim"`,
+    `Within the chat, users prompt you with the command "${timCommand}"`,
     `Only summarize the messages when you are explicity asked to, otherwise just respond to the prompt`,
     `The topic of the group chat is "${topicName}"`,
     `The person who just sent you a message is named "${toFirstName(
