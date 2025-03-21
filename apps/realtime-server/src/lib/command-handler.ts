@@ -27,6 +27,9 @@ export const commandRegistry: Record<string, Command> = {
   giphy: {
     execute: async (prompt) => getRandomGif(prompt),
   },
+  giph: {
+    execute: async (prompt) => getRandomGif(prompt),
+  },
   youtube: {
     execute: async (prompt) => getYoutubeVideo(prompt),
   },
