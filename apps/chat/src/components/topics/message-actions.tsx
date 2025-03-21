@@ -26,7 +26,7 @@ export function MessageActions(props: Props) {
   const showEdit = !isValidCommand(props.text);
   const isRandomGif =
     isGiphy(props.mediaUrl ?? undefined) &&
-    props.text?.split(" ")[0] === "/giphy";
+    ["/giphy", "/giph"].includes(props.text?.split(" ")[0]);
 
   return (
     <div

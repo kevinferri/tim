@@ -82,5 +82,5 @@ export function getTwitchStreamFromUrl(url: string) {
 
 export function isValidCommand(message: string) {
   const command = message.split(" ")[0].toLowerCase();
-  return ["/youtube", "/giphy", "/yt", "/tim"].includes(command);
+  return ["/youtube", "/giphy", "/giph", "/yt", "/tim"].includes(command);
 }
