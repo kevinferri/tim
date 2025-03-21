@@ -5,7 +5,7 @@ import { User } from "@prisma/client";
 
 export type Self = Pick<
   User,
-  "id" | "name" | "email" | "imageUrl" | "createdAt"
+  "id" | "name" | "email" | "imageUrl" | "createdAt" | "status"
 >;
 
 const SelfContext = createContext<Self | undefined>(undefined);

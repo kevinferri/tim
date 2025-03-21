@@ -82,6 +82,8 @@ export function TopicActiveUsers(props: Props) {
             createdAt={user.createdAt}
             variant={variant()}
             topicId={props.topicId}
+            status={user.status}
+            lastStatusUpdate={user.lastStatusUpdate}
           />
         );
       })}

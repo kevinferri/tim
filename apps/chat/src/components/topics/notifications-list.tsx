@@ -63,7 +63,11 @@ export function NotificationsList(props: Props) {
           >
             <div className="flex gap-3 p-3 items-start">
               <div className="flex">
-                <UserAvatar {...notification.actor} topicId={topicId} />
+                <UserAvatar
+                  {...notification.actor}
+                  topicId={topicId}
+                  showStatus={false}
+                />
               </div>
               <div className="flex flex-col gap-1 w-full">
                 <div className="text-sm text-muted-foreground mt-[-2px] flex items-center gap-1">

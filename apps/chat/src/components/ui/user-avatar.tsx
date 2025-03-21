@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SocketEvent, useSocketHandler } from "../socket/use-socket";
 
 export function getInitials(name?: string) {
   if (!name) return "?";
@@ -54,9 +55,12 @@ type Props = VariantProps<typeof variants> & {
   id: string;
   topicId?: string | null;
   name?: string | null;
+  status?: string | null;
   imageUrl?: string | null;
   createdAt?: Date;
   disableSheet?: boolean;
+  showStatus?: boolean;
+  lastStatusUpdate?: Date;
 };
 
 const variants = cva("shadow-md", {
@@ -83,32 +87,99 @@ function StatsLoader() {
   return <Skeleton className="w-[30px] h-8" />;
 }
 
+export const STATUS_COLOR = "bg-yellow-500";
+
+export type UserUpdatedStatusHandlerProps = {
+  user: {
+    name: string;
+    status?: string;
+    id: string;
+    lastStatusUpdate?: Date;
+  };
+};
+
 export function UserAvatar(props: Props) {
   const initials = getInitials(props.name ?? undefined);
   const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState(props.status);
+  const [lastStatusUpdate, setLastStatusUpdate] = useState(
+    props.lastStatusUpdate
+  );
   const since = useDateFormatter(props.createdAt, {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
+
   const { data } = useFetch<UserStatsForTopicResponse>({
     url: `/api/topics/${props.topicId}/user-stats/${props.id}`,
     skip: !props.topicId || !open,
   });
 
+  useSocketHandler<UserUpdatedStatusHandlerProps>(
+    SocketEvent.UpdateUserStatus,
+    (payload) => {
+      if (payload.user.id === props.id) {
+        setStatus(payload.user.status);
+        setLastStatusUpdate(payload.user.lastStatusUpdate);
+      }
+    }
+  );
+
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
+  const statusUpdatedOn = useDateFormatter(lastStatusUpdate);
+
+  const showStatus = Boolean(
+    typeof props.showStatus === "undefined" ? true : props.showStatus
+  );
+
+  const dot = (
+    <span
+      className={`border relative inline-flex rounded-full w-3 h-3 ${STATUS_COLOR}`}
+    />
+  );
 
   const trigger = (
-    <Avatar
-      onClick={() => setOpen(true)}
-      className={cn(
-        variants({ size: props.size, variant: props.variant }),
-        props.topicId ? "cursor-pointer hover:opacity-80" : ""
+    <div className="relative">
+      <Avatar
+        onClick={() => setOpen(true)}
+        className={cn(
+          variants({ size: props.size, variant: props.variant }),
+          props.topicId ? "cursor-pointer hover:opacity-80" : ""
+        )}
+      >
+        <AvatarImage
+          className="rounded-full"
+          src={props.imageUrl ?? undefined}
+        />
+        <AvatarFallback>{initials}</AvatarFallback>
+      </Avatar>
+
+      {status && showStatus && (
+        <TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <div className="cursor-pointer absolute flex right-0 bottom-[-1px]">
+                {dot}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <div className="flex flex-col">
+                <div className="flex gap-1 items-center font-medium">
+                  {dot} {status}
+                </div>
+                <div className="flex gap-1 items-center text-slate-500">
+                  <span>@ </span>
+                  {statusUpdatedOn && (
+                    <time className="text-[10px]">{statusUpdatedOn}</time>
+                  )}
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
-    >
-      <AvatarImage className="rounded-full" src={props.imageUrl ?? undefined} />
-      <AvatarFallback>{initials}</AvatarFallback>
-    </Avatar>
+    </div>
   );
 
   if (!props.topicId || !!props.disableSheet) return trigger;
