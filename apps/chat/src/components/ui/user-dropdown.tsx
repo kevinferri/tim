@@ -11,23 +11,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  UserAvatar,
-  UserUpdatedStatusHandlerProps,
-} from "@/components/ui/user-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useSelf } from "@/components/auth/self-provider";
 import { ConnectionStatus } from "@/components/socket/connection-status";
 import { SetStatusModal } from "@/components/dashboard/set-status-modal";
-import { updateUserStatus } from "@/actions/user-status";
-import { useUpdateStatusEmitter } from "@/lib/hooks/use-update-status-emitter";
+import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
+import { UserUpdatedStatusHandlerProps } from "@/components/dashboard/user-status";
 
 export function UserDropDown() {
   const self = useSelf();
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const updateStatusEmitter = useUpdateStatusEmitter();
+  const { updateStatus } = useUpdateUserStatus();
   const router = useRouter();
 
   useSocketHandler<UserUpdatedStatusHandlerProps>(
@@ -42,7 +39,7 @@ export function UserDropDown() {
         toast({
           description: `${
             payload.user.name.split(" ")[0]
-          } updated their status to ${payload.user.status}`,
+          } updated their status to "${payload.user.status}"`,
         });
       }
     }
@@ -78,10 +75,9 @@ export function UserDropDown() {
           <Separator />
           <DropdownMenuItem
             className="flex gap-3"
-            onClick={async () => {
+            onClick={() => {
               if (self.status) {
-                const resp = await updateUserStatus(null);
-                updateStatusEmitter.emit(resp);
+                updateStatus(null);
               } else {
                 setStatusModalOpen(true);
               }

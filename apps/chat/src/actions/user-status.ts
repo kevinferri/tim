@@ -1,14 +1,19 @@
 "use server";
 
-import { getLoggedInUserId } from "@/lib/session";
 import { prismaClient } from "@/lib/prisma/client";
 
 export async function updateUserStatus(status: string | null) {
-  const userId = await getLoggedInUserId();
-  if (!userId) return false;
+  const user = await prismaClient.user.getLoggedIn({
+    select: {
+      id: true,
+      status: true,
+    },
+  });
 
-  const user = await prismaClient.user.update({
-    where: { id: userId },
+  if (!user || user.status === status) return false;
+
+  const updatedUser = await prismaClient.user.update({
+    where: { id: user.id },
     data: { status, lastStatusUpdate: new Date() },
     select: {
       id: true,
@@ -18,5 +23,5 @@ export async function updateUserStatus(status: string | null) {
     },
   });
 
-  return { data: user };
+  return { data: updatedUser };
 }

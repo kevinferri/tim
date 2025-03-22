@@ -14,8 +14,8 @@ import {
 } from "@radix-ui/react-icons";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
-import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { updateUserStatus } from "@/actions/user-status";
+import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 
 type Props = {
   messageId: string;
@@ -30,9 +30,9 @@ type Props = {
 const DELAY_DURATION = 100;
 
 export function MessageActions(props: Props) {
-  const { topicId, circleId } = useCurrentTopicContext();
+  const { topicId } = useCurrentTopicContext();
+  const { updateStatus } = useUpdateUserStatus();
   const showEdit = !isValidCommand(props.text);
-  const updateUserStatusEmitter = useSocketEmit(SocketEvent.UpdateUserStatus);
   const isRandomGif =
     isGiphy(props.mediaUrl ?? undefined) &&
     props.text?.split(" ")[0] === "/giphy";
@@ -51,15 +51,8 @@ export function MessageActions(props: Props) {
               <Button
                 size="iconSm"
                 variant="outline"
-                onClick={async () => {
-                  const resp = await updateUserStatus(props.text);
-
-                  if (resp && resp.data) {
-                    updateUserStatusEmitter.emit({
-                      user: resp.data,
-                      circleId,
-                    });
-                  }
+                onClick={() => {
+                  updateStatus(props.text);
                 }}
               >
                 <SewingPinFilledIcon />

@@ -18,8 +18,8 @@ export function ConnectionStatus() {
   } = useSocketContext();
 
   const getCopy = () => {
-    if (Boolean(self.status)) return self.status;
     if (!isConnected) return "Disconnected";
+    if (Boolean(self.status)) return self.status;
     return "Connected";
   };
 
@@ -27,8 +27,8 @@ export function ConnectionStatus() {
     if (typeof isConnected === "undefined") return null;
 
     const getColor = () => {
-      if (Boolean(self.status)) return STATUS_COLOR;
       if (!isConnected) return "bg-red-600";
+      if (Boolean(self.status)) return STATUS_COLOR;
       return "bg-green-600";
     };
 

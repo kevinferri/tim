@@ -11,8 +11,7 @@ import { DialogClose } from "@/components/ui/dialog";
 import { useSelf } from "../auth/self-provider";
 import { Input } from "../ui/input";
 import { useState } from "react";
-import { updateUserStatus } from "@/actions/user-status";
-import { useUpdateStatusEmitter } from "@/lib/hooks/use-update-status-emitter";
+import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 
 type Props = {
   open?: boolean;
@@ -22,7 +21,7 @@ type Props = {
 export function SetStatusModal(props: Props) {
   const self = useSelf();
   const [status, setStatus] = useState(self.status);
-  const updateStatusEmitter = useUpdateStatusEmitter();
+  const { updateStatus } = useUpdateUserStatus();
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
@@ -35,10 +34,9 @@ export function SetStatusModal(props: Props) {
           </DialogDescription>
         </DialogHeader>
         <form
-          onSubmit={async (event) => {
+          onSubmit={(event) => {
             event.preventDefault();
-            const resp = await updateUserStatus(status);
-            updateStatusEmitter.emit(resp);
+            updateStatus(status);
           }}
         >
           <div className="flex flex-col gap-4">

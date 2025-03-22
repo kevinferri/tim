@@ -2,21 +2,23 @@ import { updateUserStatus } from "@/actions/user-status";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 
-export function useUpdateStatusEmitter() {
+export function useUpdateUserStatus() {
   const updateUserStatusEmitter = useSocketEmit(SocketEvent.UpdateUserStatus);
   const { getCircleIdsFromTopicMap } = useActiveCircleMembers();
   const circleIds = getCircleIdsFromTopicMap();
 
-  const emit = (payload: Awaited<ReturnType<typeof updateUserStatus>>) => {
-    if (payload && payload.data) {
+  const updateStatus = async (status: string | null) => {
+    const resp = await updateUserStatus(status);
+
+    if (resp && resp.data) {
       circleIds.forEach((circleId) => {
         updateUserStatusEmitter.emit({
-          user: payload.data,
+          user: resp.data,
           circleId,
         });
       });
     }
   };
 
-  return { emit };
+  return { updateStatus };
 }

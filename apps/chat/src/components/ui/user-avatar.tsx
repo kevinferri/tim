@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SocketEvent, useSocketHandler } from "../socket/use-socket";
+import { UserStatus } from "@/components/dashboard/user-status";
 
 export function getInitials(name?: string) {
   if (!name) return "?";
@@ -89,22 +89,9 @@ function StatsLoader() {
 
 export const STATUS_COLOR = "bg-yellow-500";
 
-export type UserUpdatedStatusHandlerProps = {
-  user: {
-    name: string;
-    status?: string;
-    id: string;
-    lastStatusUpdate?: Date;
-  };
-};
-
 export function UserAvatar(props: Props) {
-  const initials = getInitials(props.name ?? undefined);
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState(props.status);
-  const [lastStatusUpdate, setLastStatusUpdate] = useState(
-    props.lastStatusUpdate
-  );
+  const initials = getInitials(props.name ?? undefined);
   const since = useDateFormatter(props.createdAt, {
     day: "numeric",
     month: "short",
@@ -116,19 +103,7 @@ export function UserAvatar(props: Props) {
     skip: !props.topicId || !open,
   });
 
-  useSocketHandler<UserUpdatedStatusHandlerProps>(
-    SocketEvent.UpdateUserStatus,
-    (payload) => {
-      if (payload.user.id === props.id) {
-        setStatus(payload.user.status);
-        setLastStatusUpdate(payload.user.lastStatusUpdate);
-      }
-    }
-  );
-
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
-  const statusUpdatedOn = useDateFormatter(lastStatusUpdate);
-
   const showStatus = Boolean(
     typeof props.showStatus === "undefined" ? true : props.showStatus
   );
@@ -154,30 +129,12 @@ export function UserAvatar(props: Props) {
         />
         <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
-
-      {status && showStatus && (
-        <TooltipProvider>
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <div className="cursor-pointer absolute flex right-0 bottom-[-1px]">
-                {dot}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <div className="flex flex-col">
-                <div className="flex gap-1 items-center font-medium">
-                  {dot} {status}
-                </div>
-                <div className="flex gap-1 items-center text-slate-500">
-                  <span>@ </span>
-                  {statusUpdatedOn && (
-                    <time className="text-[10px]">{statusUpdatedOn}</time>
-                  )}
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      {showStatus && (
+        <UserStatus
+          status={props.status ?? undefined}
+          userId={props.id}
+          lastStatusUpdate={props.lastStatusUpdate}
+        />
       )}
     </div>
   );
@@ -198,7 +155,7 @@ export function UserAvatar(props: Props) {
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
-            <div className="flex flex-col items-center gap-0.5">
+            <div className="flex flex-col items-center gap-1">
               <div className="flex gap-2 items-center">
                 <div className="text-2xl font-semibold">
                   {props.name}{" "}
@@ -216,8 +173,18 @@ export function UserAvatar(props: Props) {
               </div>
 
               {since && (
-                <div className="flex items-center text-xs text-muted-foreground gap-1">
-                  <CalendarIcon /> Joined {since}
+                <div className="flex flex-col text-xs text-muted-foreground gap-1 items-center">
+                  <div className="flex items-center gap-1">
+                    <UserStatus
+                      status={props.status ?? undefined}
+                      userId={props.id}
+                      lastStatusUpdate={props.lastStatusUpdate}
+                      variant="minimal"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <CalendarIcon /> Joined {since}
+                  </div>
                 </div>
               )}
             </div>
