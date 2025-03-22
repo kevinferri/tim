@@ -14,7 +14,6 @@ import {
 } from "@radix-ui/react-icons";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
-import { updateUserStatus } from "@/actions/user-status";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 
 type Props = {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import {
   Tooltip,
@@ -8,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { useSelf } from "@/components/auth/self-provider";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
-import { useState } from "react";
-import { SocketEvent, useSocketHandler } from "../socket/use-socket";
+import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useDateFormatter } from "@/lib/hooks";
 
 type Props = {

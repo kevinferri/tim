@@ -13,8 +13,8 @@ import {
 import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats/[userId]/route";
 import { useState } from "react";
 import { Message, MessageProps } from "@/components/topics/message";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
 import {
+  TooltipProvider,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
