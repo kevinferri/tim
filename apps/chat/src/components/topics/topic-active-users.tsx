@@ -83,7 +83,7 @@ export function TopicActiveUsers(props: Props) {
             variant={variant()}
             topicId={props.topicId}
             status={user.status}
-            lastStatusUpdate={user.lastStatusUpdate}
+            lastStatusUpdate={user.lastStatusUpdate ?? undefined}
           />
         );
       })}
