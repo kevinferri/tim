@@ -14,7 +14,7 @@ export async function updateUserStatus(status: string | null) {
 
   const updatedUser = await prismaClient.user.update({
     where: { id: user.id },
-    data: { status, lastStatusUpdate: new Date() },
+    data: { status, lastStatusUpdate: Boolean(status) ? new Date() : null },
     select: {
       id: true,
       status: true,
