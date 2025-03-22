@@ -19,7 +19,7 @@ type Props = {
   topicId: string;
 };
 
-export const DeleteMessageModal = ({ messageId, topicId }: Props) => {
+export function DeleteMessageModal({ messageId, topicId }: Props) {
   const deleteMessage = useSocketEmit<Props>(SocketEvent.DeleteMessage);
 
   return (
@@ -59,4 +59,4 @@ export const DeleteMessageModal = ({ messageId, topicId }: Props) => {
       </DialogContent>
     </Dialog>
   );
-};
+}

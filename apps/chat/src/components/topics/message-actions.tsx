@@ -7,9 +7,14 @@ import {
 } from "@/components/ui/tooltip";
 import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
 import { isGiphy, isValidCommand } from "@/components/topics/message-utils";
-import { Pencil1Icon, UpdateIcon } from "@radix-ui/react-icons";
+import {
+  Pencil1Icon,
+  SewingPinFilledIcon,
+  UpdateIcon,
+} from "@radix-ui/react-icons";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
+import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 
 type Props = {
   messageId: string;
@@ -21,8 +26,11 @@ type Props = {
   className?: string;
 };
 
+const DELAY_DURATION = 100;
+
 export function MessageActions(props: Props) {
   const { topicId } = useCurrentTopicContext();
+  const { updateStatus } = useUpdateUserStatus();
   const showEdit = !isValidCommand(props.text);
   const isRandomGif =
     isGiphy(props.mediaUrl ?? undefined) &&
@@ -37,7 +45,21 @@ export function MessageActions(props: Props) {
     >
       <div className="flex gap-1">
         <TooltipProvider>
-          <Tooltip delayDuration={100}>
+          <Tooltip delayDuration={DELAY_DURATION}>
+            <TooltipTrigger asChild>
+              <Button
+                size="iconSm"
+                variant="outline"
+                onClick={() => {
+                  updateStatus(props.text);
+                }}
+              >
+                <SewingPinFilledIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Set as status</TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={DELAY_DURATION}>
             <TooltipTrigger asChild>
               {isRandomGif ? (
                 <Button
@@ -67,7 +89,7 @@ export function MessageActions(props: Props) {
             <TooltipContent>{isRandomGif ? "Shuffle" : "Edit"}</TooltipContent>
           </Tooltip>
 
-          <Tooltip delayDuration={100}>
+          <Tooltip delayDuration={DELAY_DURATION}>
             <TooltipTrigger>
               <DeleteMessageModal
                 messageId={props.messageId}

@@ -16,10 +16,12 @@ model User {
   updatedAt DateTime @default(now()) @updatedAt
 
   // Specific
-  name     String?
-  email    String? @unique
-  imageUrl String?
-  googleId String  @unique
+  name             String?
+  email            String? @unique
+  imageUrl         String?
+  googleId         String  @unique
+  status           String?
+  lastStatusUpdate DateTime?
 
   // Relations
   createdCircles    Circle[]       @relation("circlesCreatedByUser")

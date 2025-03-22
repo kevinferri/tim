@@ -40,6 +40,8 @@ export const DEFAULT_MESSAGE_SELECT = {
       name: true,
       imageUrl: true,
       createdAt: true,
+      status: true,
+      lastStatusUpdate: true,
     },
   },
 };

@@ -6,16 +6,31 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSelf } from "@/components/auth/self-provider";
+import { STATUS_COLOR } from "@/components/ui/user-avatar";
 
 const dotSize = "w-3 h-3";
 
 export function ConnectionStatus() {
+  const self = useSelf();
   const {
     socketState: { isConnected },
   } = useSocketContext();
 
+  const getCopy = () => {
+    if (!isConnected) return "Disconnected";
+    if (Boolean(self.status)) return self.status;
+    return "Connected";
+  };
+
   const dot = useMemo(() => {
     if (typeof isConnected === "undefined") return null;
+
+    const getColor = () => {
+      if (!isConnected) return "bg-red-600";
+      if (Boolean(self.status)) return STATUS_COLOR;
+      return "bg-green-600";
+    };
 
     return (
       <>
@@ -25,13 +40,11 @@ export function ConnectionStatus() {
           />
         )}
         <span
-          className={`border relative inline-flex rounded-full ${dotSize} ${
-            isConnected ? "bg-green-600" : "bg-red-600"
-          }`}
+          className={`border relative inline-flex rounded-full ${dotSize} ${getColor()}`}
         />
       </>
     );
-  }, [isConnected]);
+  }, [isConnected, self.status]);
 
   return (
     <TooltipProvider>
@@ -44,7 +57,7 @@ export function ConnectionStatus() {
         <TooltipContent side="right">
           <div className="flex gap-1.5 items-center">
             {dot}
-            <div>{isConnected ? "Connected" : "Disconnected"}</div>
+            <div>{getCopy()}</div>
           </div>
         </TooltipContent>
       </Tooltip>

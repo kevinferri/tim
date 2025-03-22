@@ -38,7 +38,10 @@ export type MessageProps = {
   text?: DbMessage["text"];
   mediaUrl?: DbMessage["mediaUrl"];
   createdAt: DbMessage["createdAt"];
-  sentBy: Pick<User, "id" | "name" | "imageUrl" | "createdAt">;
+  sentBy: Pick<
+    User,
+    "id" | "name" | "imageUrl" | "createdAt" | "status" | "lastStatusUpdate"
+  >;
   highlights: Highlights;
   variant: "default" | "minimal";
   className?: string;
@@ -180,6 +183,8 @@ export const Message = (props: MessageProps) => {
             createdAt={props.sentBy.createdAt}
             topicId={topicId}
             disableSheet={props.context === "user-sheet"}
+            status={props.sentBy.status}
+            lastStatusUpdate={props.sentBy.lastStatusUpdate ?? undefined}
           />
         )}
 

@@ -273,6 +273,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                                         imageUrl={user.imageUrl}
                                         createdAt={user.createdAt}
                                         size="xs"
+                                        showStatus={false}
                                       />
                                     );
                                   })}
@@ -308,6 +309,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                                 imageUrl={user.imageUrl}
                                 createdAt={user.createdAt}
                                 size="xs"
+                                showStatus={false}
                               />
                             ))}
                           </div>

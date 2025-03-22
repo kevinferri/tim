@@ -189,6 +189,7 @@ export function CirclesList(props: Props) {
                             imageUrl={user.imageUrl}
                             createdAt={user.createdAt}
                             size="xs"
+                            showStatus={false}
                           />
                         );
                       })}

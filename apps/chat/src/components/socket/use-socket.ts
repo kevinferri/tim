@@ -31,6 +31,7 @@ export enum SocketEvent {
   UserExpandedImage = "user:expandedImage",
   UserClickedLink = "user:clickedLink",
   CreateNotification = "notification:create",
+  UpdateUserStatus = "user:updatedStatus",
 }
 
 export function useSocketHandler<T>(

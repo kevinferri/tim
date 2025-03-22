@@ -26,6 +26,8 @@ const getLoggedInUser = cache(async () => {
       email: true,
       imageUrl: true,
       createdAt: true,
+      status: true,
+      lastStatusUpdate: true,
     },
   });
 

@@ -13,14 +13,15 @@ import {
 import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats/[userId]/route";
 import { useState } from "react";
 import { Message, MessageProps } from "@/components/topics/message";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
 import {
+  TooltipProvider,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { UserStatus } from "@/components/dashboard/user-status";
 
 export function getInitials(name?: string) {
   if (!name) return "?";
@@ -54,9 +55,12 @@ type Props = VariantProps<typeof variants> & {
   id: string;
   topicId?: string | null;
   name?: string | null;
+  status?: string | null;
   imageUrl?: string | null;
   createdAt?: Date;
   disableSheet?: boolean;
+  showStatus?: boolean;
+  lastStatusUpdate?: Date;
 };
 
 const variants = cva("shadow-md", {
@@ -83,32 +87,56 @@ function StatsLoader() {
   return <Skeleton className="w-[30px] h-8" />;
 }
 
+export const STATUS_COLOR = "bg-yellow-500";
+
 export function UserAvatar(props: Props) {
-  const initials = getInitials(props.name ?? undefined);
   const [open, setOpen] = useState(false);
+  const initials = getInitials(props.name ?? undefined);
   const since = useDateFormatter(props.createdAt, {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
+
   const { data } = useFetch<UserStatsForTopicResponse>({
     url: `/api/topics/${props.topicId}/user-stats/${props.id}`,
     skip: !props.topicId || !open,
   });
 
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
+  const showStatus = Boolean(
+    typeof props.showStatus === "undefined" ? true : props.showStatus
+  );
+
+  const dot = (
+    <span
+      className={`border relative inline-flex rounded-full w-3 h-3 ${STATUS_COLOR}`}
+    />
+  );
 
   const trigger = (
-    <Avatar
-      onClick={() => setOpen(true)}
-      className={cn(
-        variants({ size: props.size, variant: props.variant }),
-        props.topicId ? "cursor-pointer hover:opacity-80" : ""
+    <div className="relative">
+      <Avatar
+        onClick={() => setOpen(true)}
+        className={cn(
+          variants({ size: props.size, variant: props.variant }),
+          props.topicId ? "cursor-pointer hover:opacity-80" : ""
+        )}
+      >
+        <AvatarImage
+          className="rounded-full"
+          src={props.imageUrl ?? undefined}
+        />
+        <AvatarFallback>{initials}</AvatarFallback>
+      </Avatar>
+      {showStatus && (
+        <UserStatus
+          status={props.status ?? undefined}
+          userId={props.id}
+          lastStatusUpdate={props.lastStatusUpdate}
+        />
       )}
-    >
-      <AvatarImage className="rounded-full" src={props.imageUrl ?? undefined} />
-      <AvatarFallback>{initials}</AvatarFallback>
-    </Avatar>
+    </div>
   );
 
   if (!props.topicId || !!props.disableSheet) return trigger;
@@ -127,7 +155,7 @@ export function UserAvatar(props: Props) {
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
-            <div className="flex flex-col items-center gap-0.5">
+            <div className="flex flex-col items-center gap-1">
               <div className="flex gap-2 items-center">
                 <div className="text-2xl font-semibold">
                   {props.name}{" "}
@@ -145,8 +173,18 @@ export function UserAvatar(props: Props) {
               </div>
 
               {since && (
-                <div className="flex items-center text-xs text-muted-foreground gap-1">
-                  <CalendarIcon /> Joined {since}
+                <div className="flex flex-col text-xs text-muted-foreground gap-1 items-center">
+                  <div className="flex items-center gap-1">
+                    <UserStatus
+                      status={props.status ?? undefined}
+                      userId={props.id}
+                      lastStatusUpdate={props.lastStatusUpdate}
+                      variant="minimal"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <CalendarIcon /> Joined {since}
+                  </div>
                 </div>
               )}
             </div>

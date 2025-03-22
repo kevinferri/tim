@@ -8,6 +8,7 @@ import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useDebounce } from "@/lib/hooks";
 
 type ActiveUser = Self & { state: { isIdle: boolean; isTyping: boolean } };
+
 type TopicMap = Record<string, { activeUsers: ActiveUser[]; circleId: string }>;
 
 type Store = {
@@ -24,8 +25,14 @@ export function useActiveCircleMembers() {
   const topicMap = useStore(useShallow((state) => state.topicMap));
   const setTopicMap = useStore((state) => state.setTopicMap);
   const debounced = useDebounce(topicMap, 250);
+
   const getActiveMembersInTopic = (topicId: string) =>
     uniqBy(topicMap?.[topicId]?.activeUsers ?? [], "id");
+
+  const getCircleIdsFromTopicMap = () =>
+    Object.values(topicMap)
+      .map((topic) => topic.circleId)
+      .filter((circleId, index, self) => self.indexOf(circleId) === index);
 
   useSocketHandler<{
     topicMap: TopicMap;
@@ -53,5 +60,9 @@ export function useActiveCircleMembers() {
     });
   });
 
-  return { topicMap: debounced, getActiveMembersInTopic };
+  return {
+    topicMap: debounced,
+    getActiveMembersInTopic,
+    getCircleIdsFromTopicMap,
+  };
 }

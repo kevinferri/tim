@@ -75,6 +75,8 @@ export default async function TopicPage({ params }: Props) {
         name: true,
         imageUrl: true,
         createdAt: true,
+        status: true,
+        lastStatusUpdate: true,
         createdCircles: {
           select: {
             id: true,
