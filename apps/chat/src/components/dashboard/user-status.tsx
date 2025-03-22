@@ -99,7 +99,7 @@ export function UserStatus(props: Props) {
                 </Button>
               )}
             </div>
-            <div className="flex gap-1 items-center text-slate-300 dark:text-slate-500">
+            <div className="flex ml-4 text-slate-300 dark:text-slate-500">
               {statusUpdatedOn && (
                 <span className="text-[10px]">
                   since <time>{statusUpdatedOn}</time>
