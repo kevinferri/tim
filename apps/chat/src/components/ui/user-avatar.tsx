@@ -170,7 +170,7 @@ export function UserAvatar(props: Props) {
                 <div className="flex flex-col text-xs text-muted-foreground gap-1 items-center">
                   <div className="flex items-center gap-1">
                     <UserStatus
-                      status={props.status ?? undefined}
+                      status={props.status}
                       userId={props.id}
                       lastStatusUpdate={props.lastStatusUpdate}
                       variant="minimal"
