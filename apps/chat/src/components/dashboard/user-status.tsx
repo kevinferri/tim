@@ -69,7 +69,7 @@ export function UserStatus(props: Props) {
     <TooltipProvider>
       <Tooltip delayDuration={100}>
         <TooltipTrigger asChild>
-          <div className="cursor-pointer absolute flex right-0 bottom-[-1px]">
+          <div className="cursor-pointer absolute flex right-0 bottom-0">
             {dot}
           </div>
         </TooltipTrigger>

@@ -108,12 +108,6 @@ export function UserAvatar(props: Props) {
     typeof props.showStatus === "undefined" ? true : props.showStatus
   );
 
-  const dot = (
-    <span
-      className={`border relative inline-flex rounded-full w-3 h-3 ${STATUS_COLOR}`}
-    />
-  );
-
   const trigger = (
     <div className="relative">
       <Avatar
