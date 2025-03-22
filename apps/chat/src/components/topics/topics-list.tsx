@@ -274,6 +274,8 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                                         createdAt={user.createdAt}
                                         size="xs"
                                         showStatus={false}
+                                        status={user.status}
+                                        lastStatusUpdate={user.lastStatusUpdate}
                                       />
                                     );
                                   })}
@@ -310,6 +312,8 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                                 createdAt={user.createdAt}
                                 size="xs"
                                 showStatus={false}
+                                status={user.status}
+                                lastStatusUpdate={user.lastStatusUpdate}
                               />
                             ))}
                           </div>

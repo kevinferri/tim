@@ -13,9 +13,9 @@ import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useDateFormatter } from "@/lib/hooks";
 
 type Props = {
-  status?: string;
+  status: string | null;
   userId: string;
-  lastStatusUpdate?: Date;
+  lastStatusUpdate: Date | null;
   variant?: "minimal" | "tooltip";
 };
 
@@ -37,7 +37,14 @@ export function UserStatus(props: Props) {
   const [lastStatusUpdate, setLastStatusUpdate] = useState(
     props.lastStatusUpdate
   );
-  const statusUpdatedOn = useDateFormatter(lastStatusUpdate);
+
+  const statusUpdatedOn = useDateFormatter(lastStatusUpdate ?? undefined, {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   const variant = props.variant ?? "tooltip";
   const dot = (
     <span
@@ -49,8 +56,8 @@ export function UserStatus(props: Props) {
     SocketEvent.UpdateUserStatus,
     (payload) => {
       if (payload.user.id === props.userId) {
-        setStatus(payload.user.status);
-        setLastStatusUpdate(payload.user.lastStatusUpdate);
+        setStatus(payload.user.status ?? null);
+        setLastStatusUpdate(payload.user.lastStatusUpdate ?? null);
       }
     }
   );
@@ -75,8 +82,8 @@ export function UserStatus(props: Props) {
         </TooltipTrigger>
         <TooltipContent side="right">
           <div className="flex flex-col">
-            <div className="flex gap-1 items-center font-medium">
-              <span className="flex gap-1 items-center">
+            <div className="flex gap-1 items-center">
+              <span className="flex gap-1 items-center text-sm">
                 {dot} {status}
               </span>
               {self.id === props.userId && (
@@ -92,10 +99,11 @@ export function UserStatus(props: Props) {
                 </Button>
               )}
             </div>
-            <div className="flex gap-1 items-center text-slate-300 dark:text-slate-500 text-[14px]">
-              <span>@ </span>
+            <div className="flex gap-1 items-center text-slate-300 dark:text-slate-500">
               {statusUpdatedOn && (
-                <time className="text-[10px] mt-0.5">{statusUpdatedOn}</time>
+                <span className="text-[10px]">
+                  since <time>{statusUpdatedOn}</time>
+                </span>
               )}
             </div>
           </div>

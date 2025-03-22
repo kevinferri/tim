@@ -67,6 +67,8 @@ export function NotificationsList(props: Props) {
                   {...notification.actor}
                   topicId={topicId}
                   showStatus={false}
+                  status={null}
+                  lastStatusUpdate={null}
                 />
               </div>
               <div className="flex flex-col gap-1 w-full">

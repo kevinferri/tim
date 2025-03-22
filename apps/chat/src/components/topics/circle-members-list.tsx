@@ -16,8 +16,8 @@ type MemberProps = {
   imageUrl: string;
   isAdmin: boolean;
   createdAt?: Date;
-  status?: string;
-  lastStatusUpdate?: Date;
+  status: string | null;
+  lastStatusUpdate: Date | null;
 };
 
 function Member(props: MemberProps) {
@@ -40,7 +40,7 @@ function Member(props: MemberProps) {
           lastStatusUpdate={props.lastStatusUpdate}
           createdAt={props.createdAt}
         />
-        {!props.status && (
+        {!Boolean(props.status) && (
           <div
             className={`absolute right-0 bottom-1.5 rounded-full h-3 w-3 border ${
               props.isOnline ? "bg-green-600" : "bg-slate-400"
@@ -48,7 +48,6 @@ function Member(props: MemberProps) {
           />
         )}
       </div>
-
       <div>{props.name}</div>
       <div className="ml-auto">
         <Badge variant="secondary">{props.isAdmin ? "Admin" : "Member"}</Badge>
@@ -109,7 +108,8 @@ export function CircleMembersList() {
             isOnline
             isAdmin={user.isCreator}
             createdAt={user.createdAt}
-            status={user.status ?? undefined}
+            status={user.status}
+            lastStatusUpdate={user.lastStatusUpdate}
           />
         );
       })}
@@ -125,7 +125,8 @@ export function CircleMembersList() {
             isOnline={false}
             isAdmin={user.isCreator}
             createdAt={user.createdAt}
-            status={user.status ?? undefined}
+            status={user.status}
+            lastStatusUpdate={user.lastStatusUpdate}
           />
         );
       })}

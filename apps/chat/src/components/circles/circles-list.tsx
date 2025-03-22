@@ -183,13 +183,15 @@ export function CirclesList(props: Props) {
                       {activeUsers.map((user) => {
                         return (
                           <UserAvatar
+                            size="xs"
+                            showStatus={false}
                             key={user.id}
                             id={user.id}
                             name={user.name}
                             imageUrl={user.imageUrl}
                             createdAt={user.createdAt}
-                            size="xs"
-                            showStatus={false}
+                            status={user.status}
+                            lastStatusUpdate={user.lastStatusUpdate}
                           />
                         );
                       })}

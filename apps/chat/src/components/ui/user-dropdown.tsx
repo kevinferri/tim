@@ -65,6 +65,8 @@ export function UserDropDown() {
                 name={self.name}
                 imageUrl={self.imageUrl}
                 showStatus={false}
+                status={self.status}
+                lastStatusUpdate={self.lastStatusUpdate}
               />
             </Button>
             <ConnectionStatus />

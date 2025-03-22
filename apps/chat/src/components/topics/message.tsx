@@ -184,7 +184,7 @@ export const Message = (props: MessageProps) => {
             topicId={topicId}
             disableSheet={props.context === "user-sheet"}
             status={props.sentBy.status}
-            lastStatusUpdate={props.sentBy.lastStatusUpdate ?? undefined}
+            lastStatusUpdate={props.sentBy.lastStatusUpdate}
           />
         )}
 

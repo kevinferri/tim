@@ -55,12 +55,12 @@ type Props = VariantProps<typeof variants> & {
   id: string;
   topicId?: string | null;
   name?: string | null;
-  status?: string | null;
+  status: string | null;
+  lastStatusUpdate: Date | null;
   imageUrl?: string | null;
   createdAt?: Date;
   disableSheet?: boolean;
   showStatus?: boolean;
-  lastStatusUpdate?: Date;
 };
 
 const variants = cva("shadow-md", {
@@ -125,7 +125,7 @@ export function UserAvatar(props: Props) {
       </Avatar>
       {showStatus && (
         <UserStatus
-          status={props.status ?? undefined}
+          status={props.status}
           userId={props.id}
           lastStatusUpdate={props.lastStatusUpdate}
         />
