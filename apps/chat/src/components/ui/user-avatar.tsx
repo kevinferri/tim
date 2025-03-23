@@ -65,6 +65,7 @@ type Props = VariantProps<typeof variants> & {
   createdAt?: Date;
   disableSheet?: boolean;
   showStatus?: boolean;
+  isOnline?: boolean;
 };
 
 const variants = cva("shadow-md", {
@@ -90,8 +91,6 @@ const variants = cva("shadow-md", {
 function StatsLoader() {
   return <Skeleton className="w-[30px] h-8" />;
 }
-
-export const STATUS_COLOR = "bg-yellow-500";
 
 export function UserAvatar(props: Props) {
   const [open, setOpen] = useState(false);
@@ -123,9 +122,8 @@ export function UserAvatar(props: Props) {
   );
 
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
-  const showStatus = Boolean(
-    typeof props.showStatus === "undefined" ? true : props.showStatus
-  );
+  const showStatus =
+    typeof props.showStatus === "undefined" ? true : props.showStatus;
 
   const trigger = (
     <div className="relative">
@@ -147,6 +145,7 @@ export function UserAvatar(props: Props) {
           status={status}
           userId={props.id}
           lastStatusUpdate={lastStatusUpdate}
+          isOnline={props.isOnline}
         />
       )}
     </div>

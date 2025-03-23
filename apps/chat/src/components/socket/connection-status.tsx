@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSelf } from "@/components/auth/self-provider";
-import { STATUS_COLOR } from "@/components/ui/user-avatar";
+import { STATUS_COLOR } from "@/components/dashboard/user-status";
 
 const dotSize = "w-3 h-3";
 

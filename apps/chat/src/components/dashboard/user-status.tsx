@@ -15,6 +15,7 @@ type Props = {
   userId: string;
   lastStatusUpdate: Date | null;
   variant?: "minimal" | "tooltip";
+  isOnline?: boolean;
 };
 
 export const STATUS_COLOR = "bg-yellow-500";
@@ -32,6 +33,18 @@ export function UserStatus(props: Props) {
   const self = useSelf();
   const { updateStatus } = useUpdateUserStatus();
 
+  const getDotColor = () => {
+    if (props.status) return STATUS_COLOR;
+    if (Boolean(props.isOnline)) return "bg-green-600";
+    return "bg-slate-400";
+  };
+
+  const getTooltipContent = () => {
+    if (props.status) return props.status;
+    if (Boolean(props.isOnline)) return "Online";
+    return "Offline";
+  };
+
   const statusUpdatedOn = useDateFormatter(
     props.lastStatusUpdate ?? undefined,
     {
@@ -45,16 +58,16 @@ export function UserStatus(props: Props) {
   const variant = props.variant ?? "tooltip";
   const dot = (
     <span
-      className={`border relative inline-flex rounded-full w-3 h-3 ${STATUS_COLOR}`}
+      className={`border relative inline-flex rounded-full w-3 h-3 ${getDotColor()}`}
     />
   );
 
-  if (!props.status) return null;
+  if (!props.status && typeof props.isOnline === "undefined") return null;
 
   if (variant === "minimal") {
     return (
       <>
-        {dot} {props.status} since {statusUpdatedOn}
+        {dot} {getTooltipContent()} since {statusUpdatedOn}
       </>
     );
   }
@@ -67,34 +80,36 @@ export function UserStatus(props: Props) {
             {dot}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="right">
-          <div className="flex flex-col">
-            <div className="flex gap-1 items-center">
-              <span className="flex gap-1 items-center text-sm">
-                {dot} {props.status}
-              </span>
-              {self.id === props.userId && (
-                <Button
-                  variant="ghost"
-                  size="iconSm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    updateStatus(null);
-                  }}
-                >
-                  <CrossCircledIcon />
-                </Button>
-              )}
-            </div>
-            <div className="flex ml-4 text-slate-300 dark:text-slate-500">
-              {statusUpdatedOn && (
-                <span className="text-[10px]">
-                  since <time>{statusUpdatedOn}</time>
+        {props.status && (
+          <TooltipContent side="right">
+            <div className="flex flex-col">
+              <div className="flex gap-1 items-center">
+                <span className="flex gap-1 items-center text-sm">
+                  {dot} {getTooltipContent()}
                 </span>
-              )}
+                {self.id === props.userId && props.status && (
+                  <Button
+                    variant="ghost"
+                    size="iconSm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      updateStatus(null);
+                    }}
+                  >
+                    <CrossCircledIcon />
+                  </Button>
+                )}
+              </div>
+              <div className="flex ml-4 text-slate-300 dark:text-slate-500">
+                {statusUpdatedOn && (
+                  <span className="text-[10px]">
+                    since <time>{statusUpdatedOn}</time>
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        </TooltipContent>
+          </TooltipContent>
+        )}
       </Tooltip>
     </TooltipProvider>
   );

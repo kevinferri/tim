@@ -39,14 +39,8 @@ function Member(props: MemberProps) {
           status={props.status}
           lastStatusUpdate={props.lastStatusUpdate}
           createdAt={props.createdAt}
+          isOnline={props.isOnline}
         />
-        {!Boolean(props.status) && (
-          <div
-            className={`absolute right-0 bottom-[6px] rounded-full h-3 w-3 border ${
-              props.isOnline ? "bg-green-600" : "bg-slate-400"
-            }`}
-          />
-        )}
       </div>
       <div>{props.name}</div>
       <div className="ml-auto">
