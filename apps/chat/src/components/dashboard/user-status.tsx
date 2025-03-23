@@ -39,12 +39,6 @@ export function UserStatus(props: Props) {
     return "bg-slate-400";
   };
 
-  const getTooltipContent = () => {
-    if (props.status) return props.status;
-    if (Boolean(props.isOnline)) return "Online";
-    return "Offline";
-  };
-
   const statusUpdatedOn = useDateFormatter(
     props.lastStatusUpdate ?? undefined,
     {
@@ -85,7 +79,7 @@ export function UserStatus(props: Props) {
             <div className="flex flex-col">
               <div className="flex gap-1 items-center">
                 <span className="flex gap-1 items-center text-sm">
-                  {dot} {getTooltipContent()}
+                  {dot} {props.status}
                 </span>
                 {self.id === props.userId && props.status && (
                   <Button
