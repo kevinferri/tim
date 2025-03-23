@@ -113,7 +113,6 @@ export function UserAvatar(props: Props) {
   useSocketHandler<UserUpdatedStatusHandlerProps>(
     SocketEvent.UpdateUserStatus,
     (payload) => {
-      console.log("going");
       if (payload.user.id === props.id) {
         setStatus(payload.user.status ?? null);
         setLastStatusUpdate(payload.user.lastStatusUpdate ?? null);

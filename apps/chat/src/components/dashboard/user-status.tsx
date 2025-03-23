@@ -61,7 +61,7 @@ export function UserStatus(props: Props) {
   if (variant === "minimal") {
     return (
       <>
-        {dot} {getTooltipContent()} since {statusUpdatedOn}
+        {dot} {props.status} since {statusUpdatedOn}
       </>
     );
   }
@@ -82,16 +82,20 @@ export function UserStatus(props: Props) {
                   {dot} {props.status}
                 </span>
                 {self.id === props.userId && props.status && (
-                  <Button
-                    variant="ghost"
-                    size="iconSm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      updateStatus(null);
-                    }}
-                  >
-                    <CrossCircledIcon />
-                  </Button>
+                  <div>
+                    <Button
+                      asChild
+                      className="p-1"
+                      variant="ghost"
+                      size="iconSm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        updateStatus(null);
+                      }}
+                    >
+                      <CrossCircledIcon />
+                    </Button>
+                  </div>
                 )}
               </div>
               <div className="flex ml-4 text-slate-300 dark:text-slate-500">
