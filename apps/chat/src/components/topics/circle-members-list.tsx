@@ -42,7 +42,7 @@ function Member(props: MemberProps) {
         />
         {!Boolean(props.status) && (
           <div
-            className={`absolute right-0 bottom-1.5 rounded-full h-3 w-3 border ${
+            className={`absolute right-0 bottom-[6px] rounded-full h-3 w-3 border ${
               props.isOnline ? "bg-green-600" : "bg-slate-400"
             }`}
           />

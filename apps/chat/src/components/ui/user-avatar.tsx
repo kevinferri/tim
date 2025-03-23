@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserStatus } from "@/components/dashboard/user-status";
+import {
+  UserStatus,
+  UserUpdatedStatusHandlerProps,
+} from "@/components/dashboard/user-status";
+import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 
 export function getInitials(name?: string) {
   if (!name) return "?";
@@ -92,6 +96,10 @@ export const STATUS_COLOR = "bg-yellow-500";
 export function UserAvatar(props: Props) {
   const [open, setOpen] = useState(false);
   const initials = getInitials(props.name ?? undefined);
+  const [status, setStatus] = useState(props.status);
+  const [lastStatusUpdate, setLastStatusUpdate] = useState(
+    props.lastStatusUpdate
+  );
   const since = useDateFormatter(props.createdAt, {
     day: "numeric",
     month: "short",
@@ -102,6 +110,17 @@ export function UserAvatar(props: Props) {
     url: `/api/topics/${props.topicId}/user-stats/${props.id}`,
     skip: !props.topicId || !open,
   });
+
+  useSocketHandler<UserUpdatedStatusHandlerProps>(
+    SocketEvent.UpdateUserStatus,
+    (payload) => {
+      console.log("going");
+      if (payload.user.id === props.id) {
+        setStatus(payload.user.status ?? null);
+        setLastStatusUpdate(payload.user.lastStatusUpdate ?? null);
+      }
+    }
+  );
 
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
   const showStatus = Boolean(
@@ -125,9 +144,9 @@ export function UserAvatar(props: Props) {
       </Avatar>
       {showStatus && (
         <UserStatus
-          status={props.status}
+          status={status}
           userId={props.id}
-          lastStatusUpdate={props.lastStatusUpdate}
+          lastStatusUpdate={lastStatusUpdate}
         />
       )}
     </div>
@@ -170,9 +189,9 @@ export function UserAvatar(props: Props) {
                 <div className="flex flex-col text-xs text-muted-foreground gap-1 items-center">
                   <div className="flex items-center gap-1">
                     <UserStatus
-                      status={props.status}
+                      status={status}
                       userId={props.id}
-                      lastStatusUpdate={props.lastStatusUpdate}
+                      lastStatusUpdate={lastStatusUpdate}
                       variant="minimal"
                     />
                   </div>

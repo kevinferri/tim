@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import {
   Tooltip,
@@ -9,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { useSelf } from "@/components/auth/self-provider";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
-import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useDateFormatter } from "@/lib/hooks";
 
 type Props = {
@@ -33,17 +31,16 @@ export type UserUpdatedStatusHandlerProps = {
 export function UserStatus(props: Props) {
   const self = useSelf();
   const { updateStatus } = useUpdateUserStatus();
-  const [status, setStatus] = useState(props.status);
-  const [lastStatusUpdate, setLastStatusUpdate] = useState(
-    props.lastStatusUpdate
-  );
 
-  const statusUpdatedOn = useDateFormatter(lastStatusUpdate ?? undefined, {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const statusUpdatedOn = useDateFormatter(
+    props.lastStatusUpdate ?? undefined,
+    {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  );
 
   const variant = props.variant ?? "tooltip";
   const dot = (
@@ -52,22 +49,12 @@ export function UserStatus(props: Props) {
     />
   );
 
-  useSocketHandler<UserUpdatedStatusHandlerProps>(
-    SocketEvent.UpdateUserStatus,
-    (payload) => {
-      if (payload.user.id === props.userId) {
-        setStatus(payload.user.status ?? null);
-        setLastStatusUpdate(payload.user.lastStatusUpdate ?? null);
-      }
-    }
-  );
+  if (!props.status) return null;
 
-  if (!status) return null;
-
-  if (props.variant === "minimal") {
+  if (variant === "minimal") {
     return (
       <>
-        {dot} {status} @ {statusUpdatedOn}
+        {dot} {props.status} since {statusUpdatedOn}
       </>
     );
   }
@@ -84,7 +71,7 @@ export function UserStatus(props: Props) {
           <div className="flex flex-col">
             <div className="flex gap-1 items-center">
               <span className="flex gap-1 items-center text-sm">
-                {dot} {status}
+                {dot} {props.status}
               </span>
               {self.id === props.userId && (
                 <Button
