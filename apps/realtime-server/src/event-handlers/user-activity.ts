@@ -1,4 +1,7 @@
-import { handleActiveUserStateChange } from "../lib/active-user-state";
+import {
+  handleActiveUserAttributeChange,
+  handleActiveUserStateChange,
+} from "../lib/active-user-state";
 import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
@@ -125,7 +128,12 @@ export function handleUserUpdatedStatus({ socket, server }: HandlerArgs) {
       roomType: RoomType.Circle,
     });
 
-    if (!roomKey) return;
+    if (!roomKey || payload.user.id !== socket.data.user.id) return;
+
+    handleActiveUserAttributeChange(socket, {
+      status: payload.user.status,
+      lastStatusUpdate: payload.user.lastStatusUpdate,
+    });
 
     server.to(roomKey).emit(SocketEvent.UserUpdatedStatus, payload);
   });

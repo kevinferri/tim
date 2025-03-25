@@ -26,3 +26,17 @@ export function handleActiveUserStateChange(
 
   return socket.data.user.state;
 }
+
+export function handleActiveUserAttributeChange(
+  socket: Socket,
+  next: Record<string, unknown>
+) {
+  const cur = socket.data.user;
+
+  socket.data.user = {
+    ...cur,
+    ...next,
+  };
+
+  return socket.data.user;
+}
