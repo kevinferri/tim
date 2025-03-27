@@ -1,7 +1,7 @@
 import {
   handleActiveUserAttributeChange,
   handleActiveUserStateChange,
-} from "../lib/active-user-state";
+} from "../lib/user-change-handler";
 import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";

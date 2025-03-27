@@ -57,6 +57,12 @@ export const commandRegistry: Record<string, Command> = {
   },
 };
 
+export function findCommandKeyByExecute(command: Command) {
+  return Object.keys(commandRegistry).find(
+    (key) => commandRegistry[key].execute === command.execute
+  );
+}
+
 export function getCommandTokens(text: string) {
   const words = text.split(" ");
   const wordsCopy = [...words];

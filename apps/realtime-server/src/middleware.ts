@@ -1,7 +1,7 @@
 import { Socket } from "socket.io";
 import { ExtendedError } from "socket.io/dist/namespace";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { getInitialActiveUserState } from "./lib/active-user-state";
+import { getInitialActiveUserState } from "./lib/user-change-handler";
 
 function invalidCredentialsError(next: (err?: ExtendedError) => void) {
   next(new Error("Invalid credentials"));

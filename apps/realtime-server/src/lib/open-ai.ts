@@ -1,6 +1,6 @@
 import { decrypt } from "./encryption";
 import { pgClient } from "../db/client";
-import { commandRegistry } from "./command-handler";
+import { commandRegistry, findCommandKeyByExecute } from "./command-handler";
 
 type User = { id: string; name: string };
 
@@ -46,14 +46,12 @@ function generatePrompt({
     day: "numeric",
   });
 
-  const timCommand = Object.keys(commandRegistry).find(
-    (key) => commandRegistry[key].execute === commandRegistry.tim.execute
-  );
+  const timCommand = findCommandKeyByExecute(commandRegistry.tim);
 
   const prompts = [
     `Today is ${today}`,
     `You are a bot named "Tim" in a real time group chat with friends`,
-    `Within the chat, users prompt you with the command "${timCommand}"`,
+    `Within the chat, users prompt you with the command "/${timCommand}"`,
     `Only summarize the messages when you are explicity asked to, otherwise just respond to the prompt`,
     `The topic of the group chat is "${topicName}"`,
     `The person who just sent you a message is named "${toFirstName(
@@ -78,6 +76,32 @@ function generatePrompt({
   }
 
   return prompts.join(". ") + ".";
+}
+
+function toFirstName(name: string) {
+  return name.split(" ")[0];
+}
+
+async function callOpenAI(messages: { role: string; content: string }[]) {
+  const endpoint = "https://api.openai.com/v1/chat/completions";
+  const body = {
+    model: "gpt-4o-mini",
+    temperature: 0.9,
+    messages,
+  };
+
+  const resp = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) return undefined;
+  const json = await resp.json();
+  return json.choices[0].message.content;
 }
 
 export async function getChatGpt({
@@ -112,6 +136,7 @@ export async function getChatGpt({
   const messagePrompts = [];
   const reversed = messages.reverse();
   let messageCount = 1;
+  const timCommand = findCommandKeyByExecute(commandRegistry.tim);
 
   (reversed as { text: string; mediaUrl: string; name: string }[]).forEach(
     (m) => {
@@ -126,7 +151,7 @@ export async function getChatGpt({
 
       messageCount++;
 
-      if (text.startsWith("/tim")) {
+      if (text.startsWith(`/${timCommand}`)) {
         messagePrompts.push({
           role: "developer",
           content: `Here is message number ${messageCount}, it was sent by you: ${m.mediaUrl}`,
@@ -150,35 +175,14 @@ export async function getChatGpt({
     notInTopic,
   });
 
-  const endpoint = "https://api.openai.com/v1/chat/completions";
-  const body = {
-    model: "gpt-4o-mini",
-    temperature: 0.9,
-    messages: [
-      {
-        role: "developer",
-        content: prompt,
-      },
-      ...messagePrompts,
-      { role: "user", content: query },
-    ],
-  };
-
-  const resp = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+  const openAIMessages = [
+    {
+      role: "developer",
+      content: prompt,
     },
-    body: JSON.stringify(body),
-  });
+    ...messagePrompts,
+    { role: "user", content: query },
+  ];
 
-  if (!resp.ok) return undefined;
-  const json = await resp.json();
-
-  return json.choices[0].message.content;
-}
-
-function toFirstName(name: string) {
-  return name.split(" ")[0];
+  return callOpenAI(openAIMessages);
 }
