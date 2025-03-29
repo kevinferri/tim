@@ -2,12 +2,13 @@ import { prismaClient } from "@/lib/prisma/client";
 import { redirect } from "next/navigation";
 
 type Props = {
-  params: { circleId: string };
+  params: Promise<{ circleId: string }>;
 };
 
 export default async function CirclePage(props: Props) {
+  const { circleId } = await props.params;
   const circle = await prismaClient.circle.getMeCircleById({
-    circleId: props.params.circleId,
+    circleId,
     select: {
       id: true,
       defaultTopicId: true,

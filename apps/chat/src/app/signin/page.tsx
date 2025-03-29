@@ -12,15 +12,13 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 export default async function LogInPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string | undefined };
+  searchParams?: Promise<{ [key: string]: string | undefined }>;
 }) {
   const session = await getServerSession();
+  const params = await searchParams;
 
   if (session) {
-    const redirectTo = searchParams?.callbackUrl
-      ? searchParams.callbackUrl
-      : Routes.Home;
-
+    const redirectTo = params?.callbackUrl ? params.callbackUrl : Routes.Home;
     return redirect(redirectTo);
   }
 

@@ -15,7 +15,7 @@ import { DEFAULT_TITLE } from "@/app/layout";
 import { MessageModal } from "@/components/topics/message-modal";
 
 type Props = {
-  params: { topicId: string };
+  params: Promise<{ topicId: string }>;
 };
 
 const getTopic = cache(async (id: string) => {

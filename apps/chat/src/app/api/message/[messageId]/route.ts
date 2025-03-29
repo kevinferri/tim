@@ -5,22 +5,21 @@ import {
 } from "@/lib/prisma/message-model";
 import { badRequest, notFound, unauthorized } from "../../error-responses";
 import { getLoggedInUserId } from "@/lib/session";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(
-  req: Request,
-  route: { params: { messageId: string } }
-) {
+type Route = { params: Promise<{ messageId: string }> };
+
+export async function GET(req: NextRequest, { params }: Route) {
   try {
     const userId = await getLoggedInUserId();
-    const id = route.params.messageId;
+    const { messageId } = await params;
 
     if (!userId) return unauthorized;
-    if (!id) return badRequest;
+    if (!messageId) return badRequest;
 
     const message = await prismaClient.message.findUnique({
       where: {
-        id,
+        id: messageId,
       },
       select: {
         ...DEFAULT_MESSAGE_SELECT,

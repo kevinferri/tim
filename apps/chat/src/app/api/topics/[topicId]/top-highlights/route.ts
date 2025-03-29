@@ -1,15 +1,14 @@
 import { badRequest, notFound, unauthorized } from "@/app/api/error-responses";
 import { getLoggedInUserId } from "@/lib/session";
 import { prismaClient } from "@/lib/prisma/client";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
 
-export async function GET(
-  req: Request,
-  route: { params: { topicId: string } }
-) {
+type Route = { params: Promise<{ topicId: string }> };
+
+export async function GET(req: NextRequest, { params }: Route) {
   const userId = await getLoggedInUserId();
-  const topicId = route.params.topicId;
+  const { topicId } = await params;
 
   if (!userId) return unauthorized;
 
