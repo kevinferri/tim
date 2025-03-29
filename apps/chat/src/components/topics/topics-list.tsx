@@ -372,14 +372,16 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
             isMinimized ? (
               <TooltipProvider>
                 <Tooltip delayDuration={100}>
-                  <TooltipTrigger>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="rounded-full"
-                    >
-                      <PlusIcon />
-                    </Button>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="rounded-full"
+                      >
+                        <PlusIcon />
+                      </Button>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">New topic</TooltipContent>
                 </Tooltip>
@@ -393,14 +395,16 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
             isMinimized ? (
               <TooltipProvider>
                 <Tooltip delayDuration={100}>
-                  <TooltipTrigger>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="rounded-full"
-                    >
-                      <GearIcon />
-                    </Button>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="rounded-full"
+                      >
+                        <GearIcon />
+                      </Button>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">Circle settings</TooltipContent>
                 </Tooltip>

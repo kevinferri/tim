@@ -3,7 +3,12 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { VariantProps, cva } from "class-variance-authority";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useDateFormatter, useFetch } from "@/lib/hooks";
 import {
   CalendarIcon,
@@ -155,6 +160,7 @@ export function UserAvatar(props: Props) {
   return (
     <Sheet onOpenChange={setOpen}>
       <SheetTrigger>{trigger}</SheetTrigger>
+      <SheetTitle></SheetTitle>
       <SheetContent className="p-0 h-full flex overflow-y-hidden flex-col md:min-w-[460px] w-full">
         <div className="flex flex-col gap-4 h-full overflow-y-hidden">
           <div className="bg-secondary w-full flex flex-col items-center px-3 py-6 gap-3 flex-1">

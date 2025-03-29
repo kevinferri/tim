@@ -120,8 +120,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getLoggedInUser();
-  const cookieStore = cookies();
-  const headerList = headers();
+  const cookieStore = await cookies();
+  const headerList = await headers();
   const pathname = headerList.get("x-current-path");
   const sessionToken = cookieStore.get(process.env.NEXTAUTH_COOKIE_KEY ?? "");
 

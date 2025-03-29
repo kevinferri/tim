@@ -14,16 +14,17 @@ export type UserStatsForTopicResponse = {
   topHighlights: Array<MessageProps>;
 };
 
-export async function GET(
-  req: Request,
-  route: { params: { topicId: string; userId: string } }
-) {
-  const userId = await getLoggedInUserId();
-  if (!userId) return unauthorized;
+type Route = { params: { topicId: string; userId: string } };
+
+export async function GET(req: Request, { params }: Route) {
+  const loggedInUserId = await getLoggedInUserId();
+  if (!loggedInUserId) return unauthorized;
+
+  const { topicId, userId } = await params;
 
   try {
     const topicWithCircleMembers = await prismaClient.topic.findFirst({
-      where: { id: route.params.topicId },
+      where: { id: topicId },
       select: {
         name: true,
         parentCircle: {
@@ -42,16 +43,14 @@ export async function GET(
       ({ id }) => id
     );
     if (!memberIds.includes(userId)) return notFound;
-    if (!memberIds.includes(route.params.userId)) return notFound;
+    if (!memberIds.includes(userId)) return notFound;
 
-    const where = {
-      userId: route.params.userId,
-    };
+    const where = { userId };
 
     const queries = [
       // Top highlights for user
       prismaClient.message.getTopHighlightedMessagesForTopic({
-        topicId: route.params.topicId,
+        topicId: topicId,
         select: DEFAULT_MESSAGE_SELECT,
         ...where,
       }),

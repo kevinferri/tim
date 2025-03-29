@@ -40,7 +40,8 @@ const getTopic = cache(async (id: string) => {
 });
 
 export async function generateMetadata({ params }: Props) {
-  const topic = await getTopic(params.topicId);
+  const { topicId } = await params;
+  const topic = await getTopic(topicId);
 
   return {
     title: !topic
@@ -50,7 +51,8 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function TopicPage({ params }: Props) {
-  const topic = await getTopic(params.topicId);
+  const { topicId } = await params;
+  const topic = await getTopic(topicId);
 
   const queries = [
     prismaClient.message.getMessagesForTopic({

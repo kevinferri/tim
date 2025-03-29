@@ -7,10 +7,12 @@ type Props = {
   };
 };
 
-export default function CircleLayout(props: Props) {
+export default async function CircleLayout(props: Props) {
+  const params = await props.params;
+
   return (
     <>
-      <TopicsNav circleId={props.params.circleId} />
+      <TopicsNav circleId={params.circleId} />
       {props.children}
     </>
   );
