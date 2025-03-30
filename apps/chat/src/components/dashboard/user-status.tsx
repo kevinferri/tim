@@ -60,9 +60,9 @@ export function UserStatus(props: Props) {
 
   if (variant === "minimal") {
     return (
-      <span>
+      <>
         {dot} {props.status} (since {statusUpdatedOn})
-      </span>
+      </>
     );
   }
 
