@@ -52,7 +52,7 @@ export function TopicActiveUsers(props: Props) {
   );
 
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-2">
       {activeUsers.map((user) => {
         const variant = () => {
           if (
