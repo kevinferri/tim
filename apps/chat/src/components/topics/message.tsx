@@ -174,7 +174,7 @@ export const Message = (props: MessageProps) => {
         if (isActionEligable) setShowActions(false);
       }}
     >
-      <div className="flex gap-3 items-start overflow-hidden leading-none">
+      <div className="flex gap-1.5 items-start overflow-hidden leading-none">
         {!props.hiddenElements?.includes("sentBy") && (
           <UserAvatar
             id={props.sentBy.id}
@@ -189,7 +189,7 @@ export const Message = (props: MessageProps) => {
         )}
 
         <div className="flex flex-col flex-1">
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-1.5 items-center">
             {!props.hiddenElements?.includes("sentBy") && (
               <span
                 className={cn(
