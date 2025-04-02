@@ -74,12 +74,13 @@ function isNearBottom(
   ref: MutableRefObject<HTMLDivElement | null>,
   padding = 120
 ) {
-  const _ref = ref.current;
+  const el = ref.current;
   const threshold = 50;
-  const _padding = threshold + padding;
-  if (!_ref) return;
+  if (!el) return false;
 
-  return _ref.scrollHeight - _ref.scrollTop <= _ref.clientHeight + _padding;
+  return (
+    el.scrollHeight - el.scrollTop <= el.clientHeight + padding + threshold
+  );
 }
 
 export function CurrentTopicProvider(props: Props) {
