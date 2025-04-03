@@ -1,3 +1,6 @@
+// If you are updating this from shadcn, make sure you pass the ref to
+// ScrollAreaPrimitive.Viewport and not ScrollAreaPrimitive.Root
+
 "use client";
 
 import * as React from "react";

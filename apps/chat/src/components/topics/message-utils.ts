@@ -57,13 +57,15 @@ export function extractImageFromMessage(text: string) {
 }
 
 export function getYoutubeVideoFromUrl(url: string) {
-  if (!url.includes("youtube.com")) return undefined;
+  if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+    return undefined;
+  }
 
   const match = url.match(
-    /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/
+    /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|shorts\/))([^#&?]*)/
   );
 
-  const id = match && match[7].length == 11 ? match[7] : false;
+  const id = match && match[1].length === 11 ? match[1] : undefined;
 
   if (!id) return undefined;
   return { id, videoUrl: `https://youtube.com/watch?v=${id}` };
