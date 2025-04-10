@@ -92,13 +92,23 @@ export const messageModel = {
     topicId,
     userId,
     select,
-  }: MessageArgs & { userId?: string }) {
+    daysAgo = 30,
+  }: MessageArgs & { userId?: string; daysAgo?: number }) {
     const loggedInUser = getLoggedInUserId();
     if (!topicId || !loggedInUser) return [];
 
+    const from = new Date();
+    from.setDate(from.getDate() - daysAgo);
+
     const messages = await prismaClient.message.findMany({
       select,
-      where: { topicId, userId },
+      where: {
+        topicId,
+        userId,
+        createdAt: {
+          gte: from,
+        },
+      },
       take: TOP_HIGHLIGHTS_LIMIT,
       orderBy: [
         {

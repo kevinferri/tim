@@ -127,7 +127,7 @@ export default async function RootLayout({
 
   // next-auth cookie in a bad state, sign out the user
   if (!user && sessionToken?.value && pathname !== Routes.ForceSignout) {
-    redirect(Routes.ForceSignout);
+    return redirect(Routes.ForceSignout);
   }
 
   if (!user) {

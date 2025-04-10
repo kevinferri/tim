@@ -32,7 +32,14 @@ export function TopicSideBar(props: Props) {
 
   const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
     highlights: {
-      header: "Top highlights",
+      header: (
+        <div className="flex items-center justify-center gap-1">
+          <span>Top highlights</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">
+            (monthly)
+          </span>
+        </div>
+      ),
       node: <TopHighlights />,
       icon: <StarIcon />,
     },
@@ -43,7 +50,7 @@ export function TopicSideBar(props: Props) {
       icon: <PersonIcon />,
     },
     notifications: {
-      header: <>Notifications</>,
+      header: "Notifications",
       node: <NotificationsList notifications={notificationList} />,
       icon: (
         <div className="flex items-center gap-1.5 w-fu">

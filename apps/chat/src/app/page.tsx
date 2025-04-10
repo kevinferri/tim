@@ -45,15 +45,17 @@ export default async function HomePage() {
     });
   }
 
+  if (mostRecentTopic) {
+    return (
+      <MostRecentTopicRedirect
+        redirect={`/circles/${mostRecentTopic.topic.circleId}/topics/${mostRecentTopic?.topicId}`}
+      />
+    );
+  }
+
   return (
     <div className="flex basis-full justify-center items-center">
-      {mostRecentTopic ? (
-        <MostRecentTopicRedirect
-          redirect={`/circles/${mostRecentTopic.topic.circleId}/topics/${mostRecentTopic?.topicId}`}
-        />
-      ) : (
-        <>Welcome to Tim</>
-      )}
+      Welcome to Tim
     </div>
   );
 }
