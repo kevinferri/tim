@@ -6,8 +6,6 @@ import { uploadImage } from "@/lib/cloudinary";
 import { Routes } from "@/routes";
 
 export const authOptions: AuthOptions = {
-  debug: true,
-
   session: {
     strategy: "jwt",
   },

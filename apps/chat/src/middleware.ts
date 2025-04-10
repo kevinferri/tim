@@ -1,33 +1,37 @@
 import { Routes } from "@/routes";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { unauthorized } from "@/app/api/error-responses";
 
 export async function middleware(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(process.env.NEXTAUTH_COOKIE_KEY ?? "");
+  const { pathname } = req.nextUrl;
   const headers = new Headers(req.headers);
 
-  if (pathname.startsWith("/api/auth")) {
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/static") ||
+    pathname === "/favicon.ico" ||
+    pathname === Routes.SignIn
+  ) {
     return NextResponse.next();
   }
 
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(process.env.NEXTAUTH_COOKIE_KEY ?? "");
+
   if (pathname.startsWith("/api/") && !sessionToken) {
-    return unauthorized;
+    return new NextResponse("Unauthorized", { status: 401 });
   }
 
   if (!sessionToken) {
     return NextResponse.redirect(`${process.env.FRONTEND_URL}${Routes.SignIn}`);
   }
 
-  headers.set("x-current-path", req.nextUrl.pathname);
+  headers.set("x-current-path", pathname);
 
-  return NextResponse.next({ request: { headers } });
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|static|signin|assets).*)",
-  ],
+  matcher: ["/((?!api/auth|_next/static|favicon.ico).*)"],
 };
