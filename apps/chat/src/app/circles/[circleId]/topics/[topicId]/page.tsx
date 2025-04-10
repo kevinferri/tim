@@ -63,6 +63,7 @@ export default async function TopicPage({ params }: Props) {
     prismaClient.message.getTopHighlightedMessagesForTopic({
       topicId: topic?.id,
       select: DEFAULT_MESSAGE_SELECT,
+      since: "month",
     }),
 
     prismaClient.message.getMediaMessagesForTopic({
