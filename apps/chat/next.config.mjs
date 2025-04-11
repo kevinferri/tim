@@ -23,9 +23,6 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "100mb",
     },
-    turbo: {
-      rules: {},
-    },
   },
 };
 
