@@ -4,7 +4,9 @@ import { prismaClient } from "@/lib/prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
 
-type Route = { params: Promise<{ topicId: string }> };
+type Route = {
+  params: Promise<{ topicId: string }>;
+};
 
 export async function GET(req: NextRequest, { params }: Route) {
   const userId = await getLoggedInUserId();
@@ -38,6 +40,7 @@ export async function GET(req: NextRequest, { params }: Route) {
       await prismaClient.message.getTopHighlightedMessagesForTopic({
         topicId,
         select: DEFAULT_MESSAGE_SELECT,
+        since: "month", // TODO when dynamic filtering is out, allow this to be passed in via query param
       });
 
     return NextResponse.json(highlights, { status: 200 });
