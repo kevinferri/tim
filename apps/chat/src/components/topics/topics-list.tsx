@@ -173,7 +173,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
     >
       <div
         className={cn(
-          `flex block p-3 border-b overflow-hidden whitespace-nowrap text-ellipsis font-medium flex`,
+          `flex block p-3 border-b whitespace-nowrap text-ellipsis font-medium flex`,
           isMinimized ? "justify-center" : ""
         )}
       >
