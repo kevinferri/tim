@@ -121,7 +121,7 @@ export async function deleteTopic({ topicId }: { topicId: string }) {
   const userId = await getLoggedInUserId();
   if (!userId || !topicId) return false;
 
-  const topic = await prismaClient.topic.getMeTopicById({
+  const topic = await prismaClient.topic.getMeTopicByIdWithCircle({
     topicId,
     select: {
       id: true,

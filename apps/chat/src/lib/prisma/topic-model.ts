@@ -31,19 +31,22 @@ export const topicModel = {
     });
   },
 
-  async getMeTopicById({
+  async getMeTopicByIdWithCircle({
     topicId,
+    circleId,
     select,
   }: {
     topicId?: string;
+    circleId?: string;
     select: Prisma.TopicSelect;
   }) {
     const userId = await getLoggedInUserId();
-    if (!userId || !topicId) return undefined;
+    if (!userId || !topicId || !circleId) return undefined;
 
     return await prismaClient.topic.findUnique({
       where: {
         id: topicId,
+        circleId,
         parentCircle: {
           members: {
             some: {

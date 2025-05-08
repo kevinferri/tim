@@ -15,12 +15,13 @@ import { DEFAULT_TITLE } from "@/app/layout";
 import { MessageModal } from "@/components/topics/message-modal";
 
 type Props = {
-  params: Promise<{ topicId: string }>;
+  params: Promise<{ topicId: string; circleId: string }>;
 };
 
-const getTopic = cache(async (id: string) => {
-  const topic = await prismaClient.topic.getMeTopicById({
-    topicId: id,
+const getTopic = cache(async (topicId: string, circleId: string) => {
+  const topic = await prismaClient.topic.getMeTopicByIdWithCircle({
+    topicId,
+    circleId,
     select: {
       id: true,
       name: true,
@@ -40,8 +41,8 @@ const getTopic = cache(async (id: string) => {
 });
 
 export async function generateMetadata({ params }: Props) {
-  const { topicId } = await params;
-  const topic = await getTopic(topicId);
+  const { topicId, circleId } = await params;
+  const topic = await getTopic(topicId, circleId);
 
   return {
     title: !topic
@@ -51,8 +52,8 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function TopicPage({ params }: Props) {
-  const { topicId } = await params;
-  const topic = await getTopic(topicId);
+  const { topicId, circleId } = await params;
+  const topic = await getTopic(topicId, circleId);
 
   const queries = [
     prismaClient.message.getMessagesForTopic({
