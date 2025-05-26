@@ -93,7 +93,12 @@ export function CurrentTopicProvider(props: Props) {
     notifyOnNewMessage();
     scrollToBottomOfChat();
     if (generatingCommand) setGeneratingCommand(undefined);
-  }, [notifyOnNewMessage, scrollToBottomOfChat, setGeneratingCommand]);
+  }, [
+    notifyOnNewMessage,
+    scrollToBottomOfChat,
+    setGeneratingCommand,
+    generatingCommand,
+  ]);
 
   const { mediaMessages, setMediaMessages, shufflingGifs, addShufflingGif } =
     useTopicMedia({
