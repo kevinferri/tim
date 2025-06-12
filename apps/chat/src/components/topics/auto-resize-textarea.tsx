@@ -1,7 +1,7 @@
 "use client";
 
 import { Textarea } from "@/components/ui/textarea";
-import { useEffectOnce } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { cn } from "@/lib/utils";
 import { ChangeEvent, KeyboardEvent, useRef, forwardRef } from "react";
 

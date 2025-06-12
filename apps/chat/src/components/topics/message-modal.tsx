@@ -7,7 +7,7 @@ import {
   DialogContent,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useFetch } from "@/lib/hooks";
+import { useFetch } from "@/lib/hooks/use-fetch";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Message, MessageProps } from "@/components/topics/message";

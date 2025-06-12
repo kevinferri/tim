@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useIntersection } from "@/lib/hooks";
+import { useIntersection } from "@/lib/hooks/use-intersection";
 import { useRef } from "react";
 import {
   getTwitchStreamFromUrl,

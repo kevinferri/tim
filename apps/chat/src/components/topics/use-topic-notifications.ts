@@ -1,7 +1,7 @@
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useCallback, useMemo } from "react";
 import { User } from "@prisma/client";
-import { useLocalStorage } from "@/lib/hooks";
+import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 import { useSelf } from "@/components/auth/self-provider";
 
 type NotificationActor = Pick<User, "id" | "name" | "imageUrl">;

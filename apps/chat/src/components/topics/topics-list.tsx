@@ -12,7 +12,8 @@ import { ToastAction } from "@/components/ui/toast";
 import { useSelf } from "@/components/auth/self-provider";
 import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
-import { useEffectOnce, useLocalStorage } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
+import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { UpsertCircleForm } from "@/components/circles/upsert-circle-form";
 import {

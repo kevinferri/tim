@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { Progress } from "@/components/ui/progress";
 import { useUploadProgres } from "@/components/topics/use-upload-progress";
-import { useUserTypingEmitter } from "@/lib/hooks";
+import { useUserTypingEmitter } from "@/lib/hooks/use-user-typing-emitter";
 import { AutoResizeTextarea } from "@/components/topics/auto-resize-textarea";
 import { cn, toBase64 } from "@/lib/utils";
 import { EmojiPicker } from "@/components/topics/emoji-picker";

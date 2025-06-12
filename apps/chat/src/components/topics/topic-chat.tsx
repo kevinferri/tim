@@ -5,7 +5,7 @@ import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message, MessageProps } from "@/components/topics/message";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
-import { useEffectOnce } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Spinner } from "@/components/ui/spinner";

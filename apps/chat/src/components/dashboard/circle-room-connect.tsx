@@ -1,7 +1,7 @@
 "use client";
 
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { useEffectOnce } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 
 type Props = {
   children: React.ReactNode;

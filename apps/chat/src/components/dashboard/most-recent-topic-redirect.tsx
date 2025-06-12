@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffectOnce } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const LOADER_COUNT = 20;

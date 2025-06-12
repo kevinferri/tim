@@ -17,7 +17,9 @@ import {
   useSocketHandler,
 } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
-import { useEffectOnce, useLazyFetch, useWindowFocus } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
+import { useLazyFetch } from "@/lib/hooks/use-fetch";
+import { useWindowFocus } from "@/lib/hooks/use-window-focus";
 import { WithRelation } from "../../../types/prisma";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 import { useMessageSound } from "@/components/dashboard/use-message-sound";

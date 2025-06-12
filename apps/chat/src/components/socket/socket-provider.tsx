@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useRef } from "react";
 import { Socket, io } from "socket.io-client";
-import { useEffectOnce } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useSocketState } from "@/components/socket/use-socket-state";
 
 const SocketContext = createContext<

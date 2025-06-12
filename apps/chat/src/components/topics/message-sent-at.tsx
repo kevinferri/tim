@@ -1,6 +1,6 @@
 "use client";
 
-import { useDateFormatter } from "@/lib/hooks";
+import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
 
 type Props = {
   sentAt: Date;

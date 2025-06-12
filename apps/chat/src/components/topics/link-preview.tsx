@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useFetch } from "@/lib/hooks";
+import { useFetch } from "@/lib/hooks/use-fetch";
 import {
   Card,
   CardDescription,

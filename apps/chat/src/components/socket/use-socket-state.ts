@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Socket } from "socket.io-client";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffectOnce } from "@/lib/hooks";
+import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useToast } from "@/components/ui/use-toast";
 
 const RECONNECT_PARAM = "from-reconnect";

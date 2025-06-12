@@ -5,7 +5,7 @@ import { useShallow } from "zustand/react/shallow";
 import uniqBy from "lodash.uniqby";
 import { Self } from "@/components/auth/self-provider";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
-import { useDebounce } from "@/lib/hooks";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 type ActiveUser = Self & { state: { isIdle: boolean; isTyping: boolean } };
 

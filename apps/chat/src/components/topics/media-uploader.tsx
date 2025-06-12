@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageIcon } from "@radix-ui/react-icons";
-import { useDragAndDrop } from "@/lib/hooks";
+import { useDragAndDrop } from "@/lib/hooks/use-drag-and-drop";
 
 type Props = {
   file?: File;

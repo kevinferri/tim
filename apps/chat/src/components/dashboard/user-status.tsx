@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { useSelf } from "@/components/auth/self-provider";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
-import { useDateFormatter } from "@/lib/hooks";
+import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
 
 type Props = {
   status: string | null;

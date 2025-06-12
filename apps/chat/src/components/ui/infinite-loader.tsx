@@ -6,7 +6,7 @@ import React, {
   useLayoutEffect,
   MutableRefObject,
 } from "react";
-import { useIntersection } from "@/lib/hooks";
+import { useIntersection } from "@/lib/hooks/use-intersection";
 
 type Props = {
   children?: React.ReactNode;
