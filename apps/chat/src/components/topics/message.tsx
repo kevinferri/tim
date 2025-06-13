@@ -72,7 +72,7 @@ export const Message = (props: MessageProps) => {
   const isNewestMessage = mLength > 0 && messages[mLength - 1].id === props.id;
   const isShufflingGif = shufflingGifs.includes(props.id) || shuffledGifLoading;
   const shouldScroll = isNewestMessage && props.context === "topic";
-  const isActionEligable = sentBySelf && props.variant !== "minimal";
+  const isActionEligable = props.variant !== "minimal";
 
   const islandMessage = useIslandMessage({
     messageId: props.id,
@@ -209,6 +209,7 @@ export const Message = (props: MessageProps) => {
 
             {showActions && isActionEligable && (
               <MessageActions
+                sentBySelf={sentBySelf}
                 className={messages[0].id === props.id ? "top-0" : ""}
                 messageId={props.id}
                 text={props.text ?? ""}

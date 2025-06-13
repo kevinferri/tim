@@ -24,6 +24,7 @@ type Props = {
   onShuffleGif?: () => void;
   isShufflingGif?: boolean;
   className?: string;
+  sentBySelf: boolean;
 };
 
 const DELAY_DURATION = 100;
@@ -59,45 +60,51 @@ export function MessageActions(props: Props) {
             </TooltipTrigger>
             <TooltipContent>Set as status</TooltipContent>
           </Tooltip>
-          <Tooltip delayDuration={DELAY_DURATION}>
-            <TooltipTrigger asChild>
-              {isRandomGif ? (
-                <Button
-                  className="font-normal"
-                  size="iconSm"
-                  variant="outline"
-                  disabled={!!props.isShufflingGif}
-                  onClick={props.onShuffleGif}
-                >
-                  <UpdateIcon
-                    className={!!props.isShufflingGif ? "animate-spin" : ""}
-                  />
-                </Button>
-              ) : (
-                showEdit && (
-                  <Button
-                    className="font-normal"
-                    size="iconSm"
-                    variant="outline"
-                    onClick={props.onEditMessage}
-                  >
-                    <Pencil1Icon />
-                  </Button>
-                )
-              )}
-            </TooltipTrigger>
-            <TooltipContent>{isRandomGif ? "Shuffle" : "Edit"}</TooltipContent>
-          </Tooltip>
+          {props.sentBySelf && (
+            <>
+              <Tooltip delayDuration={DELAY_DURATION}>
+                <TooltipTrigger asChild>
+                  {isRandomGif ? (
+                    <Button
+                      className="font-normal"
+                      size="iconSm"
+                      variant="outline"
+                      disabled={!!props.isShufflingGif}
+                      onClick={props.onShuffleGif}
+                    >
+                      <UpdateIcon
+                        className={!!props.isShufflingGif ? "animate-spin" : ""}
+                      />
+                    </Button>
+                  ) : (
+                    showEdit && (
+                      <Button
+                        className="font-normal"
+                        size="iconSm"
+                        variant="outline"
+                        onClick={props.onEditMessage}
+                      >
+                        <Pencil1Icon />
+                      </Button>
+                    )
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isRandomGif ? "Shuffle" : "Edit"}
+                </TooltipContent>
+              </Tooltip>
 
-          <Tooltip delayDuration={DELAY_DURATION}>
-            <TooltipTrigger>
-              <DeleteMessageModal
-                messageId={props.messageId}
-                topicId={topicId}
-              />
-            </TooltipTrigger>
-            <TooltipContent align="end">Delete</TooltipContent>
-          </Tooltip>
+              <Tooltip delayDuration={DELAY_DURATION}>
+                <TooltipTrigger>
+                  <DeleteMessageModal
+                    messageId={props.messageId}
+                    topicId={topicId}
+                  />
+                </TooltipTrigger>
+                <TooltipContent align="end">Delete</TooltipContent>
+              </Tooltip>
+            </>
+          )}
         </TooltipProvider>
       </div>
     </div>
