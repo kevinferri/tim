@@ -13,7 +13,7 @@ const createTopicSchema = z.object({
     .min(1),
   circleId: z
     .string({
-      invalid_type_error: "Topic name required",
+      invalid_type_error: "Circle ID required",
     })
     .min(1),
   description: z.string().nullable(),
