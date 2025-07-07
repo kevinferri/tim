@@ -98,7 +98,10 @@ export function CurrentTopicProvider(props: Props) {
   const { mediaMessages, setMediaMessages, shufflingGifs, addShufflingGif } =
     useTopicMedia({
       existingMediaMessages: props.existingMediaMessages,
-      onMediaChange: undefined,
+      onMediaChange: (handler) => {
+        setMessages((prev) => handler(prev));
+        setMediaMessages((prev) => handler(prev));
+      },
     });
 
   const onMediaMessage = useCallback(
