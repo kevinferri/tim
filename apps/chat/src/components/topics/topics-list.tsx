@@ -96,19 +96,40 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
 
     return topics
       .map((topic) => {
+        const isMuted = mutedTopics.includes(topic.id);
+        const isUnread =
+          !isMuted && unreadTopics[topic.id] && params.topicId !== topic.id;
+        const isDefault = circle.defaultTopicId === topic.id;
+
         return {
           ...topic,
-          isMuted: mutedTopics.includes(topic.id),
+          isMuted,
+          isUnread,
+          isDefault,
         };
       })
       .sort((a, b) => {
-        if (a.isMuted === b.isMuted) {
-          return 0;
+        if (a.isDefault !== b.isDefault) {
+          return a.isDefault ? -1 : 1;
         }
 
-        return a.isMuted ? 1 : -1;
+        if (a.isUnread !== b.isUnread) {
+          return a.isUnread ? -1 : 1;
+        }
+
+        if (a.isMuted !== b.isMuted) {
+          return a.isMuted ? 1 : -1;
+        }
+
+        return 0;
       });
-  }, [topics, mutedTopics]);
+  }, [
+    topics,
+    mutedTopics,
+    unreadTopics,
+    params.topicId,
+    circle.defaultTopicId,
+  ]);
 
   useSocketHandler<NewTopicHandlerProps>(
     SocketEvent.UpsertedTopic,
