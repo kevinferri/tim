@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { MessageData } from "@/components/topics/message";
 import { cn } from "@/lib/utils";
 import { VariantProps, cva } from "class-variance-authority";
 import {
@@ -290,7 +291,7 @@ export function UserAvatar(props: Props) {
           )}
 
           <ScrollArea className="basis-full overflow-y-scroll no-scrollbar">
-            {data?.topHighlights.map((message: MessageProps) => {
+            {data?.topHighlights.map((message: MessageData) => {
               return (
                 <Message
                   key={`${message.id}-user-avatar`}
