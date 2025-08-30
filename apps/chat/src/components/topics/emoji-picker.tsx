@@ -51,6 +51,7 @@ export function EmojiPicker(props: Props) {
           theme={theme}
           previewPosition="none"
           skinTonePosition="none"
+          autoFocus={true}
         />
       </PopoverContent>
     </Popover>
