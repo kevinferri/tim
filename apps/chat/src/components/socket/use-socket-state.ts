@@ -2,15 +2,18 @@
 
 import { useState, useRef } from "react";
 import { Socket } from "socket.io-client";
+import { useRouter } from "next/navigation";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useToast } from "@/components/ui/use-toast";
 import { SocketEvent } from "@/components/socket/use-socket";
 import { useCurrentUserRooms } from "@/components/socket/use-current-user-rooms";
 
 export function useSocketState(socket: Socket) {
+  const router = useRouter();
   const { toast } = useToast();
   const [isConnected, setIsConnected] = useState<boolean>();
   const disconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
+  const reconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
   const { getJoinedRooms } = useCurrentUserRooms();
 
   useEffectOnce(() => {
@@ -52,11 +55,15 @@ export function useSocketState(socket: Socket) {
         socket.emit(SocketEvent.JoinRoom, room);
       });
 
-      toast({
-        title: `Your connection has been restored`,
-        variant: "success",
-        duration: 3000,
-      });
+      if (!reconnectToastRef.current) {
+        reconnectToastRef.current = toast({
+          title: `Your connection has been restored`,
+          variant: "success",
+          duration: 5000,
+        });
+      }
+
+      router.refresh();
     }
 
     socket.on("connect", onConnect);
