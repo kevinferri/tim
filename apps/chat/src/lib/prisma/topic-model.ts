@@ -36,12 +36,15 @@ export const topicModel = {
     circleId,
     select,
   }: {
-    topicId?: string;
-    circleId?: string;
+    topicId: string;
+    circleId: string;
     select: Prisma.TopicSelect;
   }) {
     const userId = await getLoggedInUserId();
-    if (!userId || !topicId || !circleId) return undefined;
+
+    if (!userId || !topicId || !circleId) {
+      return undefined;
+    }
 
     return await prismaClient.topic.findUnique({
       where: {

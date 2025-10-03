@@ -46,7 +46,9 @@ export const DEFAULT_MESSAGE_SELECT = {
   },
 };
 
-export const normalizeMessages = (messages: Partial<Message>[]) =>
+export const normalizeMessages = <T extends { text?: string | null }>(
+  messages: T[]
+): (Omit<T, 'text'> & { text?: string })[] =>
   messages.map((message) => ({
     ...message,
     text: getReadableMessage(message.text),
