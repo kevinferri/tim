@@ -117,12 +117,21 @@ export async function upsertTopic(formData: FormData) {
   };
 }
 
-export async function deleteTopic({ topicId }: { topicId: string }) {
+export async function deleteTopic({
+  topicId,
+  circleId,
+}: {
+  topicId: string;
+  circleId: string;
+}) {
   const userId = await getLoggedInUserId();
-  if (!userId || !topicId) return false;
+  if (!userId || !topicId) {
+    return false;
+  }
 
   const topic = await prismaClient.topic.getMeTopicByIdWithCircle({
     topicId,
+    circleId,
     select: {
       id: true,
       userId: true,
@@ -134,14 +143,19 @@ export async function deleteTopic({ topicId }: { topicId: string }) {
     },
   });
 
-  if (!topic) return false;
+  if (!topic) {
+    return false;
+  }
 
   const isInCircle = await prismaClient.circle.isUserInCirle({
     userId,
     circleId: topic?.parentCircle.id,
   });
 
-  if (!isInCircle || topic.userId !== userId) return false;
+  if (!isInCircle || topic.userId !== userId) {
+    console.log(151);
+    return false;
+  }
 
   const data = await prismaClient.topic.delete({
     where: {
