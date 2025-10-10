@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prismaClient } from "@/lib/prisma/client";
 import { TopicHeader } from "@/components/topics/topic-header";
 import { TopicChat } from "@/components/topics/topic-chat";
@@ -17,7 +18,7 @@ type Props = {
   params: Promise<{ topicId: string; circleId: string }>;
 };
 
-const getTopic = async (topicId: string, circleId: string) => {
+const getTopic = cache(async (topicId: string, circleId: string) => {
   const topic = await prismaClient.topic.getMeTopicByIdWithCircle({
     topicId,
     circleId,
@@ -37,7 +38,7 @@ const getTopic = async (topicId: string, circleId: string) => {
   });
 
   return topic;
-};
+});
 
 export async function generateMetadata({ params }: Props) {
   const { topicId, circleId } = await params;
