@@ -1,7 +1,7 @@
 "use client";
 
-import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
+import { useRoomManagement } from "@/components/socket/use-current-user-rooms";
 
 type Props = {
   children: React.ReactNode;
@@ -9,19 +9,18 @@ type Props = {
 };
 
 export function CircleRoomConnect({ children, circleIds }: Props) {
-  const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
-  const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
+  const { joinRoom, leaveRoom } = useRoomManagement();
 
   useEffectOnce(() => {
     process.nextTick(() => {
       circleIds.forEach((id) => {
-        joinRoom.emit({ id, roomType: "circle" });
+        joinRoom(id, "circle");
       });
     });
 
     return () => {
       circleIds.forEach((id) => {
-        leaveRoom.emit({ id, roomType: "circle" });
+        leaveRoom(id, "circle");
       });
     };
   });

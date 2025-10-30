@@ -97,7 +97,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
     return topics
       .map((topic) => {
         const isMuted = mutedTopics.includes(topic.id);
-        const isUnread = unreadTopics[topic.id] && params.topicId !== topic.id;
+        const isUnread = unreadTopics[topic.id];
         const isDefault = circle.defaultTopicId === topic.id;
 
         return {
@@ -126,7 +126,6 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
     topics,
     mutedTopics,
     unreadTopics,
-    params.topicId,
     circle.defaultTopicId,
   ]);
 
@@ -223,7 +222,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
 
               return (
                 <ContextMenu key={topic.id}>
-                  <Link href={link}>
+                  <Link href={link} onMouseEnter={() => router.prefetch(link)}>
                     {isMinimized ? (
                       <TooltipProvider>
                         <Tooltip delayDuration={100}>

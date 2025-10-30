@@ -27,22 +27,31 @@ import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
 export type Highlights = {
   id: Highlight["id"];
   userId: Highlight["userId"];
-  createdBy: {
+  createdBy?: {
     imageUrl: User["imageUrl"];
   };
+  [key: string]: any;
 }[];
 
-export type MessageProps = {
-  topicId: string;
-  id: DbMessage["id"];
-  text?: DbMessage["text"];
-  mediaUrl?: DbMessage["mediaUrl"];
-  createdAt: DbMessage["createdAt"];
-  sentBy: Pick<
-    User,
-    "id" | "name" | "imageUrl" | "createdAt" | "status" | "lastStatusUpdate"
-  >;
-  highlights: Highlights;
+export type MessageData = {
+  topicId?: string;
+  id?: string;
+  text?: string;
+  mediaUrl?: string | null;
+  createdAt?: Date;
+  sentBy?: {
+    id: string;
+    name: string | null;
+    imageUrl: string | null;
+    createdAt: Date;
+    status: string | null;
+    lastStatusUpdate: Date | null;
+  };
+  highlights?: Highlights;
+  [key: string]: any;
+};
+
+export type MessageProps = MessageData & {
   variant: "default" | "minimal";
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
@@ -65,24 +74,24 @@ export const Message = (props: MessageProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingText, setEditingText] = useState(props.text);
   const [shuffledGifLoading, setShuffledGifLoading] = useState(false);
-  const createdAt = new Date(props.createdAt);
-  const sentBySelf = props.sentBy.id === self.id;
+  const createdAt = new Date(props.createdAt || new Date());
+  const sentBySelf = props.sentBy?.id === self.id;
   const mLength = messages.length;
   const isIsland = props.context === "modal" || props.context === "user-sheet";
   const isNewestMessage = mLength > 0 && messages[mLength - 1].id === props.id;
-  const isShufflingGif = shufflingGifs.includes(props.id) || shuffledGifLoading;
+  const isShufflingGif = (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
   const shouldScroll = isNewestMessage && props.context === "topic";
   const isActionEligable = props.variant !== "minimal";
 
   const islandMessage = useIslandMessage({
-    messageId: props.id,
-    existingHighlights: props.highlights,
+    messageId: props.id!,
+    existingHighlights: props.highlights || [],
     skip: !isIsland,
   });
 
-  const highlights = isIsland ? islandMessage.highlights : props.highlights;
+  const highlights = isIsland ? islandMessage.highlights : props.highlights || [];
 
-  const highlightedBySelf = !!highlights.find(
+  const highlightedBySelf = !!highlights?.find(
     (highlight) => self.id === highlight.userId
   );
 
@@ -111,6 +120,7 @@ export const Message = (props: MessageProps) => {
   );
 
   const handleToggleHighlight = () => {
+    if (!props.id) return;
     toggleHighlight.emit({
       messageId: props.id,
       topicId,
@@ -123,6 +133,7 @@ export const Message = (props: MessageProps) => {
     setIsEditing(false);
 
     if (editingText === props.text) return;
+    if (!props.id) return;
 
     editMessage.emit({
       topicId,
@@ -175,7 +186,7 @@ export const Message = (props: MessageProps) => {
       }}
     >
       <div className="flex gap-3 items-start overflow-hidden leading-none">
-        {!props.hiddenElements?.includes("sentBy") && (
+        {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
           <UserAvatar
             id={props.sentBy.id}
             name={props.sentBy.name}
@@ -190,7 +201,7 @@ export const Message = (props: MessageProps) => {
 
         <div className="flex flex-col flex-1">
           <div className="flex gap-2 items-center">
-            {!props.hiddenElements?.includes("sentBy") && (
+            {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
               <span
                 className={cn(
                   `font-semibold ${
@@ -211,7 +222,7 @@ export const Message = (props: MessageProps) => {
               <MessageActions
                 sentBySelf={sentBySelf}
                 className={messages[0].id === props.id ? "top-0" : ""}
-                messageId={props.id}
+                messageId={props.id!}
                 text={props.text ?? ""}
                 mediaUrl={props.mediaUrl ?? ""}
                 isShufflingGif={isShufflingGif}
@@ -220,6 +231,7 @@ export const Message = (props: MessageProps) => {
                   if (isNewestMessage) scrollToBottomOfChat({ force: true });
                 }}
                 onShuffleGif={() => {
+                  if (!props.id) return;
                   addShufflingGif(props.id);
                   setShuffledGifLoading(true);
                   shuffleGif.emit({ messageId: props.id, topicId });
@@ -241,7 +253,7 @@ export const Message = (props: MessageProps) => {
               />
             ) : (
               <MessageText
-                id={props.id}
+                id={props.id!}
                 topicId={topicId}
                 text={
                   props.variant === "minimal"
@@ -261,7 +273,7 @@ export const Message = (props: MessageProps) => {
                   variant={props.variant}
                   url={props.mediaUrl}
                   onImageExpanded={() => {
-                    expandImage.emit({ topicId, messageId: props.id });
+                    if (props.id) expandImage.emit({ topicId, messageId: props.id });
                   }}
                   onPreviewLoad={() => {
                     if (shuffledGifLoading) {
@@ -279,7 +291,7 @@ export const Message = (props: MessageProps) => {
               links.map((link, i) => {
                 return (
                   <LinkPreview
-                    messageId={props.id}
+                    messageId={props.id!}
                     topicId={topicId}
                     key={`${props.id}${link}${i}`}
                     link={link}
@@ -299,7 +311,7 @@ export const Message = (props: MessageProps) => {
             className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
             highlightedBySelf={highlightedBySelf}
             highlights={highlights}
-            messageId={props.id}
+            messageId={props.id!}
             onHighlight={handleToggleHighlight}
           />
         )}

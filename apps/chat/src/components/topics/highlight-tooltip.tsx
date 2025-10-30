@@ -63,6 +63,7 @@ export const HighlightTooltip = (props: Props) => {
         >
           <div className="flex gap-1.5">
             {highlights.map(({ createdBy, id }) => {
+              if (!createdBy) return null;
               return (
                 <Avatar key={id} className="h-7 w-7">
                   <AvatarImage

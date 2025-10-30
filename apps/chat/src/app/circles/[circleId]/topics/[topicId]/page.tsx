@@ -1,4 +1,3 @@
-import { cache } from "react";
 import { prismaClient } from "@/lib/prisma/client";
 import { TopicHeader } from "@/components/topics/topic-header";
 import { TopicChat } from "@/components/topics/topic-chat";
@@ -11,14 +10,14 @@ import {
   TOP_HIGHLIGHTS_LIMIT,
 } from "@/lib/prisma/message-model";
 import { CurrentTopicProvider } from "@/components/topics/current-topic-provider";
-import { DEFAULT_TITLE } from "@/app/layout";
 import { MessageModal } from "@/components/topics/message-modal";
+import { DEFAULT_TITLE } from "@/app/layout";
 
 type Props = {
   params: Promise<{ topicId: string; circleId: string }>;
 };
 
-const getTopic = cache(async (topicId: string, circleId: string) => {
+const getTopic = async (topicId: string, circleId: string) => {
   const topic = await prismaClient.topic.getMeTopicByIdWithCircle({
     topicId,
     circleId,
@@ -38,7 +37,7 @@ const getTopic = cache(async (topicId: string, circleId: string) => {
   });
 
   return topic;
-});
+};
 
 export async function generateMetadata({ params }: Props) {
   const { topicId, circleId } = await params;
@@ -55,43 +54,41 @@ export default async function TopicPage({ params }: Props) {
   const { topicId, circleId } = await params;
   const topic = await getTopic(topicId, circleId);
 
-  const queries = [
-    prismaClient.message.getMessagesForTopic({
-      topicId: topic?.id,
-      select: DEFAULT_MESSAGE_SELECT,
-    }),
+  const [messages, topHighlights, mediaMessages, circleMembers] =
+    await Promise.all([
+      prismaClient.message.getMessagesForTopic({
+        topicId: topic?.id,
+        select: DEFAULT_MESSAGE_SELECT,
+      }),
 
-    prismaClient.message.getTopHighlightedMessagesForTopic({
-      topicId: topic?.id,
-      select: DEFAULT_MESSAGE_SELECT,
-      since: "month",
-    }),
+      prismaClient.message.getTopHighlightedMessagesForTopic({
+        topicId: topic?.id,
+        select: DEFAULT_MESSAGE_SELECT,
+        since: "month",
+      }),
 
-    prismaClient.message.getMediaMessagesForTopic({
-      topicId: topic?.id,
-      select: DEFAULT_MESSAGE_SELECT,
-    }),
+      prismaClient.message.getMediaMessagesForTopic({
+        topicId: topic?.id,
+        select: DEFAULT_MESSAGE_SELECT,
+      }),
 
-    prismaClient.user.getMembersForCircle({
-      circleId: topic?.parentCircle.id ?? "",
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-        createdAt: true,
-        status: true,
-        lastStatusUpdate: true,
-        createdCircles: {
-          select: {
-            id: true,
+      prismaClient.user.getMembersForCircle({
+        circleId: topic?.parentCircle.id ?? "",
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+          createdAt: true,
+          status: true,
+          lastStatusUpdate: true,
+          createdCircles: {
+            select: {
+              id: true,
+            },
           },
         },
-      },
-    }),
-  ];
-
-  const [messages, topHighlights, mediaMessages, circleMembers] =
-    await Promise.all(queries);
+      }),
+    ] as const);
 
   return (
     <div className="flex flex-col overflow-y-auto basis-full h-full">
@@ -103,13 +100,9 @@ export default async function TopicPage({ params }: Props) {
           topicName={topic.name}
           circleName={topic.parentCircle.name}
           topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
-          // @ts-expect-error
-          existingCircleMemebers={circleMembers}
-          // @ts-expect-error
+          existingCircleMembers={circleMembers}
           existingMessages={messages}
-          // @ts-expect-error
           existingTopHighlights={topHighlights}
-          // @ts-expect-error
           existingMediaMessages={mediaMessages}
         >
           <TopicHeader topic={topic} />

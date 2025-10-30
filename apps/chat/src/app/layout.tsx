@@ -16,8 +16,6 @@ import { Routes } from "@/routes";
 
 import "@/globals.css";
 
-export const DEFAULT_TITLE = "Tim";
-
 const getLoggedInUser = cache(async () => {
   const user = await prismaClient.user.getLoggedIn({
     select: {
@@ -33,6 +31,8 @@ const getLoggedInUser = cache(async () => {
 
   return user ?? undefined;
 });
+
+export const DEFAULT_TITLE = "Tim";
 
 export async function generateMetadata() {
   const user = await getLoggedInUser();

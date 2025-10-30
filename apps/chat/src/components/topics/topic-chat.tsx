@@ -1,41 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Message, MessageProps } from "@/components/topics/message";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
+import { useCurrentTopicContext } from "./current-topic-provider";
+import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
+import { useRoomManagement } from "@/components/socket/use-current-user-rooms";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
+import { Message, MessageProps } from "./message";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Spinner } from "@/components/ui/spinner";
-import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 
-const SCROLL_TIMEOUT = 250;
+const SCROLL_TIMEOUT = 500;
 
 export function TopicChat() {
-  const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
-  const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
-  const [hasScrolled, setHasScrolled] = useState(false);
   const { markTopicAsRead } = useUnreadTopics();
+  const { joinRoom, leaveRoom } = useRoomManagement();
+  const [hasScrolled, setHasScrolled] = useState(false);
 
   const {
-    messages,
     topicId,
-    scrollRef,
-    messagesListRef,
     scrollToBottomOfChat,
+    blopSoundRef,
+    messages,
+    messagesListRef,
+    scrollRef,
     loadMoreMessages,
     loadingMoreMessages,
     hasMoreMessages,
-    blopSoundRef,
   } = useCurrentTopicContext();
 
-  const payload = { id: topicId, roomType: "topic" };
-
   useEffectOnce(() => {
-    joinRoom.emit(payload);
-    markTopicAsRead(topicId);
+    joinRoom(topicId, "topic");
     scrollToBottomOfChat({ force: true, timeout: SCROLL_TIMEOUT });
 
     setTimeout(() => {
@@ -43,7 +39,8 @@ export function TopicChat() {
     }, SCROLL_TIMEOUT + 1);
 
     return () => {
-      leaveRoom.emit(payload);
+      markTopicAsRead(topicId);
+      leaveRoom(topicId, "topic");
     };
   });
 
@@ -64,32 +61,34 @@ export function TopicChat() {
   }
 
   return (
-    <ScrollArea className="flex flex-col basis-full" ref={messagesListRef}>
-      {hasScrolled && hasMoreMessages && (
-        <InfiniteLoader
-          loading={loadingMoreMessages}
-          fetchNextPage={loadMoreMessages}
-          containerRef={messagesListRef}
-        >
-          <div className="flex flex-col items-center p-2">
-            <Spinner />
-          </div>
-        </InfiniteLoader>
-      )}
+    <div className="flex flex-col basis-full overflow-hidden">
+      <ScrollArea className="flex flex-col basis-full" ref={messagesListRef}>
+        {hasScrolled && hasMoreMessages && (
+          <InfiniteLoader
+            loading={loadingMoreMessages}
+            fetchNextPage={loadMoreMessages}
+            containerRef={messagesListRef}
+          >
+            <div className="flex flex-col items-center p-2">
+              <Spinner />
+            </div>
+          </InfiniteLoader>
+        )}
 
-      {messages.map((message: MessageProps) => {
-        return (
-          <Message
-            key={message.id}
-            {...message}
-            context="topic"
-            className={!hasScrolled ? "invisible" : ""}
-          />
-        );
-      })}
+        {messages.map((message: MessageProps) => {
+          return (
+            <Message
+              key={message.id}
+              {...message}
+              context="topic"
+              className={!hasScrolled ? "invisible" : ""}
+            />
+          );
+        })}
 
-      <div ref={scrollRef} />
-      <audio ref={blopSoundRef} src="/sounds/blop.mp3" />
-    </ScrollArea>
+        <div ref={scrollRef} />
+        <audio ref={blopSoundRef} src="/sounds/blop.mp3" />
+      </ScrollArea>
+    </div>
   );
 }

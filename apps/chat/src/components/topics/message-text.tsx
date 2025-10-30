@@ -1,4 +1,5 @@
 import { cn, isEmojiOnly } from "@/lib/utils";
+import { isValidCommand } from "@/components/topics/message-utils";
 import Link from "next/link";
 import { useMemo } from "react";
 import Linkify from "react-linkify";
@@ -10,6 +11,27 @@ type Props = {
   text?: string | null;
   isNewestMessage?: boolean;
 };
+
+function parseMessage(text: string) {
+  if (!text) return text;
+
+  const parts = text.split(" ");
+  const firstPart = parts[0];
+
+  if (isValidCommand(text)) {
+    const command = firstPart;
+    const rest = parts.slice(1).join(" ");
+
+    return (
+      <>
+        <span className="font-pronounced">{command}</span>
+        {rest && ` ${rest}`}
+      </>
+    );
+  }
+
+  return text;
+}
 
 export function MessageText(props: Props) {
   const isOnlyEmoji = useMemo(
@@ -44,7 +66,7 @@ export function MessageText(props: Props) {
         )}
         style={{ overflowWrap: "anywhere" }}
       >
-        {props.text}
+        {props.text ? parseMessage(props.text) : null}
       </div>
     </Linkify>
   );

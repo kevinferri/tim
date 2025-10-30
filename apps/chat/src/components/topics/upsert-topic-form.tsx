@@ -135,10 +135,13 @@ export const UpsertTopicForm = ({
 
                     const resp = await deleteTopic({
                       topicId: existingTopic?.id,
+                      circleId,
                     });
 
                     setSubmitting(false);
                     setOpen(false);
+
+                    console.log(resp);
 
                     if (resp && resp.data) {
                       deletedTopic.emit({

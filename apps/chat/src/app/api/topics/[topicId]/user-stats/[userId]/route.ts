@@ -3,7 +3,7 @@ import { getLoggedInUserId } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { prismaClient } from "@/lib/prisma/client";
 import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
-import { MessageProps } from "@/components/topics/message";
+import { MessageData } from "@/components/topics/message";
 
 export type UserStatsForTopicResponse = {
   topicName: string;
@@ -11,7 +11,7 @@ export type UserStatsForTopicResponse = {
   messagesSent: number;
   highlightsGiven: number;
   highlightsRecieved: number;
-  topHighlights: Array<MessageProps>;
+  topHighlights: Array<MessageData>;
 };
 
 type Route = {
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest, { params }: Route) {
         highlightsGiven,
         highlightsRecieved,
         topHighlights,
-      } as UserStatsForTopicResponse,
+      } as unknown as UserStatsForTopicResponse,
       { status: 200 }
     );
   } catch (e) {

@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Socket } from "socket.io-client";
-import { usePathname, useSearchParams } from "next/navigation";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useToast } from "@/components/ui/use-toast";
-
-const RECONNECT_PARAM = "from-reconnect";
+import { SocketEvent } from "@/components/socket/use-socket";
+import { useCurrentUserRooms } from "@/components/socket/use-current-user-rooms";
 
 export function useSocketState(socket: Socket) {
   const { toast } = useToast();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [isConnected, setIsConnected] = useState<boolean>();
+  const disconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
+  const { getJoinedRooms } = useCurrentUserRooms();
 
   useEffectOnce(() => {
     // socket.connected is initially false for a flash.
@@ -20,28 +19,25 @@ export function useSocketState(socket: Socket) {
     setTimeout(() => {
       setIsConnected(socket.connected);
       if (!socket.connected) showDisconnectedToast();
-    }, 3000);
+    }, 1500);
 
     function showDisconnectedToast() {
-      toast({
-        title: `Your connection to our server has been lost`,
-        description: `Attempting to reconnect...`,
-        variant: "destructive",
-        duration: Number.POSITIVE_INFINITY,
-      });
+      if (!disconnectToastRef.current) {
+        disconnectToastRef.current = toast({
+          title: `Your connection to our server has been lost`,
+          description: `Attempting to reconnect...`,
+          variant: "destructive",
+          duration: Number.POSITIVE_INFINITY,
+        });
+      }
     }
 
     function onConnect() {
       setIsConnected(true);
 
-      if (searchParams.get(RECONNECT_PARAM)) {
-        window.history.replaceState(null, "", pathname);
-
-        toast({
-          title: `Your connection has been restored  🎉`,
-          variant: "success",
-          duration: 5000,
-        });
+      if (disconnectToastRef.current) {
+        disconnectToastRef.current.dismiss();
+        disconnectToastRef.current = null;
       }
     }
 
@@ -51,8 +47,16 @@ export function useSocketState(socket: Socket) {
     }
 
     function onReconnect() {
-      window.location.href =
-        window.location.pathname + `?${RECONNECT_PARAM}=true`;
+      const rooms = getJoinedRooms();
+      rooms.forEach((room) => {
+        socket.emit(SocketEvent.JoinRoom, room);
+      });
+
+      toast({
+        title: `Your connection has been restored`,
+        variant: "success",
+        duration: 3000,
+      });
     }
 
     socket.on("connect", onConnect);

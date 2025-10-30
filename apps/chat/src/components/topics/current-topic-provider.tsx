@@ -3,28 +3,31 @@
 import {
   createContext,
   useContext,
-  useState,
   useMemo,
   useCallback,
-  useRef,
   MutableRefObject,
 } from "react";
 import { useRouter } from "next/navigation";
-import { MessageProps } from "@/components/topics/message";
-import {
-  SocketEvent,
-  useSocketEmit,
-  useSocketHandler,
-} from "@/components/socket/use-socket";
-import { Highlight, User } from "@prisma/client";
+import { MessageProps, MessageData } from "@/components/topics/message";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
-import { useLazyFetch } from "@/lib/hooks/use-fetch";
-import { useWindowFocus } from "@/lib/hooks/use-window-focus";
-import { WithRelation } from "../../../types/prisma";
-import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
-import { useMessageSound } from "@/components/dashboard/use-message-sound";
+import { useState } from "react";
+import { useTopicScroll } from "@/components/topics/provider/use-topic-scroll";
+import { useTopicMessages } from "@/components/topics/provider/use-topic-messages";
+import { useTopicHighlights } from "@/components/topics/provider/use-topic-highlights";
+import { useTopicMedia } from "@/components/topics/provider/use-topic-media";
+import { useTopicActivity } from "@/components/topics/provider/use-topic-activity";
 
-export type CircleMember = WithRelation<"User", "createdCircles">;
+export type CircleMember = {
+  id: string;
+  name: string | null;
+  imageUrl: string | null;
+  createdAt: Date;
+  status: string | null;
+  lastStatusUpdate: Date | null;
+  createdCircles: {
+    id: string;
+  }[];
+};
 
 type ScrollArgs =
   | {
@@ -50,10 +53,10 @@ type ContextValue = {
   loadingMoreMessages: boolean;
   hasMoreMessages: boolean;
   loadMoreAnchorRef: MutableRefObject<HTMLDivElement | null>;
-  loadMoreAnchorId: string;
+  loadMoreAnchorId?: string;
   blopSoundRef: MutableRefObject<HTMLAudioElement | null>;
   generatingCommand?: string;
-  setGeneratingCommand: (command: string) => void;
+  setGeneratingCommand: (command?: string) => void;
 };
 
 type Props = {
@@ -61,10 +64,10 @@ type Props = {
   circleId: string;
   topicName: string;
   circleName: string;
-  existingMessages: MessageProps[];
-  existingTopHighlights: MessageProps[];
-  existingMediaMessages: MessageProps[];
-  existingCircleMemebers: CircleMember[];
+  existingMessages: MessageData[];
+  existingTopHighlights: MessageData[];
+  existingMediaMessages: MessageData[];
+  existingCircleMembers: CircleMember[];
   topHighlightsLimit: number;
   messagesLimit: number;
   children: React.ReactNode;
@@ -72,365 +75,86 @@ type Props = {
 
 const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 
-function isNearBottom(
-  ref: MutableRefObject<HTMLDivElement | null>,
-  padding = 120
-) {
-  const el = ref.current;
-  const threshold = 50;
-  if (!el) return false;
-
-  return (
-    el.scrollHeight - el.scrollTop <= el.clientHeight + padding + threshold
-  );
-}
-
 export function CurrentTopicProvider(props: Props) {
   const router = useRouter();
-  const scrollRef = useRef<null | HTMLDivElement>(null);
-  const newestMessageRef = useRef<null | HTMLDivElement>(null);
-  const messagesListRef = useRef<null | HTMLDivElement>(null);
-  const loadMoreAnchorRef = useRef<null | HTMLDivElement>(null);
-  const blopSoundRef = useRef<null | HTMLAudioElement>(null);
-  const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
-  const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
-  const { isMessageSoundEnabled } = useMessageSound();
-  const { markTopicAsUnread } = useUnreadTopics();
+  const baseTitle = `${props.circleName} - ${props.topicName}`;
+  const [generatingCommand, setGeneratingCommand] = useState<
+    string | undefined
+  >();
+  const { scrollRef, newestMessageRef, messagesListRef, scrollToBottomOfChat } =
+    useTopicScroll();
 
-  const { fetchData: refreshTopHighlights } = useLazyFetch<MessageProps[]>({
-    url: `/api/topics/${props.topicId}/top-highlights`,
-    onSuccess: (refreshed) => setTopHighlights(refreshed),
+  const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
+    topicId: props.topicId,
+    baseTitle,
   });
 
-  const scrollToBottomOfChat = useCallback(
-    ({ timeout, force }: ScrollArgs = {}) => {
-      setTimeout(() => {
-        const padding = newestMessageRef.current?.clientHeight;
-        if (isNearBottom(messagesListRef, padding) || force) {
-          scrollRef?.current?.scrollIntoView({ block: "center" });
-        }
-      }, timeout ?? 1);
+  const onNewMessage = useCallback(() => {
+    notifyOnNewMessage();
+    scrollToBottomOfChat();
+    setGeneratingCommand(undefined);
+  }, [notifyOnNewMessage, scrollToBottomOfChat, setGeneratingCommand]);
+
+  const { mediaMessages, setMediaMessages, shufflingGifs, addShufflingGif } =
+    useTopicMedia({
+      existingMediaMessages: props.existingMediaMessages,
+      onMediaChange: undefined,
+    });
+
+  const onMediaMessage = useCallback(
+    (message: MessageProps) => {
+      setMediaMessages((prev) => [message, ...prev]);
     },
-    []
+    [setMediaMessages]
   );
 
-  // next caches server data (messages) by default,
-  // this ensures when the user switches
-  // topics they get the latest server data
-  // gross i know
+  const {
+    messages,
+    setMessages,
+    loadMoreMessages,
+    loadingMoreMessages,
+    hasMoreMessages,
+    loadMoreAnchorRef,
+    loadMoreAnchorId,
+  } = useTopicMessages({
+    topicId: props.topicId,
+    existingMessages: props.existingMessages,
+    messagesLimit: props.messagesLimit,
+    messagesListRef,
+    onNewMessage,
+    onMediaMessage,
+  });
+
+  const { topHighlights } = useTopicHighlights({
+    topicId: props.topicId,
+    existingTopHighlights: props.existingTopHighlights,
+    topHighlightsLimit: props.topHighlightsLimit,
+    onHighlightChange: (handler) => {
+      setMessages((prev) => handler(prev));
+      setMediaMessages((prev) => handler(prev));
+    },
+  });
+
   useEffectOnce(() => {
     router.refresh();
   });
 
-  const [messages, setMessages] = useState<MessageProps[]>(
-    props.existingMessages
+  const circleMembers = useMemo(
+    () => props.existingCircleMembers,
+    [props.existingCircleMembers]
   );
-  const [topHighlights, setTopHighlights] = useState<MessageProps[]>(
-    props.existingTopHighlights
-  );
-  const [mediaMessages, setMediaMessages] = useState<MessageProps[]>(
-    props.existingMediaMessages
-  );
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-  const [shufflingGifs, setShufflingGifs] = useState<string[]>([]);
-  const [loadMoreAnchorId, setLoadMoreAnchorId] = useState(messages?.[0]?.id);
-  const [hasMoreMessages, setHasMoreMessages] = useState(
-    messages.length >= props.messagesLimit
-  );
-  const [generatingCommand, _setGeneratingCommand] = useState<string>();
-  const baseTitle = `${props.circleName} - ${props.topicName}`;
-
-  const addShufflingGif = useCallback(
-    (messageId: string) => {
-      setShufflingGifs([...shufflingGifs, messageId]);
-    },
-    [shufflingGifs]
-  );
-
-  const setGeneratingCommand = useCallback((str: string) => {
-    _setGeneratingCommand(str);
-  }, []);
-
-  const windowFocused = useWindowFocus({
-    onFocus: () => {
-      userTabFocused.emit({ topicId: props.topicId });
-      if (unreadMessageCount !== 0) {
-        setUnreadMessageCount(0);
-        document.title = baseTitle;
-      }
-    },
-    onBlur: () => {
-      userTabBlurred.emit({ topicId: props.topicId });
-    },
-  });
-
-  // Updates all message state (default messages, top highlights, media)
-  const syncedUpdate = useCallback(
-    (handler: (prevState: MessageProps[]) => MessageProps[]) => {
-      setMessages((prevMessages) => handler(prevMessages));
-      setTopHighlights((prevMessages) => handler(prevMessages));
-      setMediaMessages((prevMessages) => handler(prevMessages));
-    },
-    []
-  );
-
-  // Handle new message
-  useSocketHandler<MessageProps>(
-    SocketEvent.SendMessage,
-    (newMessage: MessageProps) => {
-      if (newMessage.topicId !== props.topicId) {
-        markTopicAsUnread(newMessage.topicId);
-        return;
-      }
-
-      const withNewMessage = [
-        ...messages,
-        {
-          ...newMessage,
-          createdAt: new Date(newMessage.createdAt),
-        },
-      ];
-
-      const slicer = Math.max(messages.length + 1 - props.messagesLimit, 0);
-      const needsSlice =
-        withNewMessage.length > props.messagesLimit &&
-        isNearBottom(messagesListRef);
-
-      if (needsSlice && !hasMoreMessages) setHasMoreMessages(true);
-      setMessages(needsSlice ? withNewMessage.slice(slicer) : withNewMessage);
-
-      if (newMessage.mediaUrl) {
-        setMediaMessages([
-          {
-            ...newMessage,
-            createdAt: new Date(newMessage.createdAt),
-          },
-          ...mediaMessages,
-        ]);
-      }
-
-      if (Boolean(generatingCommand)) {
-        _setGeneratingCommand(undefined);
-      }
-
-      if (!windowFocused) {
-        setUnreadMessageCount((count) => {
-          const newCount = count + 1;
-          document.title = `(${newCount}) ${baseTitle}`;
-          return newCount;
-        });
-
-        if (isMessageSoundEnabled) blopSoundRef.current?.play();
-      }
-
-      scrollToBottomOfChat();
-    }
-  );
-
-  // Handle delete message
-  useSocketHandler<{ deletedMessageId: string }>(
-    SocketEvent.DeleteMessage,
-    async (payload) => {
-      const wasTopHighlight = !!topHighlights.find(
-        ({ id }) => payload.deletedMessageId === id
-      );
-
-      syncedUpdate((prevMessages) =>
-        prevMessages.filter(({ id }) => id !== payload.deletedMessageId)
-      );
-
-      if (
-        wasTopHighlight &&
-        topHighlights.length === props.topHighlightsLimit
-      ) {
-        refreshTopHighlights();
-      }
-    }
-  );
-
-  // Handle edit message
-  useSocketHandler<{ id: string; text: string }>(
-    SocketEvent.EditMessage,
-    (payload) => {
-      syncedUpdate((prevMessages) =>
-        prevMessages.map((m) => {
-          if (m.id === payload.id) {
-            return {
-              ...m,
-              text: payload.text,
-            };
-          }
-
-          return m;
-        })
-      );
-    }
-  );
-
-  // Handle added highlight
-  useSocketHandler<{ highlight: Highlight; createdBy: User }>(
-    SocketEvent.AddedHighlight,
-    ({ highlight, createdBy }) => {
-      let newTopHighlight = undefined;
-      const isAlreadyTopHighlight = topHighlights.find(
-        ({ id }) => highlight.messageId == id
-      );
-
-      const lowestTopHighlights =
-        topHighlights.length > 0
-          ? topHighlights[topHighlights.length - 1].highlights.length
-          : 0;
-
-      syncedUpdate((prevMessages) => {
-        return prevMessages.map((message) => {
-          if (message.id !== highlight.messageId) {
-            return message;
-          }
-
-          const newMessage = {
-            ...message,
-            highlights: [
-              ...message.highlights,
-              {
-                id: highlight.id,
-                messageId: highlight.messageId,
-                userId: highlight.userId,
-                createdBy,
-              },
-            ],
-          };
-
-          if (
-            !isAlreadyTopHighlight &&
-            (lowestTopHighlights <= newMessage.highlights.length ||
-              topHighlights.length < props.topHighlightsLimit)
-          ) {
-            newTopHighlight = newMessage;
-          }
-
-          return newMessage;
-        });
-      });
-
-      if (newTopHighlight) {
-        setTopHighlights([...topHighlights, newTopHighlight]);
-      }
-    }
-  );
-
-  // Handle removed highlight
-  useSocketHandler<{ messageId: string; userId: string }>(
-    SocketEvent.RemovedHighlight,
-    async (payload) => {
-      let toBeRemovedFromTopHighlights: string | undefined = undefined;
-      const lowestTopHighlights =
-        topHighlights[topHighlights.length - 1].highlights.length;
-
-      syncedUpdate((prevMessages) => {
-        return prevMessages.map((message) => {
-          if (message.id !== payload.messageId) {
-            return message;
-          }
-
-          const newMessage = {
-            ...message,
-            highlights: message.highlights.filter(
-              ({ userId }) => userId !== payload.userId
-            ),
-          };
-
-          if (
-            newMessage.highlights.length === 0 ||
-            (lowestTopHighlights > newMessage.highlights.length &&
-              topHighlights.length >= props.topHighlightsLimit)
-          ) {
-            toBeRemovedFromTopHighlights = newMessage.id;
-          }
-
-          return newMessage;
-        });
-      });
-
-      if (toBeRemovedFromTopHighlights) {
-        const wasTopHighlight = !!topHighlights.find(
-          ({ id }) => toBeRemovedFromTopHighlights === id
-        );
-
-        if (wasTopHighlight) {
-          // Optimistically remove from state
-          setTopHighlights((prevHighlights) =>
-            prevHighlights.filter(
-              ({ id }) => id !== toBeRemovedFromTopHighlights
-            )
-          );
-
-          // Get top highlight from server to replace the removed one if at capacity
-          if (topHighlights.length >= props.topHighlightsLimit) {
-            refreshTopHighlights();
-          }
-        }
-      }
-    }
-  );
-
-  // Handle gif shuffle
-  useSocketHandler<{ messageId: string; mediaUrl: string }>(
-    SocketEvent.ShuffleGifMessage,
-    (payload) => {
-      syncedUpdate((prevMessages) =>
-        prevMessages.map((m) => {
-          if (m.id === payload.messageId) {
-            return {
-              ...m,
-              mediaUrl: payload.mediaUrl,
-            };
-          }
-
-          return m;
-        })
-      );
-
-      setShufflingGifs((gifs) => gifs.filter((id) => id !== payload.messageId));
-    }
-  );
-
-  const before = messages?.[0]?.createdAt
-    ? new Date(messages?.[0]?.createdAt ?? undefined)
-    : new Date();
-
-  const { fetchData: loadMoreMessages, loading: loadingMoreMessages } =
-    useLazyFetch<MessageProps[]>({
-      skip: messages.length === 0,
-      url: `/api/topics/${
-        props.topicId
-      }/messages?before=${before.toISOString()}`,
-      onSuccess: (newMessages) => {
-        if (newMessages.length < props.messagesLimit) {
-          setHasMoreMessages(false);
-        }
-
-        setMessages([...newMessages, ...messages]);
-        setLoadMoreAnchorId(newMessages[newMessages.length - 1].id);
-        setTimeout(() => {
-          loadMoreAnchorRef?.current?.scrollIntoView({ block: "end" });
-        }, 1);
-      },
-    });
 
   const contextValue = useMemo(
     () => ({
       messages,
       mediaMessages,
-      circleMembers: props.existingCircleMemebers,
+      circleMembers,
       scrollRef,
       messagesListRef,
       scrollToBottomOfChat,
       shufflingGifs,
       addShufflingGif,
-      topHighlights: sanitizeTopHighlights(
-        topHighlights,
-        props.topHighlightsLimit
-      ),
+      topHighlights,
       topicId: props.topicId,
       circleId: props.circleId,
       loadMoreMessages,
@@ -446,23 +170,24 @@ export function CurrentTopicProvider(props: Props) {
     [
       messages,
       mediaMessages,
-      topHighlights,
-      props.existingCircleMemebers,
+      circleMembers,
       shufflingGifs,
       addShufflingGif,
+      topHighlights,
       props.topicId,
       props.circleId,
-      props.topHighlightsLimit,
       scrollToBottomOfChat,
       loadMoreMessages,
       loadingMoreMessages,
       hasMoreMessages,
-      loadMoreAnchorRef,
-      blopSoundRef,
       loadMoreAnchorId,
-      newestMessageRef,
       generatingCommand,
       setGeneratingCommand,
+      scrollRef,
+      messagesListRef,
+      loadMoreAnchorRef,
+      blopSoundRef,
+      newestMessageRef,
     ]
   );
 
@@ -483,18 +208,4 @@ export function useCurrentTopicContext() {
   }
 
   return context;
-}
-
-function sanitizeTopHighlights(messages: MessageProps[], limit: number) {
-  return messages
-    .sort((a, b) => {
-      if (b.highlights.length === a.highlights.length) {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      } else {
-        return b.highlights.length - a.highlights.length;
-      }
-    })
-    .slice(0, limit);
 }

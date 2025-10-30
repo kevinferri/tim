@@ -46,22 +46,20 @@ export function MessageActions(props: Props) {
     >
       <div className="flex gap-1">
         <TooltipProvider>
-          <Tooltip delayDuration={DELAY_DURATION}>
-            <TooltipTrigger asChild>
-              <Button
-                size="iconSm"
-                variant="outline"
-                onClick={() => {
-                  updateStatus(props.text);
-                }}
-              >
-                <SewingPinFilledIcon />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Set as status</TooltipContent>
-          </Tooltip>
           {props.sentBySelf && (
             <>
+              <Tooltip delayDuration={DELAY_DURATION}>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="iconSm"
+                    variant="outline"
+                    onClick={() => updateStatus(props.text)}
+                  >
+                    <SewingPinFilledIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Set as status</TooltipContent>
+              </Tooltip>
               <Tooltip delayDuration={DELAY_DURATION}>
                 <TooltipTrigger asChild>
                   {isRandomGif ? (
