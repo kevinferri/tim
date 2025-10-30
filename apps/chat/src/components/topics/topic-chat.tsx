@@ -9,9 +9,39 @@ import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { Message, MessageProps } from "./message";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const SCROLL_TIMEOUT = 500;
+
+function MoreMessagesSkeleton() {
+  const widths = [
+    "w-[70%]",
+    "w-[60%]",
+    "w-[50%]",
+    "w-[80%]",
+    "w-[65%]",
+    "w-[55%]",
+    "w-[75%]",
+  ];
+
+  return (
+    <>
+      {[...Array(3)].map((_, i) => {
+        const widthClass = widths[Math.floor(Math.random() * widths.length)];
+
+        return (
+          <div key={i} className="flex items-start space-x-2 p-3 w-full">
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+            <div className="flex flex-col space-y-2 w-full">
+              <Skeleton className="h-4 w-[120px]" />
+              <Skeleton className={`h-4 ${widthClass}`} />
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 export function TopicChat() {
   const { markTopicAsRead } = useUnreadTopics();
@@ -31,7 +61,13 @@ export function TopicChat() {
   } = useCurrentTopicContext();
 
   useEffectOnce(() => {
+    // Immediate snap to bottom
+    scrollToBottomOfChat({ force: true });
+
+    // Join room
     joinRoom(topicId, "topic");
+
+    // If there are lazily loaded assets, try scrolling again
     scrollToBottomOfChat({ force: true, timeout: SCROLL_TIMEOUT });
 
     setTimeout(() => {
@@ -69,21 +105,14 @@ export function TopicChat() {
             fetchNextPage={loadMoreMessages}
             containerRef={messagesListRef}
           >
-            <div className="flex flex-col items-center p-2">
-              <Spinner />
+            <div className="flex flex-col">
+              <MoreMessagesSkeleton />
             </div>
           </InfiniteLoader>
         )}
 
         {messages.map((message: MessageProps) => {
-          return (
-            <Message
-              key={message.id}
-              {...message}
-              context="topic"
-              className={!hasScrolled ? "invisible" : ""}
-            />
-          );
+          return <Message key={message.id} {...message} context="topic" />;
         })}
 
         <div ref={scrollRef} />
