@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
 import { MediaUploader } from "@/components/topics/media-uploader";
@@ -54,6 +54,11 @@ export function TopicMessageBar() {
     () => (image ? URL.createObjectURL(image) : undefined),
     [image]
   );
+
+  // Focus textarea when command generation completes
+  useEffect(() => {
+    if (!generatingCommand) textAreaRef.current?.focus();
+  }, [generatingCommand]);
 
   const emitMessage = async (message: string) => {
     if (!image && !message.trim()) return;
@@ -116,7 +121,7 @@ export function TopicMessageBar() {
           <AutoResizeTextarea
             ref={textAreaRef}
             onPaste={(event) => {
-            const items = event.clipboardData?.items;
+              const items = event.clipboardData?.items;
               if (!items) return;
 
               for (const key in items) {
@@ -125,26 +130,26 @@ export function TopicMessageBar() {
                 if (item.kind === "file") {
                   const blob = item.getAsFile();
                   if (blob) setImage(blob);
+                }
               }
-            }
-          }}
+            }}
             disabled={isGenerating}
             className={cn(
-            "border-none",
-            isGenerating ? "bg-slate-100 dark:bg-slate-900" : ""
+              "border-none",
+              isGenerating ? "bg-slate-100 dark:bg-slate-900" : ""
             )}
             onChange={(e) => {
-            setMessage(e.target.value);
+              setMessage(e.target.value);
             }}
             onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-            emitMessage(message);
-            }
+              if (e.key === "Enter" && !e.shiftKey) {
+                emitMessage(message);
+              }
             }}
             value={message}
             placeholder={generatingCommand}
           />
-          {isGenerating && Boolean(generatingCommand) && (
+          {isGenerating && Boolean(generatingCommand) && isTim && (
             <div className="flex items-center pr-2">
               <ThinkingDots />
             </div>
