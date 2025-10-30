@@ -13,14 +13,17 @@ type Props = {
   onPreviewLoad?: () => void;
   onImageExpanded?: () => void;
   priority?: boolean;
+  skipVirtualization?: boolean;
 };
 
 export function ResponsiveVideoPlayer({
   src,
   onPreviewLoad,
+  skipVirtualization = false,
 }: {
   src: string;
   onPreviewLoad?: () => void;
+  skipVirtualization?: boolean;
 }) {
   const intersectionRef = useRef(null);
   const intersection = useIntersection(intersectionRef, {
@@ -30,7 +33,7 @@ export function ResponsiveVideoPlayer({
   return (
     <div className="max-w-[640px] shadow-lg" ref={intersectionRef}>
       <div className="relative pt-[56.25%]">
-        {intersection?.isIntersecting && (
+        {(skipVirtualization || intersection?.isIntersecting) && (
           <iframe
             onLoad={onPreviewLoad}
             className="rounded-sm absolute top-0 left-0 w-full h-full"
@@ -76,6 +79,7 @@ export function MediaViewer(props: Props) {
       <ResponsiveVideoPlayer
         onPreviewLoad={props.onPreviewLoad}
         src={iframeSrc}
+        skipVirtualization={props.skipVirtualization}
       />
     );
   }

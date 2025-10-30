@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
@@ -77,6 +77,8 @@ export const Message = (props: MessageProps) => {
   const createdAt = new Date(props.createdAt || new Date());
   const sentBySelf = props.sentBy?.id === self.id;
   const mLength = messages.length;
+  const messageIndex = messages.findIndex((m) => m.id === props.id);
+  const isRecentMessage = messageIndex >= 0 && mLength - messageIndex <= 5;
   const isIsland = props.context === "modal" || props.context === "user-sheet";
   const isNewestMessage = mLength > 0 && messages[mLength - 1].id === props.id;
   const isShufflingGif =
@@ -161,12 +163,6 @@ export const Message = (props: MessageProps) => {
 
     return undefined;
   };
-
-  const scroll = useCallback(() => {
-    process.nextTick(() => {
-      scrollToBottomOfChat();
-    });
-  }, []);
 
   return (
     <div
@@ -281,6 +277,7 @@ export const Message = (props: MessageProps) => {
                   priority={props.context === "topic"}
                   variant={props.variant}
                   url={props.mediaUrl}
+                  skipVirtualization={isRecentMessage}
                   onImageExpanded={() => {
                     if (props.id)
                       expandImage.emit({ topicId, messageId: props.id });
@@ -290,7 +287,9 @@ export const Message = (props: MessageProps) => {
                       setShuffledGifLoading(false);
                     }
 
-                    scroll();
+                    if (shouldScroll) {
+                      scrollToBottomOfChat();
+                    }
                   }}
                 />
               ))}
@@ -304,7 +303,9 @@ export const Message = (props: MessageProps) => {
                     key={`${props.id}${link}${i}`}
                     link={link}
                     onEmbedMediaLoad={() => {
-                      scroll();
+                      if (shouldScroll) {
+                        scrollToBottomOfChat();
+                      }
                     }}
                   />
                 );
