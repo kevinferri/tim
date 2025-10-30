@@ -122,12 +122,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
 
         return 0;
       });
-  }, [
-    topics,
-    mutedTopics,
-    unreadTopics,
-    circle.defaultTopicId,
-  ]);
+  }, [topics, mutedTopics, unreadTopics, circle.defaultTopicId]);
 
   useSocketHandler<NewTopicHandlerProps>(
     SocketEvent.UpsertedTopic,
@@ -222,7 +217,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
 
               return (
                 <ContextMenu key={topic.id}>
-                  <Link href={link} onMouseEnter={() => router.prefetch(link)}>
+                  <Link href={link}>
                     {isMinimized ? (
                       <TooltipProvider>
                         <Tooltip delayDuration={100}>

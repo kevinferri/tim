@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
@@ -79,7 +79,8 @@ export const Message = (props: MessageProps) => {
   const mLength = messages.length;
   const isIsland = props.context === "modal" || props.context === "user-sheet";
   const isNewestMessage = mLength > 0 && messages[mLength - 1].id === props.id;
-  const isShufflingGif = (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
+  const isShufflingGif =
+    (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
   const shouldScroll = isNewestMessage && props.context === "topic";
   const isActionEligable = props.variant !== "minimal";
 
@@ -89,7 +90,9 @@ export const Message = (props: MessageProps) => {
     skip: !isIsland,
   });
 
-  const highlights = isIsland ? islandMessage.highlights : props.highlights || [];
+  const highlights = isIsland
+    ? islandMessage.highlights
+    : props.highlights || [];
 
   const highlightedBySelf = !!highlights?.find(
     (highlight) => self.id === highlight.userId
@@ -158,6 +161,12 @@ export const Message = (props: MessageProps) => {
 
     return undefined;
   };
+
+  const scroll = useCallback(() => {
+    process.nextTick(() => {
+      scrollToBottomOfChat();
+    });
+  }, []);
 
   return (
     <div
@@ -273,16 +282,15 @@ export const Message = (props: MessageProps) => {
                   variant={props.variant}
                   url={props.mediaUrl}
                   onImageExpanded={() => {
-                    if (props.id) expandImage.emit({ topicId, messageId: props.id });
+                    if (props.id)
+                      expandImage.emit({ topicId, messageId: props.id });
                   }}
                   onPreviewLoad={() => {
                     if (shuffledGifLoading) {
                       setShuffledGifLoading(false);
                     }
 
-                    if (shouldScroll) {
-                      scrollToBottomOfChat();
-                    }
+                    scroll();
                   }}
                 />
               ))}
@@ -296,9 +304,7 @@ export const Message = (props: MessageProps) => {
                     key={`${props.id}${link}${i}`}
                     link={link}
                     onEmbedMediaLoad={() => {
-                      if (shouldScroll) {
-                        scrollToBottomOfChat();
-                      }
+                      scroll();
                     }}
                   />
                 );
