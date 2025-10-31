@@ -92,7 +92,7 @@ export function CurrentTopicProvider(props: Props) {
   const onNewMessage = useCallback(() => {
     notifyOnNewMessage();
     scrollToBottomOfChat();
-    setGeneratingCommand(undefined);
+    if (generatingCommand) setGeneratingCommand(undefined);
   }, [notifyOnNewMessage, scrollToBottomOfChat, setGeneratingCommand]);
 
   const { mediaMessages, setMediaMessages, shufflingGifs, addShufflingGif } =

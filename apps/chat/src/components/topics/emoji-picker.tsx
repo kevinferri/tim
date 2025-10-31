@@ -20,7 +20,7 @@ export function EmojiPicker(props: Props) {
   const { theme } = useTheme();
 
   // Can also load data in remotely instead of including it in the bundle:
-  // Should be put in context/store
+  // Should be put in context/store/cache
   // const { data } = useFetch({
   //   url: "https://cdn.jsdelivr.net/npm/@emoji-mart/data",
   // });

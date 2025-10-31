@@ -4,9 +4,7 @@ import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 
 type UseTopicMediaProps = {
   existingMediaMessages: MessageData[];
-  onMediaChange?:
-    | ((handler: (prev: MessageProps[]) => MessageProps[]) => void)
-    | undefined;
+  onMediaChange?: (handler: (prev: MessageProps[]) => MessageProps[]) => void;
 };
 
 export function useTopicMedia({
