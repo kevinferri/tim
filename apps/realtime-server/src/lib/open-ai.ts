@@ -4,6 +4,10 @@ import { commandRegistry, findCommandKeyByExecute } from "./command-handler";
 
 type User = { id: string; name: string };
 
+function toFirstName(name: string) {
+  return name.split(" ")[0];
+}
+
 function getActiveAndNonActiveUsers({
   activeUsers,
   allUsers,
@@ -13,19 +17,14 @@ function getActiveAndNonActiveUsers({
   allUsers: User[];
   currentUserId: string;
 }) {
-  // Filter out the current user from both lists
-  const filteredActiveUsers = activeUsers.filter(
-    (user) => user.id !== currentUserId
-  );
-  const filteredAllUsers = allUsers.filter((user) => user.id !== currentUserId);
-  const activeUserIds = new Set(filteredActiveUsers.map((user) => user.id));
-  const nonActiveUsers = filteredAllUsers.filter(
-    (user) => !activeUserIds.has(user.id)
-  );
+  const filteredActive = activeUsers.filter((u) => u.id !== currentUserId);
+  const filteredAll = allUsers.filter((u) => u.id !== currentUserId);
+  const activeIds = new Set(filteredActive.map((u) => u.id));
+  const nonActive = filteredAll.filter((u) => !activeIds.has(u.id));
 
   return {
-    inTopic: filteredActiveUsers.map((user) => `${toFirstName(user.name)}`),
-    notInTopic: nonActiveUsers.map((user) => `${toFirstName(user.name)}`),
+    inTopic: filteredActive.map((u) => toFirstName(u.name)),
+    notInTopic: nonActive.map((u) => toFirstName(u.name)),
   };
 }
 
@@ -47,50 +46,76 @@ function generatePrompt({
   });
 
   const timCommand = findCommandKeyByExecute(commandRegistry.tim);
+  const availableCommands = Object.keys(commandRegistry).filter(
+    (key) => key !== "tim"
+  );
 
-  const prompts = [
-    `Today is ${today}`,
-    `You are a bot named "Tim" in a real time group chat with friends`,
-    `Within the chat, users prompt you with the command "/${timCommand}"`,
-    `Only summarize the messages when you are explicity asked to, otherwise just respond to the prompt`,
-    `The topic of the group chat is "${topicName}"`,
-    `The person who just sent you a message is named "${toFirstName(
-      currentUserName
-    )}"`,
-  ];
+  return `# System Context
+- Today is ${today}
+- You are "Tim", a helpful and witty bot in a small friend group chat.
+- Users talk to you using "/${timCommand}" followed by their question.
+- You can recall recent messages and summarize them if asked.
+- Available commands: ${availableCommands.map((c) => `/${c}`).join(", ")}.
 
-  if (inTopic.length > 0) {
-    prompts.push(
-      `The other people that are currently in the group chat are named ${inTopic.join(
-        ", "
-      )}`
-    );
-  }
+# Chat Context
+- Topic: "${topicName}"
+- Current user: ${toFirstName(currentUserName)}
+${inTopic.length ? `- Active: ${inTopic.join(", ")}` : ""}
+${notInTopic.length ? `- Offline: ${notInTopic.join(", ")}` : ""}
 
-  if (notInTopic.length > 0) {
-    prompts.push(
-      `The people that are currently not in the group chat are named ${notInTopic.join(
-        ", "
-      )}`
-    );
-  }
+# Behavior Guidelines
+- Be funny and witty. Pretend the user is a close friend.
+- Be confident and definitive in your tone.
+- Do not end your messages with follow-up questions unless the user explicitly asks for a discussion.
+- Avoid filler like "Would you like me to..." or "Should I...?" unless it’s clearly requested.
+- Use context from previous messages if helpful.
+- If asked for a "summary" or "recap", write a comprehensive summary. Really go into detail.
 
-  return prompts.join(". ") + ".";
-}
+Here are the app's features:
 
-function toFirstName(name: string) {
-  return name.split(" ")[0];
+Messaging & Chat:
+- Real-time chat in topics with friends
+- Send images, files, and emoji-rich messages
+- Message threading and conversation history
+- Highlight/bookmark important messages
+
+Circles & Topics:
+- Circles are top-level groups where users can create, join, or leave
+- Each circle can have multiple topics for focused conversations
+- Users can create new topics within a circle
+- Topics track recent activity and unread messages
+
+Organization & Navigation:
+- Track recently visited topics
+- Automatic redirect to last visited conversation
+- Unread message indicators
+
+User Interaction:
+- User profiles with avatars and status updates
+- Real-time presence and activity tracking
+- Notifications for messages, connection changes, and events
+
+Real-Time Features:
+- Instant message delivery with live updates
+- Automatic reconnection and room rejoining
+- Activity indicators and typing feedback
+
+Content & UX:
+- Persistent message history with timestamps
+- Emoji picker, link formatting, and media previews
+- Dark/light theme switching, responsive design
+
+Answer users’ questions using this feature set. Do not make up features or technical implementation details.`;
 }
 
 async function callOpenAI(messages: { role: string; content: string }[]) {
-  const endpoint = "https://api.openai.com/v1/chat/completions";
   const body = {
     model: "gpt-4o-mini",
-    temperature: 0.9,
+    temperature: 0.8,
     messages,
   };
 
-  const resp = await fetch(endpoint, {
+  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -102,6 +127,16 @@ async function callOpenAI(messages: { role: string; content: string }[]) {
   if (!resp.ok) return undefined;
   const json = await resp.json();
   return json.choices[0].message.content;
+}
+
+async function fetchMessageHistory(topicId: string, expand: boolean) {
+  const limit = expand ? 50 : 5; // Fetch more if summarizing
+  return pgClient("messages")
+    .select("messages.text", "users.name")
+    .join("users", "messages.userId", "users.id")
+    .where("messages.topicId", topicId)
+    .orderBy("messages.createdAt", "desc")
+    .limit(limit);
 }
 
 export async function getChatGpt({
@@ -117,50 +152,26 @@ export async function getChatGpt({
   circleId: string;
   activeUsers: User[];
 }) {
-  const queries = [
+  const isSummaryRequest = /\b(summary|summarize|recap|catch\s?up)\b/i.test(
+    query
+  );
+
+  const [topic, members, messages] = await Promise.all([
     pgClient("topics").select("id", "name").where("id", topicId).first(),
     pgClient("_circleMembershipsForUser")
       .select("users.id", "users.name")
       .where("_circleMembershipsForUser.A", circleId)
       .join("users", "_circleMembershipsForUser.B", "users.id"),
-    pgClient("messages")
-      .select("messages.id", "messages.text", "messages.userId", "users.name")
-      .join("users", "messages.userId", "users.id")
-      .where("messages.topicId", topicId)
-      .orderBy("messages.createdAt", "desc")
-      .limit(5),
-  ];
+    fetchMessageHistory(topicId, isSummaryRequest),
+  ]);
 
-  const me = activeUsers.find(({ id }) => id === userId);
-  const [topic, members, messages] = await Promise.all(queries);
-  const messagePrompts = [];
-  const reversed = messages.reverse();
-  let messageCount = 1;
+  const me = activeUsers.find(({ id }) => id === userId)!;
   const timCommand = findCommandKeyByExecute(commandRegistry.tim);
-
-  (reversed as { text: string; mediaUrl: string; name: string }[]).forEach(
-    (m) => {
-      const text = decrypt(m.text);
-
-      messagePrompts.push({
-        role: "developer",
-        content: `Here is message number ${messageCount}, it was sent by ${toFirstName(
-          m.name
-        )}: ${text}`,
-      });
-
-      messageCount++;
-
-      if (text.startsWith(`/${timCommand}`)) {
-        messagePrompts.push({
-          role: "developer",
-          content: `Here is message number ${messageCount}, it was sent by you: ${m.mediaUrl}`,
-        });
-
-        messageCount++;
-      }
-    }
-  );
+  const reversed = messages.reverse();
+  const messagePrompts = reversed.map((m, i) => ({
+    role: "developer",
+    content: `Message ${i + 1} from ${toFirstName(m.name)}: ${decrypt(m.text)}`,
+  }));
 
   const { inTopic, notInTopic } = getActiveAndNonActiveUsers({
     activeUsers,
@@ -176,10 +187,7 @@ export async function getChatGpt({
   });
 
   const openAIMessages = [
-    {
-      role: "developer",
-      content: prompt,
-    },
+    { role: "system", content: prompt },
     ...messagePrompts,
     { role: "user", content: query },
   ];
