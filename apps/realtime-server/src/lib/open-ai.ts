@@ -53,8 +53,7 @@ function generatePrompt({
   return `# System Context
 - Today is ${today}
 - You are "Tim", a helpful and witty bot in a small friend group chat.
-- Users talk to you using "/${timCommand}" followed by their question.
-- You can recall recent messages and summarize them if asked.
+- Users talk to you using "/${timCommand}" followed by a question.
 - Available commands: ${availableCommands.map((c) => `/${c}`).join(", ")}.
 
 # Chat Context
@@ -64,54 +63,20 @@ ${inTopic.length ? `- Active: ${inTopic.join(", ")}` : ""}
 ${notInTopic.length ? `- Offline: ${notInTopic.join(", ")}` : ""}
 
 # Behavior Guidelines
-- Be funny and witty. Pretend the user is a close friend.
-- Be confident and definitive in your tone.
-- Do not end your messages with follow-up questions unless the user explicitly asks for a discussion.
-- Avoid filler like "Would you like me to..." or "Should I...?" unless it’s clearly requested.
-- Use context from previous messages if helpful.
-- If asked for a "summary" or "recap", write a comprehensive summary. Really go into detail.
+- Be funny, witty, confident, and banter like a close friend.
+- Never ask follow-up questions unless explicitly requested.
+- Use prior chat context naturally.
+- If asked for a recap, write a detailed summary.
+- If earlier messages conflict, use the most recent ones.
+- Never invent app features that don’t exist.
 
-Here are the app's features:
-
-Messaging & Chat:
-- Real-time chat in topics with friends
-- Send images, files, and emoji-rich messages
-- Message threading and conversation history
-- Highlight/bookmark important messages
-
-Circles & Topics:
-- Circles are top-level groups where users can create, join, or leave
-- Each circle can have multiple topics for focused conversations
-- Users can create new topics within a circle
-- Topics track recent activity and unread messages
-
-Organization & Navigation:
-- Track recently visited topics
-- Automatic redirect to last visited conversation
-- Unread message indicators
-
-User Interaction:
-- User profiles with avatars and status updates
-- Real-time presence and activity tracking
-- Notifications for messages, connection changes, and events
-
-Real-Time Features:
-- Instant message delivery with live updates
-- Automatic reconnection and room rejoining
-- Activity indicators and typing feedback
-
-Content & UX:
-- Persistent message history with timestamps
-- Emoji picker, link formatting, and media previews
-- Dark/light theme switching, responsive design
-
-Answer users’ questions using this feature set. Do not make up features or technical implementation details.`;
+Use the conversation history below to understand context.`;
 }
 
 async function callOpenAI(messages: { role: string; content: string }[]) {
   const body = {
     model: "gpt-4o-mini",
-    temperature: 0.8,
+    temperature: 0.4,
     messages,
   };
 
@@ -130,13 +95,62 @@ async function callOpenAI(messages: { role: string; content: string }[]) {
 }
 
 async function fetchMessageHistory(topicId: string, expand: boolean) {
-  const limit = expand ? 50 : 5; // Fetch more if summarizing
+  const limit = expand ? 50 : 25;
   return pgClient("messages")
-    .select("messages.text", "users.name")
+    .select(
+      "messages.text",
+      "messages.mediaUrl",
+      "users.name",
+      "messages.userId",
+      "messages.createdAt"
+    )
     .join("users", "messages.userId", "users.id")
     .where("messages.topicId", topicId)
-    .orderBy("messages.createdAt", "desc")
+    .orderBy("messages.createdAt", "asc")
     .limit(limit);
+}
+
+function convertDbRowToMessages(row: { text: string; mediaUrl: string }) {
+  const rawText = row.text ? decrypt(row.text) : "";
+  const botResponse = row.mediaUrl;
+  const isBotTrigger = rawText.startsWith("/tim");
+
+  if (isBotTrigger && botResponse) {
+    return [
+      { role: "user", content: rawText },
+      { role: "assistant", content: botResponse },
+    ];
+  }
+
+  return [
+    {
+      role: "user",
+      content: rawText,
+    },
+  ];
+}
+
+async function summarizeMessages(
+  messages: { role: string; content: string }[]
+) {
+  const text = messages
+    .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
+    .join("\n");
+
+  const summaryPrompt = [
+    {
+      role: "system",
+      content:
+        "Summarize the conversation in 6–10 sentences. Include useful context, decisions, and jokes.",
+    },
+    {
+      role: "user",
+      content: text,
+    },
+  ];
+
+  const summary = await callOpenAI(summaryPrompt);
+  return summary ?? "";
 }
 
 export async function getChatGpt({
@@ -156,7 +170,7 @@ export async function getChatGpt({
     query
   );
 
-  const [topic, members, messages] = await Promise.all([
+  const [topic, members, rows] = await Promise.all([
     pgClient("topics").select("id", "name").where("id", topicId).first(),
     pgClient("_circleMembershipsForUser")
       .select("users.id", "users.name")
@@ -165,32 +179,40 @@ export async function getChatGpt({
     fetchMessageHistory(topicId, isSummaryRequest),
   ]);
 
-  const me = activeUsers.find(({ id }) => id === userId)!;
-  const timCommand = findCommandKeyByExecute(commandRegistry.tim);
-  const reversed = messages.reverse();
-  const messagePrompts = reversed.map((m, i) => ({
-    role: "developer",
-    content: `Message ${i + 1} from ${toFirstName(m.name)}: ${decrypt(m.text)}`,
-  }));
+  const currentUser = activeUsers.find((u) => u.id === userId)!;
+
+  let history = rows.flatMap(convertDbRowToMessages);
+
+  if (history.length > 20 && !isSummaryRequest) {
+    const older = history.slice(0, history.length - 10);
+    const recent = history.slice(-10);
+
+    const summary = await summarizeMessages(older);
+
+    history = [
+      { role: "developer", content: `Summary of earlier messages: ${summary}` },
+      ...recent,
+    ];
+  }
 
   const { inTopic, notInTopic } = getActiveAndNonActiveUsers({
     activeUsers,
     allUsers: members,
-    currentUserId: me.id,
+    currentUserId: currentUser.id,
   });
 
   const prompt = generatePrompt({
     topicName: topic.name,
-    currentUserName: me.name,
+    currentUserName: currentUser.name,
     inTopic,
     notInTopic,
   });
 
-  const openAIMessages = [
+  const messages = [
     { role: "system", content: prompt },
-    ...messagePrompts,
+    ...history,
     { role: "user", content: query },
   ];
 
-  return callOpenAI(openAIMessages);
+  return callOpenAI(messages);
 }
