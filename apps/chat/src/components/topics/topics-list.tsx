@@ -26,6 +26,8 @@ import {
   PlusIcon,
   SpeakerLoudIcon,
   SpeakerOffIcon,
+  CrossCircledIcon,
+  MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
 import { WithRelation } from "../../../types/prisma";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ import {
   ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Input } from "@/components/ui/input";
 
 type Props = {
   topics?: Topic[];
@@ -85,6 +88,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
     `tim:muted-topics:${self.id}`,
     []
   );
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffectOnce(() => {
     hydrateUnreadTopics(unreadTopicIds);
@@ -94,7 +98,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
   const topicsWithMuted = useMemo(() => {
     if (!topics) return [];
 
-    return topics
+    const filtered = topics
       .map((topic) => {
         const isMuted = mutedTopics.includes(topic.id);
         const isUnread = unreadTopics[topic.id];
@@ -106,6 +110,10 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
           isUnread,
           isDefault,
         };
+      })
+      .filter((topic) => {
+        if (isMinimized) return true;
+        return topic.name.toLowerCase().includes(searchQuery.toLowerCase());
       })
       .sort((a, b) => {
         if (a.isDefault !== b.isDefault) {
@@ -122,7 +130,16 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
 
         return 0;
       });
-  }, [topics, mutedTopics, unreadTopics, circle.defaultTopicId]);
+
+    return filtered;
+  }, [
+    topics,
+    mutedTopics,
+    unreadTopics,
+    circle.defaultTopicId,
+    searchQuery,
+    isMinimized,
+  ]);
 
   useSocketHandler<NewTopicHandlerProps>(
     SocketEvent.UpsertedTopic,
@@ -203,8 +220,38 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
         </Button>
       </div>
 
+      {!isMinimized && (
+        <div className="px-3 pt-3 pb-2">
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                <CrossCircledIcon width={16} height={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <ScrollArea>
         <div className="flex flex-col gap-3 p-3">
+          {showTopics &&
+            topicsWithMuted.length === 0 &&
+            searchQuery &&
+            !isMinimized && (
+              <div className="text-center text-sm text-slate-500 dark:text-slate-400 py-2">
+                No topics found for{" "}
+                <span className="font-medium">&quot;{searchQuery}&quot;</span>
+              </div>
+            )}
           {showTopics &&
             topicsWithMuted.map((topic) => {
               const activeUsers = getActiveMembersInTopic(topic.id);
