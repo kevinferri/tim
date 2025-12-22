@@ -96,12 +96,14 @@ async function callOpenAI(messages: { role: string; content: string }[]) {
 async function fetchMessageHistory(topicId: string, expand: boolean) {
   const limit = expand ? 50 : 20;
 
-  return pgClient("messages")
+  const rows = await pgClient("messages")
     .select("messages.text", "messages.mediaUrl", "users.name")
     .join("users", "messages.userId", "users.id")
     .where("messages.topicId", topicId)
-    .orderBy("messages.createdAt", "asc")
+    .orderBy("messages.createdAt", "desc")
     .limit(limit);
+
+  return rows.reverse();
 }
 
 function convertDbRowToMessages(row: {
@@ -112,12 +114,13 @@ function convertDbRowToMessages(row: {
   const rawText = row.text ? decrypt(row.text) : "";
   const botResponse = row.mediaUrl;
   const isBotTrigger = rawText.startsWith("/tim");
+  const firstName = toFirstName(row.name);
 
   if (isBotTrigger && botResponse) {
     return [
       {
         role: "user",
-        content: `${row.name}: ${rawText.replace(/^\/tim\s*/, "")}`,
+        content: `${firstName}: ${rawText.replace(/^\/tim\s*/, "")}`,
       },
       {
         role: "assistant",
@@ -129,7 +132,7 @@ function convertDbRowToMessages(row: {
   return [
     {
       role: "user",
-      content: `${row.name}: ${rawText}`,
+      content: `${firstName}: ${rawText}`,
     },
   ];
 }
