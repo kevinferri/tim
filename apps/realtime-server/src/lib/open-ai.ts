@@ -68,7 +68,6 @@ ${notInTopic.length ? `- Offline: ${notInTopic.join(", ")}` : ""}
 - Use prior chat context naturally.
 - If asked for a recap, write a detailed summary.
 - If earlier messages conflict, use the most recent ones.
-- Never invent app features that don’t exist.
 
 Use the conversation history below to understand context.`;
 }
@@ -95,37 +94,42 @@ async function callOpenAI(messages: { role: string; content: string }[]) {
 }
 
 async function fetchMessageHistory(topicId: string, expand: boolean) {
-  const limit = expand ? 50 : 25;
+  const limit = expand ? 50 : 20;
+
   return pgClient("messages")
-    .select(
-      "messages.text",
-      "messages.mediaUrl",
-      "users.name",
-      "messages.userId",
-      "messages.createdAt"
-    )
+    .select("messages.text", "messages.mediaUrl", "users.name")
     .join("users", "messages.userId", "users.id")
     .where("messages.topicId", topicId)
     .orderBy("messages.createdAt", "asc")
     .limit(limit);
 }
 
-function convertDbRowToMessages(row: { text: string; mediaUrl: string }) {
+function convertDbRowToMessages(row: {
+  text: string;
+  mediaUrl: string;
+  name: string;
+}) {
   const rawText = row.text ? decrypt(row.text) : "";
   const botResponse = row.mediaUrl;
   const isBotTrigger = rawText.startsWith("/tim");
 
   if (isBotTrigger && botResponse) {
     return [
-      { role: "user", content: rawText },
-      { role: "assistant", content: botResponse },
+      {
+        role: "user",
+        content: `${row.name}: ${rawText.replace(/^\/tim\s*/, "")}`,
+      },
+      {
+        role: "assistant",
+        content: botResponse,
+      },
     ];
   }
 
   return [
     {
       role: "user",
-      content: rawText,
+      content: `${row.name}: ${rawText}`,
     },
   ];
 }
@@ -141,7 +145,7 @@ async function summarizeMessages(
     {
       role: "system",
       content:
-        "Summarize the conversation in 6–10 sentences. Include useful context, decisions, and jokes.",
+        "Summarize the conversation in 6-10 sentences. Include speaker names, useful context, decisions, and jokes.",
     },
     {
       role: "user",
