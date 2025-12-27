@@ -221,7 +221,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
       </div>
 
       {!isMinimized && (
-        <div className="px-3 pt-3 pb-2">
+        <div className="px-3 pt-3">
           <div className="relative">
             <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
             <Input
