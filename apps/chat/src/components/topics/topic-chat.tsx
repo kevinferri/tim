@@ -7,6 +7,7 @@ import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 import { useRoomManagement } from "@/components/socket/use-current-user-rooms";
 import { EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { Message, MessageProps } from "./message";
+import { MessageDateSeparator } from "./message-date-separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,8 +112,25 @@ export function TopicChat() {
           </InfiniteLoader>
         )}
 
-        {messages.map((message: MessageProps) => {
-          return <Message key={message.id} {...message} context="topic" />;
+        {messages.map((message: MessageProps, index: number) => {
+          const currentDate = new Date(message.createdAt ?? new Date());
+          const prevMessage = index > 0 ? messages[index - 1] : null;
+          const prevDate = prevMessage
+            ? new Date(prevMessage.createdAt ?? new Date())
+            : null;
+
+          const showDateSeparator =
+            !prevDate ||
+            currentDate.getDate() !== prevDate.getDate() ||
+            currentDate.getMonth() !== prevDate.getMonth() ||
+            currentDate.getFullYear() !== prevDate.getFullYear();
+
+          return (
+            <div key={message.id}>
+              {showDateSeparator && <MessageDateSeparator date={currentDate} />}
+              <Message {...message} context="topic" />
+            </div>
+          );
         })}
 
         <div ref={scrollRef} />

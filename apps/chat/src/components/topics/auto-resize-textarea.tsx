@@ -47,7 +47,7 @@ export const AutoResizeTextarea = forwardRef((props: Props, refProp) => {
       placeholder={props.placeholder}
       className={cn(
         "bg-background focus-visible:ring-transparent focus-visible:transparent resize-none text-base shadow-none overflow-hidden",
-        props.className
+        props.className,
       )}
       onChange={(e) => {
         props.onChange(e);

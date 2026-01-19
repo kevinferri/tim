@@ -67,7 +67,7 @@ export function CirclesList(props: Props) {
         ...acc,
         [circleId]: uniqBy([...(acc[circleId] ?? []), ...activeUsers], "id"),
       }),
-      {} as Record<string, Self[]>
+      {} as Record<string, Self[]>,
     );
   }, [topicMap]);
 
@@ -107,7 +107,7 @@ export function CirclesList(props: Props) {
           ),
         });
       }
-    }
+    },
   );
 
   useSocketHandler<DeletedCircleHandlerProps>(
@@ -128,7 +128,7 @@ export function CirclesList(props: Props) {
       }
 
       router.refresh();
-    }
+    },
   );
 
   return (

@@ -1,11 +1,52 @@
-import Image from "next/image";
+"use client";
+
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useIntersection } from "@/lib/hooks/use-intersection";
-import { useRef } from "react";
+import { VideoPlayer } from "@/components/topics/video-player";
+import {
+  useGlobalVideoPlayer,
+  useGlobalVideoPlayerStore,
+  VideoPlayerData,
+} from "@/components/topics/global-video-player-store";
 import {
   getTwitchStreamFromUrl,
   getYoutubeVideoFromUrl,
-} from "@/components/topics/message-utils";
+} from "./message-utils";
+import { MediaViewerImage } from "./media-viewer-image";
+
+type VideoProvider = {
+  type: "youtube" | "twitch";
+  match: (url: string) => { id: string; videoUrl: string } | undefined;
+  getIframeSrc: (id: string) => string;
+};
+
+const VIDEO_PROVIDERS: VideoProvider[] = [
+  {
+    type: "youtube",
+    match: getYoutubeVideoFromUrl,
+    getIframeSrc: (id: string) =>
+      `https://www.youtube.com/embed/${id}?color=white&disablekb=1&rel=0&modestbranding=1`,
+  },
+  {
+    type: "twitch",
+    match: getTwitchStreamFromUrl,
+    getIframeSrc: (id: string) =>
+      `https://player.twitch.tv/?channel=${id}&parent=${window.location.hostname}`,
+  },
+];
+
+function prepareVideoPlayer(url: string): VideoPlayerData | undefined {
+  for (const provider of VIDEO_PROVIDERS) {
+    const match = provider.match(url);
+    if (!match) continue;
+
+    return {
+      url,
+      videoId: match.id,
+      type: provider.type,
+      iframeSrc: provider.getIframeSrc(match.id),
+    };
+  }
+}
 
 type Props = {
   url: string;
@@ -16,90 +57,57 @@ type Props = {
   skipVirtualization?: boolean;
 };
 
-export function ResponsiveVideoPlayer({
-  src,
+export function MediaViewer({
+  url,
   onPreviewLoad,
-  skipVirtualization = false,
-}: {
-  src: string;
-  onPreviewLoad?: () => void;
-  skipVirtualization?: boolean;
-}) {
-  const intersectionRef = useRef(null);
-  const intersection = useIntersection(intersectionRef, {
-    rootMargin: "20px",
-  });
+  onImageExpanded,
+  priority,
+  skipVirtualization,
+}: Props) {
+  const videoData = prepareVideoPlayer(url);
 
-  return (
-    <div className="max-w-[640px] shadow-lg" ref={intersectionRef}>
-      <div className="relative pt-[56.25%]">
-        {(skipVirtualization || intersection?.isIntersecting) && (
-          <iframe
-            onLoad={onPreviewLoad}
-            className="rounded-sm absolute top-0 left-0 w-full h-full"
-            width="640"
-            height="360"
-            src={src}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
+  const { openInGlobal, closeGlobal } = useGlobalVideoPlayer();
+  const isGlobalMode = useGlobalVideoPlayerStore((s) => s.isGlobalMode);
+  const globalData = useGlobalVideoPlayerStore((s) => s.data);
 
-export function MediaViewer(props: Props) {
-  let iframeSrc;
-  const youtubeVideo = getYoutubeVideoFromUrl(props.url);
-  const twitchStream = getTwitchStreamFromUrl(props.url);
-  const imageProps = {
-    src: props.url,
-    alt: props.url,
-    priority: props.priority,
-    sizes: "100vw",
-    width: 0,
-    height: 0,
+  const isPlayingInGlobal =
+    isGlobalMode && globalData?.videoId === videoData?.videoId;
+
+  const handleGlobalClick = () => {
+    if (!videoData) return;
+
+    isPlayingInGlobal ? closeGlobal() : openInGlobal(videoData);
   };
 
-  if (youtubeVideo) {
-    iframeSrc = `https://www.youtube.com/embed/${
-      youtubeVideo.id
-    }?color=white&disablekb=1&rel=1${
-      props.variant === "minimal" && `&controls=0`
-    }`;
-  }
-
-  if (twitchStream) {
-    iframeSrc = `https://player.twitch.tv/?channel=${twitchStream.id}&parent=${
-      process.env.FRONTEND_URL ?? window.location.hostname
-    }`;
-  }
-
-  if (iframeSrc) {
+  if (videoData) {
     return (
-      <ResponsiveVideoPlayer
-        onPreviewLoad={props.onPreviewLoad}
-        src={iframeSrc}
-        skipVirtualization={props.skipVirtualization}
+      <VideoPlayer
+        src={videoData.iframeSrc}
+        onPreviewLoad={onPreviewLoad}
+        skipVirtualization={skipVirtualization}
+        isPlayingInGlobal={isPlayingInGlobal}
+        onGlobalClick={handleGlobalClick}
       />
     );
   }
 
   return (
     <Dialog>
-      <DialogTrigger asChild onClick={props.onImageExpanded}>
-        <div className="relative cursor-zoom-in w-fit max-w-sm max-h-sm">
-          <Image
-            {...imageProps}
-            alt={props.url}
+      <DialogTrigger asChild onClick={onImageExpanded}>
+        <div className="relative w-fit max-w-sm max-h-sm cursor-zoom-in">
+          <MediaViewerImage
+            src={url}
+            priority={priority}
+            onLoad={onPreviewLoad}
             className="w-full rounded-sm shadow-lg hover:opacity-80"
-            onLoad={props.onPreviewLoad}
           />
         </div>
       </DialogTrigger>
+
       <DialogContent className="w-max max-w-full max-h-full min-w-[450px] min-h-[450px] p-0">
-        <Image
-          {...imageProps}
-          alt={props.url}
+        <MediaViewerImage
+          src={url}
+          priority={priority}
           className="w-full h-full rounded-lg"
         />
       </DialogContent>

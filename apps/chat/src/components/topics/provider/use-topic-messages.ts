@@ -2,7 +2,7 @@ import { useState, useRef, MutableRefObject } from "react";
 import { MessageProps, MessageData } from "@/components/topics/message";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useLazyFetch } from "@/lib/hooks/use-fetch";
-import { isNearBottom } from "./utils";
+import { isNearBottomOfTopic } from "./use-topic-scroll";
 
 type UseTopicMessagesProps = {
   topicId: string;
@@ -22,14 +22,14 @@ export function useTopicMessages({
   onMediaMessage,
 }: UseTopicMessagesProps) {
   const [messages, setMessages] = useState<MessageProps[]>(
-    existingMessages as MessageProps[]
+    existingMessages as MessageProps[],
   );
   const [hasMoreMessages, setHasMoreMessages] = useState(
-    existingMessages.length >= messagesLimit
+    existingMessages.length >= messagesLimit,
   );
   const loadMoreAnchorRef = useRef<null | HTMLDivElement>(null);
   const [loadMoreAnchorId, setLoadMoreAnchorId] = useState(
-    existingMessages?.[0]?.id
+    existingMessages?.[0]?.id,
   );
 
   useSocketHandler<MessageProps>(
@@ -47,7 +47,8 @@ export function useTopicMessages({
       setMessages((prev) => {
         const withNew = [...prev, newMsg];
         const needsSlice =
-          withNew.length > messagesLimit && isNearBottom(messagesListRef);
+          withNew.length > messagesLimit &&
+          isNearBottomOfTopic(messagesListRef);
 
         if (needsSlice) {
           setHasMoreMessages(true);
@@ -62,16 +63,16 @@ export function useTopicMessages({
       }
 
       onNewMessage?.(newMsg);
-    }
+    },
   );
 
   useSocketHandler<{ deletedMessageId: string }>(
     SocketEvent.DeleteMessage,
     (payload) => {
       setMessages((prev) =>
-        prev.filter(({ id }) => id !== payload.deletedMessageId)
+        prev.filter(({ id }) => id !== payload.deletedMessageId),
       );
-    }
+    },
   );
 
   useSocketHandler<{ id: string; text: string }>(
@@ -83,9 +84,9 @@ export function useTopicMessages({
             return { ...m, text: payload.text };
           }
           return m;
-        })
+        }),
       );
-    }
+    },
   );
 
   const before = messages?.[0]?.createdAt

@@ -10,6 +10,7 @@ import { SelfProvider } from "@/components/auth/self-provider";
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
+import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { Routes } from "@/routes";
@@ -106,6 +107,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
                   {children}
                 </div>
               </div>
+              <GlobalVideoPlayer />
             </CircleRoomConnect>
           </UserRoomConnect>
         </SocketProvider>

@@ -1,5 +1,4 @@
-import { useCallback, useRef } from "react";
-import { isNearBottom } from "./utils";
+import { MutableRefObject, useCallback, useRef } from "react";
 
 type ScrollArgs =
   | {
@@ -7,6 +6,19 @@ type ScrollArgs =
       force?: boolean;
     }
   | undefined;
+
+export function isNearBottomOfTopic(
+  ref: MutableRefObject<HTMLDivElement | null>,
+  padding = 120,
+) {
+  const el = ref.current;
+  const threshold = 50;
+  if (!el) return false;
+
+  return (
+    el.scrollHeight - el.scrollTop <= el.clientHeight + padding + threshold
+  );
+}
 
 export function useTopicScroll() {
   const scrollRef = useRef<null | HTMLDivElement>(null);
@@ -17,12 +29,12 @@ export function useTopicScroll() {
     ({ timeout, force }: ScrollArgs = {}) => {
       setTimeout(() => {
         const padding = newestMessageRef.current?.clientHeight;
-        if (isNearBottom(messagesListRef, padding) || force) {
+        if (isNearBottomOfTopic(messagesListRef, padding) || force) {
           scrollRef?.current?.scrollIntoView({ block: "center" });
         }
       }, timeout ?? 1);
     },
-    []
+    [],
   );
 
   return {

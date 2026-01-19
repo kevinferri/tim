@@ -113,7 +113,7 @@ export function CurrentTopicProvider(props: Props) {
     (message: MessageProps) => {
       setMediaMessages((prev) => [message, ...prev]);
     },
-    [setMediaMessages]
+    [setMediaMessages],
   );
 
   const {
@@ -149,7 +149,7 @@ export function CurrentTopicProvider(props: Props) {
 
   const circleMembers = useMemo(
     () => props.existingCircleMembers,
-    [props.existingCircleMembers]
+    [props.existingCircleMembers],
   );
 
   const contextValue = useMemo(
@@ -196,7 +196,7 @@ export function CurrentTopicProvider(props: Props) {
       loadMoreAnchorRef,
       blopSoundRef,
       newestMessageRef,
-    ]
+    ],
   );
 
   return (
@@ -211,7 +211,7 @@ export function useCurrentTopicContext() {
 
   if (!context) {
     throw new Error(
-      "useCurrentTopicContext must be used inside CurrentTopicProvider"
+      "useCurrentTopicContext must be used inside CurrentTopicProvider",
     );
   }
 

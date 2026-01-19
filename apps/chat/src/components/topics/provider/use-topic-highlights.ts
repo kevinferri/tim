@@ -3,16 +3,31 @@ import { MessageProps, MessageData } from "@/components/topics/message";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
 import { useLazyFetch } from "@/lib/hooks/use-fetch";
-import { sanitizeTopHighlights } from "./utils";
 
 type UseTopicHighlightsProps = {
   topicId: string;
   existingTopHighlights: MessageData[];
   topHighlightsLimit: number;
   onHighlightChange?: (
-    handler: (prev: MessageProps[]) => MessageProps[]
+    handler: (prev: MessageProps[]) => MessageProps[],
   ) => void;
 };
+
+function sanitizeTopHighlights(messages: MessageProps[], limit: number) {
+  return [...messages]
+    .sort((a, b) => {
+      const bLen = b.highlights?.length ?? 0;
+      const aLen = a.highlights?.length ?? 0;
+      if (bLen === aLen) {
+        return (
+          new Date(b.createdAt ?? new Date()).getTime() -
+          new Date(a.createdAt ?? new Date()).getTime()
+        );
+      }
+      return bLen - aLen;
+    })
+    .slice(0, limit);
+}
 
 export function useTopicHighlights({
   topicId,
@@ -21,7 +36,7 @@ export function useTopicHighlights({
   onHighlightChange,
 }: UseTopicHighlightsProps) {
   const [topHighlights, setTopHighlights] = useState<MessageProps[]>(
-    existingTopHighlights as MessageProps[]
+    existingTopHighlights as MessageProps[],
   );
 
   const { fetchData: refreshTopHighlights } = useLazyFetch<MessageProps[]>({
@@ -31,19 +46,19 @@ export function useTopicHighlights({
 
   const visibleTopHighlights = useMemo(
     () => sanitizeTopHighlights(topHighlights, topHighlightsLimit),
-    [topHighlights, topHighlightsLimit]
+    [topHighlights, topHighlightsLimit],
   );
 
   useSocketHandler<{ highlight: Highlight; createdBy: User }>(
     SocketEvent.AddedHighlight,
     ({ highlight, createdBy }) => {
       const isAlreadyTopHighlight = topHighlights.some(
-        ({ id }) => highlight.messageId === id
+        ({ id }) => highlight.messageId === id,
       );
 
       const lowestTopHighlights =
         topHighlights.length > 0
-          ? topHighlights[topHighlights.length - 1]?.highlights?.length ?? 0
+          ? (topHighlights[topHighlights.length - 1]?.highlights?.length ?? 0)
           : 0;
 
       let potentialNewHighlight: MessageProps | null = null;
@@ -89,7 +104,7 @@ export function useTopicHighlights({
         }
         return updated;
       });
-    }
+    },
   );
 
   useSocketHandler<{ messageId: string; userId: string }>(
@@ -109,7 +124,7 @@ export function useTopicHighlights({
           const newMessage: MessageProps = {
             ...message,
             highlights: (message.highlights ?? []).filter(
-              ({ userId }) => userId !== payload.userId
+              ({ userId }) => userId !== payload.userId,
             ),
           };
 
@@ -129,7 +144,7 @@ export function useTopicHighlights({
       if (toBeRemovedFromTopHighlights) {
         setTopHighlights((prev) => {
           const wasTopHighlight = prev.some(
-            ({ id }) => toBeRemovedFromTopHighlights === id
+            ({ id }) => toBeRemovedFromTopHighlights === id,
           );
 
           if (!wasTopHighlight) {
@@ -137,7 +152,7 @@ export function useTopicHighlights({
           }
 
           const filtered = prev.filter(
-            ({ id }) => id !== toBeRemovedFromTopHighlights
+            ({ id }) => id !== toBeRemovedFromTopHighlights,
           );
 
           if (topHighlights.length >= topHighlightsLimit) {
@@ -149,7 +164,7 @@ export function useTopicHighlights({
       } else {
         setTopHighlights((prev) => updateHandler(prev));
       }
-    }
+    },
   );
 
   return {

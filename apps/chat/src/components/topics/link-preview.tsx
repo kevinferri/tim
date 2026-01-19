@@ -13,9 +13,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
-import { ResponsiveVideoPlayer } from "@/components/topics/media-viewer";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { getYoutubeVideoFromUrl } from "@/components/topics/message-utils";
+import { VideoPlayer } from "@/components/topics/video-player";
 
 type Props = {
   link: string;
@@ -43,7 +43,7 @@ export function LinkPreview(props: Props) {
   });
 
   const clickedLink = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.UserClickedLink
+    SocketEvent.UserClickedLink,
   );
 
   if (error || !data) return null;
@@ -51,7 +51,7 @@ export function LinkPreview(props: Props) {
   return (
     <div className="hidden md:block">
       {data?.ogVideo && !getYoutubeVideoFromUrl(data?.ogVideo) && (
-        <ResponsiveVideoPlayer
+        <VideoPlayer
           src={data.ogVideo}
           onPreviewLoad={props.onEmbedMediaLoad}
         />

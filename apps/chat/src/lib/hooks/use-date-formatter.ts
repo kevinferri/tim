@@ -21,12 +21,12 @@ function format(date: Date, options?: Intl.DateTimeFormatOptions) {
  */
 export function useDateFormatter(
   date?: Date,
-  options?: Intl.DateTimeFormatOptions
+  options?: Intl.DateTimeFormatOptions,
 ) {
   const [d, setD] = useState<string>();
   useEffect(
     () => setD(date ? format(date, options) : undefined),
-    [date, options]
+    [date, options],
   );
   return d;
 }
