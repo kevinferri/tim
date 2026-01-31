@@ -33,7 +33,7 @@ export function PlayerHeader({
     <div
       className={cn(
         "flex items-center justify-end bg-secondary p-2",
-        isGlobal && "cursor-grab",
+        isGlobal && "cursor-grab"
       )}
     >
       <Button

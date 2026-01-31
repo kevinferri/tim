@@ -41,12 +41,12 @@ const getCornerPositions = ({
 
 const clampPosition = (
   pos: Position,
-  { width, height }: Viewport,
+  { width, height }: Viewport
 ): Position => ({
   x: Math.min(Math.max(0, pos.x), width - PLAYER_WIDTH),
   y: Math.min(
     Math.max(PLAYER_TOP_PADDING, pos.y),
-    height - PLAYER_HEIGHT - PLAYER_BOTTOM_PADDING,
+    height - PLAYER_HEIGHT - PLAYER_BOTTOM_PADDING
   ),
 });
 
@@ -58,17 +58,17 @@ const getNearestCorner = (pos: Position, viewport: Viewport): Corner => {
       const dist = Math.hypot(pos.x - cornerPos.x, pos.y - cornerPos.y);
       return dist < closest.dist ? { corner, dist } : closest;
     },
-    { corner: "top-right" as Corner, dist: Infinity },
+    { corner: "top-right" as Corner, dist: Infinity }
   ).corner;
 };
 
 export function useDraggableVideo(
   isEnabled: boolean,
-  storageKey = "floating-video",
+  storageKey = "floating-video"
 ) {
   const [persisted, setPersisted] = useLocalStorage<PersistedState>(
     storageKey,
-    { corner: "top-right" },
+    { corner: "top-right" }
   );
 
   const [position, setPosition] = useState<Position | null>(null);

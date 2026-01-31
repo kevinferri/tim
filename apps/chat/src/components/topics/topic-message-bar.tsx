@@ -52,7 +52,7 @@ export function TopicMessageBar() {
 
   const mediaBlobUrl = useMemo(
     () => (image ? URL.createObjectURL(image) : undefined),
-    [image],
+    [image]
   );
 
   // Focus textarea when command generation completes
@@ -115,7 +115,7 @@ export function TopicMessageBar() {
         <div
           className={cn(
             "flex items-center rounded-md",
-            isGenerating ? "bg-slate-100 dark:bg-slate-900" : "",
+            isGenerating ? "bg-slate-100 dark:bg-slate-900" : ""
           )}
         >
           <AutoResizeTextarea
@@ -136,7 +136,7 @@ export function TopicMessageBar() {
             disabled={isGenerating}
             className={cn(
               "border-none",
-              isGenerating ? "bg-slate-100 dark:bg-slate-900" : "",
+              isGenerating ? "bg-slate-100 dark:bg-slate-900" : ""
             )}
             onChange={(e) => {
               setMessage(e.target.value);

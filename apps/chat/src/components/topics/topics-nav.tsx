@@ -81,7 +81,7 @@ export async function TopicsNav({ circleId }: Props) {
 
       return acc;
     },
-    {},
+    {}
   );
 
   if (parentCircle) {
