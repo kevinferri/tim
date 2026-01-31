@@ -2,8 +2,8 @@ import { cn, isEmojiOnly } from "@/lib/utils";
 import { isValidCommand } from "@/components/topics/message-utils";
 import Link from "next/link";
 import { useMemo } from "react";
-import Linkify from "react-linkify";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
+import Linkify from "linkify-react";
 
 type Props = {
   id: string;
@@ -36,33 +36,39 @@ function parseMessage(text: string) {
 export function MessageText(props: Props) {
   const isOnlyEmoji = useMemo(
     () => (props.text ? isEmojiOnly(props.text) : false),
-    [props.text]
+    [props.text],
   );
 
   const clickedLink = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.UserClickedLink
+    SocketEvent.UserClickedLink,
   );
 
   return (
     <Linkify
-      componentDecorator={(decoratedHref, decoratedText, key) => (
-        <Link
-          key={key}
-          target="_blank"
-          href={decoratedHref}
-          className="underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
-          onClick={() => {
-            clickedLink.emit({ topicId: props.topicId, messageId: props.id });
-          }}
-        >
-          {decoratedText}
-        </Link>
-      )}
+      options={{
+        render: {
+          url: ({ attributes, content }) => (
+            <Link
+              href={attributes.href}
+              target="_blank"
+              className="underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
+              onClick={() => {
+                clickedLink.emit({
+                  topicId: props.topicId,
+                  messageId: props.id,
+                });
+              }}
+            >
+              {content}
+            </Link>
+          ),
+        },
+      }}
     >
       <div
         className={cn(
           "whitespace-pre-line break-word leading-normal",
-          isOnlyEmoji ? "text-4xl" : ""
+          isOnlyEmoji ? "text-4xl" : "",
         )}
         style={{ overflowWrap: "anywhere" }}
       >
