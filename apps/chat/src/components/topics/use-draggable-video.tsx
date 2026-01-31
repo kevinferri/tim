@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-export const PLAYER_WIDTH = 600;
-export const PLAYER_HEIGHT = 400;
+export const PLAYER_WIDTH = 360;
+export const PLAYER_HEIGHT = 240;
 export const PLAYER_TOP_PADDING = 48;
 export const PLAYER_BOTTOM_PADDING = 32;
 

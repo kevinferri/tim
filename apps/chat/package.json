@@ -45,6 +45,7 @@
     "geist": "^1.2.2",
     "jsonwebtoken": "^9.0.2",
     "linkify-react": "^4.3.2",
+    "linkifyjs": "^4.3.2",
     "lodash.keyby": "^4.6.0",
     "lodash.uniqby": "^4.7.0",
     "lucide-react": "^0.334.0",
