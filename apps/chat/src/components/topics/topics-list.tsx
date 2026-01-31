@@ -29,7 +29,7 @@ import {
   CrossCircledIcon,
   MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
-import { WithRelation } from "../../../types/prisma";
+import { Prisma } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipProvider } from "@radix-ui/react-tooltip";
@@ -48,7 +48,9 @@ import { Input } from "@/components/ui/input";
 type Props = {
   topics?: Topic[];
   unreadTopicIds: Record<string, boolean>;
-  circle: WithRelation<"Circle", "members">;
+  circle: Prisma.CircleGetPayload<{
+    include: { members: true };
+  }>;
 };
 
 type NewTopicHandlerProps = {

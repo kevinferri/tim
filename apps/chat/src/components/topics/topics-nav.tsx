@@ -1,7 +1,6 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { TopicsList } from "@/components/topics/topics-list";
 import { Message, Prisma, Topic, TopicHistory } from "@prisma/client";
-import { WithRelation } from "../../../types/prisma";
 import { getLoggedInUserId } from "@/lib/session";
 import keyBy from "lodash.keyby";
 
@@ -82,7 +81,7 @@ export async function TopicsNav({ circleId }: Props) {
 
       return acc;
     },
-    {}
+    {},
   );
 
   if (parentCircle) {
@@ -90,7 +89,11 @@ export async function TopicsNav({ circleId }: Props) {
       <TopicsList
         topics={topicList}
         unreadTopicIds={unreadTopicIds}
-        circle={parentCircle as WithRelation<"Circle", "members">}
+        circle={
+          parentCircle as Prisma.CircleGetPayload<{
+            include: { members: true };
+          }>
+        }
       />
     );
   }
