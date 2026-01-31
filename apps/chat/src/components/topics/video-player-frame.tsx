@@ -28,7 +28,7 @@ export function VideoPlayerFrame({
   if (isPlayingInGlobal) {
     return (
       <div className={frameContainerStyles}>
-        <div className="absolute inset-0 flex items-center justify-center gap-2">
+        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-900 p-3 text-center">
           <VideoIcon className="h-5 w-5" />
           Playing in picture-in-picture
         </div>
