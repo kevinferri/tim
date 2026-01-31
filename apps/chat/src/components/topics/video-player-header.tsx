@@ -24,8 +24,8 @@ export function PlayerHeader({
   const action = isGlobal
     ? { icon: Cross1Icon, onClick: onCloseClick }
     : isPlayingInGlobal
-      ? { icon: ArrowBottomLeftIcon, onClick: onCloseClick }
-      : { icon: ArrowTopRightIcon, onClick: onExpandClick };
+    ? { icon: ArrowBottomLeftIcon, onClick: onCloseClick }
+    : { icon: ArrowTopRightIcon, onClick: onExpandClick };
 
   const { icon: Icon, onClick } = action;
 

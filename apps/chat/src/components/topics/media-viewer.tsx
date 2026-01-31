@@ -99,7 +99,7 @@ export function MediaViewer({
             src={url}
             priority={priority}
             onLoad={onPreviewLoad}
-            className="w-full rounded-sm shadow-lg hover:opacity-80"
+            className="w-full rounded-md shadow-lg hover:opacity-80"
           />
         </div>
       </DialogTrigger>
@@ -108,7 +108,7 @@ export function MediaViewer({
         <MediaViewerImage
           src={url}
           priority={priority}
-          className="w-full h-full rounded-lg"
+          className="w-full h-full rounded-md"
         />
       </DialogContent>
     </Dialog>

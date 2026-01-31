@@ -62,7 +62,7 @@ export function VideoPlayer({
   }
 
   return (
-    <div className="max-w-[640px] shadow-lg overflow-hidden rounded-sm">
+    <div className="max-w-[640px] shadow-xl overflow-hidden rounded-md">
       {header}
       {frame}
     </div>

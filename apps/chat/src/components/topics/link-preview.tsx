@@ -73,15 +73,15 @@ export function LinkPreview(props: Props) {
                 <div className="flex gap-3 items-start">
                   <div>
                     {data.ogImage ? (
-                      <Avatar className="w-[160px] h-auto rounded-sm">
+                      <Avatar className="w-[160px] h-auto rounded-md">
                         <AvatarImage
                           src={data.ogImage}
                           className="aspect-auto"
                         />
                       </Avatar>
                     ) : (
-                      <Avatar className="rounded-sm w-12 h-12">
-                        <AvatarFallback className="rounded-sm">
+                      <Avatar className="rounded-md w-12 h-12">
+                        <AvatarFallback className="rounded-md">
                           <ExternalLinkIcon />
                         </AvatarFallback>
                       </Avatar>
@@ -114,7 +114,7 @@ function PreviewLoader() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2 flex-1 items-center">
-        <Skeleton className="h-9 w-9 rounded-sm shrink-0" />
+        <Skeleton className="h-9 w-9 rounded-md shrink-0" />
         <Skeleton className="h-4 w-full" />
       </div>
       <div className="flex flex-col gap-2">

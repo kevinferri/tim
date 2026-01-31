@@ -73,7 +73,7 @@ export function DraggableVideoContainer({
         >
           <div
             ref={draggableRef}
-            className="pointer-events-auto rounded-sm overflow-hidden shadow-lg"
+            className="pointer-events-auto rounded-md overflow-hidden shadow-lg"
             style={{ width: `${PLAYER_WIDTH}px` }}
           >
             {isDragging && (
