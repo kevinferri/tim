@@ -36,11 +36,11 @@ function parseMessage(text: string) {
 export function MessageText(props: Props) {
   const isOnlyEmoji = useMemo(
     () => (props.text ? isEmojiOnly(props.text) : false),
-    [props.text],
+    [props.text]
   );
 
   const clickedLink = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.UserClickedLink,
+    SocketEvent.UserClickedLink
   );
 
   return (
@@ -68,7 +68,7 @@ export function MessageText(props: Props) {
       <div
         className={cn(
           "whitespace-pre-line break-word leading-normal",
-          isOnlyEmoji ? "text-4xl" : "",
+          isOnlyEmoji ? "text-4xl" : ""
         )}
         style={{ overflowWrap: "anywhere" }}
       >

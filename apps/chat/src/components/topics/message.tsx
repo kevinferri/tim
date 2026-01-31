@@ -97,16 +97,16 @@ export const Message = (props: MessageProps) => {
     : props.highlights || [];
 
   const highlightedBySelf = !!highlights?.find(
-    (highlight) => self.id === highlight.userId,
+    (highlight) => self.id === highlight.userId
   );
 
   const links = useMemo(
     () => getLinksFromMessage(props.text ?? undefined),
-    [props.text],
+    [props.text]
   );
 
   const toggleHighlight = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.ToggleHighlight,
+    SocketEvent.ToggleHighlight
   );
 
   const editMessage = useSocketEmit<{
@@ -121,7 +121,7 @@ export const Message = (props: MessageProps) => {
   }>(SocketEvent.ShuffleGifMessage);
 
   const expandImage = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.UserExpandedImage,
+    SocketEvent.UserExpandedImage
   );
 
   const handleToggleHighlight = () => {
@@ -173,7 +173,7 @@ export const Message = (props: MessageProps) => {
         props.variant === "minimal"
           ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
           : "",
-        props.className,
+        props.className
       )}
       onDoubleClick={(e) => {
         if (props.variant !== "minimal") handleToggleHighlight();
@@ -212,7 +212,7 @@ export const Message = (props: MessageProps) => {
                   `font-semibold ${
                     props.sentBy.id === self.id &&
                     "text-purple-700 dark:text-purple-500"
-                  }`,
+                  }`
                 )}
               >
                 {props.sentBy.name?.split(" ")[0]}
