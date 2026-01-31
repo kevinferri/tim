@@ -49,7 +49,7 @@ export function DraggableVideoContainer({
 
       onDragStart(event, uiData);
     },
-    [onDragStart],
+    [onDragStart]
   );
 
   return (
@@ -77,7 +77,7 @@ export function DraggableVideoContainer({
             style={{ width: `${PLAYER_WIDTH}px` }}
           >
             {isDragging && (
-              <div className="absolute inset-0 z-10 bg-black/30" />
+              <div className="absolute inset-0 z-10 bg-background/20" />
             )}
             {children}
           </div>
