@@ -43,10 +43,10 @@ export function LinkPreview(props: Props) {
   });
 
   const clickedLink = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.UserClickedLink,
+    SocketEvent.UserClickedLink
   );
 
-  if (error || !data) return null;
+  if (error) return null;
 
   return (
     <div className="hidden md:block">
