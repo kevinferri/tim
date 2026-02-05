@@ -114,10 +114,11 @@ function PreviewLoader() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2 flex-1 items-center">
-        <Skeleton className="h-9 w-9 rounded-md shrink-0" />
+        <Skeleton className="h-10 w-10 rounded-md shrink-0" />
         <Skeleton className="h-4 w-full" />
       </div>
       <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
