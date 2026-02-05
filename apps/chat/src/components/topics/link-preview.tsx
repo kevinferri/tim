@@ -112,12 +112,9 @@ export function LinkPreview(props: Props) {
 
 function PreviewLoader() {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex gap-2 flex-1 items-center">
-        <Skeleton className="h-10 w-10 rounded-md shrink-0" />
-        <Skeleton className="h-4 w-full" />
-      </div>
-      <div className="flex flex-col gap-2">
+    <div className="flex gap-4">
+      <Skeleton className="h-[100px] w-[140px] rounded-md flex-shrink-0" />
+      <div className="flex flex-col gap-3 flex-1">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
