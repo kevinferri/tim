@@ -120,10 +120,11 @@ export function TopicChat() {
             : null;
 
           const showDateSeparator =
-            !prevDate ||
-            currentDate.getDate() !== prevDate.getDate() ||
-            currentDate.getMonth() !== prevDate.getMonth() ||
-            currentDate.getFullYear() !== prevDate.getFullYear();
+            (!prevDate ||
+              currentDate.getDate() !== prevDate.getDate() ||
+              currentDate.getMonth() !== prevDate.getMonth() ||
+              currentDate.getFullYear() !== prevDate.getFullYear()) &&
+            !(index === 0 && loadingMoreMessages);
 
           return (
             <div key={message.id}>
