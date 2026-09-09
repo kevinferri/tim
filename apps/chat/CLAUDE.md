@@ -9,7 +9,7 @@ A Next.js 14 (App Router) chat/community app ("Tim") built on React Server Compo
 - **Database**: PostgreSQL via Prisma ORM, with a custom model-extension layer
 - **Styling**: TailwindCSS + shadcn/ui (Radix primitives)
 - **Auth**: NextAuth.js (Google provider only, JWT session strategy)
-- **Real-time**: Socket.io client — connects to a *separate, externally-hosted* WS server (not part of this app)
+- **Real-time**: Socket.io client — connects to the sibling `apps/realtime-server` service (separately deployed, lives in this monorepo)
 - **State**: Zustand (client), Server Components/Server Actions (server)
 - **Media**: Cloudinary
 
@@ -51,9 +51,9 @@ No test framework is configured in this repo.
 
 `src/app/layout.tsx` (`RootLayout`) is a server component that loads the current user and renders either `LoggedOutLayout` or `LoggedInLayout`. `LoggedInLayout` is where global providers are wired up in this order: `SelfProvider` (current user context) → `SocketProvider` → `UserRoomConnect` / `CircleRoomConnect` (joins the user's socket rooms) → nav/chrome. It also mints the socket JWT (signed with `JWT_SECRET`, containing the full user object) passed to `SocketProvider`.
 
-### Real-time via external Socket.io server
+### Real-time via the sibling socket server
 
-The Socket.io server is **not** part of this Next.js app — the client in `src/components/socket/socket-provider.tsx` connects to `WS_SERVER_URL`/`WS_SERVER_PATH` (external service) using a per-session JWT. `src/components/socket/use-socket.ts` defines the shared `SocketEvent` enum (message/topic/circle/highlight/user-presence events) and the `useSocketHandler` / `useSocketEmit` hooks used throughout `src/components` to subscribe to and emit events. When adding a new real-time event, add it to `SocketEvent` first — that enum is the contract for both emitting and listening.
+The Socket.io server is a separately-deployed service (`apps/realtime-server` in this monorepo, not this Next.js process) — the client in `src/components/socket/socket-provider.tsx` connects to `WS_SERVER_URL`/`WS_SERVER_PATH` using a per-session JWT. `src/components/socket/use-socket.ts` re-exports the `SocketEvent` enum from `@tim/shared-types` (the canonical source, shared with `apps/realtime-server`) and defines the `useSocketHandler` / `useSocketEmit` hooks used throughout `src/components` to subscribe to and emit events. When adding a new real-time event, add it to `packages/shared-types/src/socket-events.ts` first — that's the contract both apps import from.
 
 ### Server actions vs. API routes
 

@@ -19,7 +19,7 @@ A Node.js/TypeScript Socket.IO server (`tim-chat-server`) providing real-time ch
 
 `src/app.ts` creates a plain HTTP server (with a `/api/ping` health check) and attaches a Socket.IO server at path `/ws/`. `middleware.ts` runs on every connection: it verifies the JWT from `socket.handshake.auth.token`, then sets `socket.data.user` to the decoded token plus an initial activity state from `getInitialActiveUserState()` (`src/lib/user-change-handler.ts`). Unauthenticated sockets are rejected before any handler runs.
 
-`src/event-handlers/main.ts` is the hub: it defines the `SocketEvent` enum (all wire event names) and `registerEventHandlers(server)`, which on `connection` wires up every handler module (rooms, messages, circles, topics, highlights, user-activity, socket lifecycle, plus `any.ts` for logging all in/out events). A second `socket.use` guard re-checks `socket.data.user` per-event. Every handler function takes `{ socket, server }: HandlerArgs`.
+`src/event-handlers/main.ts` is the hub: it re-exports the `SocketEvent` enum from the shared `@tim/shared-types` package (`packages/shared-types/src/socket-events.ts` is the canonical source, shared with `apps/chat` — add new wire events there, not here) and defines `registerEventHandlers(server)`, which on `connection` wires up every handler module (rooms, messages, circles, topics, highlights, user-activity, socket lifecycle, plus `any.ts` for logging all in/out events). A second `socket.use` guard re-checks `socket.data.user` per-event. Every handler function takes `{ socket, server }: HandlerArgs`.
 
 ### Rooms
 
