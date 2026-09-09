@@ -75,12 +75,12 @@ type Props = VariantProps<typeof variants> & {
   isOnline?: boolean;
 };
 
-const variants = cva("shadow-md", {
+const variants = cva("", {
   variants: {
     variant: {
-      default: "",
+      default: "shadow-md",
       typing: "animate-typing shadow-glow",
-      idle: "opacity-50",
+      idle: "opacity-50 shadow-md",
     },
     size: {
       default: "h-9 w-9",
