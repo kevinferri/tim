@@ -12,10 +12,8 @@ export function CircleRoomConnect({ children, circleIds }: Props) {
   const { joinRoom, leaveRoom } = useRoomManagement();
 
   useEffectOnce(() => {
-    process.nextTick(() => {
-      circleIds.forEach((id) => {
-        joinRoom(id, "circle");
-      });
+    circleIds.forEach((id) => {
+      joinRoom(id, "circle");
     });
 
     return () => {

@@ -7,6 +7,7 @@ import { SocketProvider } from "@/components/socket/socket-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { prismaClient } from "@/lib/prisma/client";
 import { SelfProvider } from "@/components/auth/self-provider";
+import { PresenceSync } from "@/components/dashboard/presence-sync";
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
@@ -99,6 +100,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
       <Toaster />
       <SelfProvider user={user}>
         <SocketProvider {...socketConfig}>
+          <PresenceSync />
           <UserRoomConnect>
             <CircleRoomConnect circleIds={circleIds ?? []}>
               <div className="flex flex-col h-screen">

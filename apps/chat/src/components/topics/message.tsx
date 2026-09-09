@@ -61,13 +61,10 @@ export type MessageProps = MessageData & {
 export const Message = (props: MessageProps) => {
   const {
     topicId,
-    scrollToBottomOfChat,
+    scrollToBottom,
     messages,
     addShufflingGif,
     shufflingGifs,
-    loadMoreAnchorRef,
-    loadMoreAnchorId,
-    newestMessageRef,
   } = useCurrentTopicContext();
   const self = useSelf();
   const [showActions, setShowActions] = useState(false);
@@ -83,7 +80,6 @@ export const Message = (props: MessageProps) => {
   const isNewestMessage = mLength > 0 && messages[mLength - 1].id === props.id;
   const isShufflingGif =
     (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
-  const shouldScroll = isNewestMessage && props.context === "topic";
   const isActionEligable = props.variant !== "minimal";
 
   const islandMessage = useIslandMessage({
@@ -152,21 +148,8 @@ export const Message = (props: MessageProps) => {
     setEditingText(props.text);
   };
 
-  const getRef = () => {
-    if (loadMoreAnchorId === props.id) {
-      return loadMoreAnchorRef;
-    }
-
-    if (isNewestMessage) {
-      return newestMessageRef;
-    }
-
-    return undefined;
-  };
-
   return (
     <div
-      ref={getRef()}
       className={cn(
         baseStyles,
         highlightedBySelf ? highlightStyles : "",
@@ -233,7 +216,7 @@ export const Message = (props: MessageProps) => {
                 isShufflingGif={isShufflingGif}
                 onEditMessage={() => {
                   setIsEditing(true);
-                  if (isNewestMessage) scrollToBottomOfChat({ force: true });
+                  if (isNewestMessage) scrollToBottom({ behavior: "instant" });
                 }}
                 onShuffleGif={() => {
                   if (!props.id) return;
@@ -286,10 +269,6 @@ export const Message = (props: MessageProps) => {
                     if (shuffledGifLoading) {
                       setShuffledGifLoading(false);
                     }
-
-                    if (shouldScroll) {
-                      scrollToBottomOfChat();
-                    }
                   }}
                 />
               ))}
@@ -302,11 +281,6 @@ export const Message = (props: MessageProps) => {
                     topicId={topicId}
                     key={`${props.id}${link}${i}`}
                     link={link}
-                    onEmbedMediaLoad={() => {
-                      if (shouldScroll) {
-                        scrollToBottomOfChat();
-                      }
-                    }}
                   />
                 );
               })}

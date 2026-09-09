@@ -54,13 +54,8 @@ type MembersWithStatus = (CircleMember & { isCreator: boolean })[];
 
 export function CircleMembersList() {
   const { circleMembers, circleId } = useCurrentTopicContext();
-  const { topicMap } = useActiveCircleMembers();
-  const allActiveMembers = topicMap
-    ? keyBy(
-        Object.values(topicMap).flatMap(({ activeUsers }) => activeUsers),
-        "id"
-      )
-    : {};
+  const { getActiveMembersInCircle } = useActiveCircleMembers();
+  const allActiveMembers = keyBy(getActiveMembersInCircle(circleId), "id");
 
   const onlineMembers: MembersWithStatus = [];
   const offlineMembers: MembersWithStatus = [];

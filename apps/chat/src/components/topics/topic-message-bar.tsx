@@ -36,7 +36,8 @@ export function TopicMessageBar() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const {
     topicId,
-    scrollToBottomOfChat,
+    scrollToBottom,
+    isAtBottom,
     circleId,
     generatingCommand,
     setGeneratingCommand,
@@ -160,7 +161,10 @@ export function TopicMessageBar() {
               file={image}
               onFileChange={(file) => {
                 setImage(file);
-                scrollToBottomOfChat();
+                // The composer growing to show the attachment preview can
+                // push the last message out of view -- keep it visible,
+                // but only if the user was already caught up.
+                if (isAtBottom) scrollToBottom({ behavior: "instant" });
                 textAreaRef.current?.focus();
               }}
               onFileRemove={() => setImage(undefined)}

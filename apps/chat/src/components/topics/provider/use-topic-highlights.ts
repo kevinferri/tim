@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { MessageProps, MessageData } from "@/components/topics/message";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
@@ -39,9 +39,14 @@ export function useTopicHighlights({
     existingTopHighlights as MessageProps[],
   );
 
+  const onRefreshSuccess = useCallback(
+    (refreshed: MessageProps[]) => setTopHighlights(refreshed),
+    [],
+  );
+
   const { fetchData: refreshTopHighlights } = useLazyFetch<MessageProps[]>({
     url: `/api/topics/${topicId}/top-highlights`,
-    onSuccess: (refreshed) => setTopHighlights(refreshed),
+    onSuccess: onRefreshSuccess,
   });
 
   const visibleTopHighlights = useMemo(

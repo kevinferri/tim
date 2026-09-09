@@ -4,6 +4,7 @@ import { createContext, useContext, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useSocketState } from "@/components/socket/use-socket-state";
+import { useRoomResyncOnConnect } from "@/components/socket/use-current-user-rooms";
 
 const SocketContext = createContext<
   { socket: Socket; socketState: ReturnType<typeof useSocketState> } | undefined
@@ -36,6 +37,7 @@ export function SocketProvider({ endpoint, path, jwt, children }: Props) {
   });
 
   const socketState = useSocketState(socket);
+  useRoomResyncOnConnect(socket);
   const value = { socket, socketState };
 
   return (

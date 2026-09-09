@@ -66,7 +66,7 @@ function getReadableMessage(text?: string | null) {
 
 export const messageModel = {
   async getMessagesForTopic({ topicId, select, before }: MessageArgs) {
-    const userId = getLoggedInUserId();
+    const userId = await getLoggedInUserId();
     const cursor = before
       ? {
           createdAt: {

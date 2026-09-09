@@ -5,8 +5,6 @@ import { Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useToast } from "@/components/ui/use-toast";
-import { SocketEvent } from "@/components/socket/use-socket";
-import { useCurrentUserRooms } from "@/components/socket/use-current-user-rooms";
 
 export function useSocketState(socket: Socket) {
   const router = useRouter();
@@ -14,16 +12,8 @@ export function useSocketState(socket: Socket) {
   const [isConnected, setIsConnected] = useState<boolean>();
   const disconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
   const reconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
-  const { getJoinedRooms } = useCurrentUserRooms();
 
   useEffectOnce(() => {
-    // socket.connected is initially false for a flash.
-    // we set is as undefined initially then get the real state
-    setTimeout(() => {
-      setIsConnected(socket.connected);
-      if (!socket.connected) showDisconnectedToast();
-    }, 1500);
-
     function showDisconnectedToast() {
       if (!disconnectToastRef.current) {
         disconnectToastRef.current = toast({
@@ -47,14 +37,30 @@ export function useSocketState(socket: Socket) {
     function onDisconnect() {
       setIsConnected(false);
       showDisconnectedToast();
+      // Let a future reconnect show its own "restored" toast again --
+      // without this, the ref from a previous reconnect (auto-dismissed
+      // after 5s, but never cleared) permanently suppresses it.
+      reconnectToastRef.current = null;
+    }
+
+    // The socket starts disconnected and only ever emits "disconnect"
+    // for a connection that was established and then dropped -- if it
+    // never manages to connect in the first place (bad URL, server
+    // down), neither "connect" nor "disconnect" ever fires, and
+    // isConnected would stay stuck at `undefined` forever. socket.io
+    // retries automatically and re-emits "connect_error" on every
+    // failed attempt, which is the actual signal for that case.
+    function onConnectError() {
+      setIsConnected(false);
+      showDisconnectedToast();
     }
 
     function onReconnect() {
-      const rooms = getJoinedRooms();
-      rooms.forEach((room) => {
-        socket.emit(SocketEvent.JoinRoom, room);
-      });
-
+      // Room membership itself is resynced by useRoomResyncOnConnect,
+      // and each topic's message/highlight state re-syncs itself off
+      // `isConnected` flipping back to true -- this handler only owns
+      // reconnect UX, plus refreshing the server-rendered nav lists
+      // (circles/topics), which aren't covered by either of those.
       if (!reconnectToastRef.current) {
         reconnectToastRef.current = toast({
           title: `Your connection has been restored`,
@@ -68,11 +74,13 @@ export function useSocketState(socket: Socket) {
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
     socket.io.on("reconnect", onReconnect);
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
       socket.io.off("reconnect", onReconnect);
     };
   });

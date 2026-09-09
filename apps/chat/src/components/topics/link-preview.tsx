@@ -21,7 +21,6 @@ type Props = {
   link: string;
   messageId: string;
   topicId: string;
-  onEmbedMediaLoad?: () => void;
 };
 
 function shouldSkip(link: string) {
@@ -39,7 +38,6 @@ export function LinkPreview(props: Props) {
   const { data, error } = useFetch<LinkMetadataResponse>({
     skip,
     url: `/api/link-metadata?url=${encodeURIComponent(props.link)}`,
-    onSuccess: props.onEmbedMediaLoad,
   });
 
   const clickedLink = useSocketEmit<{ messageId: string; topicId: string }>(
@@ -51,10 +49,7 @@ export function LinkPreview(props: Props) {
   return (
     <div className="hidden md:block">
       {data?.ogVideo && !getYoutubeVideoFromUrl(data?.ogVideo) && (
-        <VideoPlayer
-          src={data.ogVideo}
-          onPreviewLoad={props.onEmbedMediaLoad}
-        />
+        <VideoPlayer src={data.ogVideo} />
       )}
       <Link
         target="_blank"

@@ -3,14 +3,16 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useCallback,
+  useRef,
   MutableRefObject,
 } from "react";
-import { useRouter } from "next/navigation";
 import { MessageProps, MessageData } from "@/components/topics/message";
-import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useState } from "react";
+import { useSelf } from "@/components/auth/self-provider";
+import { useSocketContext } from "@/components/socket/socket-provider";
 import { useTopicScroll } from "@/components/topics/provider/use-topic-scroll";
 import { useTopicMessages } from "@/components/topics/provider/use-topic-messages";
 import { useTopicHighlights } from "@/components/topics/provider/use-topic-highlights";
@@ -29,12 +31,9 @@ export type CircleMember = {
   }[];
 };
 
-type ScrollArgs =
-  | {
-      timeout?: number;
-      force?: boolean;
-    }
-  | undefined;
+type ScrollToBottomOptions = {
+  behavior?: ScrollBehavior;
+};
 
 type ContextValue = {
   topicId: string;
@@ -43,17 +42,17 @@ type ContextValue = {
   topHighlights: MessageProps[];
   mediaMessages: MessageProps[];
   circleMembers: CircleMember[];
-  scrollRef: MutableRefObject<HTMLDivElement | null>;
-  newestMessageRef: MutableRefObject<HTMLDivElement | null>;
-  messagesListRef: MutableRefObject<HTMLDivElement | null>;
-  scrollToBottomOfChat: (args?: ScrollArgs) => void;
+  viewportRef: MutableRefObject<HTMLDivElement | null>;
+  contentRef: MutableRefObject<HTMLDivElement | null>;
+  bottomSentinelRef: MutableRefObject<HTMLDivElement | null>;
+  isAtBottom: boolean;
+  unseenCount: number;
+  scrollToBottom: (options?: ScrollToBottomOptions) => void;
   addShufflingGif: (id: string) => void;
   shufflingGifs: string[];
   loadMoreMessages: () => void;
   loadingMoreMessages: boolean;
   hasMoreMessages: boolean;
-  loadMoreAnchorRef: MutableRefObject<HTMLDivElement | null>;
-  loadMoreAnchorId?: string;
   blopSoundRef: MutableRefObject<HTMLAudioElement | null>;
   generatingCommand?: string;
   setGeneratingCommand: (command?: string) => void;
@@ -76,12 +75,16 @@ type Props = {
 const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 
 export function CurrentTopicProvider(props: Props) {
-  const router = useRouter();
+  const self = useSelf();
+  const {
+    socketState: { isConnected },
+  } = useSocketContext();
   const baseTitle = `${props.circleName} - ${props.topicName}`;
   const [generatingCommand, setGeneratingCommand] = useState<
     string | undefined
   >();
-  const { scrollRef, newestMessageRef, messagesListRef, scrollToBottomOfChat } =
+  const [unseenCount, setUnseenCount] = useState(0);
+  const { viewportRef, contentRef, bottomSentinelRef, isAtBottom, scrollToBottom } =
     useTopicScroll();
 
   const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
@@ -89,16 +92,33 @@ export function CurrentTopicProvider(props: Props) {
     baseTitle,
   });
 
-  const onNewMessage = useCallback(() => {
-    notifyOnNewMessage();
-    scrollToBottomOfChat();
-    if (generatingCommand) setGeneratingCommand(undefined);
-  }, [
-    notifyOnNewMessage,
-    scrollToBottomOfChat,
-    setGeneratingCommand,
-    generatingCommand,
-  ]);
+  useEffect(() => {
+    if (isAtBottom) setUnseenCount(0);
+  }, [isAtBottom]);
+
+  const onNewMessage = useCallback(
+    (message: MessageProps) => {
+      notifyOnNewMessage();
+
+      if (message.sentBy?.id === self.id) {
+        // Always land on your own messages, regardless of where you were
+        // scrolled to when you sent it.
+        scrollToBottom({ behavior: "instant" });
+      } else if (!isAtBottom) {
+        setUnseenCount((count) => count + 1);
+      }
+
+      if (generatingCommand) setGeneratingCommand(undefined);
+    },
+    [
+      notifyOnNewMessage,
+      scrollToBottom,
+      self.id,
+      isAtBottom,
+      setGeneratingCommand,
+      generatingCommand,
+    ],
+  );
 
   const { mediaMessages, setMediaMessages, shufflingGifs, addShufflingGif } =
     useTopicMedia({
@@ -122,18 +142,18 @@ export function CurrentTopicProvider(props: Props) {
     loadMoreMessages,
     loadingMoreMessages,
     hasMoreMessages,
-    loadMoreAnchorRef,
-    loadMoreAnchorId,
+    reconcileRecentMessages,
   } = useTopicMessages({
     topicId: props.topicId,
     existingMessages: props.existingMessages,
     messagesLimit: props.messagesLimit,
-    messagesListRef,
+    viewportRef,
+    isAtBottom,
     onNewMessage,
     onMediaMessage,
   });
 
-  const { topHighlights } = useTopicHighlights({
+  const { topHighlights, refreshTopHighlights } = useTopicHighlights({
     topicId: props.topicId,
     existingTopHighlights: props.existingTopHighlights,
     topHighlightsLimit: props.topHighlightsLimit,
@@ -143,9 +163,23 @@ export function CurrentTopicProvider(props: Props) {
     },
   });
 
-  useEffectOnce(() => {
-    router.refresh();
-  });
+  // The socket only tells us about changes while it's actually
+  // connected -- anything sent, edited, deleted, or highlighted while
+  // disconnected never reaches us as an event. Catch up on reconnect
+  // (a real "was disconnected, now isn't" transition, not the initial
+  // connect -- we already have fresh data for that from the server
+  // render).
+  const wasConnectedRef = useRef(isConnected);
+
+  useEffect(() => {
+    const wasConnected = wasConnectedRef.current;
+    wasConnectedRef.current = isConnected;
+
+    if (wasConnected === false && isConnected === true) {
+      reconcileRecentMessages();
+      refreshTopHighlights();
+    }
+  }, [isConnected, reconcileRecentMessages, refreshTopHighlights]);
 
   const circleMembers = useMemo(
     () => props.existingCircleMembers,
@@ -157,9 +191,12 @@ export function CurrentTopicProvider(props: Props) {
       messages,
       mediaMessages,
       circleMembers,
-      scrollRef,
-      messagesListRef,
-      scrollToBottomOfChat,
+      viewportRef,
+      contentRef,
+      bottomSentinelRef,
+      isAtBottom,
+      unseenCount,
+      scrollToBottom,
       shufflingGifs,
       addShufflingGif,
       topHighlights,
@@ -168,10 +205,7 @@ export function CurrentTopicProvider(props: Props) {
       loadMoreMessages,
       loadingMoreMessages,
       hasMoreMessages,
-      loadMoreAnchorRef,
       blopSoundRef,
-      loadMoreAnchorId,
-      newestMessageRef,
       generatingCommand,
       setGeneratingCommand,
     }),
@@ -184,18 +218,18 @@ export function CurrentTopicProvider(props: Props) {
       topHighlights,
       props.topicId,
       props.circleId,
-      scrollToBottomOfChat,
+      isAtBottom,
+      unseenCount,
+      scrollToBottom,
       loadMoreMessages,
       loadingMoreMessages,
       hasMoreMessages,
-      loadMoreAnchorId,
       generatingCommand,
       setGeneratingCommand,
-      scrollRef,
-      messagesListRef,
-      loadMoreAnchorRef,
+      viewportRef,
+      contentRef,
+      bottomSentinelRef,
       blopSoundRef,
-      newestMessageRef,
     ],
   );
 

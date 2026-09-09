@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function useFetch<T>(
   opts: { url: string; skip?: boolean; onSuccess?: (data: T) => void } = {
@@ -14,28 +14,40 @@ export function useFetch<T>(
   useEffect(() => {
     if (!!opts.skip) return;
 
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(false);
         const resp = await fetch(opts.url);
 
         if (!resp.ok) {
-          setError(true);
-          setData(undefined);
+          throw new Error(`Request failed with status ${resp.status}`);
         }
 
         const json = await resp.json();
+        // A newer request may have started (url/skip changed) while this
+        // one was in flight -- don't let a stale response clobber it.
+        if (cancelled) return;
 
         setData(json);
         opts.onSuccess?.(json);
       } catch (e) {
-        setError(true);
+        if (!cancelled) {
+          setError(true);
+          setData(undefined);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts.url, opts.skip]);
 
@@ -50,27 +62,36 @@ export function useLazyFetch<T>(
 ) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  // A ref, not the `loading` state, guards against overlapping calls --
+  // state updates are batched/async, so two calls fired in quick
+  // succession (e.g. a fast double-scroll) could both pass a
+  // `loading`-based check before either had a chance to flip it.
+  const isFetchingRef = useRef(false);
   const { url, onSuccess, skip } = opts;
 
   const fetchData = useCallback(async () => {
-    if (skip) return;
+    if (skip || isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+    setLoading(true);
+    setError(false);
 
     try {
-      setLoading(true);
       const resp = await fetch(url);
 
       if (!resp.ok) {
-        setError(true);
+        throw new Error(`Request failed with status ${resp.status}`);
       }
 
-      const json = await resp.json();
+      const json = (await resp.json()) as T;
       onSuccess?.(json);
 
-      return json as T;
+      return json;
     } catch (e) {
       setError(true);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [url, onSuccess, skip]);
 

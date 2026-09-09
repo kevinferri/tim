@@ -5,64 +5,94 @@ import { useShallow } from "zustand/react/shallow";
 import uniqBy from "lodash.uniqby";
 import { Self } from "@/components/auth/self-provider";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
-import { useDebounce } from "@/lib/hooks/use-debounce";
 
-type ActiveUser = Self & { state: { isIdle: boolean; isTyping: boolean } };
+export type ActiveUser = Self & { state: { isIdle: boolean; isTyping: boolean } };
 
-type TopicMap = Record<string, { activeUsers: ActiveUser[]; circleId: string }>;
+type TopicPresence = { activeUsers: ActiveUser[]; circleId: string };
+type TopicMap = Record<string, TopicPresence>;
 
 type Store = {
   topicMap: TopicMap;
-  setTopicMap: (topicMap: TopicMap) => void;
+  mergeCircleSnapshot: (topicMap: TopicMap) => void;
+  setTopicPresence: (topicId: string, presence: TopicPresence) => void;
 };
 
 const useStore = create<Store>((set) => ({
   topicMap: {},
-  setTopicMap: (topicMap: TopicMap) => set(() => ({ topicMap })),
+
+  mergeCircleSnapshot: (topicMap) =>
+    set((state) => ({ topicMap: { ...state.topicMap, ...topicMap } })),
+
+  setTopicPresence: (topicId, presence) =>
+    set((state) => ({
+      topicMap: {
+        ...state.topicMap,
+        [topicId]: {
+          ...presence,
+          activeUsers: uniqBy(presence.activeUsers, "id"),
+        },
+      },
+    })),
 }));
 
-export function useActiveCircleMembers() {
-  const topicMap = useStore(useShallow((state) => state.topicMap));
-  const setTopicMap = useStore((state) => state.setTopicMap);
-  const debounced = useDebounce(topicMap, 250);
+// Registers the presence socket listeners exactly once. Mount this a
+// single time, near the socket root (see PresenceSync) -- previously
+// every component that wanted presence data (circles list, topics list,
+// members list, active-users row) called useSocketHandler itself, which
+// meant up to four redundant listeners for the same events, and any of
+// them mounting after the server's initial snapshot arrived would just
+// miss it for good since socket.io doesn't replay past events. Reading
+// presence is now decoupled from subscribing to it -- see
+// useActiveCircleMembers below.
+export function usePresenceSync() {
+  const mergeCircleSnapshot = useStore((state) => state.mergeCircleSnapshot);
+  const setTopicPresence = useStore((state) => state.setTopicPresence);
 
-  const getActiveMembersInTopic = (topicId: string) =>
-    uniqBy(topicMap?.[topicId]?.activeUsers ?? [], "id");
-
-  const getCircleIdsFromTopicMap = () =>
-    Object.values(topicMap)
-      .map((topic) => topic.circleId)
-      .filter((circleId, index, self) => self.indexOf(circleId) === index);
-
-  useSocketHandler<{
-    topicMap: TopicMap;
-  }>(SocketEvent.UserJoinedCircle, (payload) => {
-    setTopicMap({
-      ...topicMap,
-      ...payload.topicMap,
-    });
-  });
+  useSocketHandler<{ topicMap: TopicMap }>(
+    SocketEvent.UserJoinedCircle,
+    (payload) => mergeCircleSnapshot(payload.topicMap),
+  );
 
   useSocketHandler<{
     activeUsers: ActiveUser[];
     topicId: string;
     circleId: string;
-  }>(SocketEvent.UserJoinedOrLeftTopic, (payload) => {
-    if (!topicMap) return;
+  }>(SocketEvent.UserJoinedOrLeftTopic, (payload) =>
+    setTopicPresence(payload.topicId, {
+      circleId: payload.circleId,
+      activeUsers: payload.activeUsers,
+    }),
+  );
+}
 
-    setTopicMap({
-      ...topicMap,
-      [payload.topicId]: {
-        ...topicMap[payload.topicId],
-        circleId: payload.circleId,
-        activeUsers: uniqBy(payload.activeUsers, "id"),
-      },
-    });
-  });
+export function useActiveCircleMembers() {
+  const topicMap = useStore(useShallow((state) => state.topicMap));
+
+  const getActiveMembersInTopic = (topicId: string) =>
+    topicMap[topicId]?.activeUsers ?? [];
+
+  const getActiveMembersInCircle = (circleId: string) =>
+    uniqBy(
+      Object.values(topicMap)
+        .filter((topic) => topic.circleId === circleId)
+        .flatMap((topic) => topic.activeUsers),
+      "id",
+    );
+
+  const getAllActiveMembers = () =>
+    uniqBy(
+      Object.values(topicMap).flatMap((topic) => topic.activeUsers),
+      "id",
+    );
+
+  const getCircleIdsFromTopicMap = () =>
+    Array.from(new Set(Object.values(topicMap).map((topic) => topic.circleId)));
 
   return {
-    topicMap: debounced,
+    topicMap,
     getActiveMembersInTopic,
+    getActiveMembersInCircle,
+    getAllActiveMembers,
     getCircleIdsFromTopicMap,
   };
 }
