@@ -1,0 +1,149 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specific
+  name             String?
+  email            String? @unique
+  imageUrl         String?
+  googleId         String  @unique
+  status           String?
+  lastStatusUpdate DateTime?
+
+  // Relations
+  createdCircles    Circle[]       @relation("circlesCreatedByUser")
+  createdTopics     Topic[]        @relation("topicsCreatedByUser")
+  circleMemberships Circle[]       @relation("circleMembershipsForUser")
+  messages          Message[]      @relation("messagesSentByUser")
+  highlights        Highlight[]    @relation("highlightsByUser")
+  topicHistory      TopicHistory[] @relation("topicHistoryForUser")
+
+  @@index([email])
+  
+  @@map(name: "users")
+}
+
+model Circle {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specific
+  name           String
+  description    String?
+  imageUrl       String?
+  userId         String
+  defaultTopicId String? @unique
+
+  // Relations
+  createdBy    User    @relation("circlesCreatedByUser", fields: [userId], references: [id])
+  members      User[]  @relation("circleMembershipsForUser")
+  topics       Topic[] @relation("topicsInCircle")
+  defaultTopic Topic?  @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
+
+  @@index([userId])
+
+  @@map(name: "circles")
+}
+
+model Topic {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specfic
+  name        String
+  description String?
+  userId      String
+  circleId    String
+
+  // Relations
+  createdBy        User           @relation("topicsCreatedByUser", fields: [userId], references: [id])
+  parentCircle     Circle         @relation("topicsInCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  defaultForCircle Circle?        @relation("defaultTopicForCircle")
+  messages         Message[]      @relation("messagesInTopic")
+  history          TopicHistory[] @relation("userHistoryForTopic")
+
+  @@index([userId, circleId])
+
+  @@map(name: "topics")
+}
+
+model Message {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specific 
+  text     String?
+  mediaUrl String?
+  userId   String
+  topicId  String
+
+  // Relations
+  sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
+  topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
+  highlights Highlight[] @relation("highlightsForMessage")
+
+  @@index([id])
+  @@index([userId])
+  @@index([topicId, createdAt(sort: Desc)])
+  @@index([userId, topicId])
+
+  @@map(name: "messages")
+}
+
+model Highlight {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specific 
+  userId    String
+  messageId String
+
+  // Relations
+  createdBy     User    @relation("highlightsByUser", fields: [userId], references: [id])
+  message       Message @relation("highlightsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([messageId])
+
+  @@map(name: "highlights")
+}
+
+model TopicHistory {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Specific 
+  userId    String
+  topicId   String
+
+  // Relations
+  user     User    @relation("topicHistoryForUser", fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic   @relation("userHistoryForTopic", fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+
+  @@map(name: "topic_histories")
+}
