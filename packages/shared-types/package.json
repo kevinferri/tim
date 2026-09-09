@@ -2,8 +2,8 @@
   "name": "@tim/shared-types",
   "version": "1.0.0",
   "private": true,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/socket-events.js",
+  "types": "dist/socket-events.d.ts",
   "scripts": {
     "build": "tsc"
   },
