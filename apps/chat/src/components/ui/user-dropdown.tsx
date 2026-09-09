@@ -28,7 +28,7 @@ export function UserDropDown() {
   const router = useRouter();
 
   useSocketHandler<UserUpdatedStatusHandlerProps>(
-    SocketEvent.UpdateUserStatus,
+    SocketEvent.UserUpdatedStatus,
     (payload) => {
       if (payload.user.id === self.id) {
         router.refresh();

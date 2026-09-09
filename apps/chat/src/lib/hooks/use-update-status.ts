@@ -3,7 +3,7 @@ import { useActiveCircleMembers } from "@/components/dashboard/active-circle-mem
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 
 export function useUpdateUserStatus() {
-  const updateUserStatusEmitter = useSocketEmit(SocketEvent.UpdateUserStatus);
+  const updateUserStatusEmitter = useSocketEmit(SocketEvent.UserUpdatedStatus);
   const { getCircleIdsFromTopicMap } = useActiveCircleMembers();
   const circleIds = getCircleIdsFromTopicMap();
 
