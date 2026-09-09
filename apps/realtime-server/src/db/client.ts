@@ -18,7 +18,7 @@ const ssl = isProd
 const pgClientSingleton = () => {
   const connectionString = process.env.DATABASE_URL;
 
-  if (!isProd && !connectionString.includes("supabase")) {
+  if (!connectionString) {
     throw new Error("Malformed database connection string");
   }
 
