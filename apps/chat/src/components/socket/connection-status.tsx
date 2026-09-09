@@ -27,16 +27,16 @@ export function ConnectionStatus() {
     if (typeof isConnected === "undefined") return null;
 
     const getColor = () => {
-      if (!isConnected) return "bg-red-600";
+      if (!isConnected) return "bg-destructive";
       if (Boolean(self.status)) return STATUS_COLOR;
-      return "bg-green-600";
+      return "bg-success";
     };
 
     return (
       <>
         {!isConnected && (
           <span
-            className={`animate-ping absolute inline-flex rounded-full bg-red-600 opacity-80 ${dotSize}`}
+            className={`animate-ping absolute inline-flex rounded-full bg-destructive opacity-80 ${dotSize}`}
           />
         )}
         <span

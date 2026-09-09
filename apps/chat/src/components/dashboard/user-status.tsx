@@ -18,7 +18,7 @@ type Props = {
   isOnline?: boolean;
 };
 
-export const STATUS_COLOR = "bg-yellow-500";
+export const STATUS_COLOR = "bg-warning";
 
 export type UserUpdatedStatusHandlerProps = {
   user: {
@@ -35,8 +35,8 @@ export function UserStatus(props: Props) {
 
   const getDotColor = () => {
     if (props.status) return STATUS_COLOR;
-    if (Boolean(props.isOnline)) return "bg-green-600";
-    return "bg-slate-400";
+    if (Boolean(props.isOnline)) return "bg-success";
+    return "bg-muted-foreground";
   };
 
   const statusUpdatedOn = useDateFormatter(
@@ -98,7 +98,7 @@ export function UserStatus(props: Props) {
                   </div>
                 )}
               </div>
-              <div className="flex ml-4 text-slate-300 dark:text-slate-500">
+              <div className="flex ml-4 text-muted-foreground">
                 {statusUpdatedOn && (
                   <span className="text-[10px]">
                     since <time>{statusUpdatedOn}</time>

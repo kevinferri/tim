@@ -71,7 +71,9 @@ export function MediaViewer({
   const globalData = useGlobalVideoPlayerStore((s) => s.data);
 
   const isPlayingInGlobal =
-    isGlobalMode && globalData?.videoId === videoData?.videoId;
+    isGlobalMode &&
+    globalData?.type === videoData?.type &&
+    globalData?.videoId === videoData?.videoId;
 
   const handleGlobalClick = () => {
     if (!videoData) return;

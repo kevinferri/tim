@@ -26,7 +26,7 @@ export function MediaUploader(props: Props) {
   return (
     <div>
       {isDragging && (
-        <div className="absolute w-screen h-screen top-0 left-0 z-10 bg-slate-800 opacity-90 flex flex-col items-center justify-center gap-6 text-slate-50">
+        <div className="absolute w-screen h-screen top-0 left-0 z-10 bg-black/80 flex flex-col items-center justify-center gap-6 text-white">
           <ImageIcon height={80} width={80} />
           <div className="text-xl">Drop your file anywhere on the screen</div>
         </div>

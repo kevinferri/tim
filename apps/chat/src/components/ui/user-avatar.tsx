@@ -11,7 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
-import { useFetch } from "@/lib/hooks/use-fetch";
+import { useQuery } from "@tanstack/react-query";
 import {
   CalendarIcon,
   EnvelopeClosedIcon,
@@ -79,8 +79,7 @@ const variants = cva("shadow-md", {
   variants: {
     variant: {
       default: "",
-      typing:
-        "animate-typing shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]",
+      typing: "animate-typing shadow-glow",
       idle: "opacity-50",
     },
     size: {
@@ -112,9 +111,17 @@ export function UserAvatar(props: Props) {
     year: "numeric",
   });
 
-  const { data } = useFetch<UserStatsForTopicResponse>({
-    url: `/api/topics/${props.topicId}/user-stats/${props.id}`,
-    skip: !props.topicId || !open,
+  const { data } = useQuery({
+    queryKey: ["user-stats", props.topicId, props.id],
+    queryFn: () =>
+      fetch(`/api/topics/${props.topicId}/user-stats/${props.id}`).then(
+        (r) => {
+          if (!r.ok)
+            throw new Error(`Request failed with status ${r.status}`);
+          return r.json() as Promise<UserStatsForTopicResponse>;
+        },
+      ),
+    enabled: !!props.topicId && open,
   });
 
   useSocketHandler<UserUpdatedStatusHandlerProps>(

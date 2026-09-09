@@ -28,7 +28,7 @@ export function MessageEdit(props: Props) {
         <span>
           esc to{" "}
           <span
-            className="cursor-pointer text-purple-700"
+            className="cursor-pointer text-mention"
             onClick={props.onEditCancel}
           >
             cancel
@@ -38,7 +38,7 @@ export function MessageEdit(props: Props) {
         <span>
           enter to{" "}
           <span
-            className="cursor-pointer text-purple-700"
+            className="cursor-pointer text-mention"
             onClick={props.onEditConfirm}
           >
             save changes

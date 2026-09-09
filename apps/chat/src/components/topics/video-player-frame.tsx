@@ -1,4 +1,4 @@
-import { useIntersection } from "@/lib/hooks/use-intersection";
+import { useLazyVisible } from "@/lib/hooks/use-lazy-visible";
 import { VideoIcon } from "@radix-ui/react-icons";
 import { useRef } from "react";
 
@@ -19,16 +19,23 @@ export function VideoPlayerFrame({
 }: Props) {
   const intersectionRef = useRef<HTMLDivElement | null>(null);
 
-  const intersection = useIntersection(intersectionRef, {
-    rootMargin: "20px",
+  // Load the embed once it first scrolls into view, then leave it mounted.
+  // Re-deriving "should render" from live intersection state (the previous
+  // approach) tore the iframe down every time it scrolled out and rebuilt it
+  // from scratch on the way back in -- for YouTube/Twitch that reload can
+  // silently fail to re-initialize, leaving the bordered frame visible with
+  // no video inside it.
+  const isVisible = useLazyVisible(intersectionRef, {
+    rootMargin: "200px",
+    skip: skipVirtualization,
   });
 
-  const shouldRender = skipVirtualization || intersection?.isIntersecting;
+  const shouldRender = skipVirtualization || isVisible;
 
   if (isPlayingInGlobal) {
     return (
       <div className={frameContainerStyles}>
-        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-900 p-3 text-center">
+        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-muted p-3 text-center">
           <VideoIcon className="h-5 w-5" />
           Playing in picture-in-picture
         </div>

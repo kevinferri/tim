@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import Draggable, { DraggableData, DraggableEvent } from "react-draggable";
 import { cn } from "@/lib/utils";
 import { PLAYER_WIDTH, PLAYER_TOP_PADDING } from "./use-draggable-video";
@@ -12,6 +12,7 @@ type Props = {
   onDragStart: (event: DraggableEvent, uiData: DraggableData) => void;
   onDrag: (event: DraggableEvent, uiData: DraggableData) => void;
   onDragStop: () => void;
+  onMeasureHeight?: (height: number) => void;
 };
 
 export function DraggableVideoContainer({
@@ -21,6 +22,7 @@ export function DraggableVideoContainer({
   onDragStart,
   onDrag,
   onDragStop,
+  onMeasureHeight,
 }: Props) {
   const draggableRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({
@@ -29,6 +31,24 @@ export function DraggableVideoContainer({
     bottom: 0,
     right: 0,
   });
+
+  // Report the container's actual rendered height (header + frame) instead
+  // of letting corner/bounds math in useDraggableVideo assume a fixed
+  // constant -- that constant drifts from reality whenever the header or
+  // frame aspect ratio changes, throwing off where the player snaps to.
+  useEffect(() => {
+    const node = draggableRef.current;
+    if (!node || !onMeasureHeight || typeof ResizeObserver !== "function") {
+      return;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      onMeasureHeight(entry.contentRect.height);
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [onMeasureHeight]);
 
   const handleDragStart = useCallback(
     (event: DraggableEvent, uiData: DraggableData) => {

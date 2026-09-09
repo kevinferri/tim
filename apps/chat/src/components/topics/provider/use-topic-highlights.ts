@@ -1,16 +1,17 @@
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageProps, MessageData } from "@/components/topics/message";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { Highlight, User } from "@prisma/client";
-import { useLazyFetch } from "@/lib/hooks/use-fetch";
+import {
+  updateMessagesCache,
+  updateMediaMessagesCache,
+} from "@/components/topics/provider/topic-query-cache";
 
 type UseTopicHighlightsProps = {
   topicId: string;
   existingTopHighlights: MessageData[];
   topHighlightsLimit: number;
-  onHighlightChange?: (
-    handler: (prev: MessageProps[]) => MessageProps[],
-  ) => void;
 };
 
 function sanitizeTopHighlights(messages: MessageProps[], limit: number) {
@@ -33,21 +34,31 @@ export function useTopicHighlights({
   topicId,
   existingTopHighlights,
   topHighlightsLimit,
-  onHighlightChange,
 }: UseTopicHighlightsProps) {
-  const [topHighlights, setTopHighlights] = useState<MessageProps[]>(
-    existingTopHighlights as MessageProps[],
-  );
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ["top-highlights", topicId], [topicId]);
 
-  const onRefreshSuccess = useCallback(
-    (refreshed: MessageProps[]) => setTopHighlights(refreshed),
-    [],
-  );
-
-  const { fetchData: refreshTopHighlights } = useLazyFetch<MessageProps[]>({
-    url: `/api/topics/${topicId}/top-highlights`,
-    onSuccess: onRefreshSuccess,
+  // Refresh-on-demand only (`refreshTopHighlights`) -- SSR already
+  // provided the initial data, so this never fetches on mount.
+  const { data: topHighlights, refetch: refreshTopHighlights } = useQuery({
+    queryKey,
+    queryFn: () =>
+      fetch(`/api/topics/${topicId}/top-highlights`).then((r) => {
+        if (!r.ok) throw new Error(`Request failed with status ${r.status}`);
+        return r.json() as Promise<MessageProps[]>;
+      }),
+    initialData: existingTopHighlights as MessageProps[],
+    enabled: false,
   });
+
+  const setTopHighlights = useCallback(
+    (updater: (prev: MessageProps[]) => MessageProps[]) => {
+      queryClient.setQueryData<MessageProps[]>(queryKey, (prev) =>
+        updater(prev ?? []),
+      );
+    },
+    [queryClient, queryKey],
+  );
 
   const visibleTopHighlights = useMemo(
     () => sanitizeTopHighlights(topHighlights, topHighlightsLimit),
@@ -97,7 +108,11 @@ export function useTopicHighlights({
           return updatedMessage;
         });
 
-      onHighlightChange?.(updateMessages);
+      // Patch the message's `highlights` field wherever else it's
+      // cached (main chat history, media rail) directly -- no callback
+      // threading needed now that both live in react-query's cache.
+      updateMessagesCache(queryClient, topicId, updateMessages);
+      updateMediaMessagesCache(queryClient, topicId, updateMessages);
 
       setTopHighlights((prev) => {
         const updated = updateMessages(prev);
@@ -144,7 +159,8 @@ export function useTopicHighlights({
           return newMessage;
         });
 
-      onHighlightChange?.(updateHandler);
+      updateMessagesCache(queryClient, topicId, updateHandler);
+      updateMediaMessagesCache(queryClient, topicId, updateHandler);
 
       if (toBeRemovedFromTopHighlights) {
         setTopHighlights((prev) => {

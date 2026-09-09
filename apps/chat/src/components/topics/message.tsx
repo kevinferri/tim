@@ -200,8 +200,7 @@ const MessageComponent = (props: MessageProps) => {
               <span
                 className={cn(
                   `font-semibold ${
-                    props.sentBy.id === self.id &&
-                    "text-purple-700 dark:text-purple-500"
+                    props.sentBy.id === self.id && "text-mention"
                   }`
                 )}
               >
@@ -288,6 +287,7 @@ const MessageComponent = (props: MessageProps) => {
                     topicId={topicId}
                     key={`${props.id}${link}${i}`}
                     link={link}
+                    mediaUrl={props.mediaUrl}
                   />
                 );
               })}

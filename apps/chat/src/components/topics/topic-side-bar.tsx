@@ -35,9 +35,7 @@ export function TopicSideBar(props: Props) {
       header: (
         <div className="flex items-center justify-center gap-1">
           <span>Top highlights</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">
-            (monthly)
-          </span>
+          <span className="text-xs text-muted-foreground">(monthly)</span>
         </div>
       ),
       node: <TopHighlights />,
@@ -56,7 +54,7 @@ export function TopicSideBar(props: Props) {
         <div className="flex items-center gap-1.5 w-fu">
           <BellIcon />
           {activeTab !== "notifications" && unreadCount > 0 && (
-            <Badge className="flex font-normal text-xs rounded-xl hover:bg-succes px-2 bg-purple-500 min-w-7 justify-center">
+            <Badge className="flex font-normal text-xs rounded-xl hover:bg-success px-2 bg-purple-500 min-w-7 justify-center">
               {unreadCount}
             </Badge>
           )}
@@ -68,7 +66,7 @@ export function TopicSideBar(props: Props) {
   return (
     <Tabs
       defaultValue="highlights"
-      className="flex flex-col shadow-md border-l hidden w-[280px] lg:w-[320px] md:flex shrink-0"
+      className="flex flex-col shadow-md border-l hidden w-sidebar-detail lg:w-sidebar-detail-lg md:flex shrink-0"
       onValueChange={(tab) => {
         setActiveTab(tab as Tab);
 

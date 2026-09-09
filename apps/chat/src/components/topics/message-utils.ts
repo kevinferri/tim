@@ -1,5 +1,5 @@
-import { hydrateUrl, isValidUrl } from "@/lib/utils";
 import { ChangeEvent } from "react";
+import { find } from "linkifyjs";
 
 export function adjustHeight(
   target: ChangeEvent<HTMLTextAreaElement>["target"]
@@ -17,17 +17,17 @@ export function truncateText(str: string, maxLength = 50) {
 export function getLinksFromMessage(message?: string) {
   if (!message) return [];
 
-  const links = [];
-  const words = message.split(/\s+/);
-
-  for (let word of words) {
-    if (word.match(/[A-Za-z]+/)) {
-      const url = hydrateUrl(word);
-      if (isValidUrl(url)) links.push(url);
-    }
-  }
-
-  return links;
+  // Same matcher message-text.tsx already uses (via linkify-react) to decide
+  // what's clickable in the message body -- reusing it here means a preview
+  // only fires for text the UI itself treats as a link. The previous
+  // hand-rolled version (any word with a letter, accepted as a URL if its
+  // last dot-segment was 2+ chars) had no real TLD check, so ordinary
+  // technical words like "config.yml" or "package.json" parsed as "valid
+  // URLs" and triggered a real preview fetch/scrape for text that was never
+  // a link.
+  return find(message, "url", { defaultProtocol: "https" })
+    .filter((match) => match.isLink)
+    .map((match) => match.href);
 }
 
 export function isGiphy(url?: string) {

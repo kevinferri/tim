@@ -54,6 +54,7 @@ export function VideoPlayer({
         onDragStart={draggableVideo.onDragStart}
         onDrag={(_, uiData) => draggableVideo.onDrag(uiData.x, uiData.y)}
         onDragStop={draggableVideo.onDragStop}
+        onMeasureHeight={draggableVideo.onMeasureHeight}
       >
         {header}
         {frame}

@@ -39,6 +39,11 @@ module.exports = {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        mention: "hsl(var(--mention))",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -57,18 +62,30 @@ module.exports = {
         },
         highlight: {
           DEFAULT: "#ffffcd",
+          icon: "#dfa0a1",
         },
       },
-      dropShadow: {
-        glow: [
-          "0 0px 20px rgba(255,255, 255, 0.35)",
-          "0 0px 65px rgba(255, 255,255, 0.2)",
-        ],
+      boxShadow: {
+        glow: "0 0 1px white, inset 0 0 1px white, 0 0 2px #9333ea, 0 0 5px #9333ea, 0 0 10px #9333ea",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      width: {
+        "sidebar-nav": "220px",
+        "sidebar-nav-lg": "280px",
+        "sidebar-detail": "280px",
+        "sidebar-detail-lg": "320px",
+      },
+      minWidth: {
+        "sidebar-nav": "220px",
+        "sidebar-nav-lg": "280px",
+      },
+      maxWidth: {
+        "sidebar-nav": "220px",
+        "sidebar-nav-lg": "280px",
       },
       keyframes: {
         "accordion-down": {

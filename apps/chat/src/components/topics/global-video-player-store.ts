@@ -20,7 +20,15 @@ type Store = {
 export const useGlobalVideoPlayerStore = create<Store>((set) => ({
   isGlobalMode: false,
   data: undefined,
-  setGlobalMode: (isGlobal: boolean) => set({ isGlobalMode: isGlobal }),
+  // Clear `data` on close (not just flip the flag) so the store doesn't
+  // hang onto the last-played video indefinitely -- every isPlayingInGlobal
+  // check elsewhere reads `data` alongside `isGlobalMode`, so a stale value
+  // here is a bug waiting for the next feature that reads it on its own.
+  setGlobalMode: (isGlobal: boolean) =>
+    set((state) => ({
+      isGlobalMode: isGlobal,
+      data: isGlobal ? state.data : undefined,
+    })),
   setData: (data: VideoPlayerData) => set({ data }),
 }));
 

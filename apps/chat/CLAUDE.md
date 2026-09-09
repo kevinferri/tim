@@ -59,6 +59,10 @@ The Socket.io server is **not** part of this Next.js app — the client in `src/
 
 Mutations triggered from forms/UI generally go through `"use server"` actions in `src/actions/` (`circles.ts`, `topics.ts`, `media.ts`, `user-status.ts`), validated with `zod` schemas defined inline above each action. Data fetched by REST-style consumers (e.g. paginated message history, link previews) lives under `src/app/api/**/route.ts`. Both layers rely on `getLoggedInUserId()` plus a Prisma model-extension membership check (e.g. `isUserInCirle`) before allowing a mutation/read — follow that same auth-then-authorize pattern for new actions/routes rather than trusting client-supplied ids.
 
+### Client-side data fetching
+
+TanStack React Query (`src/components/providers/query-provider.tsx`, mounted in `src/app/layout.tsx`) is the single client-side fetching system — there is no hand-rolled fetch hook. Plain HTTP GETs use `useQuery`/`useInfiniteQuery`; data that's also mutated by socket events (topic messages, top highlights, media messages — see `src/components/topics/provider/`) is seeded from SSR props via `initialData` and then read/written entirely through the query cache, so a socket handler anywhere can patch it with `queryClient.setQueryData(key, ...)` instead of threading update callbacks through providers. Shared cache-key builders and cross-cache update helpers for topic data live in `src/components/topics/provider/topic-query-cache.ts` — prefer those over hand-writing `setQueryData` calls against `["messages", topicId]` elsewhere, since that cache holds paginated (`useInfiniteQuery`) data, not a plain array. Zustand stays for pure client UI/ephemeral state that never fetches over HTTP (unread topics, presence, room membership, sound toggle, etc.).
+
 ### Path aliases & conventions
 
 - `@/*` → `src/*`

@@ -51,7 +51,7 @@ export function MessageText(props: Props) {
             <Link
               href={attributes.href}
               target="_blank"
-              className="underline text-purple-700 dark:text-purple-500 underline-offset-4 hover:opacity-80"
+              className="underline text-mention underline-offset-4 hover:opacity-80"
               onClick={() => {
                 clickedLink.emit({
                   topicId: props.topicId,

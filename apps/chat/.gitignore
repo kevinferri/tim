@@ -37,3 +37,6 @@ next-env.d.ts
 
 # custom
 todo.txt
+
+# local embedded postgres data
+/.pgdata

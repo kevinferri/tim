@@ -287,11 +287,8 @@ export function CurrentTopicProvider(props: Props) {
 
   const { mediaMessages, setMediaMessages, shufflingGifs, addShufflingGif } =
     useTopicMedia({
+      topicId: props.topicId,
       existingMediaMessages: props.existingMediaMessages,
-      onMediaChange: (handler) => {
-        setMessages((prev) => handler(prev));
-        setMediaMessages((prev) => handler(prev));
-      },
     });
 
   const onMediaMessage = useCallback(
@@ -303,7 +300,6 @@ export function CurrentTopicProvider(props: Props) {
 
   const {
     messages,
-    setMessages,
     loadMoreMessages,
     loadingMoreMessages,
     hasMoreMessages,
@@ -322,10 +318,6 @@ export function CurrentTopicProvider(props: Props) {
     topicId: props.topicId,
     existingTopHighlights: props.existingTopHighlights,
     topHighlightsLimit: props.topHighlightsLimit,
-    onHighlightChange: (handler) => {
-      setMessages((prev) => handler(prev));
-      setMediaMessages((prev) => handler(prev));
-    },
   });
 
   // The socket only tells us about changes while it's actually

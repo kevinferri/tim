@@ -1,13 +1,13 @@
 "use client";
 
 import { useQueryState } from "nuqs";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useFetch } from "@/lib/hooks/use-fetch";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Message, MessageProps } from "@/components/topics/message";
@@ -55,9 +55,14 @@ export function MessageModal() {
     ({ id }) => id === messageId
   );
 
-  const { data, loading } = useFetch<MessageProps>({
-    url: `/api/message/${messageId}`,
-    skip: !messageId || Boolean(thisMessage),
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["message", messageId],
+    queryFn: () =>
+      fetch(`/api/message/${messageId}`).then((r) => {
+        if (!r.ok) throw new Error(`Request failed with status ${r.status}`);
+        return r.json() as Promise<MessageProps>;
+      }),
+    enabled: !!messageId && !thisMessage,
   });
 
   const message = thisMessage ?? data;

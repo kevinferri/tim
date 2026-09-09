@@ -12,7 +12,7 @@ export function MessageSentAt(props: Props) {
   return (
     <>
       {" "}
-      <time suppressHydrationWarning className="text-slate-300 text-xs">
+      <time suppressHydrationWarning className="text-muted-foreground text-xs">
         {sentAt}
       </time>
     </>

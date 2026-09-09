@@ -6,7 +6,7 @@ type Props = {
   date: Date;
 };
 
-function isToday(date: Date): boolean {
+export function isToday(date: Date): boolean {
   const today = new Date();
 
   return (

@@ -12,7 +12,7 @@ import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 import { useRoomManagement } from "@/components/socket/use-current-user-rooms";
 import { ArrowDownIcon, EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { Message, MessageProps } from "./message";
-import { MessageDateSeparator } from "./message-date-separator";
+import { isToday, MessageDateSeparator } from "./message-date-separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Button } from "@/components/ui/button";
@@ -95,12 +95,16 @@ export function TopicChat() {
               ? new Date(prevMessage.createdAt ?? new Date())
               : null;
 
+            const isVeryFirstMessage =
+              index === 0 && !hasMoreMessages && !loadingMoreMessages;
+
             const showDateSeparator =
               (!prevDate ||
                 currentDate.getDate() !== prevDate.getDate() ||
                 currentDate.getMonth() !== prevDate.getMonth() ||
                 currentDate.getFullYear() !== prevDate.getFullYear()) &&
-              !(index === 0 && loadingMoreMessages);
+              !(index === 0 && loadingMoreMessages) &&
+              !(isVeryFirstMessage && isToday(currentDate));
 
             return (
               <div key={message.id}>

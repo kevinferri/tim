@@ -21,7 +21,6 @@ type Props = {
 };
 
 const DELAY = 100;
-const HIGHLIGHT_ICON_COLOR = "#dfa0a1";
 
 export const HighlightTooltip = (props: Props) => {
   const highlights = uniqBy(props.highlights, "userId");
@@ -43,15 +42,11 @@ export const HighlightTooltip = (props: Props) => {
               variant="ghost"
               size="iconSm"
               asChild
-              className="cursor-pointer h-6 w-6 p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
+              className="cursor-pointer h-6 w-6 p-1 text-highlight-icon hover:bg-muted"
               onClick={props.onHighlight}
               type="button"
             >
-              {props.highlightedBySelf ? (
-                <StarFilledIcon color={HIGHLIGHT_ICON_COLOR} />
-              ) : (
-                <StarIcon color={HIGHLIGHT_ICON_COLOR} />
-              )}
+              {props.highlightedBySelf ? <StarFilledIcon /> : <StarIcon />}
             </Button>
             {highlights.length}
           </div>

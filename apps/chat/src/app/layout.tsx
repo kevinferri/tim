@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import jwt from "jsonwebtoken";
 import { User } from "@prisma/client";
 import { ThemeProvider } from "@/components/ui/theme-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { SocketProvider } from "@/components/socket/socket-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { prismaClient } from "@/lib/prisma/client";
@@ -67,7 +68,7 @@ function BaseLayout({ children }: { children: React.ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>
       </body>
     </html>

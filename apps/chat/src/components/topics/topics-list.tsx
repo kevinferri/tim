@@ -202,7 +202,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
         `flex flex-col shadow-md border-r shrink-0`,
         isMinimized
           ? ""
-          : "max-w-[220px] min-w-[220px] lg:max-w-[280px] lg:min-w-[280px]"
+          : "max-w-sidebar-nav min-w-sidebar-nav lg:max-w-sidebar-nav-lg lg:min-w-sidebar-nav-lg"
       )}
     >
       <div
@@ -225,7 +225,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
       {!isMinimized && (
         <div className="px-3 pt-3">
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+            <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -234,7 +234,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <CrossCircledIcon width={16} height={16} />
               </button>
@@ -249,7 +249,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
             topicsWithMuted.length === 0 &&
             searchQuery &&
             !isMinimized && (
-              <div className="text-center text-sm text-slate-500 dark:text-slate-400 py-2">
+              <div className="text-center text-sm text-muted-foreground py-2">
                 No topics found for{" "}
                 <span className="font-medium">&quot;{searchQuery}&quot;</span>
               </div>
@@ -275,7 +275,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                               <Avatar
                                 className={`active:border ${
                                   params.topicId === topic.id
-                                    ? "border shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#9333ea,0_0_5px_#9333ea,0_0_10px_#9333ea]"
+                                    ? "border shadow-glow"
                                     : "shadow-lg hover:opacity-80"
                                 }`}
                               >
@@ -360,8 +360,8 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                           <span
                             className={cn(
                               isUnread &&
-                                "underline decoration-wavy decoration-purple-700 underline-offset-4",
-                              isMuted && "text-slate-400 dark:text-slate-500"
+                                "underline decoration-wavy decoration-mention underline-offset-4",
+                              isMuted && "text-muted-foreground"
                             )}
                           >
                             {topic.name}
