@@ -7,7 +7,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -n chat,realtime-server -c blue.bold,green.bold \"yarn workspace react-server-components dev\" \"yarn workspace tim-chat-server watch\""
+    "dev": "concurrently -n chat,realtime-server -c blue.bold,green.bold \"yarn workspace react-server-components dev\" \"yarn workspace tim-chat-server watch\"",
+    "setup:env": "node scripts/setup-contributor-env.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
