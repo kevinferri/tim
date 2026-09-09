@@ -35,28 +35,195 @@ type ScrollToBottomOptions = {
   behavior?: ScrollBehavior;
 };
 
-type ContextValue = {
+// This used to be a single context carrying everything about the
+// current topic (messages, media, highlights, scroll state, composer
+// state...) built from one big useMemo. Any single field changing --
+// a new socket message, isAtBottom flipping, a gif shuffle starting --
+// produced a new object reference for the whole thing, so every
+// consumer re-rendered regardless of which slice it actually read
+// (every message row included, since Message read from it too). It's
+// now split by how often each slice actually changes, so e.g. the
+// member list (identity/membership, effectively static) doesn't
+// re-render on chat traffic, and the media rail doesn't re-render on
+// every new text message.
+
+// --- Meta: topic/circle identity + membership. Set once per topic
+// mount and essentially never changes again. ---
+
+type MetaContextValue = {
   topicId: string;
   circleId: string;
-  messages: MessageProps[];
-  topHighlights: MessageProps[];
-  mediaMessages: MessageProps[];
   circleMembers: CircleMember[];
+};
+
+const TopicMetaContext = createContext<MetaContextValue | undefined>(
+  undefined,
+);
+
+export function useTopicMetaContext() {
+  const context = useContext(TopicMetaContext);
+
+  if (!context) {
+    throw new Error(
+      "useTopicMetaContext must be used inside CurrentTopicProvider",
+    );
+  }
+
+  return context;
+}
+
+// Where a message sits in the timeline (newest / among the last few /
+// oldest-loaded), derived once from `messages` here instead of every
+// `Message` instance scanning the full array itself with findIndex --
+// that was an O(n) scan per message, i.e. O(n^2) total per incoming
+// message for a topic with n messages loaded. Callers that render
+// <Message> compute these flags via getMessagePositionFlags and pass
+// them down as props rather than having Message read this context
+// directly -- a changed context value re-renders every consumer
+// regardless of memoization, so Message needs plain props to stay
+// memoizable and skip re-rendering when its own position hasn't
+// changed.
+
+export type MessageRecency = {
+  newestMessageId?: string;
+  oldestMessageId?: string;
+  recentMessageIds: Set<string>;
+};
+
+export function getMessagePositionFlags(
+  recency: MessageRecency,
+  messageId?: string,
+) {
+  if (!messageId) {
+    return {
+      isNewestMessage: false,
+      isRecentMessage: false,
+      isFirstMessage: false,
+    };
+  }
+
+  return {
+    isNewestMessage: messageId === recency.newestMessageId,
+    isRecentMessage: recency.recentMessageIds.has(messageId),
+    isFirstMessage: messageId === recency.oldestMessageId,
+  };
+}
+
+const RECENT_MESSAGE_WINDOW = 5;
+
+// --- Messages: the main chat history. Changes on every send/edit/
+// delete/pagination -- the highest-churn slice. ---
+
+type MessagesContextValue = {
+  messages: MessageProps[];
+  loadMoreMessages: () => void;
+  loadingMoreMessages: boolean;
+  hasMoreMessages: boolean;
+  recency: MessageRecency;
+};
+
+const TopicMessagesContext = createContext<MessagesContextValue | undefined>(
+  undefined,
+);
+
+export function useTopicMessagesContext() {
+  const context = useContext(TopicMessagesContext);
+
+  if (!context) {
+    throw new Error(
+      "useTopicMessagesContext must be used inside CurrentTopicProvider",
+    );
+  }
+
+  return context;
+}
+
+// --- Media, highlights, and gif-shuffle each change independently of
+// the main message list and of each other. ---
+
+type MediaContextValue = { mediaMessages: MessageProps[] };
+
+const TopicMediaContext = createContext<MediaContextValue | undefined>(
+  undefined,
+);
+
+export function useTopicMediaContext() {
+  const context = useContext(TopicMediaContext);
+
+  if (!context) {
+    throw new Error(
+      "useTopicMediaContext must be used inside CurrentTopicProvider",
+    );
+  }
+
+  return context;
+}
+
+type HighlightsContextValue = { topHighlights: MessageProps[] };
+
+const TopicHighlightsContext = createContext<
+  HighlightsContextValue | undefined
+>(undefined);
+
+export function useTopicHighlightsContext() {
+  const context = useContext(TopicHighlightsContext);
+
+  if (!context) {
+    throw new Error(
+      "useTopicHighlightsContext must be used inside CurrentTopicProvider",
+    );
+  }
+
+  return context;
+}
+
+type GifContextValue = {
+  shufflingGifs: string[];
+  addShufflingGif: (id: string) => void;
+};
+
+const TopicGifContext = createContext<GifContextValue | undefined>(undefined);
+
+export function useTopicGifContext() {
+  const context = useContext(TopicGifContext);
+
+  if (!context) {
+    throw new Error(
+      "useTopicGifContext must be used inside CurrentTopicProvider",
+    );
+  }
+
+  return context;
+}
+
+// --- Scroll/composer UI state: scroll position, unread count, and
+// slash-command generation. None of the above slices care about this. ---
+
+type UiContextValue = {
   viewportRef: MutableRefObject<HTMLDivElement | null>;
   contentRef: MutableRefObject<HTMLDivElement | null>;
   bottomSentinelRef: MutableRefObject<HTMLDivElement | null>;
   isAtBottom: boolean;
   unseenCount: number;
   scrollToBottom: (options?: ScrollToBottomOptions) => void;
-  addShufflingGif: (id: string) => void;
-  shufflingGifs: string[];
-  loadMoreMessages: () => void;
-  loadingMoreMessages: boolean;
-  hasMoreMessages: boolean;
   blopSoundRef: MutableRefObject<HTMLAudioElement | null>;
   generatingCommand?: string;
   setGeneratingCommand: (command?: string) => void;
 };
+
+const TopicUiContext = createContext<UiContextValue | undefined>(undefined);
+
+export function useTopicUiContext() {
+  const context = useContext(TopicUiContext);
+
+  if (!context) {
+    throw new Error(
+      "useTopicUiContext must be used inside CurrentTopicProvider",
+    );
+  }
+
+  return context;
+}
 
 type Props = {
   topicId: string;
@@ -71,8 +238,6 @@ type Props = {
   messagesLimit: number;
   children: React.ReactNode;
 };
-
-const CurrentTopicContext = createContext<ContextValue | undefined>(undefined);
 
 export function CurrentTopicProvider(props: Props) {
   const self = useSelf();
@@ -186,68 +351,89 @@ export function CurrentTopicProvider(props: Props) {
     [props.existingCircleMembers],
   );
 
-  const contextValue = useMemo(
+  const metaValue = useMemo<MetaContextValue>(
+    () => ({
+      topicId: props.topicId,
+      circleId: props.circleId,
+      circleMembers,
+    }),
+    [props.topicId, props.circleId, circleMembers],
+  );
+
+  const recency = useMemo<MessageRecency>(
+    () => ({
+      newestMessageId: messages[messages.length - 1]?.id,
+      oldestMessageId: messages[0]?.id,
+      recentMessageIds: new Set(
+        messages.slice(-RECENT_MESSAGE_WINDOW).map((m) => m.id!),
+      ),
+    }),
+    [messages],
+  );
+
+  const messagesValue = useMemo<MessagesContextValue>(
     () => ({
       messages,
-      mediaMessages,
-      circleMembers,
+      loadMoreMessages,
+      loadingMoreMessages,
+      hasMoreMessages,
+      recency,
+    }),
+    [messages, loadMoreMessages, loadingMoreMessages, hasMoreMessages, recency],
+  );
+
+  const mediaValue = useMemo<MediaContextValue>(
+    () => ({ mediaMessages }),
+    [mediaMessages],
+  );
+
+  const highlightsValue = useMemo<HighlightsContextValue>(
+    () => ({ topHighlights }),
+    [topHighlights],
+  );
+
+  const gifValue = useMemo<GifContextValue>(
+    () => ({ shufflingGifs, addShufflingGif }),
+    [shufflingGifs, addShufflingGif],
+  );
+
+  const uiValue = useMemo<UiContextValue>(
+    () => ({
       viewportRef,
       contentRef,
       bottomSentinelRef,
       isAtBottom,
       unseenCount,
       scrollToBottom,
-      shufflingGifs,
-      addShufflingGif,
-      topHighlights,
-      topicId: props.topicId,
-      circleId: props.circleId,
-      loadMoreMessages,
-      loadingMoreMessages,
-      hasMoreMessages,
       blopSoundRef,
       generatingCommand,
       setGeneratingCommand,
     }),
     [
-      messages,
-      mediaMessages,
-      circleMembers,
-      shufflingGifs,
-      addShufflingGif,
-      topHighlights,
-      props.topicId,
-      props.circleId,
-      isAtBottom,
-      unseenCount,
-      scrollToBottom,
-      loadMoreMessages,
-      loadingMoreMessages,
-      hasMoreMessages,
-      generatingCommand,
-      setGeneratingCommand,
       viewportRef,
       contentRef,
       bottomSentinelRef,
+      isAtBottom,
+      unseenCount,
+      scrollToBottom,
       blopSoundRef,
+      generatingCommand,
     ],
   );
 
   return (
-    <CurrentTopicContext.Provider value={contextValue}>
-      {props.children}
-    </CurrentTopicContext.Provider>
+    <TopicMetaContext.Provider value={metaValue}>
+      <TopicUiContext.Provider value={uiValue}>
+        <TopicGifContext.Provider value={gifValue}>
+          <TopicHighlightsContext.Provider value={highlightsValue}>
+            <TopicMediaContext.Provider value={mediaValue}>
+              <TopicMessagesContext.Provider value={messagesValue}>
+                {props.children}
+              </TopicMessagesContext.Provider>
+            </TopicMediaContext.Provider>
+          </TopicHighlightsContext.Provider>
+        </TopicGifContext.Provider>
+      </TopicUiContext.Provider>
+    </TopicMetaContext.Provider>
   );
-}
-
-export function useCurrentTopicContext() {
-  const context = useContext(CurrentTopicContext);
-
-  if (!context) {
-    throw new Error(
-      "useCurrentTopicContext must be used inside CurrentTopicProvider",
-    );
-  }
-
-  return context;
 }

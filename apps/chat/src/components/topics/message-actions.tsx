@@ -12,7 +12,7 @@ import {
   SewingPinFilledIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import { useTopicMetaContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 
@@ -30,7 +30,7 @@ type Props = {
 const DELAY_DURATION = 100;
 
 export function MessageActions(props: Props) {
-  const { topicId } = useCurrentTopicContext();
+  const { topicId } = useTopicMetaContext();
   const { updateStatus } = useUpdateUserStatus();
   const showEdit = !isValidCommand(props.text);
   const isRandomGif =

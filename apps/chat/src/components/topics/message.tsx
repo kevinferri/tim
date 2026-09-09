@@ -1,10 +1,14 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { HighlightTooltip } from "@/components/topics/highlight-tooltip";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import {
+  useTopicGifContext,
+  useTopicMetaContext,
+  useTopicUiContext,
+} from "@/components/topics/current-topic-provider";
 import { MediaViewer } from "@/components/topics/media-viewer";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MessageActions } from "@/components/topics/message-actions";
@@ -56,16 +60,20 @@ export type MessageProps = MessageData & {
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
   context?: "topic" | "sidebar" | "user-sheet" | "modal";
+  // Where this message sits in the topic's timeline -- computed once
+  // by whoever renders the list (see getMessagePositionFlags) rather
+  // than by this component, so unrelated messages don't have to
+  // re-render just because a new one arrived. See current-topic-
+  // provider.tsx for why.
+  isNewestMessage?: boolean;
+  isRecentMessage?: boolean;
+  isFirstMessage?: boolean;
 };
 
-export const Message = (props: MessageProps) => {
-  const {
-    topicId,
-    scrollToBottom,
-    messages,
-    addShufflingGif,
-    shufflingGifs,
-  } = useCurrentTopicContext();
+const MessageComponent = (props: MessageProps) => {
+  const { topicId } = useTopicMetaContext();
+  const { scrollToBottom } = useTopicUiContext();
+  const { addShufflingGif, shufflingGifs } = useTopicGifContext();
   const self = useSelf();
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -73,11 +81,10 @@ export const Message = (props: MessageProps) => {
   const [shuffledGifLoading, setShuffledGifLoading] = useState(false);
   const createdAt = new Date(props.createdAt || new Date());
   const sentBySelf = props.sentBy?.id === self.id;
-  const mLength = messages.length;
-  const messageIndex = messages.findIndex((m) => m.id === props.id);
-  const isRecentMessage = messageIndex >= 0 && mLength - messageIndex <= 5;
+  const isRecentMessage = props.isRecentMessage ?? false;
+  const isFirstMessage = props.isFirstMessage ?? false;
   const isIsland = props.context === "modal" || props.context === "user-sheet";
-  const isNewestMessage = mLength > 0 && messages[mLength - 1].id === props.id;
+  const isNewestMessage = props.isNewestMessage ?? false;
   const isShufflingGif =
     (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
   const isActionEligable = props.variant !== "minimal";
@@ -209,7 +216,7 @@ export const Message = (props: MessageProps) => {
             {showActions && isActionEligable && (
               <MessageActions
                 sentBySelf={sentBySelf}
-                className={messages[0].id === props.id ? "top-0" : ""}
+                className={isFirstMessage ? "top-0" : ""}
                 messageId={props.id!}
                 text={props.text ?? ""}
                 mediaUrl={props.mediaUrl ?? ""}
@@ -300,3 +307,5 @@ export const Message = (props: MessageProps) => {
     </div>
   );
 };
+
+export const Message = memo(MessageComponent);

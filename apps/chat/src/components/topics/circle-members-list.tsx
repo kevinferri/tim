@@ -5,7 +5,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   CircleMember,
-  useCurrentTopicContext,
+  useTopicMetaContext,
 } from "@/components/topics/current-topic-provider";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 
@@ -21,7 +21,7 @@ type MemberProps = {
 };
 
 function Member(props: MemberProps) {
-  const { topicId } = useCurrentTopicContext();
+  const { topicId } = useTopicMetaContext();
 
   return (
     <div
@@ -53,7 +53,7 @@ function Member(props: MemberProps) {
 type MembersWithStatus = (CircleMember & { isCreator: boolean })[];
 
 export function CircleMembersList() {
-  const { circleMembers, circleId } = useCurrentTopicContext();
+  const { circleMembers, circleId } = useTopicMetaContext();
   const { getActiveMembersInCircle } = useActiveCircleMembers();
   const allActiveMembers = keyBy(getActiveMembersInCircle(circleId), "id");
 

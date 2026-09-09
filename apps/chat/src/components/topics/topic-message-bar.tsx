@@ -2,7 +2,10 @@
 
 import { useMemo, useRef, useState, useEffect } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import {
+  useTopicMetaContext,
+  useTopicUiContext,
+} from "@/components/topics/current-topic-provider";
 import { MediaUploader } from "@/components/topics/media-uploader";
 import { uploadMedia } from "@/actions/media";
 import { MediaViewer } from "@/components/topics/media-viewer";
@@ -34,14 +37,9 @@ export function TopicMessageBar() {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [image, setImage] = useState<File>();
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const {
-    topicId,
-    scrollToBottom,
-    isAtBottom,
-    circleId,
-    generatingCommand,
-    setGeneratingCommand,
-  } = useCurrentTopicContext();
+  const { topicId, circleId } = useTopicMetaContext();
+  const { scrollToBottom, isAtBottom, generatingCommand, setGeneratingCommand } =
+    useTopicUiContext();
   const isGenerating = isUploadingImage || Boolean(generatingCommand);
   const isTim = generatingCommand?.startsWith("/tim");
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);

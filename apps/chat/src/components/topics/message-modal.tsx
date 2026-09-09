@@ -11,11 +11,17 @@ import { useFetch } from "@/lib/hooks/use-fetch";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Message, MessageProps } from "@/components/topics/message";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import {
+  getMessagePositionFlags,
+  MessageRecency,
+  useTopicHighlightsContext,
+  useTopicMessagesContext,
+} from "@/components/topics/current-topic-provider";
 
 type ContentProps = {
   loading: boolean;
   message?: MessageProps;
+  recency: MessageRecency;
 };
 
 function Content(props: ContentProps) {
@@ -28,7 +34,14 @@ function Content(props: ContentProps) {
   }
 
   if (props.message) {
-    return <Message {...props.message} variant="minimal" context="modal" />;
+    return (
+      <Message
+        {...props.message}
+        variant="minimal"
+        context="modal"
+        {...getMessagePositionFlags(props.recency, props.message.id)}
+      />
+    );
   }
 
   return null;
@@ -36,7 +49,8 @@ function Content(props: ContentProps) {
 
 export function MessageModal() {
   const [messageId, setMessageId] = useQueryState("messageId");
-  const { messages, topHighlights } = useCurrentTopicContext();
+  const { messages, recency } = useTopicMessagesContext();
+  const { topHighlights } = useTopicHighlightsContext();
   const thisMessage = [...messages, ...topHighlights].find(
     ({ id }) => id === messageId
   );
@@ -56,7 +70,7 @@ export function MessageModal() {
       }}
     >
       <DialogContent className="px-4 pt-12">
-        <Content loading={loading} message={message} />
+        <Content loading={loading} message={message} recency={recency} />
         <DialogFooter>
           <DialogClose>
             <Button variant="ghost" type="button" autoFocus>

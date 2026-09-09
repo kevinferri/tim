@@ -2,7 +2,12 @@
 
 import { useLayoutEffect } from "react";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
-import { useCurrentTopicContext } from "./current-topic-provider";
+import {
+  getMessagePositionFlags,
+  useTopicMessagesContext,
+  useTopicMetaContext,
+  useTopicUiContext,
+} from "./current-topic-provider";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 import { useRoomManagement } from "@/components/socket/use-current-user-rooms";
 import { ArrowDownIcon, EnvelopeClosedIcon } from "@radix-ui/react-icons";
@@ -17,20 +22,23 @@ export function TopicChat() {
   const { markTopicAsRead } = useUnreadTopics();
   const { joinRoom, leaveRoom } = useRoomManagement();
 
+  const { topicId } = useTopicMetaContext();
   const {
-    topicId,
     scrollToBottom,
     isAtBottom,
     unseenCount,
     blopSoundRef,
-    messages,
     viewportRef,
     contentRef,
     bottomSentinelRef,
+  } = useTopicUiContext();
+  const {
+    messages,
     loadMoreMessages,
     loadingMoreMessages,
     hasMoreMessages,
-  } = useCurrentTopicContext();
+    recency,
+  } = useTopicMessagesContext();
 
   // Land on the newest message before the browser ever paints -- no
   // flash of the top of history, no timers.
@@ -99,7 +107,11 @@ export function TopicChat() {
                 {showDateSeparator && (
                   <MessageDateSeparator date={currentDate} />
                 )}
-                <Message {...message} context="topic" />
+                <Message
+                  {...message}
+                  context="topic"
+                  {...getMessagePositionFlags(recency, message.id)}
+                />
               </div>
             );
           })}

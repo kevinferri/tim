@@ -10,7 +10,13 @@ import {
   StarIcon,
 } from "@radix-ui/react-icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useCurrentTopicContext } from "@/components/topics/current-topic-provider";
+import {
+  getMessagePositionFlags,
+  useTopicHighlightsContext,
+  useTopicMediaContext,
+  useTopicMessagesContext,
+  useTopicMetaContext,
+} from "@/components/topics/current-topic-provider";
 import { Message } from "@/components/topics/message";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,8 +50,10 @@ const copyMap = {
 
 export function NotificationsList(props: Props) {
   const [_, setMessageId] = useQueryState("messageId");
-  const { messages, topHighlights, mediaMessages, topicId } =
-    useCurrentTopicContext();
+  const { topicId } = useTopicMetaContext();
+  const { messages, recency } = useTopicMessagesContext();
+  const { topHighlights } = useTopicHighlightsContext();
+  const { mediaMessages } = useTopicMediaContext();
 
   const messagesById = useMemo(
     () => keyBy([...messages, ...topHighlights, ...mediaMessages], "id"),
@@ -85,6 +93,7 @@ export function NotificationsList(props: Props) {
                         variant="minimal"
                         className="hover:bg-inherit"
                         hiddenElements={["sentBy", "sentAt"]}
+                        {...getMessagePositionFlags(recency, message.id)}
                       />
                     </CardContent>
                   ) : (
