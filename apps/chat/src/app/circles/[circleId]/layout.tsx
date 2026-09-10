@@ -4,9 +4,9 @@ import { TopicsNavSkeleton } from "@/components/topics/topics-nav-skeleton";
 
 type Props = {
   children: React.ReactNode;
-  params: {
+  params: Promise<{
     circleId: string;
-  };
+  }>;
 };
 
 export default async function CircleLayout(props: Props) {

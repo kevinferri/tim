@@ -45,7 +45,7 @@ No test framework is configured in this repo.
 
 `src/lib/session.ts` defines NextAuth `authOptions` (Google provider, JWT sessions). On sign-in it upserts a `User` row by email and uploads the Google avatar to Cloudinary. `getLoggedInUserId()` is the standard way to get the current user id in server code (actions, route handlers, model methods) — it wraps `getServerSession`.
 
-`middleware.ts` gates all routes except `/api/auth`, static assets, and `/signin`: it checks for the NextAuth session cookie (`NEXTAUTH_COOKIE_KEY`) and redirects unauthenticated page requests to sign-in / rejects `/api/*` requests with 401. It also stamps `x-current-path` on the request headers, which `src/app/layout.tsx` reads back out to detect a stale-cookie state and redirect to `/force-signout`.
+`proxy.ts` (Next's renamed `middleware.ts` convention as of v16) gates all routes except `/api/auth`, static assets, and `/signin`: it checks for the NextAuth session cookie (`NEXTAUTH_COOKIE_KEY`) and redirects unauthenticated page requests to sign-in / rejects `/api/*` requests with 401. It also stamps `x-current-path` on the request headers, which `src/app/layout.tsx` reads back out to detect a stale-cookie state and redirect to `/force-signout`.
 
 ### Root layout branches on auth state
 
@@ -69,3 +69,13 @@ TanStack React Query (`src/components/providers/query-provider.tsx`, mounted in 
 - Client components need `"use client"`; everything else defaults to Server Component
 - File names: kebab-case; components: PascalCase matching their default export
 - Merge Tailwind classes with `cn()` from `@/lib/utils`
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

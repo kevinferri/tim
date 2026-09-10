@@ -132,7 +132,6 @@ export function useDraggableVideo(
 
     const viewport = getViewport();
     setPosition(getCornerPositions(viewport, playerHeight)[persisted.corner]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEnabled, persisted.corner, playerHeight]);
 
   useEffect(() => {

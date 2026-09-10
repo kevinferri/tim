@@ -12,7 +12,7 @@ import {
 } from "@/lib/prisma/message-model";
 import { CurrentTopicProvider } from "@/components/topics/current-topic-provider";
 import { MessageModal } from "@/components/topics/message-modal";
-import { DEFAULT_TITLE } from "@/app/layout";
+import { DEFAULT_TITLE } from "@/lib/constants";
 
 type Props = {
   params: Promise<{ topicId: string; circleId: string }>;

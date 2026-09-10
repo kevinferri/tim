@@ -15,7 +15,9 @@ import { CirclesNav } from "@/components/circles/circles-nav";
 import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Routes } from "@/routes";
+import { DEFAULT_TITLE } from "@/lib/constants";
 
 import "@/globals.css";
 
@@ -34,8 +36,6 @@ const getLoggedInUser = cache(async () => {
 
   return user ?? undefined;
 });
-
-export const DEFAULT_TITLE = "Tim";
 
 export async function generateMetadata() {
   const user = await getLoggedInUser();
@@ -68,7 +68,9 @@ function BaseLayout({ children }: { children: React.ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <NuqsAdapter>{children}</NuqsAdapter>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

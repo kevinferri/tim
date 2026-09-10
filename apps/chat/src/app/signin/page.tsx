@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 
 import { Routes } from "@/routes";
 import { cn } from "@/lib/utils";
+import { getLoggedInUserId } from "@/lib/session";
 import { SignIn } from "@/components/auth/signin";
 import { SignUp } from "@/components/auth/signup";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -14,10 +14,10 @@ export default async function LogInPage({
 }: {
   searchParams?: Promise<{ [key: string]: string | undefined }>;
 }) {
-  const session = await getServerSession();
+  const userId = await getLoggedInUserId();
   const params = await searchParams;
 
-  if (session) {
+  if (userId) {
     const redirectTo = params?.callbackUrl ? params.callbackUrl : Routes.Home;
     return redirect(redirectTo);
   }

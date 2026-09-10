@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 
 export function useEffectOnce(effect: () => void | (() => void)) {
-  const destroyFunc = useRef<void | (() => void)>();
+  const destroyFunc = useRef<void | (() => void)>(undefined);
   const effectCalled = useRef(false);
   const renderAfterCalled = useRef(false);
   const [_, setVal] = useState<number>(0);

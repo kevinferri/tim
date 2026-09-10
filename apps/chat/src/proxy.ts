@@ -2,7 +2,7 @@ import { Routes } from "@/routes";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const headers = new Headers(req.headers);
 
@@ -30,7 +30,7 @@ export async function middleware(req: NextRequest) {
 
   headers.set("x-current-path", pathname);
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

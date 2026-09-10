@@ -13,7 +13,7 @@ type Options = {
 // Meant for lazy-mounting something expensive-to-reload (e.g. a third-party
 // video embed) once, not for tracking live visibility.
 export function useLazyVisible(
-  ref: RefObject<Element>,
+  ref: RefObject<Element | null>,
   { root, rootMargin, threshold, skip = false }: Options = {}
 ): boolean {
   const [isVisible, setIsVisible] = useState(skip);
