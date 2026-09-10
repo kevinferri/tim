@@ -1,12 +1,8 @@
 import { Socket } from "socket.io";
-import {
-  getParentCircleIdForTopic,
-  getTopicIdsForCircle,
-  isUserInCircle,
-  isUserInTopic,
-} from "../db/queries";
+import { getTopicIdsForCircle, isUserInCircle } from "../db/circles";
+import { getParentCircleIdForTopic, isUserInTopic } from "../db/topics";
 import { SocketEvent, HandlerArgs } from "./main";
-import { saveTopicHistory } from "../db/mutations";
+import { saveTopicHistory } from "../db/topic-history";
 
 export enum RoomType {
   Topic = "topic",

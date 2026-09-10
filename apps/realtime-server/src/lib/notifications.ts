@@ -1,6 +1,6 @@
 import { type Server } from "socket.io";
 import { SocketEvent } from "../event-handlers/main";
-import { pgClient } from "../db/client";
+import { getMessageOwnerInTopic } from "../db/messages";
 
 export enum NotificationType {
   HighlightRecieved = "highlight:recieved",
@@ -32,11 +32,7 @@ export async function emitNotification({
 }: Args) {
   if (!roomKey || !messageId) return;
 
-  const message = await pgClient("messages")
-    .select("messages.id", "messages.userId")
-    .where("messages.id", messageId)
-    .where("messages.topicId", topicId)
-    .first();
+  const message = await getMessageOwnerInTopic({ messageId, topicId });
 
   if (!message) return;
 

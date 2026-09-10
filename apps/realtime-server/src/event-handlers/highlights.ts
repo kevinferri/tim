@@ -1,7 +1,6 @@
-import { User } from "@tim/db-types";
 import { HandlerArgs, SocketEvent } from "./main";
-import { pgClient } from "../db/client";
-import { toggleHighlight } from "../db/mutations";
+import { toggleHighlight } from "../db/highlights";
+import { getUserSummary } from "../db/users";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
 import { NotificationType, emitNotification } from "../lib/notifications";
 
@@ -30,10 +29,7 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
 
     // Highlight added
     if (Boolean(highlight)) {
-      const createdBy = await pgClient<User>("users")
-        .select("id", "imageUrl", "name")
-        .where("id", highlight.userId)
-        .first();
+      const createdBy = await getUserSummary({ userId: highlight.userId });
 
       server.to(roomKey).emit(SocketEvent.AddedHighlight, {
         highlight,

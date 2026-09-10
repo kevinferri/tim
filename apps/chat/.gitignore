@@ -40,3 +40,4 @@ todo.txt
 
 # local embedded postgres data
 /.pgdata
+/.pgdata-test

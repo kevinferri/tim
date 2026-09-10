@@ -1,6 +1,8 @@
-import { Topic, User as DbUser } from "@tim/db-types";
+import { User as DbUser } from "@tim/db-types";
 import { decrypt } from "./encryption";
-import { pgClient } from "../db/client";
+import { getMessageHistoryForTopic } from "../db/messages";
+import { getTopicSummary } from "../db/topics";
+import { getCircleMembers } from "../db/circles";
 import { commandRegistry, findCommandKeyByExecute } from "./command-handler";
 
 type User = Pick<DbUser, "id" | "name">;
@@ -87,14 +89,7 @@ async function callOpenAI(messages: { role: string; content: string }[]) {
 async function fetchMessageHistory(topicId: string, forSummary: boolean) {
   const limit = forSummary ? 50 : 10;
 
-  const rows = await pgClient("messages")
-    .select("messages.text", "messages.mediaUrl", "users.name")
-    .join("users", "messages.userId", "users.id")
-    .where("messages.topicId", topicId)
-    .orderBy("messages.createdAt", "desc")
-    .limit(limit);
-
-  return rows.reverse();
+  return await getMessageHistoryForTopic({ topicId, limit });
 }
 
 function convertDbRowToMessages(row: {
@@ -166,11 +161,8 @@ export async function getChatGpt({
   );
 
   const [topic, members, rows] = await Promise.all([
-    pgClient<Topic>("topics").select("id", "name").where("id", topicId).first(),
-    pgClient("_circleMembershipsForUser")
-      .select("users.id", "users.name")
-      .where("_circleMembershipsForUser.A", circleId)
-      .join("users", "_circleMembershipsForUser.B", "users.id"),
+    getTopicSummary({ topicId }),
+    getCircleMembers({ circleId }),
     fetchMessageHistory(topicId, isSummaryRequest),
   ]);
 

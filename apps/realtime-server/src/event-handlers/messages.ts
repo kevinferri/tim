@@ -1,10 +1,13 @@
-import { Message } from "@tim/db-types";
 import { decrypt } from "../lib/encryption";
-import { deleteMessage, editMessage, writeMessage } from "../db/mutations";
+import {
+  deleteMessage,
+  editMessage,
+  getMessageForUser,
+  writeMessage,
+} from "../db/messages";
 import { getRandomGif } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
-import { pgClient } from "../db/client";
 import { commandRegistry, getCommandTokens } from "../lib/command-handler";
 
 export function handleSendMessage({ socket, server }: HandlerArgs) {
@@ -112,11 +115,10 @@ export function handleShuffleGif({ socket, server }: HandlerArgs) {
 
     if (!roomKey) return;
 
-    const message = await pgClient<Message>("messages")
-      .select("id", "text")
-      .where("id", payload.messageId)
-      .where("userId", socket.data.user.id)
-      .first();
+    const message = await getMessageForUser({
+      messageId: payload.messageId,
+      userId: socket.data.user.id,
+    });
 
     if (!message) return;
 

@@ -1,10 +1,11 @@
 import { Circle, Topic } from "@tim/db-types";
 import { pgClient } from "./client";
+import { isUserInCircle } from "./circles";
 
-// isUserInTopic/isUserInCircle duplicate the membership check in
-// apps/chat/src/lib/prisma/circle-model.ts's `isUserInCirle` (Prisma
-// nested-where vs. a raw join-table query here). If circle-membership
-// semantics ever change in schema.prisma, update both.
+// Duplicates the membership check in
+// apps/chat/src/lib/prisma/circle-model.ts's `isUserInCirle` (a raw
+// join-table query via isUserInCircle here vs. Prisma nested-where there).
+// If circle-membership semantics ever change in schema.prisma, update both.
 export async function isUserInTopic({
   userId,
   topicId,
@@ -22,22 +23,6 @@ export async function isUserInTopic({
   return await isUserInCircle({ userId, circleId: topic.circleId });
 }
 
-export async function isUserInCircle({
-  userId,
-  circleId,
-}: {
-  userId: string;
-  circleId: string;
-}) {
-  const circle = await pgClient("_circleMembershipsForUser")
-    .select("A", "B")
-    .where("A", circleId)
-    .where("B", userId)
-    .first();
-
-  return Boolean(circle);
-}
-
 export async function getParentCircleIdForTopic({
   topicId,
 }: {
@@ -50,8 +35,9 @@ export async function getParentCircleIdForTopic({
     .first();
 }
 
-export async function getTopicIdsForCircle({ circleId }: { circleId: string }) {
+export async function getTopicSummary({ topicId }: { topicId: string }) {
   return await pgClient<Topic>("topics")
-    .select("topics.id")
-    .where("topics.circleId", circleId);
+    .select("id", "name")
+    .where("id", topicId)
+    .first();
 }
