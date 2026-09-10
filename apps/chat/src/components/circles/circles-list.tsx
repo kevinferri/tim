@@ -16,6 +16,7 @@ import {
   useSocketEmit,
   useSocketHandler,
 } from "@/components/socket/use-socket";
+import { RoomType } from "@/components/socket/use-current-user-rooms";
 import { ToastAction } from "@/components/ui/toast";
 import { useParams, useRouter } from "next/navigation";
 import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
@@ -71,12 +72,12 @@ export function CirclesList(props: Props) {
       if (payload.isEdit && createdBySelf) return;
 
       if (wasInCircle && !isInCircle) {
-        leaveRoom.emit({ id: payload.id, roomType: "circle" });
+        leaveRoom.emit({ id: payload.id, roomType: RoomType.Circle });
         return;
       }
 
       if (!payload.isEdit || (isInCircle && !wasInCircle)) {
-        joinRoom.emit({ id: payload.id, roomType: "circle" });
+        joinRoom.emit({ id: payload.id, roomType: RoomType.Circle });
 
         toast({
           title: `New circle created`,
@@ -99,7 +100,7 @@ export function CirclesList(props: Props) {
   useSocketHandler<DeletedCircleHandlerProps>(
     SocketEvent.DeletedCircle,
     (payload) => {
-      leaveRoom.emit({ id: payload.id, roomType: "circle" });
+      leaveRoom.emit({ id: payload.id, roomType: RoomType.Circle });
 
       const deletedBySelf = payload.deletedBy.id === self.id;
       const name = deletedBySelf ? "You" : payload.deletedBy.name;

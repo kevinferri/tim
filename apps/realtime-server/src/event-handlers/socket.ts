@@ -1,5 +1,5 @@
 import { SocketEvent, HandlerArgs } from "./main";
-import { ROOM_KEY_INDICATOR, RoomType, emitUserChangeInTopic } from "./rooms";
+import { RoomType, emitUserChangeInTopic, parseRoomKey } from "./rooms";
 
 export function handleClientConnected({ server }: HandlerArgs) {
   console.log(`📈 clients: ${server.engine.clientsCount}`);
@@ -14,7 +14,7 @@ export function handleClientDisconnected({ socket, server }: HandlerArgs) {
 export function handleClientDisconnecting({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.Disconnecting, () => {
     socket.rooms.forEach((roomKey) => {
-      const [roomType, roomId] = roomKey.split(ROOM_KEY_INDICATOR);
+      const { roomType, id: roomId } = parseRoomKey(roomKey);
 
       if (roomType === RoomType.Topic) {
         emitUserChangeInTopic({

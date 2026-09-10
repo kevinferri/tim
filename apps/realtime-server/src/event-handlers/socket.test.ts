@@ -16,6 +16,13 @@ import { createMockSocket, createMockServer } from "../test/socket-mocks";
 vi.mock("./rooms", () => ({
   RoomType: { Topic: "topic", Circle: "circle", User: "user" },
   ROOM_KEY_INDICATOR: "::",
+  parseRoomKey: (roomKey: string) => {
+    const separatorIndex = roomKey.indexOf("::");
+    return {
+      roomType: roomKey.slice(0, separatorIndex),
+      id: roomKey.slice(separatorIndex + 2),
+    };
+  },
   emitUserChangeInTopic: vi.fn(),
 }));
 

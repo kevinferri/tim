@@ -3,9 +3,10 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 import { Socket } from "socket.io-client";
+import { RoomType } from "@tim/socket-types";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 
-type RoomType = "user" | "circle" | "topic";
+export { RoomType };
 
 export type RoomMembership = {
   id: string;

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
-import { useRoomManagement } from "@/components/socket/use-current-user-rooms";
+import {
+  RoomType,
+  useRoomManagement,
+} from "@/components/socket/use-current-user-rooms";
 
 type Props = {
   children: React.ReactNode;
@@ -13,12 +16,12 @@ export function CircleRoomConnect({ children, circleIds }: Props) {
 
   useEffectOnce(() => {
     circleIds.forEach((id) => {
-      joinRoom(id, "circle");
+      joinRoom(id, RoomType.Circle);
     });
 
     return () => {
       circleIds.forEach((id) => {
-        leaveRoom(id, "circle");
+        leaveRoom(id, RoomType.Circle);
       });
     };
   });

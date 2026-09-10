@@ -1,16 +1,20 @@
 import { Socket } from "socket.io";
+import { RoomType } from "@tim/socket-types";
 import { getTopicIdsForCircle, isUserInCircle } from "../db/circles";
 import { getParentCircleIdForTopic, isUserInTopic } from "../db/topics";
 import { SocketEvent, HandlerArgs } from "./main";
 import { saveTopicHistory } from "../db/topic-history";
 
-export enum RoomType {
-  Topic = "topic",
-  Circle = "circle",
-  User = "user",
-}
+export { RoomType };
 
 export const ROOM_KEY_INDICATOR = "::";
+
+// A user connected from more than one socket (multiple tabs/devices) has
+// more than one socket in the same room, which would otherwise surface as
+// that user appearing twice in a single room's active-user list.
+function dedupeUsersById<T extends { id: string }>(users: T[]): T[] {
+  return [...new Map(users.map((user) => [user.id, user])).values()];
+}
 
 export function toRoomKey({
   id,
@@ -20,6 +24,19 @@ export function toRoomKey({
   roomType: RoomType;
 }) {
   return `${roomType}${ROOM_KEY_INDICATOR}${id}`;
+}
+
+// Splits on the first occurrence only, so an id that happens to contain
+// the separator still round-trips correctly (roomType itself never does).
+export function parseRoomKey(roomKey: string): {
+  roomType: RoomType;
+  id: string;
+} {
+  const separatorIndex = roomKey.indexOf(ROOM_KEY_INDICATOR);
+  return {
+    roomType: roomKey.slice(0, separatorIndex) as RoomType,
+    id: roomKey.slice(separatorIndex + ROOM_KEY_INDICATOR.length),
+  };
 }
 
 export function getRoomKeyOrFail({
@@ -137,20 +154,20 @@ export async function emitUserChangeInTopic({
   const topicKey = toRoomKey({ id: topicId, roomType: RoomType.Topic });
   const sockets = await server.in(topicKey).fetchSockets();
 
-  const activeUsers = sockets
-    .map(({ data }) => data.user)
-    .filter((user) => {
-      if (
-        disconnectingUser &&
-        disconnectingUser === user.id &&
-        !hasDisconnected
-      ) {
-        hasDisconnected = true;
-        return false;
-      }
+  const activeUsers = dedupeUsersById(
+    sockets.map(({ data }) => data.user)
+  ).filter((user) => {
+    if (
+      disconnectingUser &&
+      disconnectingUser === user.id &&
+      !hasDisconnected
+    ) {
+      hasDisconnected = true;
+      return false;
+    }
 
-      return true;
-    });
+    return true;
+  });
 
   const parentCircle = await getParentCircleIdForTopic({ topicId });
 
@@ -189,10 +206,12 @@ export async function emitUserJoinedCircle({
     topicsInCircle.map(async ({ id }) => {
       const topicKey = toRoomKey({ id, roomType: RoomType.Topic });
       const socketsInTopic = await server.in(topicKey).fetchSockets();
-      const activeUsers = socketsInTopic.map(({ data }) => ({
-        ...data.user,
-        circleId,
-      }));
+      const activeUsers = dedupeUsersById(
+        socketsInTopic.map(({ data }) => ({
+          ...data.user,
+          circleId,
+        }))
+      );
 
       topicMap[id] = {
         activeUsers,

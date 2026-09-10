@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
+import { cn } from "@/lib/utils";
 import {
   getMessagePositionFlags,
   useTopicMessagesContext,
@@ -9,8 +10,11 @@ import {
   useTopicUiContext,
 } from "./current-topic-provider";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
-import { useRoomManagement } from "@/components/socket/use-current-user-rooms";
-import { ArrowDownIcon, EnvelopeClosedIcon } from "@radix-ui/react-icons";
+import {
+  RoomType,
+  useRoomManagement,
+} from "@/components/socket/use-current-user-rooms";
+import { ChevronDownIcon, EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { Message, MessageProps } from "./message";
 import { isToday, MessageDateSeparator } from "./message-date-separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,11 +52,11 @@ export function TopicChat() {
   }, []);
 
   useEffectOnce(() => {
-    joinRoom(topicId, "topic");
+    joinRoom(topicId, RoomType.Topic);
 
     return () => {
       markTopicAsRead(topicId);
-      leaveRoom(topicId, "topic");
+      leaveRoom(topicId, RoomType.Topic);
     };
   });
 
@@ -125,19 +129,29 @@ export function TopicChat() {
         </div>
       </ScrollArea>
 
-      {!isAtBottom && (
-        <Button
-          size="sm"
-          variant="secondary"
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-md rounded-full gap-1.5"
-          onClick={() => scrollToBottom()}
-        >
-          <ArrowDownIcon />
-          {unseenCount > 0
-            ? `${unseenCount} new message${unseenCount === 1 ? "" : "s"}`
-            : "Jump to latest"}
-        </Button>
-      )}
+      <Button
+        size="icon"
+        variant="secondary"
+        aria-label={
+          unseenCount > 0
+            ? `${unseenCount} new message${unseenCount === 1 ? "" : "s"}, jump to latest`
+            : "Jump to latest"
+        }
+        aria-hidden={isAtBottom}
+        tabIndex={isAtBottom ? -1 : 0}
+        className={cn(
+          "absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full shadow-md transition-opacity duration-200",
+          isAtBottom ? "pointer-events-none opacity-0" : "opacity-100",
+        )}
+        onClick={() => scrollToBottom()}
+      >
+        <ChevronDownIcon className="size-5" />
+        {unseenCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+            {unseenCount > 9 ? "9+" : unseenCount}
+          </span>
+        )}
+      </Button>
     </div>
   );
 }
