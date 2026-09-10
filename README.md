@@ -4,7 +4,8 @@ A chat/community app, built as a Yarn workspaces monorepo:
 
 - `apps/chat` — Next.js 14 app (UI, auth, database)
 - `apps/realtime-server` — Socket.IO server (real-time messaging, presence)
-- `packages/shared-types` — shared socket event contract between the two
+- `packages/socket-types` — shared socket event contract between the two
+- `packages/db-types` — DB model types (from `apps/chat`'s Prisma schema) shared with `apps/realtime-server`
 
 ## Getting started
 

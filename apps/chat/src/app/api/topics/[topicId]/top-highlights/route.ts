@@ -15,29 +15,16 @@ export async function GET(req: NextRequest, { params }: Route) {
   if (!userId) return unauthorized;
 
   try {
-    const topic = await prismaClient.topic.findUnique({
-      where: { id: topicId },
-      select: {
-        id: true,
-        parentCircle: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
-
-    if (!topic) return notFound;
-
-    const isInCircle = await prismaClient.circle.isUserInCirle({
+    const isInTopic = await prismaClient.topic.isUserInTopic({
       userId,
-      circleId: topic.parentCircle.id,
+      topicId,
     });
 
-    if (!isInCircle) return notFound;
+    if (!isInTopic) return notFound;
 
     const highlights =
       await prismaClient.message.getTopHighlightedMessagesForTopic({
+        requestingUserId: userId,
         topicId,
         select: DEFAULT_MESSAGE_SELECT,
         since: "month", // TODO when dynamic filtering is out, allow this to be passed in via query param

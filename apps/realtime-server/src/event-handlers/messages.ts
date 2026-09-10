@@ -1,3 +1,4 @@
+import { Message } from "@tim/db-types";
 import { decrypt } from "../lib/encryption";
 import { deleteMessage, editMessage, writeMessage } from "../db/mutations";
 import { getRandomGif } from "../lib/media-fetchers";
@@ -111,7 +112,7 @@ export function handleShuffleGif({ socket, server }: HandlerArgs) {
 
     if (!roomKey) return;
 
-    const message = await pgClient("messages")
+    const message = await pgClient<Message>("messages")
       .select("id", "text")
       .where("id", payload.messageId)
       .where("userId", socket.data.user.id)

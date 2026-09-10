@@ -1,3 +1,4 @@
+import { User } from "@tim/db-types";
 import { HandlerArgs, SocketEvent } from "./main";
 import { pgClient } from "../db/client";
 import { toggleHighlight } from "../db/mutations";
@@ -29,7 +30,7 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
 
     // Highlight added
     if (Boolean(highlight)) {
-      const createdBy = await pgClient("users")
+      const createdBy = await pgClient<User>("users")
         .select("id", "imageUrl", "name")
         .where("id", highlight.userId)
         .first();

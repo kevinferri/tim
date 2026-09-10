@@ -17,20 +17,13 @@ export async function GET(req: NextRequest, { params }: Route) {
     if (!userId) return unauthorized;
     if (!messageId) return badRequest;
 
-    const message = await prismaClient.message.findUnique({
-      where: {
-        id: messageId,
-      },
+    const message = await prismaClient.message.getById({
+      messageId,
       select: {
         ...DEFAULT_MESSAGE_SELECT,
         topic: {
           select: {
             id: true,
-            parentCircle: {
-              select: {
-                id: true,
-              },
-            },
           },
         },
       },
@@ -38,12 +31,12 @@ export async function GET(req: NextRequest, { params }: Route) {
 
     if (!message) return notFound;
 
-    const isInCircle = await prismaClient.circle.isUserInCirle({
+    const isInTopic = await prismaClient.topic.isUserInTopic({
       userId,
-      circleId: message.topic.parentCircle.id,
+      topicId: message.topic.id,
     });
 
-    if (!isInCircle) return notFound;
+    if (!isInTopic) return notFound;
 
     return NextResponse.json(normalizeMessages([message])[0], { status: 200 });
   } catch (e) {

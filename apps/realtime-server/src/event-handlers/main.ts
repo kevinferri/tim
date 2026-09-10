@@ -25,7 +25,7 @@ import {
   handleUserUpdatedStatus,
 } from "./user-activity";
 
-import { SocketEvent } from "@tim/shared-types";
+import { SocketEvent } from "@tim/socket-types";
 
 export { SocketEvent };
 

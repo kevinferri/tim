@@ -53,7 +53,7 @@ No test framework is configured in this repo.
 
 ### Real-time via the sibling socket server
 
-The Socket.io server is a separately-deployed service (`apps/realtime-server` in this monorepo, not this Next.js process) — the client in `src/components/socket/socket-provider.tsx` connects to `WS_SERVER_URL`/`WS_SERVER_PATH` using a per-session JWT. `src/components/socket/use-socket.ts` re-exports the `SocketEvent` enum from `@tim/shared-types` (the canonical source, shared with `apps/realtime-server`) and defines the `useSocketHandler` / `useSocketEmit` hooks used throughout `src/components` to subscribe to and emit events. When adding a new real-time event, add it to `packages/shared-types/src/socket-events.ts` first — that's the contract both apps import from.
+The Socket.io server is a separately-deployed service (`apps/realtime-server` in this monorepo, not this Next.js process) — the client in `src/components/socket/socket-provider.tsx` connects to `WS_SERVER_URL`/`WS_SERVER_PATH` using a per-session JWT. `src/components/socket/use-socket.ts` re-exports the `SocketEvent` enum from `@tim/socket-types` (the canonical source, shared with `apps/realtime-server`) and defines the `useSocketHandler` / `useSocketEmit` hooks used throughout `src/components` to subscribe to and emit events. When adding a new real-time event, add it to `packages/socket-types/src/index.ts` first — that's the contract both apps import from.
 
 ### Server actions vs. API routes
 

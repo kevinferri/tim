@@ -1,6 +1,6 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { TopicsList } from "@/components/topics/topics-list";
-import { Message, Prisma, Topic, TopicHistory } from "@prisma/client";
+import { Prisma, Topic, TopicHistory } from "@prisma/client";
 import { getLoggedInUserId } from "@/lib/session";
 import keyBy from "lodash.keyby";
 
@@ -12,7 +12,8 @@ export async function TopicsNav({ circleId }: Props) {
   const userId = await getLoggedInUserId();
 
   const queries = [
-    prismaClient.topic.getMeAllTopicsForCircle({
+    prismaClient.topic.getAllForCircleAndUser({
+      userId,
       circleId,
       select: {
         name: true,
@@ -24,7 +25,8 @@ export async function TopicsNav({ circleId }: Props) {
       },
     }),
 
-    prismaClient.circle.getMeCircleById({
+    prismaClient.circle.getByIdForUser({
+      userId,
       circleId,
       select: {
         id: true,
@@ -43,32 +45,18 @@ export async function TopicsNav({ circleId }: Props) {
     }),
 
     // See if there is a way to just get histories for current circle
-    prismaClient.topicHistory.findMany({
-      where: {
-        userId,
-      },
-      select: {
-        updatedAt: true,
-        topicId: true,
-      },
-    }),
+    prismaClient.topicHistory.getAllForUser({ userId }),
   ];
 
   const [topics, parentCircle, histories] = await Promise.all(queries);
   const topicList = topics as Topic[];
   const topicIds = topicList.map(({ id }) => id);
-  const recentMessageByTopic = await prismaClient.$queryRaw`
-  SELECT "topicId", "createdAt" FROM (
-    SELECT "topicId", "createdAt", ROW_NUMBER() OVER (PARTITION BY "topicId" ORDER BY "createdAt" DESC) as row_num
-    FROM "messages"
-    WHERE "topicId" IN (${Prisma.join(topicIds)})
-  ) AS latest_messages
-  WHERE row_num = 1;
-`;
+  const recentMessageByTopic =
+    await prismaClient.message.getMostRecentTimestampsByTopic({ topicIds });
 
   const historyMap: Record<string, TopicHistory> = keyBy(histories, "topicId");
 
-  const unreadTopicIds = (recentMessageByTopic as Message[]).reduce(
+  const unreadTopicIds = recentMessageByTopic.reduce(
     (acc, { createdAt, topicId }) => {
       const history = historyMap[topicId];
 

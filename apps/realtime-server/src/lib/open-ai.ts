@@ -1,8 +1,9 @@
+import { Topic, User as DbUser } from "@tim/db-types";
 import { decrypt } from "./encryption";
 import { pgClient } from "../db/client";
 import { commandRegistry, findCommandKeyByExecute } from "./command-handler";
 
-type User = { id: string; name: string };
+type User = Pick<DbUser, "id" | "name">;
 
 function toFirstName(name: string) {
   return name.split(" ")[0];
@@ -165,7 +166,7 @@ export async function getChatGpt({
   );
 
   const [topic, members, rows] = await Promise.all([
-    pgClient("topics").select("id", "name").where("id", topicId).first(),
+    pgClient<Topic>("topics").select("id", "name").where("id", topicId).first(),
     pgClient("_circleMembershipsForUser")
       .select("users.id", "users.name")
       .where("_circleMembershipsForUser.A", circleId)

@@ -3,6 +3,8 @@ import { userModel } from "@/lib/prisma/user-model";
 import { circleModel } from "@/lib/prisma/circle-model";
 import { topicModel } from "@/lib/prisma/topic-model";
 import { messageModel } from "@/lib/prisma/message-model";
+import { highlightModel } from "@/lib/prisma/highlight-model";
+import { topicHistoryModel } from "@/lib/prisma/topic-history-model";
 
 declare global {
   var prismaClient: ReturnType<typeof createClient> | undefined;
@@ -19,6 +21,8 @@ const createClient = () => {
       circle: circleModel,
       topic: topicModel,
       message: messageModel,
+      highlight: highlightModel,
+      topicHistory: topicHistoryModel,
     },
   });
 };

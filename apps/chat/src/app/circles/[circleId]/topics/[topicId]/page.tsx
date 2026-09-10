@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { prismaClient } from "@/lib/prisma/client";
+import { getLoggedInUserId } from "@/lib/session";
 import { TopicHeader } from "@/components/topics/topic-header";
 import { TopicChat } from "@/components/topics/topic-chat";
 import { TopicMessageBar } from "@/components/topics/topic-message-bar";
@@ -18,31 +19,35 @@ type Props = {
   params: Promise<{ topicId: string; circleId: string }>;
 };
 
-const getTopic = cache(async (topicId: string, circleId: string) => {
-  const topic = await prismaClient.topic.getMeTopicByIdWithCircle({
-    topicId,
-    circleId,
-    select: {
-      id: true,
-      name: true,
-      userId: true,
-      description: true,
-      parentCircle: {
-        select: {
-          id: true,
-          name: true,
-          defaultTopicId: true,
+const getTopic = cache(
+  async (userId: string | undefined, topicId: string, circleId: string) => {
+    const topic = await prismaClient.topic.getByIdForUser({
+      userId,
+      topicId,
+      circleId,
+      select: {
+        id: true,
+        name: true,
+        userId: true,
+        description: true,
+        parentCircle: {
+          select: {
+            id: true,
+            name: true,
+            defaultTopicId: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return topic;
-});
+    return topic;
+  }
+);
 
 export async function generateMetadata({ params }: Props) {
   const { topicId, circleId } = await params;
-  const topic = await getTopic(topicId, circleId);
+  const userId = await getLoggedInUserId();
+  const topic = await getTopic(userId, topicId, circleId);
 
   return {
     title: !topic
@@ -53,27 +58,32 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function TopicPage({ params }: Props) {
   const { topicId, circleId } = await params;
-  const topic = await getTopic(topicId, circleId);
+  const userId = await getLoggedInUserId();
+  const topic = await getTopic(userId, topicId, circleId);
 
   const [messages, topHighlights, mediaMessages, circleMembers] =
     await Promise.all([
       prismaClient.message.getMessagesForTopic({
+        requestingUserId: userId,
         topicId: topic?.id,
         select: DEFAULT_MESSAGE_SELECT,
       }),
 
       prismaClient.message.getTopHighlightedMessagesForTopic({
+        requestingUserId: userId,
         topicId: topic?.id,
         select: DEFAULT_MESSAGE_SELECT,
         since: "month",
       }),
 
       prismaClient.message.getMediaMessagesForTopic({
+        requestingUserId: userId,
         topicId: topic?.id,
         select: DEFAULT_MESSAGE_SELECT,
       }),
 
       prismaClient.user.getMembersForCircle({
+        userId,
         circleId: topic?.parentCircle.id ?? "",
         select: {
           id: true,

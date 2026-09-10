@@ -4,44 +4,18 @@ import { redirect } from "next/navigation";
 
 export default async function HomePage() {
   const userId = await getLoggedInUserId();
-  const mostRecentTopic = await prismaClient.topicHistory.findFirst({
-    orderBy: {
-      createdAt: "desc",
-    },
-    where: {
-      userId,
-    },
-    select: {
-      id: true,
-      topicId: true,
-      topic: {
-        select: {
-          circleId: true,
-          parentCircle: {
-            select: {
-              id: true,
-              members: {
-                select: {
-                  id: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  const mostRecentTopic = await prismaClient.topicHistory.getMostRecentForUser(
+    { userId }
+  );
 
   const isStillInCircle = mostRecentTopic?.topic.parentCircle.members.find(
     ({ id }) => id === userId
   );
 
   if (mostRecentTopic && !isStillInCircle) {
-    prismaClient.topicHistory.deleteMany({
-      where: {
-        topicId: mostRecentTopic.id,
-        userId,
-      },
+    prismaClient.topicHistory.deleteForTopicAndUser({
+      topicId: mostRecentTopic.topicId,
+      userId,
     });
   }
 

@@ -1,35 +1,23 @@
 import { v4 } from "uuid";
+import { Highlight, Message, TopicHistory } from "@tim/db-types";
 import { encrypt } from "../lib/encryption";
 import { pgClient } from "./client";
 
-type WriteMessageArgs = {
-  userId: string;
-  topicId: string;
-  text: string;
-  mediaUrl: string;
-};
+type WriteMessageArgs = Pick<
+  Message,
+  "userId" | "topicId" | "text" | "mediaUrl"
+>;
 
-type DeleteMessageArgs = {
-  userId: string;
-  messageId: string;
-};
+type DeleteMessageArgs = Pick<Message, "userId"> & { messageId: string };
 
-type EditMessageArgs = {
-  userId: string;
+type EditMessageArgs = Pick<Message, "userId" | "text"> & {
   messageId: string;
-  text: string;
   mediaUrl?: string;
 };
 
-type ToggleHighlightArgs = {
-  userId: string;
-  messageId: string;
-};
+type ToggleHighlightArgs = Pick<Highlight, "userId"> & { messageId: string };
 
-type TopicHistoryArgs = {
-  userId: string;
-  topicId: string;
-};
+type TopicHistoryArgs = Pick<TopicHistory, "userId" | "topicId">;
 
 export async function writeMessage({
   userId,
@@ -37,7 +25,7 @@ export async function writeMessage({
   text,
   mediaUrl,
 }: WriteMessageArgs) {
-  const message = await pgClient("messages")
+  const message = await pgClient<Message>("messages")
     .insert({
       id: v4(),
       text: encrypt(text),
@@ -51,7 +39,7 @@ export async function writeMessage({
 }
 
 async function writeHighlight({ userId, messageId }: ToggleHighlightArgs) {
-  const highlight = await pgClient("highlights")
+  const highlight = await pgClient<Highlight>("highlights")
     .insert({
       id: v4(),
       userId,
@@ -63,7 +51,7 @@ async function writeHighlight({ userId, messageId }: ToggleHighlightArgs) {
 }
 
 async function deleteHighlight({ userId, messageId }: ToggleHighlightArgs) {
-  await pgClient("highlights")
+  await pgClient<Highlight>("highlights")
     .where("userId", userId)
     .where("messageId", messageId)
     .del();
@@ -75,7 +63,7 @@ export async function toggleHighlight({
   userId,
   messageId,
 }: ToggleHighlightArgs) {
-  const existingHighlight = await pgClient("highlights")
+  const existingHighlight = await pgClient<Highlight>("highlights")
     .select("id")
     .where("userId", userId)
     .where("messageId", messageId)
@@ -89,7 +77,7 @@ export async function toggleHighlight({
 }
 
 export async function deleteMessage({ userId, messageId }: DeleteMessageArgs) {
-  const message = await pgClient("messages")
+  const message = await pgClient<Message>("messages")
     .where("id", messageId)
     .where("userId", userId)
     .del()
@@ -104,7 +92,7 @@ export async function editMessage({
   text,
   mediaUrl,
 }: EditMessageArgs) {
-  const message = await pgClient("messages")
+  const message = await pgClient<Message>("messages")
     .where("id", messageId)
     .where("userId", userId)
     .update(
@@ -119,12 +107,12 @@ export async function editMessage({
 }
 
 export async function saveTopicHistory({ userId, topicId }: TopicHistoryArgs) {
-  await pgClient("topic_histories")
+  await pgClient<TopicHistory>("topic_histories")
     .where("userId", userId)
     .where("topicId", topicId)
     .del();
 
-  const history = await pgClient("topic_histories")
+  const history = await pgClient<TopicHistory>("topic_histories")
     .insert({
       id: v4(),
       topicId,

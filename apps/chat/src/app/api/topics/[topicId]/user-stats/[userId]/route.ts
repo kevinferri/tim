@@ -28,33 +28,17 @@ export async function GET(req: NextRequest, { params }: Route) {
   const { topicId, userId } = await params;
 
   try {
-    const topicWithCircleMembers = await prismaClient.topic.findFirst({
-      where: { id: topicId },
-      select: {
-        name: true,
-        parentCircle: {
-          select: {
-            members: {
-              select: { id: true },
-            },
-          },
-        },
-      },
-    });
+    const topic = await prismaClient.topic.getNameWithMemberIds({ topicId });
 
-    if (!topicWithCircleMembers) return badRequest;
-
-    const memberIds = topicWithCircleMembers.parentCircle.members.map(
-      ({ id }) => id
-    );
-    if (!memberIds.includes(userId)) return notFound;
-    if (!memberIds.includes(userId)) return notFound;
+    if (!topic) return badRequest;
+    if (!topic.memberIds.includes(userId)) return notFound;
 
     const where = { userId };
 
     const queries = [
       // Top highlights for user
       prismaClient.message.getTopHighlightedMessagesForTopic({
+        requestingUserId: loggedInUserId,
         topicId: topicId,
         select: DEFAULT_MESSAGE_SELECT,
         ...where,
@@ -64,12 +48,10 @@ export async function GET(req: NextRequest, { params }: Route) {
       prismaClient.message.count({ where }),
 
       // Total highlights given
-      prismaClient.highlight.count({ where }),
+      prismaClient.highlight.countGivenByUser({ userId }),
 
       // Total highlights recieved
-      prismaClient.highlight.count({
-        where: { message: where },
-      }),
+      prismaClient.highlight.countReceivedByUser({ userId }),
     ];
 
     const [topHighlights, messagesSent, highlightsGiven, highlightsRecieved] =
@@ -81,7 +63,7 @@ export async function GET(req: NextRequest, { params }: Route) {
 
     return NextResponse.json(
       {
-        topicName: topicWithCircleMembers.name,
+        topicName: topic.name,
         highlightScore: highlightScore || 0,
         messagesSent,
         highlightsGiven,

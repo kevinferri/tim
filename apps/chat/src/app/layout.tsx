@@ -7,6 +7,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { SocketProvider } from "@/components/socket/socket-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { prismaClient } from "@/lib/prisma/client";
+import { getLoggedInUserId } from "@/lib/session";
 import { SelfProvider } from "@/components/auth/self-provider";
 import { PresenceSync } from "@/components/dashboard/presence-sync";
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
@@ -22,7 +23,9 @@ import { DEFAULT_TITLE } from "@/lib/constants";
 import "@/globals.css";
 
 const getLoggedInUser = cache(async () => {
-  const user = await prismaClient.user.getLoggedIn({
+  const userId = await getLoggedInUserId();
+  const user = await prismaClient.user.getById({
+    userId,
     select: {
       id: true,
       name: true,
@@ -84,7 +87,8 @@ function LoggedOutLayout({ children }: { children: React.ReactNode }) {
 async function LoggedInLayout({ children }: { children: React.ReactNode }) {
   const user = await getLoggedInUser();
   const socketConfig = await getSocketConfig(user);
-  const circles = await prismaClient.circle.getMeCircles({
+  const circles = await prismaClient.circle.getForUser({
+    userId: user?.id,
     select: {
       id: true,
       name: true,

@@ -1,4 +1,5 @@
 import { prismaClient } from "@/lib/prisma/client";
+import { getLoggedInUserId } from "@/lib/session";
 import { redirect } from "next/navigation";
 
 type Props = {
@@ -7,7 +8,9 @@ type Props = {
 
 export default async function CirclePage(props: Props) {
   const { circleId } = await props.params;
-  const circle = await prismaClient.circle.getMeCircleById({
+  const userId = await getLoggedInUserId();
+  const circle = await prismaClient.circle.getByIdForUser({
+    userId,
     circleId,
     select: {
       id: true,

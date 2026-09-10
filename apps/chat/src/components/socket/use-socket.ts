@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useSocketContext } from "@/components/socket/socket-provider";
-import { SocketEvent } from "@tim/shared-types";
+import { SocketEvent } from "@tim/socket-types";
 
 export { SocketEvent };
 

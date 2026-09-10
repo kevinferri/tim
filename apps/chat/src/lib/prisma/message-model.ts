@@ -1,13 +1,6 @@
-import { Message, Prisma } from "@prisma/client";
-import { getLoggedInUserId } from "@/lib/session";
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@/lib/prisma/client";
 import { decrypt } from "@/lib/decryption";
-
-// type Message = Partial<
-//   Prisma.MessageGetPayload<{
-//     include: { highlights: true; question_type: true };
-//   }>
-// >;
 
 type MessageArgs = {
   topicId?: string;
@@ -65,8 +58,27 @@ function getReadableMessage(text?: string | null) {
 }
 
 export const messageModel = {
-  async getMessagesForTopic({ topicId, select, before }: MessageArgs) {
-    const userId = await getLoggedInUserId();
+  async getById({
+    messageId,
+    select,
+  }: {
+    messageId?: string;
+    select: Prisma.MessageSelect;
+  }) {
+    if (!messageId) return undefined;
+
+    return await prismaClient.message.findUnique({
+      where: { id: messageId },
+      select,
+    });
+  },
+
+  async getMessagesForTopic({
+    requestingUserId,
+    topicId,
+    select,
+    before,
+  }: MessageArgs & { requestingUserId?: string }) {
     const cursor = before
       ? {
           createdAt: {
@@ -75,7 +87,7 @@ export const messageModel = {
         }
       : undefined;
 
-    if (!topicId || !userId) return [];
+    if (!topicId || !requestingUserId) return [];
 
     const messages = await prismaClient.message.findMany({
       select,
@@ -91,13 +103,17 @@ export const messageModel = {
   },
 
   async getTopHighlightedMessagesForTopic({
+    requestingUserId,
     topicId,
     userId,
     select,
     since = "allTime",
-  }: MessageArgs & { userId?: string; since?: "month" | "allTime" }) {
-    const loggedInUser = getLoggedInUserId();
-    if (!topicId || !loggedInUser) return [];
+  }: MessageArgs & {
+    requestingUserId?: string;
+    userId?: string;
+    since?: "month" | "allTime";
+  }) {
+    if (!topicId || !requestingUserId) return [];
 
     let createdAt: { gte: Date } | undefined;
 
@@ -143,9 +159,12 @@ export const messageModel = {
     return normalizeMessages(filtered);
   },
 
-  async getMediaMessagesForTopic({ topicId, select }: MessageArgs) {
-    const userId = getLoggedInUserId();
-    if (!topicId || !userId) return [];
+  async getMediaMessagesForTopic({
+    requestingUserId,
+    topicId,
+    select,
+  }: MessageArgs & { requestingUserId?: string }) {
+    if (!topicId || !requestingUserId) return [];
 
     const messages = await prismaClient.message.findMany({
       select,
@@ -162,5 +181,20 @@ export const messageModel = {
     });
 
     return normalizeMessages(messages);
+  },
+
+  async getMostRecentTimestampsByTopic({ topicIds }: { topicIds: string[] }) {
+    if (!topicIds.length) return [];
+
+    return await prismaClient.$queryRaw<
+      { topicId: string; createdAt: Date }[]
+    >`
+      SELECT "topicId", "createdAt" FROM (
+        SELECT "topicId", "createdAt", ROW_NUMBER() OVER (PARTITION BY "topicId" ORDER BY "createdAt" DESC) as row_num
+        FROM "messages"
+        WHERE "topicId" IN (${Prisma.join(topicIds)})
+      ) AS latest_messages
+      WHERE row_num = 1;
+    `;
   },
 };

@@ -41,24 +41,6 @@ const useRoomStore = create<Store>((set) => ({
     })),
 }));
 
-// How long a leave sits pending before it's actually sent. Covers e.g.
-// switching topics, where the old TopicChat unmounts (leave) and a new one
-// mounts for the new topic (join) as two independent lifecycle events --
-// without a delay, the parent circle's active-user count can flicker down
-// and back up in the gap between them. Rejoining the same room within this
-// window cancels the pending leave outright, so the round trip through the
-// server never happens at all.
-//
-const ROOM_LEAVE_DEBOUNCE_MS = 300;
-
-// Keyed by room ("<roomType>::<id>") so a rejoin can find and cancel the
-// matching pending leave.
-const pendingLeaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-function roomKey(room: RoomMembership) {
-  return `${room.roomType}::${room.id}`;
-}
-
 export function useRoomManagement() {
   const emitJoin = useSocketEmit<RoomMembership>(SocketEvent.JoinRoom);
   const emitLeave = useSocketEmit<RoomMembership>(SocketEvent.LeaveRoom);
@@ -67,17 +49,6 @@ export function useRoomManagement() {
 
   const joinRoom = (id: string, roomType: RoomType) => {
     const room = { id, roomType };
-    const key = roomKey(room);
-
-    // We were never actually removed from this room server-side -- the
-    // leave was still pending -- so cancel it and skip re-announcing a
-    // join we never left.
-    const pendingLeave = pendingLeaveTimers.get(key);
-    if (pendingLeave) {
-      clearTimeout(pendingLeave);
-      pendingLeaveTimers.delete(key);
-      return;
-    }
 
     // Record the desired room first, then announce it. socket.io buffers
     // emits made before the connection is up and flushes them once it
@@ -90,18 +61,9 @@ export function useRoomManagement() {
 
   const leaveRoom = (id: string, roomType: RoomType) => {
     const room = { id, roomType };
-    const key = roomKey(room);
 
-    const existingTimer = pendingLeaveTimers.get(key);
-    if (existingTimer) clearTimeout(existingTimer);
-
-    const timer = setTimeout(() => {
-      pendingLeaveTimers.delete(key);
-      removeRoom(room);
-      emitLeave.emit(room);
-    }, ROOM_LEAVE_DEBOUNCE_MS);
-
-    pendingLeaveTimers.set(key, timer);
+    removeRoom(room);
+    emitLeave.emit(room);
   };
 
   return { joinRoom, leaveRoom };
