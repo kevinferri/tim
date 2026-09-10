@@ -21,6 +21,8 @@ yarn workspace @tim/shared-types build            # Rebuild the shared package a
 
 Each app keeps its own `package.json` name (`chat`, `tim-chat-server`) — `yarn workspace <name> ...` is how you target one of them from the root. Per-app commands (Prisma db scripts, etc.) are documented in each app's own `CLAUDE.md`.
 
+**Don't run either app's `build` script while `yarn dev` is running.** `yarn workspace chat build` runs `next build`, which writes into the same `apps/chat/.next` directory the dev server is using live — this corrupts its webpack cache (e.g. `Resolving './vendor-chunks/...' doesn't lead to expected result` errors) and forces a manual `.next` wipe + restart. `yarn workspace tim-chat-server build` is worse: it starts with `rm -rf node_modules && yarn install`, and since this is a Yarn v1 workspaces repo, that reinstall touches the shared root `node_modules` (hoisting), not just `apps/realtime-server`'s — which can also invalidate `chat`'s dev cache and has broken root-level bins (e.g. `concurrently`) before. To typecheck either app without any of that, run `npx tsc --noEmit` from the app's directory (uses its own `tsconfig.json`, touches neither `.next` nor `node_modules`) — safe to run anytime, including alongside a live `yarn dev`.
+
 ## Structure & conventions
 
 - Single root `yarn.lock`; each app also keeps its own `tsconfig.json` unchanged (`apps/chat` is strict/ESM/DOM-lib since Next handles its own TS compilation and emits nothing; `apps/realtime-server` is non-strict/CommonJS and emits a real `dist/` build) — these are deliberate, real differences and not something to unify.
