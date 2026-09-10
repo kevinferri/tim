@@ -96,7 +96,7 @@ export const messageModel = {
         ...cursor,
       },
       take: MESSAGE_LIMIT,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
 
     return normalizeMessages([...messages].reverse());

@@ -66,7 +66,7 @@ export function useTopicMessages({
   // (oldest-first) render order.
   const pages = data?.pages;
   const messages = useMemo(
-    () => [...(pages ?? [])].reverse().flat(),
+    () => uniqBy([...(pages ?? [])].reverse().flat(), "id"),
     [pages],
   );
 
