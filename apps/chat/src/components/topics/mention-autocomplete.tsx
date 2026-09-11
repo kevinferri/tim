@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getDisplayName } from "@tim/user-display";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,11 @@ export function MentionAutocomplete({
   onHover,
 }: Props) {
   let lastSection: boolean | undefined;
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
 
   return (
     <div
@@ -47,6 +53,9 @@ export function MentionAutocomplete({
               </div>
             )}
             <div
+              ref={(el) => {
+                itemRefs.current[index] = el;
+              }}
               role="option"
               aria-selected={isSelected}
               // mousedown (not click) fires before the textarea blurs, so

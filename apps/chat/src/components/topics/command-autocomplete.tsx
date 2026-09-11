@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CommandInfo } from "@tim/commands";
 import { cn } from "@/lib/utils";
 import { CommandIcon } from "@/components/topics/command-icon";
@@ -17,6 +18,12 @@ export function CommandAutocomplete({
   onSelect,
   onHover,
 }: Props) {
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
   return (
     <div
       role="listbox"
@@ -29,6 +36,9 @@ export function CommandAutocomplete({
         return (
           <div
             key={command.name}
+            ref={(el) => {
+              itemRefs.current[index] = el;
+            }}
             role="option"
             aria-selected={isSelected}
             // mousedown (not click) fires before the textarea blurs, so

@@ -23,7 +23,7 @@ type Props = {
 };
 
 export function TopicSideBar(props: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>("highlights");
+  const [activeTab, setActiveTab] = useState<Tab>("members");
   const { notificationList, clearUnreadNotifications, unreadCount } =
     useTopicNotifications({
       topicId: props.topicId,
@@ -31,6 +31,11 @@ export function TopicSideBar(props: Props) {
     });
 
   const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
+    members: {
+      header: "Circle members",
+      node: <CircleMembersList />,
+      icon: <PersonIcon />,
+    },
     highlights: {
       header: (
         <div className="flex items-center justify-center gap-1">
@@ -42,11 +47,6 @@ export function TopicSideBar(props: Props) {
       icon: <StarIcon />,
     },
     media: { header: "Media", node: <MediaList />, icon: <ImageIcon /> },
-    members: {
-      header: "Circle members",
-      node: <CircleMembersList />,
-      icon: <PersonIcon />,
-    },
     notifications: {
       header: "Notifications",
       node: <NotificationsList notifications={notificationList} />,
@@ -65,7 +65,7 @@ export function TopicSideBar(props: Props) {
 
   return (
     <Tabs
-      defaultValue="highlights"
+      defaultValue="members"
       className="flex flex-col shadow-md border-l hidden w-sidebar-detail lg:w-sidebar-detail-lg md:flex shrink-0"
       onValueChange={(tab) => {
         setActiveTab(tab as Tab);

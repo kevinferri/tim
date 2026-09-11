@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export type TopicLinkCandidate = {
@@ -20,6 +21,12 @@ export function TopicLinkAutocomplete({
   onSelect,
   onHover,
 }: Props) {
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
   return (
     <div
       role="listbox"
@@ -31,6 +38,9 @@ export function TopicLinkAutocomplete({
         return (
           <div
             key={topic.id}
+            ref={(el) => {
+              itemRefs.current[index] = el;
+            }}
             role="option"
             aria-selected={isSelected}
             // mousedown (not click) fires before the textarea blurs, so
