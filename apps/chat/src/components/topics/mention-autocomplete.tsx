@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { getDisplayName } from "@tim/user-display";
 import { cn } from "@/lib/utils";
 
@@ -38,53 +39,59 @@ export function MentionAutocomplete({
   return (
     <div
       role="listbox"
-      className="absolute bottom-full left-0 right-0 z-50 mb-2 max-h-64 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      className="absolute bottom-full left-0 right-0 z-50 mb-2 max-h-64 rounded-md border bg-popover text-popover-foreground shadow-md"
     >
-      {members.map((member, index) => {
-        const showHeader = member.isOnline !== lastSection;
-        lastSection = member.isOnline;
-        const isSelected = index === selectedIndex;
+      <ScrollArea className="max-h-64">
+        <div className="p-1">
+          {members.map((member, index) => {
+            const showHeader = member.isOnline !== lastSection;
+            lastSection = member.isOnline;
+            const isSelected = index === selectedIndex;
 
-        return (
-          <div key={member.id}>
-            {showHeader && (
-              <div className="px-2 pt-1.5 pb-1 text-xs font-medium text-muted-foreground first:pt-0.5">
-                {member.isOnline ? "Online" : "Offline"}
+            return (
+              <div key={member.id}>
+                {showHeader && (
+                  <div className="px-2 pt-1.5 pb-1 text-xs font-medium text-muted-foreground first:pt-0.5">
+                    {member.isOnline ? "Online" : "Offline"}
+                  </div>
+                )}
+                <div
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  role="option"
+                  aria-selected={isSelected}
+                  // mousedown (not click) fires before the textarea blurs, so
+                  // selection still lands while the input keeps focus
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onSelect(member);
+                  }}
+                  onMouseEnter={() => onHover(index)}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
+                    isSelected ? "bg-accent text-accent-foreground" : "",
+                    member.isOnline ? "" : "opacity-60"
+                  )}
+                >
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={member.imageUrl ?? undefined} />
+                    <AvatarFallback className="text-xs">
+                      {member.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {/* Selecting inserts this same display name (see
+                      selectMention in topic-message-bar.tsx) -- full name is
+                      only ever a hover tooltip, never shown outright. */}
+                  <span title={member.name}>
+                    {getDisplayName(member.name)}
+                  </span>
+                </div>
               </div>
-            )}
-            <div
-              ref={(el) => {
-                itemRefs.current[index] = el;
-              }}
-              role="option"
-              aria-selected={isSelected}
-              // mousedown (not click) fires before the textarea blurs, so
-              // selection still lands while the input keeps focus
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onSelect(member);
-              }}
-              onMouseEnter={() => onHover(index)}
-              className={cn(
-                "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
-                isSelected ? "bg-accent text-accent-foreground" : "",
-                member.isOnline ? "" : "opacity-60"
-              )}
-            >
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={member.imageUrl ?? undefined} />
-                <AvatarFallback className="text-xs">
-                  {member.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              {/* Selecting inserts this same display name (see
-                  selectMention in topic-message-bar.tsx) -- full name is
-                  only ever a hover tooltip, never shown outright. */}
-              <span title={member.name}>{getDisplayName(member.name)}</span>
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

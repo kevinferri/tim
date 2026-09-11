@@ -1,6 +1,13 @@
 // If you are updating this from shadcn, make sure you pass the ref to
 // ScrollAreaPrimitive.Viewport and not ScrollAreaPrimitive.Root
 
+// Default type="scroll" instead of Radix's default "hover": under React 19,
+// the "hover" variant's scrollbar never appears in production (verified
+// live) because its internal pointerenter listener is bound via a ref
+// (context.scrollArea) that never gets set on a single-pass production
+// render -- only dev's double-invoked StrictMode effects happen to wire it
+// correctly. "scroll" uses a different, working ref path (context.viewport).
+
 "use client";
 
 import * as React from "react";
@@ -11,8 +18,9 @@ import { cn } from "@/lib/utils";
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, type = "scroll", ...props }, ref) => (
   <ScrollAreaPrimitive.Root
+    type={type}
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
