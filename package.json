@@ -2,12 +2,9 @@
   "name": "tim",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "packageManager": "pnpm@12.4.1",
   "scripts": {
-    "dev": "concurrently -n chat,realtime-server -c blue.bold,green.bold \"yarn workspace chat dev\" \"yarn workspace tim-chat-server watch\""
+    "dev": "concurrently -n chat,realtime-server -c blue.bold,green.bold \"pnpm --filter chat dev\" \"pnpm --filter tim-chat-server watch\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

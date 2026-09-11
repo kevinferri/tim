@@ -8,10 +8,10 @@ A Node.js/TypeScript Socket.IO server (`tim-chat-server`) providing real-time ch
 
 ## Commands
 
-- `yarn watch` — run the dev server with nodemon/ts-node, loading env from `.env.local` (comment/blank lines filtered out before being passed to `env`).
-- `yarn build` — clean install, compile TypeScript to `dist/`, then reinstall with `--production`. This is the deploy build, not a typical local dev command.
-- `yarn start` — run the compiled server from `dist/app.js` (production).
-- There is no test suite (`yarn test` is a placeholder that exits with an error) and no lint script configured.
+- `pnpm watch` — run the dev server with nodemon/ts-node, loading env from `.env.local` (comment/blank lines filtered out before being passed to `env`).
+- `pnpm build` — install, compile TypeScript to `dist/`, then reinstall with `--prod` to drop devDependencies from the shipped `node_modules`. This is the deploy build, not a typical local dev command.
+- `pnpm start` — run the compiled server from `dist/app.js` (production).
+- There is no test suite (`pnpm test` is a placeholder that exits with an error) and no lint script configured.
 
 ## Architecture
 

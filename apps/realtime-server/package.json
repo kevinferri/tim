@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "build": "rm -rf node_modules && yarn install && npx tsc && yarn install --production --ignore-scripts",
+    "build": "pnpm install --frozen-lockfile && npx tsc && pnpm install --prod --frozen-lockfile --ignore-scripts",
     "start": "node dist/app.js",
     "watch": "env $(grep -v '^#' .env.local | grep -v '^$') nodemon src/app.ts",
     "test": "vitest run",
@@ -24,11 +24,11 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@tim/commands": "1.0.0",
-    "@tim/crypto": "1.0.0",
-    "@tim/db-types": "1.0.0",
-    "@tim/socket-types": "1.0.0",
-    "@tim/user-display": "1.0.0",
+    "@tim/commands": "workspace:*",
+    "@tim/crypto": "workspace:*",
+    "@tim/db-types": "workspace:*",
+    "@tim/socket-types": "workspace:*",
+    "@tim/user-display": "workspace:*",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
     "pg": "^8.11.3",
