@@ -63,7 +63,7 @@ export function useTopicScroll() {
     return () => observer.disconnect();
   }, [setIsAtBottom]);
 
-  // Keeps the list pinned to the bottom as its content grows for any
+  // Keeps the list pinned to the bottom as its content changes size for any
   // reason -- a new message, an image or embed finishing load, an edit
   // box expanding, etc. This single mechanism replaces every ad-hoc
   // "scroll after this thing loads" callback the old implementation
@@ -76,8 +76,17 @@ export function useTopicScroll() {
   // the time this callback checked isAtBottomRef it could already read
   // `false` for growth that *caused* it to go false, and skip the very
   // scroll that would fix it. Instead we judge "was at bottom" directly
-  // off the viewport's scroll position against the pre-growth height --
+  // off the viewport's scroll position against the pre-change height --
   // synchronous, and not dependent on the other observer's timing.
+  //
+  // Reacts to a net *shrink* too, not just growth: once the live window
+  // hits its cap (see MESSAGE_LIMIT), a new message arrives trimmed
+  // together with the oldest one dropping out in the very same update
+  // (use-topic-messages.ts). If the dropped message was taller than the
+  // new one, total height goes down even though a message the user should
+  // see just got appended below the fold -- gating on "grew" would skip
+  // the very re-pin that's needed and leave them silently a bit short of
+  // the true bottom.
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
@@ -86,7 +95,7 @@ export function useTopicScroll() {
 
     const observer = new ResizeObserver(() => {
       const nextHeight = content.scrollHeight;
-      const grew = nextHeight > previousHeight;
+      const heightChanged = nextHeight !== previousHeight;
       const viewport = viewportRef.current;
       const wasAtBottom = viewport
         ? viewport.scrollTop + viewport.clientHeight >=
@@ -95,7 +104,7 @@ export function useTopicScroll() {
 
       previousHeight = nextHeight;
 
-      if (grew && wasAtBottom) {
+      if (heightChanged && wasAtBottom) {
         viewport?.scrollTo({ top: nextHeight, behavior: "instant" });
         setIsAtBottom(true);
       }
