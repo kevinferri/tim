@@ -18,27 +18,27 @@ Data model (see `prisma/schema.prisma`): `User` → `Circle` (has members, a cre
 ## Commands
 
 ```bash
-yarn dev                  # Start dev server (localhost:3000)
-yarn build                # Production build
-yarn start                # Applies pending migrations (prisma migrate deploy), then starts the production server
-yarn lint                 # next lint
+pnpm dev                  # Start dev server (localhost:3000)
+pnpm build                # Production build
+pnpm start                # Applies pending migrations (prisma migrate deploy), then starts the production server
+pnpm lint                 # next lint
 
-yarn db:generate           # Regenerate Prisma client after schema changes
-yarn db:push               # Push schema.prisma changes to the DB without a migration (dev-only prototyping)
-yarn db:genpush            # generate + push combined — quick local iteration only, see below
-yarn db:migrate            # Edit schema.prisma, then run this to create + apply a migration file (interactive, prompts for a name)
-yarn db:deploy              # Apply pending migrations without prompting (what `yarn start` runs internally)
-yarn db:studio             # Open Prisma Studio
-yarn db:reset              # Drop and recreate the dev DB from migrations
+pnpm db:generate           # Regenerate Prisma client after schema changes
+pnpm db:push               # Push schema.prisma changes to the DB without a migration (dev-only prototyping)
+pnpm db:genpush            # generate + push combined — quick local iteration only, see below
+pnpm db:migrate            # Edit schema.prisma, then run this to create + apply a migration file (interactive, prompts for a name)
+pnpm db:deploy              # Apply pending migrations without prompting (what `pnpm start` runs internally)
+pnpm db:studio             # Open Prisma Studio
+pnpm db:reset              # Drop and recreate the dev DB from migrations
 ```
 
 All `db:*` scripts run through `dotenv -e .env.local`, so DB env vars only need to live there.
 
 ### Prisma migrations
 
-`prisma/migrations/` is the source of truth for schema history, committed to git. **Schema changes go through `yarn db:migrate`**, which writes a new timestamped folder under `prisma/migrations/` — commit that folder along with the `schema.prisma` edit that produced it. `yarn db:push`/`db:genpush` skip migration history entirely and should stay a dev-only prototyping tool (quickly trying out a shape locally); a change made that way needs a real migration via `db:migrate` before it's real, or it will drift local/prod out of sync with `schema.prisma` again.
+`prisma/migrations/` is the source of truth for schema history, committed to git. **Schema changes go through `pnpm db:migrate`**, which writes a new timestamped folder under `prisma/migrations/` — commit that folder along with the `schema.prisma` edit that produced it. `pnpm db:push`/`db:genpush` skip migration history entirely and should stay a dev-only prototyping tool (quickly trying out a shape locally); a change made that way needs a real migration via `db:migrate` before it's real, or it will drift local/prod out of sync with `schema.prisma` again.
 
-In production, `yarn start` (the Docker `CMD`) runs `prisma migrate deploy` before `next start` on every boot, applying any migrations that shipped in that deploy. This has to happen at container **start**, not image build — DO App Platform doesn't inject `DATABASE_URL` (or any runtime env var) into the Docker build stage, only at container runtime (see `ce668ea`).
+In production, `pnpm start` (the Docker `CMD`) runs `prisma migrate deploy` before `next start` on every boot, applying any migrations that shipped in that deploy. This has to happen at container **start**, not image build — DO App Platform doesn't inject `DATABASE_URL` (or any runtime env var) into the Docker build stage, only at container runtime (see `ce668ea`).
 
 The migration history was baselined from an existing production DB that had no prior migration tracking (schema was managed by hand via `db push`/manual SQL) — see `20260911162439_baseline`. If prod schema ever needs to be baselined again (e.g. after another period of manual changes), the pattern is: generate the migration SQL from `schema.prisma` with `prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`, verify it matches prod's actual live schema with `prisma migrate diff --from-url "$PROD_DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script` (empty output = no drift), then mark it applied on prod without running it via `prisma migrate resolve --applied <migration_name>`.
 
