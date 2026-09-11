@@ -5,6 +5,10 @@ export default defineConfig({
     environment: "node",
     globalSetup: "./vitest.global-setup.mts",
     env: {
+      CRYPTO_KEY: "jom047BDiEp9APuTMuwRog5o3bCDMuDPNEJzP1mykz0=",
+      // Legacy AES-192-CBC vars, kept only for the migration script's own
+      // tests (apps/realtime-server/scripts/migrate-encryption.ts reads
+      // the old scheme from these during the real cutover).
       CRYPTO_ALGORITHM: "aes-192-cbc",
       CRYPTO_SECRET: "test-secret",
       CRYPTO_IV: "0123456789abcdef",

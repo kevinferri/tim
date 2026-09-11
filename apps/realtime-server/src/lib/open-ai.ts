@@ -1,7 +1,7 @@
 import { User as DbUser } from "@tim/db-types";
 import { CommandName, parseCommand } from "@tim/commands";
 import { getDisplayName } from "@tim/user-display";
-import { decrypt } from "./encryption";
+import { decrypt, DecryptionError } from "./encryption";
 import { getMessageHistoryForTopic } from "../db/messages";
 import { getTopicSummary } from "../db/topics";
 import { getCircleMembers } from "../db/circles";
@@ -119,16 +119,31 @@ function describeMediaCommand(
     : "shared a YouTube video";
 }
 
+// Message text pre-dating the encryption cutover migration would throw
+// here -- drop it from the transcript rather than crash the request.
+function decryptSafely(text: string, messageId: string): string {
+  try {
+    return decrypt(text, messageId);
+  } catch (err) {
+    if (err instanceof DecryptionError) {
+      console.error(`[open-ai] failed to decrypt message ${messageId}:`, err);
+      return "";
+    }
+    throw err;
+  }
+}
+
 // Each history row is one prior message in the topic, joined with its
 // sender's name. Every turn is attributed ("Name: text") since this is a
 // group chat -- without that, every speaker collapses into one anonymous
 // "user" role and the model can't tell who said what.
 function convertDbRowToMessages(row: {
+  id: string;
   text: string;
   mediaUrl: string;
   name: string;
 }): ChatMessage[] {
-  const rawText = row.text ? decrypt(row.text) : "";
+  const rawText = row.text ? decryptSafely(row.text, row.id) : "";
   const botResponse = row.mediaUrl;
   const command = parseCommand(rawText);
   const speaker = getDisplayName(row.name);

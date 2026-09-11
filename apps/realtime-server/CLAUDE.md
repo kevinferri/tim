@@ -39,4 +39,4 @@ Handlers consistently follow: validate payload → verify room membership/author
 
 ## Environment variables
 
-`WS_PORT`, `FRONTEND_URL` (CORS origin), `JWT_SECRET`, `DATABASE_URL`, `DATABASE_SSL_CERT` (base64 CA cert, required only in production), `CRYPTO_ALGORITHM`/`CRYPTO_IV`/`CRYPTO_SECRET` (message encryption), `GIPHY_KEY`, `YOUTUBE_ID`/`YOUTUBE_KEY`/`YOUTUBE_SECRET`, `OPENAI_API_KEY`, `DEBUG`.
+`WS_PORT`, `FRONTEND_URL` (CORS origin), `JWT_SECRET`, `DATABASE_URL`, `DATABASE_SSL_CERT` (base64 CA cert, required only in production), `CRYPTO_KEY` (base64 32-byte AES-256-GCM key, message encryption -- see `packages/crypto`; `scripts/migrate-encryption.ts` additionally needs the legacy `CRYPTO_ALGORITHM`/`CRYPTO_IV`/`CRYPTO_SECRET` vars until the one-time re-encryption migration has been run against production), `GIPHY_KEY`, `YOUTUBE_ID`/`YOUTUBE_KEY`/`YOUTUBE_SECRET`, `OPENAI_API_KEY`, `DEBUG`.

@@ -11,9 +11,7 @@ export default defineConfig({
     environment: "node",
     globalSetup: "./vitest.global-setup.ts",
     env: {
-      CRYPTO_ALGORITHM: "aes-192-cbc",
-      CRYPTO_SECRET: "test-secret",
-      CRYPTO_IV: "0123456789abcdef",
+      CRYPTO_KEY: "jom047BDiEp9APuTMuwRog5o3bCDMuDPNEJzP1mykz0=",
     },
     // Integration tests share one real Postgres instance and mutate the
     // same tables (see src/test/db.ts's resetDb) -- running files in

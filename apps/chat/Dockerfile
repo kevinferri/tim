@@ -31,6 +31,7 @@ RUN yarn install --frozen-lockfile
 RUN yarn workspace @tim/socket-types build
 RUN yarn workspace @tim/commands build
 RUN yarn workspace @tim/user-display build
+RUN yarn workspace @tim/crypto build
 
 WORKDIR /app/apps/chat
 RUN yarn build

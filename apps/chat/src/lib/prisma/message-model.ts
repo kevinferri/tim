@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prismaClient } from "@/lib/prisma/client";
-import { decrypt } from "@/lib/decryption";
+import { decrypt, DecryptionError } from "@/lib/decryption";
 
 type MessageArgs = {
   topicId?: string;
@@ -39,20 +39,25 @@ export const DEFAULT_MESSAGE_SELECT = {
   },
 };
 
-export const normalizeMessages = <T extends { text?: string | null }>(
+export const normalizeMessages = <
+  T extends { id: string; text?: string | null },
+>(
   messages: T[],
 ): (Omit<T, "text"> & { text?: string })[] =>
   messages.map((message) => ({
     ...message,
-    text: getReadableMessage(message.text),
+    text: getReadableMessage(message.text, message.id),
   }));
 
-function getReadableMessage(text?: string | null) {
+function getReadableMessage(text: string | null | undefined, messageId: string) {
   if (!text) return undefined;
 
   try {
-    return decrypt(text);
-  } catch {
+    return decrypt(text, messageId);
+  } catch (err) {
+    if (err instanceof DecryptionError) {
+      console.error(`[message ${messageId}] failed to decrypt:`, err);
+    }
     return "";
   }
 }

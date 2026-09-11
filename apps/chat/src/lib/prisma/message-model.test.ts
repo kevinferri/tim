@@ -1,19 +1,9 @@
 import crypto from "crypto";
 import { beforeEach, describe, it, expect } from "vitest";
 import { prismaClient, resetDb } from "@/test/db";
+import { encrypt } from "@tim/crypto";
 
 beforeEach(resetDb);
-
-// message text is stored encrypted at rest (apps/chat/src/lib/decryption.ts
-// only decrypts); mirrors apps/realtime-server/src/lib/encryption.ts using
-// the CRYPTO_* env vars set in vitest.config.mts.
-function encrypt(text: string) {
-  const algorithm = process.env.CRYPTO_ALGORITHM as string;
-  const key = crypto.scryptSync(process.env.CRYPTO_SECRET as string, "salt", 24);
-  const iv = Buffer.from(process.env.CRYPTO_IV as string, "utf8");
-  const cipher = crypto.createCipheriv(algorithm, key, iv);
-  return cipher.update(text, "utf8", "hex") + cipher.final("hex");
-}
 
 async function createUser() {
   return prismaClient.user.create({
@@ -39,11 +29,17 @@ async function createMessage(
   topicId: string,
   overrides: Partial<{ text: string; mediaUrl: string | null }> = {}
 ) {
+  // The AAD binds ciphertext to its row id, so the id has to be known
+  // before encrypting -- generate it up front instead of relying on
+  // Prisma's DB-side @default(uuid()).
+  const id = crypto.randomUUID();
+
   return prismaClient.message.create({
     data: {
+      id,
       userId,
       topicId,
-      text: encrypt(overrides.text ?? "hello"),
+      text: encrypt(overrides.text ?? "hello", id),
       mediaUrl: overrides.mediaUrl,
     },
   });
@@ -78,7 +74,7 @@ describe("messageModel.getMessagesForTopic", () => {
     const messages = await prismaClient.message.getMessagesForTopic({
       requestingUserId: user.id,
       topicId: topic.id,
-      select: { text: true, createdAt: true },
+      select: { id: true, text: true, createdAt: true },
     });
 
     expect(messages.map((m) => m.text)).toEqual(["first", "second"]);
@@ -106,7 +102,7 @@ describe("messageModel.getTopHighlightedMessagesForTopic", () => {
     const messages = await prismaClient.message.getTopHighlightedMessagesForTopic({
       requestingUserId: user.id,
       topicId: topic.id,
-      select: { text: true, highlights: { select: { id: true } } },
+      select: { id: true, text: true, highlights: { select: { id: true } } },
     });
 
     expect(messages).toHaveLength(1);

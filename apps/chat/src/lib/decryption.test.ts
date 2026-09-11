@@ -1,27 +1,26 @@
-import crypto from "crypto";
 import { describe, it, expect } from "vitest";
-import { decrypt } from "@/lib/decryption";
+import { decrypt, DecryptionError } from "@/lib/decryption";
 
 // chat only ever decrypts (realtime-server owns encrypt, see
-// apps/realtime-server/src/lib/encryption.ts) -- this mirrors that
-// algorithm locally so the round trip can be tested from this side using
-// the CRYPTO_* env vars set in vitest.config.ts.
-function encrypt(text: string) {
-  const algorithm = process.env.CRYPTO_ALGORITHM as string;
-  const key = crypto.scryptSync(process.env.CRYPTO_SECRET as string, "salt", 24);
-  const iv = Buffer.from(process.env.CRYPTO_IV as string, "utf8");
-  const cipher = crypto.createCipheriv(algorithm, key, iv);
-  return cipher.update(text, "utf8", "hex") + cipher.final("hex");
-}
+// packages/crypto/src/index.ts) -- this imports the same package's encrypt
+// so the round trip can be tested from this side using the CRYPTO_KEY set
+// in vitest.config.mts.
+import { encrypt } from "@tim/crypto";
 
 describe("decrypt", () => {
-  it("reverses encryption produced with the same key/iv/algorithm", () => {
+  it("reverses encryption produced with the same key and AAD", () => {
     const plaintext = "hello, tim";
-    expect(decrypt(encrypt(plaintext))).toBe(plaintext);
+    expect(decrypt(encrypt(plaintext, "msg-1"), "msg-1")).toBe(plaintext);
   });
 
   it("round-trips text containing unicode", () => {
     const plaintext = "🎉 emoji and ünïcödé";
-    expect(decrypt(encrypt(plaintext))).toBe(plaintext);
+    expect(decrypt(encrypt(plaintext, "msg-1"), "msg-1")).toBe(plaintext);
+  });
+
+  it("throws when the AAD (messageId) doesn't match", () => {
+    const envelope = encrypt("hello, tim", "msg-1");
+
+    expect(() => decrypt(envelope, "msg-2")).toThrow(DecryptionError);
   });
 });

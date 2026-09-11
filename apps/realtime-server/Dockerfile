@@ -23,6 +23,7 @@ RUN yarn workspace @tim/socket-types build
 RUN yarn workspace @tim/db-types build
 RUN yarn workspace @tim/commands build
 RUN yarn workspace @tim/user-display build
+RUN yarn workspace @tim/crypto build
 
 WORKDIR /app/apps/realtime-server
 RUN npx tsc

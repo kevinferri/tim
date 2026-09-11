@@ -21,10 +21,12 @@ export async function writeMessage({
   text,
   mediaUrl,
 }: WriteMessageArgs) {
+  const id = v4();
+
   const message = await pgClient<Message>("messages")
     .insert({
-      id: v4(),
-      text: encrypt(text),
+      id,
+      text: encrypt(text, id),
       mediaUrl,
       userId,
       topicId,
@@ -75,9 +77,9 @@ export async function getMessageHistoryForTopic({
   // leaves Postgres free to return them in either order. ctid (physical row
   // location) breaks the tie: it tracks insertion order for appended rows,
   // which is all this table does outside of in-place edits.
-  const rows: { text: string; mediaUrl: string; name: string }[] =
+  const rows: { id: string; text: string; mediaUrl: string; name: string }[] =
     await pgClient("messages")
-      .select("messages.text", "messages.mediaUrl", "users.name")
+      .select("messages.id", "messages.text", "messages.mediaUrl", "users.name")
       .join("users", "messages.userId", "users.id")
       .where("messages.topicId", topicId)
       .orderBy("messages.createdAt", "desc")
@@ -108,7 +110,7 @@ export async function editMessage({
     .where("userId", userId)
     .update(
       {
-        text: encrypt(text),
+        text: encrypt(text, messageId),
         mediaUrl,
       },
       ["id", "text", "mediaUrl"]

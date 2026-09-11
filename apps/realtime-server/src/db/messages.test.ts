@@ -45,7 +45,7 @@ describe("writeMessage", () => {
 
     const message = await writeMessage({ userId, topicId, text: "hello world", mediaUrl: undefined as any });
 
-    expect(decrypt(message.text!)).toBe("hello world");
+    expect(decrypt(message.text!, message.id)).toBe("hello world");
 
     const stored = await pgClient("messages").where("id", message.id).first();
     expect(stored.text).not.toBe("hello world");
@@ -61,7 +61,7 @@ describe("editMessage", () => {
 
     const edited = await editMessage({ userId, messageId: message.id, text: "edited", mediaUrl: undefined });
 
-    expect(decrypt(edited.text!)).toBe("edited");
+    expect(decrypt(edited.text!, edited.id)).toBe("edited");
   });
 
   it("does not update a message owned by a different user", async () => {
@@ -138,7 +138,7 @@ describe("getMessageHistoryForTopic", () => {
     const history = await getMessageHistoryForTopic({ topicId, limit: 10 });
 
     expect(history).toHaveLength(2);
-    expect(history.map((m) => decrypt(m.text))).toEqual(["first", "second"]);
+    expect(history.map((m) => decrypt(m.text, m.id))).toEqual(["first", "second"]);
     expect(history[0].name).toBe("Test User");
   });
 
@@ -152,7 +152,7 @@ describe("getMessageHistoryForTopic", () => {
 
     const history = await getMessageHistoryForTopic({ topicId, limit: 2 });
 
-    expect(history.map((m) => decrypt(m.text))).toEqual(["second", "third"]);
+    expect(history.map((m) => decrypt(m.text, m.id))).toEqual(["second", "third"]);
   });
 });
 

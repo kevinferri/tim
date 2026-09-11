@@ -50,9 +50,10 @@ beforeEach(() => {
 describe("getChatGpt", () => {
   it("attributes each history message to its sender by name", async () => {
     vi.mocked(getMessageHistoryForTopic).mockResolvedValue([
-      { text: encrypt("hey everyone"), mediaUrl: "", name: "Alice Smith" },
+      { id: "m1", text: encrypt("hey everyone", "m1"), mediaUrl: "", name: "Alice Smith" },
       {
-        text: encrypt("/tim summarize the thread"),
+        id: "m2",
+        text: encrypt("/tim summarize the thread", "m2"),
         mediaUrl: "Tim's earlier reply",
         name: "Bob Jones",
       },
@@ -85,7 +86,7 @@ describe("getChatGpt", () => {
 
   it("carries speaker names into the transcript for a summary request", async () => {
     vi.mocked(getMessageHistoryForTopic).mockResolvedValue([
-      { text: encrypt("shipped the fix"), mediaUrl: "", name: "Alice Smith" },
+      { id: "m1", text: encrypt("shipped the fix", "m1"), mediaUrl: "", name: "Alice Smith" },
     ] as any);
     mockOpenAiResponse("a recap");
 
@@ -107,7 +108,8 @@ describe("getChatGpt", () => {
   it("describes a non-tim command naturally instead of leaving raw slash syntax", async () => {
     vi.mocked(getMessageHistoryForTopic).mockResolvedValue([
       {
-        text: encrypt("/giphy cats"),
+        id: "m1",
+        text: encrypt("/giphy cats", "m1"),
         mediaUrl: "http://gif.example/cats.gif",
         name: "Alice Smith",
       },
@@ -133,7 +135,8 @@ describe("getChatGpt", () => {
   it("labels Tim's own past replies in the summary transcript without touching the live message history", async () => {
     vi.mocked(getMessageHistoryForTopic).mockResolvedValue([
       {
-        text: encrypt("/tim summarize"),
+        id: "m1",
+        text: encrypt("/tim summarize", "m1"),
         mediaUrl: "Tim's earlier reply",
         name: "Bob Jones",
       },

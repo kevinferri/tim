@@ -42,7 +42,7 @@ describe("handleSendMessage", () => {
   it("saves a plain message and emits it decrypted to the circle room", async () => {
     vi.mocked(writeMessage).mockResolvedValue({
       id: "msg-1",
-      text: encrypt("hello"),
+      text: encrypt("hello", "msg-1"),
       topicId: "topic-1",
       mediaUrl: undefined,
     } as any);
@@ -86,7 +86,7 @@ describe("handleSendMessage", () => {
     vi.mocked(getRandomGif).mockResolvedValue("http://gif.example/cats.gif");
     vi.mocked(writeMessage).mockResolvedValue({
       id: "msg-1",
-      text: encrypt("/giphy cats"),
+      text: encrypt("/giphy cats", "msg-1"),
       topicId: "topic-1",
       mediaUrl: "http://gif.example/cats.gif",
     } as any);
@@ -111,7 +111,7 @@ describe("handleSendMessage", () => {
   it("notifies a mentioned user who's connected in the circle room", async () => {
     vi.mocked(writeMessage).mockResolvedValue({
       id: "msg-1",
-      text: encrypt("hey @Bob"),
+      text: encrypt("hey @Bob", "msg-1"),
       topicId: "topic-1",
       mediaUrl: undefined,
     } as any);
@@ -179,7 +179,7 @@ describe("handleEditMessage", () => {
   it("edits and emits the message decrypted", async () => {
     vi.mocked(editMessage).mockResolvedValue({
       id: "msg-1",
-      text: encrypt("updated"),
+      text: encrypt("updated", "msg-1"),
       mediaUrl: undefined,
     } as any);
 
@@ -230,7 +230,7 @@ describe("handleShuffleGif", () => {
   it("fetches a new gif for the message's command prompt and emits it", async () => {
     vi.mocked(getMessageForUser).mockResolvedValue({
       id: "msg-1",
-      text: encrypt("/giphy cats"),
+      text: encrypt("/giphy cats", "msg-1"),
     } as any);
     vi.mocked(getRandomGif).mockResolvedValue("http://gif.example/new.gif");
     vi.mocked(editMessage).mockResolvedValue({ id: "msg-1", mediaUrl: "http://gif.example/new.gif" } as any);

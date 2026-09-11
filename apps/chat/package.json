@@ -41,6 +41,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@tanstack/react-query": "^5.102.8",
     "@tim/commands": "1.0.0",
+    "@tim/crypto": "1.0.0",
     "@tim/socket-types": "1.0.0",
     "@tim/user-display": "1.0.0",
     "@types/lodash.keyby": "^4.6.9",

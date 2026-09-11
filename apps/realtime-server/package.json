@@ -6,9 +6,10 @@
   "scripts": {
     "build": "rm -rf node_modules && yarn install && npx tsc && yarn install --production --ignore-scripts",
     "start": "node dist/app.js",
-    "watch": "env $(cat .env.local) nodemon src/app.ts",
+    "watch": "env $(grep -v '^#' .env.local | grep -v '^$') nodemon src/app.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "migrate:encryption": "env $(grep -v '^#' .env.local | grep -v '^$') ts-node scripts/migrate-encryption.ts"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +26,7 @@
   },
   "dependencies": {
     "@tim/commands": "1.0.0",
+    "@tim/crypto": "1.0.0",
     "@tim/db-types": "1.0.0",
     "@tim/socket-types": "1.0.0",
     "@tim/user-display": "1.0.0",
