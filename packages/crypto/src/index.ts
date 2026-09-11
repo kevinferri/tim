@@ -33,9 +33,21 @@ function loadKey(): Buffer {
   return key;
 }
 
-// Loaded eagerly so a missing/malformed key fails at import time (app
-// startup) instead of on the first encrypt()/decrypt() call.
-const key = loadKey();
+// Loaded lazily (not at import time) and memoized: apps/chat's Next.js
+// build statically evaluates every page's module graph (including this
+// one, via decryption.ts) to collect page data, and DigitalOcean's
+// Dockerfile-based builds don't inject RUN_AND_BUILD_TIME env vars into
+// that build step -- an eager top-level throw here would fail `next build`
+// itself, not just a misconfigured runtime. A missing/malformed key still
+// throws immediately on the first real encrypt()/decrypt() call, which in
+// practice happens within moments of either app actually starting to serve
+// traffic, so this is still effectively fail-fast for a real deployment.
+let key: Buffer | undefined;
+
+function getKey(): Buffer {
+  if (!key) key = loadKey();
+  return key;
+}
 
 /**
  * Encrypts `plaintext` with AES-256-GCM, using `aad` (e.g. a message id) as
@@ -46,7 +58,7 @@ const key = loadKey();
  */
 export function encrypt(plaintext: string, aad: string): string {
   const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv);
   cipher.setAAD(Buffer.from(aad, "utf8"));
 
   const ciphertext = Buffer.concat([
@@ -85,7 +97,7 @@ export function decrypt(envelope: string, aad: string): string {
   const ciphertext = Buffer.from(ciphertextHex, "hex");
 
   try {
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), iv);
     decipher.setAAD(Buffer.from(aad, "utf8"));
     decipher.setAuthTag(authTag);
 
