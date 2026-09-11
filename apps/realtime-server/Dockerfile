@@ -21,6 +21,8 @@ RUN cd apps/chat && npm pkg delete devDependencies.embedded-postgres
 RUN yarn install --frozen-lockfile
 RUN yarn workspace @tim/socket-types build
 RUN yarn workspace @tim/db-types build
+RUN yarn workspace @tim/commands build
+RUN yarn workspace @tim/user-display build
 
 WORKDIR /app/apps/realtime-server
 RUN npx tsc
