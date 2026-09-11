@@ -10,9 +10,26 @@ declare global {
   var prismaClient: ReturnType<typeof createClient> | undefined;
 }
 
+const withPoolLimits = (databaseUrl: string) => {
+  const url = new URL(databaseUrl);
+  if (!url.searchParams.has("connection_limit")) {
+    url.searchParams.set(
+      "connection_limit",
+      process.env.DB_CONNECTION_LIMIT ?? "5"
+    );
+  }
+  if (!url.searchParams.has("pool_timeout")) {
+    url.searchParams.set("pool_timeout", process.env.DB_POOL_TIMEOUT ?? "10");
+  }
+  return url.toString();
+};
+
 const createClient = () => {
   const baseClient = new PrismaClient({
     log: ["error"],
+    datasources: {
+      db: { url: withPoolLimits(process.env.DATABASE_URL as string) },
+    },
   });
 
   return baseClient.$extends({

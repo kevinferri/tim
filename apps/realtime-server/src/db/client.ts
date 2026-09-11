@@ -28,6 +28,10 @@ const pgClientSingleton = () => {
       connectionString,
       ssl,
     },
+    pool: {
+      min: Number(process.env.DB_POOL_MIN) || 2,
+      max: Number(process.env.DB_POOL_MAX) || 5,
+    },
     searchPath: ["knex", "public"],
     useNullAsDefault: true,
   });
