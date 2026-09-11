@@ -27,16 +27,11 @@ const createClient = () => {
   });
 };
 
-let prismaClient: ReturnType<typeof createClient>;
-
-if (process.env.NODE_ENV === "production") {
-  prismaClient = createClient();
-} else {
-  if (!global.prismaClient) {
-    global.prismaClient = createClient();
-  }
-  prismaClient = global.prismaClient;
+if (!global.prismaClient) {
+  global.prismaClient = createClient();
 }
+
+const prismaClient = global.prismaClient;
 
 export { prismaClient };
 
