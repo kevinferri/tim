@@ -1,7 +1,6 @@
 "use client";
 
-import { useLayoutEffect } from "react";
-import { useEffectOnce } from "@/lib/hooks/use-effect-once";
+import { useEffect, useLayoutEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   getMessagePositionFlags,
@@ -51,14 +50,15 @@ export function TopicChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffectOnce(() => {
+  useEffect(() => {
     joinRoom(topicId, RoomType.Topic);
 
     return () => {
       markTopicAsRead(topicId);
       leaveRoom(topicId, RoomType.Topic);
     };
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topicId]);
 
   if (messages.length === 0) {
     return (
