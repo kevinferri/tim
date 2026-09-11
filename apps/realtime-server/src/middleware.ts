@@ -15,7 +15,9 @@ export function middleware(
   if (!token) return invalidCredentialsError(next);
 
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+    const user = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    }) as JwtPayload;
     const state = getInitialActiveUserState();
 
     socket.data.user = { ...user, state };

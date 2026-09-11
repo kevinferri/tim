@@ -147,7 +147,7 @@ describe("handleUserUpdatedStatus", () => {
     handleUserUpdatedStatus({ socket: socket as any, server: server as any });
 
     const payload = {
-      circleId: "circle-1",
+      circleIds: ["circle-1"],
       user: { id: "user-1", status: "afk", lastStatusUpdate: "2026-01-01" },
     };
     await socket.trigger(SocketEvent.UserUpdatedStatus, payload);
@@ -156,7 +156,26 @@ describe("handleUserUpdatedStatus", () => {
       status: "afk",
       lastStatusUpdate: "2026-01-01",
     });
+    expect(server.to).toHaveBeenCalledWith(["circle::circle-1"]);
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserUpdatedStatus, payload);
+  });
+
+  it("broadcasts once across all shared circle rooms instead of once per circle", async () => {
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    socket.rooms.add("circle::circle-2");
+    const server = createMockServer();
+    handleUserUpdatedStatus({ socket: socket as any, server: server as any });
+
+    const payload = {
+      circleIds: ["circle-1", "circle-2"],
+      user: { id: "user-1", status: "afk", lastStatusUpdate: "2026-01-01" },
+    };
+    await socket.trigger(SocketEvent.UserUpdatedStatus, payload);
+
+    expect(server.to).toHaveBeenCalledTimes(1);
+    expect(server.to).toHaveBeenCalledWith(["circle::circle-1", "circle::circle-2"]);
+    expect(server.emit).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a payload whose user id doesn't match the acting socket", async () => {
@@ -166,7 +185,7 @@ describe("handleUserUpdatedStatus", () => {
     handleUserUpdatedStatus({ socket: socket as any, server: server as any });
 
     await socket.trigger(SocketEvent.UserUpdatedStatus, {
-      circleId: "circle-1",
+      circleIds: ["circle-1"],
       user: { id: "someone-else", status: "afk" },
     });
 
@@ -180,7 +199,7 @@ describe("handleUserUpdatedStatus", () => {
     handleUserUpdatedStatus({ socket: socket as any, server: server as any });
 
     await socket.trigger(SocketEvent.UserUpdatedStatus, {
-      circleId: "circle-1",
+      circleIds: ["circle-1"],
       user: { id: "user-1", status: "afk" },
     });
 

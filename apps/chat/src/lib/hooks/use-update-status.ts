@@ -11,11 +11,9 @@ export function useUpdateUserStatus() {
     const resp = await updateUserStatus(status);
 
     if (resp && resp.data) {
-      circleIds.forEach((circleId) => {
-        updateUserStatusEmitter.emit({
-          user: resp.data,
-          circleId,
-        });
+      updateUserStatusEmitter.emit({
+        user: resp.data,
+        circleIds,
       });
     }
   };

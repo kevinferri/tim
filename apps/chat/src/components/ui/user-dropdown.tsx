@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { ExitIcon, SewingPinFilledIcon } from "@radix-ui/react-icons";
+import { getDisplayName } from "@tim/user-display";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,29 +18,31 @@ import { ConnectionStatus } from "@/components/socket/connection-status";
 import { SetStatusModal } from "@/components/dashboard/set-status-modal";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
-import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
-import { UserUpdatedStatusHandlerProps } from "@/components/dashboard/user-status";
+import {
+  UserUpdatedStatusPayload,
+  useUserStatus,
+} from "@/components/dashboard/user-status-store";
 
 export function UserDropDown() {
   const self = useSelf();
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const { updateStatus } = useUpdateUserStatus();
-  const router = useRouter();
+  const { status } = useUserStatus(self.id, {
+    status: self.status,
+    lastStatusUpdate: self.lastStatusUpdate,
+  });
 
-  useSocketHandler<UserUpdatedStatusHandlerProps>(
+  useSocketHandler<UserUpdatedStatusPayload>(
     SocketEvent.UserUpdatedStatus,
     (payload) => {
-      if (payload.user.id === self.id) {
-        router.refresh();
-        return;
-      }
+      if (payload.user.id === self.id) return;
 
       if (payload.user.status) {
         toast({
-          description: `${
-            payload.user.name.split(" ")[0]
-          } updated their status to "${payload.user.status}"`,
+          description: `${getDisplayName(
+            payload.user.name
+          )} updated their status to "${payload.user.status}"`,
         });
       }
     }
@@ -78,15 +81,14 @@ export function UserDropDown() {
           <DropdownMenuItem
             className="flex gap-3"
             onClick={() => {
-              if (self.status) {
+              if (status) {
                 updateStatus(null);
               } else {
                 setStatusModalOpen(true);
               }
             }}
           >
-            <SewingPinFilledIcon />{" "}
-            {self.status ? "Clear status" : "Set status"}
+            <SewingPinFilledIcon /> {status ? "Clear status" : "Set status"}
           </DropdownMenuItem>
           <Separator />
           <DropdownMenuItem onClick={() => signOut()} className="flex gap-3">

@@ -31,6 +31,7 @@ export async function GET(req: NextRequest, { params }: Route) {
     const topic = await prismaClient.topic.getNameWithMemberIds({ topicId });
 
     if (!topic) return badRequest;
+    if (!topic.memberIds.includes(loggedInUserId)) return notFound;
     if (!topic.memberIds.includes(userId)) return notFound;
 
     const where = { userId };

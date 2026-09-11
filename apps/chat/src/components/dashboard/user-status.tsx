@@ -20,15 +20,6 @@ type Props = {
 
 export const STATUS_COLOR = "bg-warning";
 
-export type UserUpdatedStatusHandlerProps = {
-  user: {
-    name: string;
-    status?: string;
-    id: string;
-    lastStatusUpdate?: Date;
-  };
-};
-
 export function UserStatus(props: Props) {
   const self = useSelf();
   const { updateStatus } = useUpdateUserStatus();

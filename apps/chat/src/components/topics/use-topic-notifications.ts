@@ -1,4 +1,5 @@
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { NotificationType } from "@tim/socket-types";
 import { useCallback, useMemo } from "react";
 import { User } from "@prisma/client";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
@@ -8,16 +9,11 @@ type NotificationActor = Pick<User, "id" | "name" | "imageUrl">;
 
 export type TopicNotification = {
   messageId: string;
-  type: TopicNotificationType;
+  type: NotificationType;
   actor: NotificationActor;
 };
 
-export enum TopicNotificationType {
-  HighlightRecieved = "highlight:recieved",
-  HighlightRemoved = "highlight:removed",
-  ImageExpanded = "image:expanded",
-  ClickedLink = "link:clicked",
-}
+export { NotificationType };
 
 const NOTIFICATION_LIMIT = 20;
 
@@ -47,7 +43,7 @@ export function useTopicNotifications({
   useSocketHandler<{
     messageId: string;
     actor: NotificationActor;
-    notificationType: TopicNotificationType;
+    notificationType: NotificationType;
   }>(SocketEvent.CreateNotification, (payload) => {
     const newNotification = {
       messageId: payload.messageId,

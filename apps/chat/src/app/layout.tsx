@@ -1,5 +1,5 @@
 import React, { cache } from "react";
-import { GeistSans } from "geist/font/sans";
+import { Inter } from "next/font/google";
 import jwt from "jsonwebtoken";
 import { User } from "@prisma/client";
 import { ThemeProvider } from "@/components/ui/theme-provider";
@@ -10,6 +10,7 @@ import { prismaClient } from "@/lib/prisma/client";
 import { getLoggedInUserId } from "@/lib/session";
 import { SelfProvider } from "@/components/auth/self-provider";
 import { PresenceSync } from "@/components/dashboard/presence-sync";
+import { UserStatsHighlightSync } from "@/components/dashboard/user-stats-highlight-sync";
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
@@ -21,6 +22,11 @@ import { Routes } from "@/routes";
 import { DEFAULT_TITLE } from "@/lib/constants";
 
 import "@/globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 const getLoggedInUser = cache(async () => {
   const userId = await getLoggedInUserId();
@@ -49,8 +55,14 @@ export async function generateMetadata() {
 }
 
 async function getSocketConfig(user?: User) {
+  if (user && !process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not set");
+  }
+
   const token = user
-    ? jwt.sign(JSON.stringify(user), process.env.JWT_SECRET ?? "")
+    ? jwt.sign(user, process.env.JWT_SECRET as string, {
+        expiresIn: "24h",
+      })
     : undefined;
 
   return {
@@ -62,7 +74,7 @@ async function getSocketConfig(user?: User) {
 
 function BaseLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={GeistSans.className} suppressHydrationWarning>
+    <html lang="en" className={inter.className} suppressHydrationWarning>
       <head />
       <body>
         <ThemeProvider
@@ -108,6 +120,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
       <SelfProvider user={user}>
         <SocketProvider {...socketConfig}>
           <PresenceSync />
+          <UserStatsHighlightSync />
           <UserRoomConnect>
             <CircleRoomConnect circleIds={circleIds ?? []}>
               <div className="flex flex-col h-screen">

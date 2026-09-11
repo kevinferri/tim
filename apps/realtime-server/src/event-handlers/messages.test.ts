@@ -15,6 +15,9 @@ vi.mock("../lib/media-fetchers", () => ({
 vi.mock("../lib/open-ai", () => ({
   getChatGpt: vi.fn(),
 }));
+vi.mock("../db/topics", () => ({
+  isUserInTopic: vi.fn().mockResolvedValue(true),
+}));
 
 import {
   writeMessage,
@@ -102,6 +105,33 @@ describe("handleSendMessage", () => {
     expect(getRandomGif).toHaveBeenCalledWith("cats");
     expect(writeMessage).toHaveBeenCalledWith(
       expect.objectContaining({ mediaUrl: "http://gif.example/cats.gif" })
+    );
+  });
+
+  it("notifies a mentioned user who's connected in the circle room", async () => {
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-1",
+      text: encrypt("hey @Bob"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const bobSocket = createMockSocket({ id: "bob" });
+    const server = createMockServer({ socketsInRoom: [bobSocket as any] });
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "hey @Bob",
+      mentionedUserIds: ["bob"],
+    });
+
+    expect(bobSocket.emit).toHaveBeenCalledWith(
+      "notification:create",
+      expect.objectContaining({ messageId: "msg-1", topicId: "topic-1" })
     );
   });
 });

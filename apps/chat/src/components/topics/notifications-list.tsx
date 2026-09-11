@@ -4,11 +4,13 @@ import { useMemo } from "react";
 import { useQueryState } from "nuqs";
 import keyBy from "lodash.keyby";
 import {
+  ChatBubbleIcon,
   Link2Icon,
   MagnifyingGlassIcon,
   StarFilledIcon,
   StarIcon,
 } from "@radix-ui/react-icons";
+import { getDisplayName } from "@tim/user-display";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   getMessagePositionFlags,
@@ -22,7 +24,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   TopicNotification,
-  TopicNotificationType,
+  NotificationType,
 } from "@/components/topics/use-topic-notifications";
 
 type Props = {
@@ -30,21 +32,25 @@ type Props = {
 };
 
 const copyMap = {
-  [TopicNotificationType.HighlightRecieved]: {
+  [NotificationType.HighlightRecieved]: {
     text: "highlighted your message",
     icon: <StarFilledIcon />,
   },
-  [TopicNotificationType.HighlightRemoved]: {
+  [NotificationType.HighlightRemoved]: {
     text: "removed a highlight",
     icon: <StarIcon />,
   },
-  [TopicNotificationType.ImageExpanded]: {
+  [NotificationType.ExpandedImage]: {
     text: "expanded your image",
     icon: <MagnifyingGlassIcon />,
   },
-  [TopicNotificationType.ClickedLink]: {
+  [NotificationType.ClickedLink]: {
     text: "clicked your link",
     icon: <Link2Icon />,
+  },
+  [NotificationType.Mentioned]: {
+    text: "mentioned you",
+    icon: <ChatBubbleIcon />,
   },
 };
 
@@ -82,7 +88,7 @@ export function NotificationsList(props: Props) {
               <div className="flex flex-col gap-1 w-full">
                 <div className="text-sm text-muted-foreground mt-[-2px] flex items-center gap-1">
                   {copyMap[notification.type].icon}
-                  {notification.actor.name?.split(" ")[0]}{" "}
+                  {getDisplayName(notification.actor.name)}{" "}
                   {copyMap[notification.type].text}
                 </div>
                 <Card>

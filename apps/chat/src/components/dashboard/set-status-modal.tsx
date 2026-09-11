@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { DialogClose } from "@/components/ui/dialog";
 import { useSelf } from "../auth/self-provider";
 import { Input } from "../ui/input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
+import { useUserStatus } from "@/components/dashboard/user-status-store";
 
 type Props = {
   open?: boolean;
@@ -20,8 +21,20 @@ type Props = {
 
 export function SetStatusModal(props: Props) {
   const self = useSelf();
-  const [status, setStatus] = useState(self.status);
+  const liveStatus = useUserStatus(self.id, {
+    status: self.status,
+    lastStatusUpdate: self.lastStatusUpdate,
+  });
+  const [status, setStatus] = useState(liveStatus.status);
   const { updateStatus } = useUpdateUserStatus();
+
+  // The dialog never unmounts (its parent always renders it, toggling
+  // `open`), so this local draft would otherwise keep whatever value it
+  // had the first time the dialog opened -- resync it each time it opens.
+  useEffect(() => {
+    if (props.open) setStatus(liveStatus.status);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.open]);
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>

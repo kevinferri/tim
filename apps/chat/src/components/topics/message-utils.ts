@@ -1,5 +1,6 @@
 import { ChangeEvent } from "react";
 import { find } from "linkifyjs";
+import { CommandName, isCommandMessage, parseCommand } from "@tim/commands";
 
 export function adjustHeight(
   target: ChangeEvent<HTMLTextAreaElement>["target"]
@@ -83,6 +84,82 @@ export function getTwitchStreamFromUrl(url: string) {
 }
 
 export function isValidCommand(message: string) {
-  const command = message.split(" ")[0].toLowerCase();
-  return ["/youtube", "/giphy", "/giph", "/yt", "/tim"].includes(command);
+  return isCommandMessage(message);
+}
+
+export function escapeRegExp(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export type MessageToken =
+  | { type: "text"; value: string }
+  | { type: "command"; value: string; name: CommandName }
+  | { type: "mention"; value: string }
+  | { type: "topicLink"; value: string };
+
+// Splits a raw message into ordered, whitespace-preserving segments so one
+// tokenizer can back both the sent-message renderer (message-text.tsx) and
+// the live composer highlight overlay (topic-message-bar.tsx) -- each just
+// maps the same tokens to its own visual treatment (clickable elements vs.
+// plain colored spans), instead of keeping two separate regexes that could
+// drift out of sync on what counts as a mention/topic link.
+export function tokenizeMessage(
+  text: string,
+  mentionNames: string[],
+  topicNames: string[]
+): MessageToken[] {
+  if (!text) return [];
+
+  const command = parseCommand(text);
+  const tokens: MessageToken[] = [];
+  let rest = text;
+
+  if (command) {
+    const parts = text.split(" ");
+    tokens.push({ type: "command", value: parts[0], name: command.name });
+    rest = parts.slice(1).join(" ");
+    if (rest) tokens.push({ type: "text", value: " " });
+  }
+
+  if (!rest) return tokens;
+
+  if (mentionNames.length === 0 && topicNames.length === 0) {
+    tokens.push({ type: "text", value: rest });
+    return tokens;
+  }
+
+  const patternParts: string[] = [];
+  if (mentionNames.length > 0) {
+    patternParts.push(
+      `@(?<mention>${mentionNames.map(escapeRegExp).join("|")})\\b`
+    );
+  }
+  if (topicNames.length > 0) {
+    patternParts.push(
+      `#(?<topicLink>${topicNames.map(escapeRegExp).join("|")})\\b`
+    );
+  }
+
+  const pattern = new RegExp(patternParts.join("|"), "g");
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(rest))) {
+    if (match.index > lastIndex) {
+      tokens.push({ type: "text", value: rest.slice(lastIndex, match.index) });
+    }
+
+    tokens.push({
+      type: match.groups?.mention ? "mention" : "topicLink",
+      value: match[0],
+    });
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < rest.length) {
+    tokens.push({ type: "text", value: rest.slice(lastIndex) });
+  }
+
+  return tokens;
 }

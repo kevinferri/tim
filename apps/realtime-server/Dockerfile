@@ -2,7 +2,7 @@
 # this component, since the build needs the root yarn.lock, packages/socket-types,
 # and packages/db-types, not just apps/realtime-server in isolation).
 
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /app
 COPY . .

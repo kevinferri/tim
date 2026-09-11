@@ -2,9 +2,9 @@
 # this component, since the build needs the root yarn.lock and packages/socket-types,
 # not just apps/chat in isolation).
 
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
-# node:20-bookworm-slim doesn't ship openssl, so Prisma's "native" binary-target
+# node:22-bookworm-slim doesn't ship openssl, so Prisma's "native" binary-target
 # auto-detection (which runs during `yarn install`'s postinstall -> prisma generate)
 # can't probe the real OpenSSL version and silently falls back to a wrong guess
 # (debian-openssl-1.1.x instead of Bookworm's actual 3.0.x), which fails at runtime.

@@ -17,6 +17,7 @@ import {
   useTopicHighlightsContext,
   useTopicMessagesContext,
 } from "@/components/topics/current-topic-provider";
+import { useMessageHighlightSync } from "@/components/topics/use-message-highlight-sync";
 
 type ContentProps = {
   loading: boolean;
@@ -64,6 +65,8 @@ export function MessageModal() {
       }),
     enabled: !!messageId && !thisMessage,
   });
+
+  useMessageHighlightSync(thisMessage ? null : messageId);
 
   const message = thisMessage ?? data;
 

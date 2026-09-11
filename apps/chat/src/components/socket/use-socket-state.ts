@@ -12,6 +12,7 @@ export function useSocketState(socket: Socket) {
   const [isConnected, setIsConnected] = useState<boolean>();
   const disconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
   const reconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
+  const hasTriggeredAuthReload = useRef(false);
 
   useEffectOnce(() => {
     function showDisconnectedToast() {
@@ -37,9 +38,14 @@ export function useSocketState(socket: Socket) {
     function onDisconnect() {
       setIsConnected(false);
       showDisconnectedToast();
-      // Let a future reconnect show its own "restored" toast again --
-      // without this, the ref from a previous reconnect (auto-dismissed
-      // after 5s, but never cleared) permanently suppresses it.
+      // Dismiss (not just forget) any still-visible "restored" toast from
+      // a prior reconnect -- on a flapping connection, a new disconnect
+      // can land within that toast's 5s duration, and without an explicit
+      // dismiss here the next reconnect would add a second one on top of
+      // it instead of replacing it.
+      if (reconnectToastRef.current) {
+        reconnectToastRef.current.dismiss();
+      }
       reconnectToastRef.current = null;
     }
 
@@ -50,7 +56,20 @@ export function useSocketState(socket: Socket) {
     // isConnected would stay stuck at `undefined` forever. socket.io
     // retries automatically and re-emits "connect_error" on every
     // failed attempt, which is the actual signal for that case.
-    function onConnectError() {
+    function onConnectError(err: Error) {
+      // The socket JWT is minted once per page load and expires after
+      // 24h -- a socket that's been open longer than that reconnects
+      // (network blip, laptop sleep, a deploy) with the same now-expired
+      // token every retry, since `auth` is captured once at construction
+      // rather than refreshed per attempt. Retrying can never succeed in
+      // that case, so force a hard reload to pick up a fresh token
+      // instead of looping on "Invalid credentials" forever.
+      if (err.message === "Invalid credentials" && !hasTriggeredAuthReload.current) {
+        hasTriggeredAuthReload.current = true;
+        window.location.reload();
+        return;
+      }
+
       setIsConnected(false);
       showDisconnectedToast();
     }

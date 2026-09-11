@@ -61,7 +61,7 @@ export default async function TopicPage({ params }: Props) {
   const userId = await getLoggedInUserId();
   const topic = await getTopic(userId, topicId, circleId);
 
-  const [messages, topHighlights, mediaMessages, circleMembers] =
+  const [messages, topHighlights, mediaMessages, circleMembers, circleTopics] =
     await Promise.all([
       prismaClient.message.getMessagesForTopic({
         requestingUserId: userId,
@@ -99,6 +99,15 @@ export default async function TopicPage({ params }: Props) {
           },
         },
       }),
+
+      prismaClient.topic.getAllForCircleAndUser({
+        userId,
+        circleId: topic?.parentCircle.id ?? "",
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
     ] as const);
 
   return (
@@ -112,6 +121,7 @@ export default async function TopicPage({ params }: Props) {
           circleName={topic.parentCircle.name}
           topHighlightsLimit={TOP_HIGHLIGHTS_LIMIT}
           existingCircleMembers={circleMembers}
+          existingCircleTopics={circleTopics ?? []}
           existingMessages={messages}
           existingTopHighlights={topHighlights}
           existingMediaMessages={mediaMessages}

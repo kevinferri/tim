@@ -1,5 +1,6 @@
 import { QueryClient, InfiniteData } from "@tanstack/react-query";
-import { MessageProps } from "@/components/topics/message";
+import { MessageData, MessageProps } from "@/components/topics/message";
+import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats/[userId]/route";
 
 export type MessagesData = InfiniteData<MessageProps[], string | undefined>;
 
@@ -9,6 +10,10 @@ export function messagesQueryKey(topicId: string) {
 
 export function mediaMessagesQueryKey(topicId: string) {
   return ["media-messages", topicId];
+}
+
+export function singleMessageQueryKey(messageId: string) {
+  return ["message", messageId];
 }
 
 // Applies a same-length, same-order map transform across every loaded
@@ -50,5 +55,36 @@ export function updateMediaMessagesCache(
   queryClient.setQueryData<MessageProps[]>(
     mediaMessagesQueryKey(topicId),
     (prev) => updater(prev ?? []),
+  );
+}
+
+// A message fetched on its own via /api/message/:id (see message-modal.tsx)
+// lives outside any topic's paginated cache -- this patches that standalone
+// entry the same way the caches above get patched, so a message shown in
+// isolation (e.g. an old permalinked message not currently loaded in the
+// topic) still stays live for highlight events.
+export function updateSingleMessageCache(
+  queryClient: QueryClient,
+  messageId: string,
+  updater: (prev: MessageProps) => MessageProps,
+) {
+  queryClient.setQueryData<MessageProps>(
+    singleMessageQueryKey(messageId),
+    (prev) => (prev ? updater(prev) : prev),
+  );
+}
+
+// Patches every cached `["user-stats", topicId, userId]` entry (the "top
+// highlights" list in a user's profile sheet, see user-avatar.tsx) via a
+// partial query-key match -- there's no single topicId/userId to key off
+// of here, since a highlight event should update whichever of these are
+// currently cached, possibly for a topic other than the one open right now.
+export function updateUserStatsTopHighlightsCache(
+  queryClient: QueryClient,
+  updater: (prev: MessageData[]) => MessageData[],
+) {
+  queryClient.setQueriesData<UserStatsForTopicResponse>(
+    { queryKey: ["user-stats"] },
+    (prev) => (prev ? { ...prev, topHighlights: updater(prev.topHighlights) } : prev),
   );
 }

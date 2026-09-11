@@ -25,8 +25,11 @@ import {
   truncateText,
 } from "@/components/topics/message-utils";
 import { MessageSentAt } from "@/components/topics/message-sent-at";
-import { useIslandMessage } from "@/components/topics/use-island-message";
 import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
+import { RollResult } from "@/components/topics/roll-result";
+import { EightBallResult } from "@/components/topics/eight-ball-result";
+import { CommandName, parseCommand } from "@tim/commands";
+import { getDisplayName } from "@tim/user-display";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -83,33 +86,24 @@ const MessageComponent = (props: MessageProps) => {
   const sentBySelf = props.sentBy?.id === self.id;
   const isRecentMessage = props.isRecentMessage ?? false;
   const isFirstMessage = props.isFirstMessage ?? false;
-  const isIsland = props.context === "modal" || props.context === "user-sheet";
   const isNewestMessage = props.isNewestMessage ?? false;
   const isShufflingGif =
     (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
   const isActionEligable = props.variant !== "minimal";
 
-  const islandMessage = useIslandMessage({
-    messageId: props.id!,
-    existingHighlights: props.highlights || [],
-    skip: !isIsland,
-  });
-
-  const highlights = isIsland
-    ? islandMessage.highlights
-    : props.highlights || [];
+  const highlights = props.highlights || [];
 
   const highlightedBySelf = !!highlights?.find(
-    (highlight) => self.id === highlight.userId
+    (highlight) => self.id === highlight.userId,
   );
 
   const links = useMemo(
     () => getLinksFromMessage(props.text ?? undefined),
-    [props.text]
+    [props.text],
   );
 
   const toggleHighlight = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.ToggleHighlight
+    SocketEvent.ToggleHighlight,
   );
 
   const editMessage = useSocketEmit<{
@@ -124,7 +118,7 @@ const MessageComponent = (props: MessageProps) => {
   }>(SocketEvent.ShuffleGifMessage);
 
   const expandImage = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.UserExpandedImage
+    SocketEvent.UserExpandedImage,
   );
 
   const handleToggleHighlight = () => {
@@ -163,7 +157,7 @@ const MessageComponent = (props: MessageProps) => {
         props.variant === "minimal"
           ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
           : "",
-        props.className
+        props.className,
       )}
       onDoubleClick={(e) => {
         if (props.variant !== "minimal") handleToggleHighlight();
@@ -197,15 +191,26 @@ const MessageComponent = (props: MessageProps) => {
         <div className="flex flex-col flex-1">
           <div className="flex gap-2 items-center">
             {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
-              <span
-                className={cn(
-                  `font-semibold ${
-                    props.sentBy.id === self.id && "text-mention"
-                  }`
-                )}
+              <UserAvatar
+                id={props.sentBy.id}
+                topicId={topicId}
+                name={props.sentBy.name}
+                imageUrl={props.sentBy.imageUrl}
+                createdAt={props.sentBy.createdAt}
+                disableSheet={props.context === "user-sheet"}
+                status={props.sentBy.status}
+                lastStatusUpdate={props.sentBy.lastStatusUpdate}
               >
-                {props.sentBy.name?.split(" ")[0]}
-              </span>
+                <span
+                  className={cn(
+                    `font-semibold ${
+                      props.sentBy.id === self.id && "text-mention"
+                    }`,
+                  )}
+                >
+                  {getDisplayName(props.sentBy.name)}
+                </span>
+              </UserAvatar>
             )}
 
             {!props.hiddenElements?.includes("sentAt") && (
@@ -259,8 +264,13 @@ const MessageComponent = (props: MessageProps) => {
             )}
 
             {props.mediaUrl &&
-              (props.text?.toLowerCase().startsWith("/tim") ? (
+              (parseCommand(props.text ?? "")?.name === CommandName.Tim ? (
                 <OpenAiViewer content={props.mediaUrl} />
+              ) : parseCommand(props.text ?? "")?.name === CommandName.Roll ? (
+                <RollResult content={props.mediaUrl} />
+              ) : parseCommand(props.text ?? "")?.name ===
+                CommandName.EightBall ? (
+                <EightBallResult content={props.mediaUrl} />
               ) : (
                 <MediaViewer
                   priority={props.context === "topic"}

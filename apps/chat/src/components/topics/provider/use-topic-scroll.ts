@@ -68,6 +68,16 @@ export function useTopicScroll() {
   // box expanding, etc. This single mechanism replaces every ad-hoc
   // "scroll after this thing loads" callback the old implementation
   // needed scattered through message/media/link-preview components.
+  //
+  // Deliberately doesn't gate on isAtBottomRef here -- that ref is set
+  // by the IntersectionObserver above, which is async and races this
+  // one. A tall incoming message can push the bottom sentinel out of
+  // the "near bottom" zone before that observer's callback runs, so by
+  // the time this callback checked isAtBottomRef it could already read
+  // `false` for growth that *caused* it to go false, and skip the very
+  // scroll that would fix it. Instead we judge "was at bottom" directly
+  // off the viewport's scroll position against the pre-growth height --
+  // synchronous, and not dependent on the other observer's timing.
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
@@ -77,16 +87,23 @@ export function useTopicScroll() {
     const observer = new ResizeObserver(() => {
       const nextHeight = content.scrollHeight;
       const grew = nextHeight > previousHeight;
+      const viewport = viewportRef.current;
+      const wasAtBottom = viewport
+        ? viewport.scrollTop + viewport.clientHeight >=
+          previousHeight - BOTTOM_SLACK_PX
+        : isAtBottomRef.current;
+
       previousHeight = nextHeight;
 
-      if (grew && isAtBottomRef.current) {
-        viewportRef.current?.scrollTo({ top: nextHeight, behavior: "instant" });
+      if (grew && wasAtBottom) {
+        viewport?.scrollTo({ top: nextHeight, behavior: "instant" });
+        setIsAtBottom(true);
       }
     });
 
     observer.observe(content);
     return () => observer.disconnect();
-  }, []);
+  }, [setIsAtBottom]);
 
   return {
     viewportRef,

@@ -18,7 +18,7 @@ import {
   StarIcon,
 } from "@radix-ui/react-icons";
 import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats/[userId]/route";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { Message, MessageProps } from "@/components/topics/message";
 import {
   TooltipProvider,
@@ -28,11 +28,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  UserStatus,
-  UserUpdatedStatusHandlerProps,
-} from "@/components/dashboard/user-status";
-import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { UserStatus } from "@/components/dashboard/user-status";
+import { useUserStatus } from "@/components/dashboard/user-status-store";
 
 export function getInitials(name?: string) {
   if (!name) return "?";
@@ -73,6 +70,10 @@ type Props = VariantProps<typeof variants> & {
   disableSheet?: boolean;
   showStatus?: boolean;
   isOnline?: boolean;
+  // Renders this instead of the avatar circle as the clickable element that
+  // opens the profile sheet -- e.g. a sender's name next to a message. The
+  // sheet itself (avatar, stats, highlights) is unaffected either way.
+  children?: ReactNode;
 };
 
 const variants = cva("", {
@@ -101,10 +102,10 @@ function StatsLoader() {
 export function UserAvatar(props: Props) {
   const [open, setOpen] = useState(false);
   const initials = getInitials(props.name ?? undefined);
-  const [status, setStatus] = useState(props.status);
-  const [lastStatusUpdate, setLastStatusUpdate] = useState(
-    props.lastStatusUpdate
-  );
+  const { status, lastStatusUpdate } = useUserStatus(props.id, {
+    status: props.status,
+    lastStatusUpdate: props.lastStatusUpdate,
+  });
   const since = useDateFormatter(props.createdAt, {
     day: "numeric",
     month: "short",
@@ -124,21 +125,18 @@ export function UserAvatar(props: Props) {
     enabled: !!props.topicId && open,
   });
 
-  useSocketHandler<UserUpdatedStatusHandlerProps>(
-    SocketEvent.UserUpdatedStatus,
-    (payload) => {
-      if (payload.user.id === props.id) {
-        setStatus(payload.user.status ?? null);
-        setLastStatusUpdate(payload.user.lastStatusUpdate ?? null);
-      }
-    }
-  );
-
   const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
   const showStatus =
     typeof props.showStatus === "undefined" ? true : props.showStatus;
 
-  const trigger = (
+  const trigger = props.children ? (
+    <span
+      onClick={() => setOpen(true)}
+      className="cursor-pointer hover:opacity-80"
+    >
+      {props.children}
+    </span>
+  ) : (
     <div className="relative">
       <Avatar
         onClick={() => setOpen(true)}

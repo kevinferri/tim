@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/tooltip";
 import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
 import { isGiphy, isValidCommand } from "@/components/topics/message-utils";
+import { CommandName, parseCommand } from "@tim/commands";
 import {
   Pencil1Icon,
   SewingPinFilledIcon,
@@ -35,7 +36,7 @@ export function MessageActions(props: Props) {
   const showEdit = !isValidCommand(props.text);
   const isRandomGif =
     isGiphy(props.mediaUrl ?? undefined) &&
-    ["/giphy", "/giph"].includes(props.text?.split(" ")[0]);
+    parseCommand(props.text)?.name === CommandName.Giphy;
 
   return (
     <div

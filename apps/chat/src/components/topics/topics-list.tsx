@@ -174,11 +174,11 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
   useSocketHandler<DeletedTopicHandlerProps>(
     SocketEvent.DeletedTopic,
     (payload) => {
-      router.refresh();
-
       if (payload.id === params.topicId) {
         router.push(`/circles/${payload.circleId}`);
       }
+
+      router.refresh();
 
       if (payload.circleId !== circle.id) return;
 

@@ -31,6 +31,11 @@ export type CircleMember = {
   }[];
 };
 
+export type CircleTopic = {
+  id: string;
+  name: string;
+};
+
 type ScrollToBottomOptions = {
   behavior?: ScrollBehavior;
 };
@@ -54,6 +59,7 @@ type MetaContextValue = {
   topicId: string;
   circleId: string;
   circleMembers: CircleMember[];
+  circleTopics: CircleTopic[];
 };
 
 const TopicMetaContext = createContext<MetaContextValue | undefined>(
@@ -234,6 +240,7 @@ type Props = {
   existingTopHighlights: MessageData[];
   existingMediaMessages: MessageData[];
   existingCircleMembers: CircleMember[];
+  existingCircleTopics: CircleTopic[];
   topHighlightsLimit: number;
   messagesLimit: number;
   children: React.ReactNode;
@@ -343,13 +350,19 @@ export function CurrentTopicProvider(props: Props) {
     [props.existingCircleMembers],
   );
 
+  const circleTopics = useMemo(
+    () => props.existingCircleTopics,
+    [props.existingCircleTopics],
+  );
+
   const metaValue = useMemo<MetaContextValue>(
     () => ({
       topicId: props.topicId,
       circleId: props.circleId,
       circleMembers,
+      circleTopics,
     }),
-    [props.topicId, props.circleId, circleMembers],
+    [props.topicId, props.circleId, circleMembers, circleTopics],
   );
 
   const recency = useMemo<MessageRecency>(

@@ -34,6 +34,10 @@ export function SocketProvider({ endpoint, path, jwt, children }: Props) {
       prevSocket.current = socket;
       socket.connect();
     }
+
+    return () => {
+      socket.disconnect();
+    };
   });
 
   const socketState = useSocketState(socket);

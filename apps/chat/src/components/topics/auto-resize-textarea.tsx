@@ -3,12 +3,13 @@
 import { Textarea } from "@/components/ui/textarea";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { cn } from "@/lib/utils";
-import { ChangeEvent, KeyboardEvent, useRef, forwardRef } from "react";
+import { ChangeEvent, KeyboardEvent, SyntheticEvent, useRef, forwardRef } from "react";
 
 type Props = {
   disabled?: boolean;
   onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onSelect?: (e: SyntheticEvent<HTMLTextAreaElement>) => void;
   value: string;
   className?: string;
   onPaste?: (e: ClipboardEvent) => void;
@@ -61,6 +62,7 @@ export const AutoResizeTextarea = forwardRef((props: Props, refProp) => {
 
         props.onKeyDown(e);
       }}
+      onSelect={props.onSelect}
       value={props.value ?? ""}
     />
   );

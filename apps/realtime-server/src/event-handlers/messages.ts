@@ -5,10 +5,13 @@ import {
   getMessageForUser,
   writeMessage,
 } from "../db/messages";
+import { isUserInTopic } from "../db/topics";
 import { getRandomGif } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail } from "./rooms";
-import { commandRegistry, getCommandTokens } from "../lib/command-handler";
+import { executeCommand } from "../lib/command-handler";
+import { parseCommand } from "@tim/commands";
+import { emitMentionNotifications } from "../lib/notifications";
 
 export function handleSendMessage({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.SendMessage, async (payload) => {
@@ -20,22 +23,24 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
 
     if (!roomKey) return;
 
-    let _mediaUrl = payload.mediaUrl;
-    const { words, commandType, commandPrompt } = getCommandTokens(
-      payload.message
-    );
+    // payload.circleId only proves membership in *some* circle room -- it
+    // doesn't prove payload.topicId (used below to persist the message)
+    // actually belongs to that circle, so a member of one circle could
+    // otherwise inject a message into an unrelated topic they were never
+    // added to.
+    const canSendToTopic = await isUserInTopic({
+      userId: socket.data.user.id,
+      topicId: payload.topicId,
+    });
 
-    if (words.length > 0 && words[0].charAt(0) === "/") {
-      const command = commandRegistry[commandType];
+    if (!canSendToTopic) return;
 
-      if (command) {
-        _mediaUrl = await command.execute(commandPrompt, {
-          socket,
-          server,
-          payload,
-        });
-      }
-    }
+    const commandMediaUrl = await executeCommand(payload.message, {
+      socket,
+      server,
+      payload,
+    });
+    const _mediaUrl = commandMediaUrl ?? payload.mediaUrl;
 
     const savedMessage = await writeMessage({
       userId: socket.data.user.id,
@@ -54,6 +59,15 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
     };
 
     server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
+
+    await emitMentionNotifications({
+      server,
+      roomKey,
+      topicId: payload.topicId,
+      messageId: savedMessage.id,
+      actor: socket.data.user,
+      mentionedUserIds: payload.mentionedUserIds ?? [],
+    });
   });
 }
 
@@ -123,8 +137,7 @@ export function handleShuffleGif({ socket, server }: HandlerArgs) {
     if (!message) return;
 
     const text = decrypt(message.text);
-    const { commandPrompt } = getCommandTokens(text);
-    const newGif = await getRandomGif(commandPrompt);
+    const newGif = await getRandomGif(parseCommand(text)?.prompt ?? "");
 
     const shuffledMessage = await editMessage({
       text,

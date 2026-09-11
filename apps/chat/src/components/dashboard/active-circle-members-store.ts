@@ -15,6 +15,7 @@ type Store = {
   topicMap: TopicMap;
   mergeCircleSnapshot: (topicMap: TopicMap) => void;
   setTopicPresence: (topicId: string, presence: TopicPresence) => void;
+  removeTopic: (topicId: string) => void;
 };
 
 const useStore = create<Store>((set) => ({
@@ -33,6 +34,15 @@ const useStore = create<Store>((set) => ({
         },
       },
     })),
+
+  removeTopic: (topicId) =>
+    set((state) => {
+      if (!(topicId in state.topicMap)) return state;
+
+      const topicMap = { ...state.topicMap };
+      delete topicMap[topicId];
+      return { topicMap };
+    }),
 }));
 
 // Registers the presence socket listeners exactly once. Mount this a
@@ -47,6 +57,7 @@ const useStore = create<Store>((set) => ({
 export function usePresenceSync() {
   const mergeCircleSnapshot = useStore((state) => state.mergeCircleSnapshot);
   const setTopicPresence = useStore((state) => state.setTopicPresence);
+  const removeTopic = useStore((state) => state.removeTopic);
 
   useSocketHandler<{ topicMap: TopicMap }>(
     SocketEvent.UserJoinedCircle,
@@ -62,6 +73,13 @@ export function usePresenceSync() {
       circleId: payload.circleId,
       activeUsers: payload.activeUsers,
     }),
+  );
+
+  // mergeCircleSnapshot/setTopicPresence only ever add or overwrite keys, so
+  // a deleted topic's stale presence entry (including our own) would
+  // otherwise never leave topicMap -- explicitly drop it here.
+  useSocketHandler<{ id: string }>(SocketEvent.DeletedTopic, (payload) =>
+    removeTopic(payload.id),
   );
 }
 

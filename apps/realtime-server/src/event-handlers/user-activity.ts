@@ -122,19 +122,23 @@ export function handleUserClickedLink({ socket, server }: HandlerArgs) {
 
 export function handleUserUpdatedStatus({ socket, server }: HandlerArgs) {
   socket.on(SocketEvent.UserUpdatedStatus, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.circleId,
-      roomType: RoomType.Circle,
-    });
+    if (payload.user.id !== socket.data.user.id) return;
 
-    if (!roomKey || payload.user.id !== socket.data.user.id) return;
+    const roomKeys = (payload.circleIds as string[])
+      .map((circleId) =>
+        getRoomKeyOrFail({ socket, id: circleId, roomType: RoomType.Circle })
+      )
+      .filter((roomKey): roomKey is string => Boolean(roomKey));
+
+    if (roomKeys.length === 0) return;
 
     handleActiveUserAttributeChange(socket, {
       status: payload.user.status,
       lastStatusUpdate: payload.user.lastStatusUpdate,
     });
 
-    server.to(roomKey).emit(SocketEvent.UserUpdatedStatus, payload);
+    // .to() with multiple rooms dedupes recipients in a single emit, so a
+    // client in more than one shared circle only gets this once.
+    server.to(roomKeys).emit(SocketEvent.UserUpdatedStatus, payload);
   });
 }
