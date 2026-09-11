@@ -25,11 +25,13 @@ const withPoolLimits = (databaseUrl: string) => {
 };
 
 const createClient = () => {
+  const databaseUrl = process.env.DATABASE_URL;
+
   const baseClient = new PrismaClient({
     log: ["error"],
-    datasources: {
-      db: { url: withPoolLimits(process.env.DATABASE_URL as string) },
-    },
+    ...(databaseUrl && {
+      datasources: { db: { url: withPoolLimits(databaseUrl) } },
+    }),
   });
 
   return baseClient.$extends({
