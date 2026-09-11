@@ -16,8 +16,8 @@
     "db:generate": "npx dotenv -e .env.local -- prisma generate",
     "db:studio": "yarn db:up && npx dotenv -e .env.local -- prisma studio",
     "db:genpush": "yarn db:generate && yarn db:push",
-    "production:build": "npx prisma generate && npx prisma migrate deploy && next build",
-    "db:migrate": "yarn db:up && npx dotenv -e .env.local -- prisma migrate dev"
+    "db:migrate": "yarn db:up && npx dotenv -e .env.local -- prisma migrate dev",
+    "db:deploy": "npx prisma migrate deploy"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
