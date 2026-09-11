@@ -19,7 +19,9 @@ import { cn, toBase64 } from "@/lib/utils";
 import { EmojiPicker } from "@/components/topics/emoji-picker";
 import { ThinkingDots } from "@/components/topics/thinking-dots";
 import {
+  encodeMention,
   extractImageFromMessage,
+  extractMentionedUserIds,
   getTwitchStreamFromUrl,
   getYoutubeVideoFromUrl,
   isValidCommand,
@@ -181,9 +183,11 @@ export function TopicMessageBar() {
 
     // First name only -- that's the display name everywhere else in the
     // app (sender names, notifications), so a mention should read the same
-    // way. Two members can share a first name; we accept that ambiguity
-    // (avatar + context disambiguates) rather than showing a full name.
-    const insertion = `@${getDisplayName(member.name)} `;
+    // way. Two members can share a first name; the member's id is encoded
+    // invisibly alongside it (see encodeMention) so the exact person
+    // clicked -- not just whichever same-named member happens to match --
+    // is who gets notified and linked once this is sent.
+    const insertion = `${encodeMention(getDisplayName(member.name), member.id)} `;
     const newMessage =
       message.slice(0, mentionStart) + insertion + message.slice(caretIndex);
 
@@ -271,16 +275,13 @@ export function TopicMessageBar() {
       setIsUploadingImage(false);
     }
 
-    // Matches against first names (see selectMention) -- if two members
-    // share one, a "@FirstName" mention notifies both rather than neither.
-    const mentionedUserIds = circleMembers
-      .filter(
-        (member) =>
-          member.id !== self.id &&
-          member.name &&
-          message.includes(`@${getDisplayName(member.name)}`)
-      )
-      .map((member) => member.id);
+    // Reads the ids encoded into the message by selectMention, so which
+    // exact member was clicked (not just whichever shares their first name)
+    // is who gets notified -- filtered against current circleMembers so a
+    // stale id (e.g. the member has since left the circle) can't sneak in.
+    const mentionedUserIds = extractMentionedUserIds(message).filter((id) =>
+      circleMembers.some((member) => member.id === id)
+    );
 
     sendMessage.emit({
       message: _message,

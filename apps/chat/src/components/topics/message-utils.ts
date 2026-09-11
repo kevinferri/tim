@@ -100,8 +100,78 @@ export function stripLeadingEmoji(str: string) {
 export type MessageToken =
   | { type: "text"; value: string }
   | { type: "command"; value: string; name: CommandName }
-  | { type: "mention"; value: string }
+  | { type: "mention"; value: string; id?: string }
   | { type: "topicLink"; value: string };
+
+// A mention carries the selected member's id invisibly right after the
+// visible "@Name" text, so which of several same-named members was actually
+// clicked survives into the stored message (see selectMention in
+// topic-message-bar.tsx) instead of being re-guessed by name every time the
+// message is rendered or notified on. The id is bit-encoded across zero-
+// width Unicode format characters -- real fonts/browsers give these zero
+// advance width -- rather than embedded as visible characters, which would
+// show up as garbage text wherever the raw string is displayed unstyled
+// (e.g. message-edit.tsx's plain textarea) and would break the composer's
+// textarea/highlight-overlay character-for-character alignment (see
+// message-highlight-overlay.tsx): a genuinely zero-width payload occupies
+// the same rendered width whether or not the overlay repeats it, so the
+// overlay can just render the plain "@Name" and stay in sync.
+const MENTION_ID_START = "\u2060"; // WORD JOINER
+const MENTION_ID_END = "\u200d"; // ZERO WIDTH JOINER
+const MENTION_ID_BIT0 = "\u200b"; // ZERO WIDTH SPACE
+const MENTION_ID_BIT1 = "\u200c"; // ZERO WIDTH NON-JOINER
+const MENTION_ID_BODY_PATTERN = `[${MENTION_ID_BIT0}${MENTION_ID_BIT1}]+`;
+const MENTION_ID_PATTERN = `${MENTION_ID_START}(?<mentionIdBits>${MENTION_ID_BODY_PATTERN})${MENTION_ID_END}`;
+
+function encodeMentionId(id: string): string {
+  const bits = Array.from(id)
+    .map((char) => char.charCodeAt(0).toString(2).padStart(8, "0"))
+    .join("")
+    .split("")
+    .map((bit) => (bit === "1" ? MENTION_ID_BIT1 : MENTION_ID_BIT0))
+    .join("");
+  return `${MENTION_ID_START}${bits}${MENTION_ID_END}`;
+}
+
+function decodeMentionId(bits: string): string | undefined {
+  if (bits.length === 0 || bits.length % 8 !== 0) return undefined;
+
+  let id = "";
+  for (let i = 0; i < bits.length; i += 8) {
+    const byte = bits
+      .slice(i, i + 8)
+      .split("")
+      .map((bit) => (bit === MENTION_ID_BIT1 ? "1" : "0"))
+      .join("");
+    id += String.fromCharCode(parseInt(byte, 2));
+  }
+  return id;
+}
+
+// Inserted by selectMention when a candidate is chosen from the dropdown --
+// displays as "@Name" (the invisible id payload takes no rendered width).
+export function encodeMention(displayName: string, id: string): string {
+  return `@${displayName}${encodeMentionId(id)}`;
+}
+
+// Pulls the ids out of any ID-tagged mentions in a raw message, for
+// send-time notification routing (see emitMessage in topic-message-bar.tsx)
+// -- self-describing via the invisible payload, so no member list is needed
+// to recognize one. A plain "@Name" typed without using the dropdown (or a
+// mention from before this format existed) carries no id and is skipped
+// rather than guessed at by name.
+export function extractMentionedUserIds(text: string): string[] {
+  const pattern = new RegExp(`@[^\\s@#${MENTION_ID_START}]+${MENTION_ID_PATTERN}`, "g");
+  const ids = new Set<string>();
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text))) {
+    const id = decodeMentionId(match.groups?.mentionIdBits ?? "");
+    if (id) ids.add(id);
+  }
+
+  return Array.from(ids);
+}
 
 // Splits a raw message into ordered, whitespace-preserving segments so one
 // tokenizer can back both the sent-message renderer (message-text.tsx) and
@@ -129,15 +199,27 @@ export function tokenizeMessage(
 
   if (!rest) return tokens;
 
-  if (mentionNames.length === 0 && topicNames.length === 0) {
+  if (
+    mentionNames.length === 0 &&
+    topicNames.length === 0 &&
+    !rest.includes(MENTION_ID_START)
+  ) {
     tokens.push({ type: "text", value: rest });
     return tokens;
   }
 
-  const patternParts: string[] = [];
+  // ID-tagged mentions are self-describing (any "@word" immediately
+  // followed by the invisible id payload), so they're matched first and
+  // don't need to appear in mentionNames -- this also covers a member
+  // mentioned under a name that's since changed. Plain "@Name" (no id
+  // payload) still only counts as a mention when it matches a real member,
+  // same as before.
+  const patternParts: string[] = [
+    `@(?<mention>[^\\s@#${MENTION_ID_START}]+)${MENTION_ID_PATTERN}`,
+  ];
   if (mentionNames.length > 0) {
     patternParts.push(
-      `@(?<mention>${mentionNames.map(escapeRegExp).join("|")})\\b`
+      `@(?<mentionOld>${mentionNames.map(escapeRegExp).join("|")})\\b`
     );
   }
   if (topicNames.length > 0) {
@@ -155,10 +237,17 @@ export function tokenizeMessage(
       tokens.push({ type: "text", value: rest.slice(lastIndex, match.index) });
     }
 
-    tokens.push({
-      type: match.groups?.mention ? "mention" : "topicLink",
-      value: match[0],
-    });
+    if (match.groups?.mention !== undefined) {
+      tokens.push({
+        type: "mention",
+        value: `@${match.groups.mention}`,
+        id: decodeMentionId(match.groups.mentionIdBits ?? ""),
+      });
+    } else if (match.groups?.mentionOld !== undefined) {
+      tokens.push({ type: "mention", value: match[0] });
+    } else {
+      tokens.push({ type: "topicLink", value: match[0] });
+    }
 
     lastIndex = match.index + match[0].length;
   }

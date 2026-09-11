@@ -60,26 +60,29 @@ export function TopicChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId]);
 
-  if (messages.length === 0) {
-    return (
-      <div className="flex flex-col basis-full justify-center items-center gap-3 p-3 text-center">
-        <div className="bg-secondary p-8 rounded-full border shadow-sm">
-          <EnvelopeClosedIcon height={80} width={80} />
-        </div>
-
-        <div className="text-xl">No messages yet</div>
-
-        <div className="text-muted-foreground text-base">
-          Send a message to get the conversation going
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col basis-full overflow-hidden relative">
       <ScrollArea className="flex flex-col basis-full" ref={viewportRef}>
-        <div ref={contentRef} className="flex flex-col">
+        {/* Always rendered (even with zero messages) so viewportRef/contentRef/
+            bottomSentinelRef attach on the very first render -- useTopicScroll's
+            observers are set up in effects that run once and never retry, so if
+            these refs were null on mount (e.g. a brand-new empty topic), auto-scroll
+            would silently never work for the rest of the session. */}
+        <div ref={contentRef} className="flex flex-col min-h-full">
+          {messages.length === 0 && (
+            <div className="flex flex-1 flex-col justify-center items-center gap-3 p-3 text-center">
+              <div className="bg-secondary p-8 rounded-full border shadow-sm">
+                <EnvelopeClosedIcon height={80} width={80} />
+              </div>
+
+              <div className="text-xl">No messages yet</div>
+
+              <div className="text-muted-foreground text-base">
+                Send a message to get the conversation going
+              </div>
+            </div>
+          )}
+
           {hasMoreMessages && (
             <InfiniteLoader
               loading={loadingMoreMessages}

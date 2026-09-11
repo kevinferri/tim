@@ -30,17 +30,19 @@ type Props = {
 // navigates to that topic), so they should read as links, not as
 // decoration. The hover fade lives on that shared trigger wrapper.
 //
-// Mentions match on display name (first name), same as what gets inserted
-// when selecting one (see selectMention in topic-message-bar.tsx). Two
-// members can share a first name -- membersByName then resolves to
-// whichever of them comes last in circleMembers, so a shared-name mention
-// still highlights and links somewhere reasonable rather than not at all.
+// A mention selected from the dropdown carries the exact member's id (see
+// selectMention in topic-message-bar.tsx), so it resolves unambiguously via
+// membersById even when two members share a first name. A mention with no
+// id -- a plain "@Name" typed by hand, or one sent before this format
+// existed -- falls back to matching display name, which membersByName
+// resolves to whichever same-named member comes last in circleMembers.
 // Topic links match on the full topic name (see selectTopicLink), which is
 // unique per circle.
 function renderTokens(
   tokens: MessageToken[],
   topicId: string,
   circleId: string,
+  membersById: Map<string, CircleMember>,
   membersByName: Map<string, CircleMember>,
   topicsByName: Map<string, CircleTopic>
 ) {
@@ -58,7 +60,9 @@ function renderTokens(
         );
 
       case "mention": {
-        const member = membersByName.get(token.value.slice(1));
+        const member = token.id
+          ? membersById.get(token.id)
+          : membersByName.get(token.value.slice(1));
         const mentionSpan = (
           <span className="underline text-mention underline-offset-4">
             {token.value}
@@ -108,6 +112,7 @@ function parseMessage(
   text: string,
   topicId: string,
   circleId: string,
+  membersById: Map<string, CircleMember>,
   membersByName: Map<string, CircleMember>,
   topicsByName: Map<string, CircleTopic>
 ) {
@@ -120,12 +125,28 @@ function parseMessage(
   );
 
   return (
-    <>{renderTokens(tokens, topicId, circleId, membersByName, topicsByName)}</>
+    <>
+      {renderTokens(
+        tokens,
+        topicId,
+        circleId,
+        membersById,
+        membersByName,
+        topicsByName
+      )}
+    </>
   );
 }
 
 export function MessageText(props: Props) {
   const { circleId, circleMembers, circleTopics } = useTopicMetaContext();
+  const membersById = useMemo(() => {
+    const map = new Map<string, CircleMember>();
+    for (const member of circleMembers) {
+      map.set(member.id, member);
+    }
+    return map;
+  }, [circleMembers]);
   const membersByName = useMemo(() => {
     const map = new Map<string, CircleMember>();
     for (const member of circleMembers) {
@@ -184,6 +205,7 @@ export function MessageText(props: Props) {
               props.text,
               props.topicId,
               circleId,
+              membersById,
               membersByName,
               topicsByName
             )
