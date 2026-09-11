@@ -1,4 +1,4 @@
-import { decrypt, DecryptionError } from "../lib/encryption";
+import { decrypt } from "../lib/encryption";
 import {
   deleteMessage,
   editMessage,
@@ -136,19 +136,7 @@ export function handleShuffleGif({ socket, server }: HandlerArgs) {
 
     if (!message) return;
 
-    let text: string;
-    try {
-      text = decrypt(message.text, message.id);
-    } catch (err) {
-      if (err instanceof DecryptionError) {
-        // Message text pre-dates the encryption cutover migration -- skip
-        // rather than crash the handler.
-        console.error(`[shuffleGif] failed to decrypt message ${message.id}:`, err);
-        return;
-      }
-      throw err;
-    }
-
+    const text = decrypt(message.text, message.id);
     const newGif = await getRandomGif(parseCommand(text)?.prompt ?? "");
 
     const shuffledMessage = await editMessage({

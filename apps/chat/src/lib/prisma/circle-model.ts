@@ -152,7 +152,7 @@ export const circleModel = {
     let defaultTopic: Partial<Topic> = {};
 
     try {
-      await prismaClient.$transaction(async () => {
+      await prismaClient.$transaction(async (tx) => {
         const data = {
           userId,
           name,
@@ -166,18 +166,18 @@ export const circleModel = {
 
         if (existingCircle) {
           // Remove existing members to be updated with new payload
-          await prismaClient.circle.update({
+          await tx.circle.update({
             where: { id: existingCircle.id },
             data: { members: { set: [] } },
           });
 
-          newCircle = await prismaClient.circle.update({
+          newCircle = await tx.circle.update({
             where: { id: existingCircle.id },
             data,
             select: CIRCLE_SELECT,
           });
         } else {
-          newCircle = await prismaClient.circle.create({
+          newCircle = await tx.circle.create({
             data,
             select: CIRCLE_SELECT,
           });
@@ -185,7 +185,7 @@ export const circleModel = {
 
         // Create default topic on circle creation
         if (!existingCircle && newCircle.id) {
-          defaultTopic = await prismaClient.topic.create({
+          defaultTopic = await tx.topic.create({
             data: {
               userId,
               name: defaultTopicName ?? "General",

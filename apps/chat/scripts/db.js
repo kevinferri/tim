@@ -2,6 +2,7 @@ const fs = require("fs");
 const net = require("net");
 const os = require("os");
 const path = require("path");
+const { pathToFileURL } = require("url");
 const { spawn } = require("child_process");
 const { Client } = require("pg");
 
@@ -40,7 +41,21 @@ async function resolveBinaries() {
     );
   }
 
-  return import(pkg);
+  // A bare `import(pkg)` from this file fails under pnpm: these platform
+  // packages are optional dependencies of embedded-postgres itself, not of
+  // this project, so pnpm's isolated node_modules never exposes them to
+  // anything outside embedded-postgres's own install tree (this is what
+  // changed in the yarn-v1 -> pnpm migration; yarn's flat node_modules
+  // happened to hoist them within reach). embedded-postgres/dist/binary.js
+  // resolves the same bare specifier successfully because it runs from
+  // inside that tree -- so resolve `pkg` starting from embedded-postgres's
+  // own location instead of this script's, then import the resolved path.
+  const embeddedPostgresEntry = require.resolve("embedded-postgres");
+  const resolvedPkgPath = require.resolve(pkg, {
+    paths: [path.dirname(embeddedPostgresEntry)],
+  });
+
+  return import(pathToFileURL(resolvedPkgPath).href);
 }
 
 function isPortOpen(port, host = "127.0.0.1") {

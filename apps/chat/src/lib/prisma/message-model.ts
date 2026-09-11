@@ -49,6 +49,9 @@ export const normalizeMessages = <
     text: getReadableMessage(message.text, message.id),
   }));
 
+// One undecryptable row (corruption, a key-rotation mistake, a future
+// encryption bug) shouldn't take down the whole list it's part of --
+// degrade that single message instead of throwing out of the .map().
 function getReadableMessage(text: string | null | undefined, messageId: string) {
   if (!text) return undefined;
 
@@ -57,8 +60,9 @@ function getReadableMessage(text: string | null | undefined, messageId: string) 
   } catch (err) {
     if (err instanceof DecryptionError) {
       console.error(`[message ${messageId}] failed to decrypt:`, err);
+      return "";
     }
-    return "";
+    throw err;
   }
 }
 

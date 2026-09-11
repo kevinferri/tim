@@ -1,12 +1,16 @@
 import { prismaClient } from "@/lib/prisma/client";
+import keyBy from "lodash.keyby";
 
 export const topicHistoryModel = {
   async getMostRecentForUser({ userId }: { userId?: string }) {
     if (!userId) return undefined;
 
     return await prismaClient.topicHistory.findFirst({
+      // updatedAt, not createdAt: history rows are upserted in place on
+      // every topic visit (see saveTopicHistory in apps/realtime-server),
+      // so createdAt only reflects the first-ever visit to a topic.
       orderBy: {
-        createdAt: "desc",
+        updatedAt: "desc",
       },
       where: {
         userId,
@@ -62,6 +66,68 @@ export const topicHistoryModel = {
         topicId: true,
       },
     });
+  },
+
+  async getAllForUserAndCircle({
+    userId,
+    circleId,
+  }: {
+    userId?: string;
+    circleId: string;
+  }) {
+    if (!userId) return [];
+
+    return await prismaClient.topicHistory.findMany({
+      where: {
+        userId,
+        topic: {
+          circleId,
+        },
+      },
+      select: {
+        updatedAt: true,
+        topicId: true,
+      },
+    });
+  },
+
+  // Compares each topic's most recent message against the requesting
+  // user's history for that topic to decide which topics have unread
+  // activity -- pulled out of topics-nav.tsx so the diff logic is one
+  // reusable, independently testable unit.
+  async getUnreadTopicIds({
+    userId,
+    circleId,
+    topicIds,
+  }: {
+    userId?: string;
+    circleId: string;
+    topicIds: string[];
+  }): Promise<Record<string, boolean>> {
+    if (!userId || !topicIds.length) return {};
+
+    const [histories, recentMessagesByTopic] = await Promise.all([
+      prismaClient.topicHistory.getAllForUserAndCircle({ userId, circleId }),
+      prismaClient.message.getMostRecentTimestampsByTopic({ topicIds }),
+    ]);
+
+    const historyMap = keyBy(histories, "topicId");
+
+    return recentMessagesByTopic.reduce<Record<string, boolean>>(
+      (acc, { createdAt, topicId }) => {
+        const history = historyMap[topicId];
+
+        if (history && new Date(history.updatedAt) < new Date(createdAt)) {
+          return {
+            ...acc,
+            [topicId]: true,
+          };
+        }
+
+        return acc;
+      },
+      {}
+    );
   },
 
   async createManyForUsers({

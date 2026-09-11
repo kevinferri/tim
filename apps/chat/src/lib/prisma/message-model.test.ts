@@ -131,7 +131,7 @@ describe("messageModel.getMediaMessagesForTopic", () => {
     const messages = await prismaClient.message.getMediaMessagesForTopic({
       requestingUserId: user.id,
       topicId: topic.id,
-      select: { text: true, mediaUrl: true },
+      select: { id: true, text: true, mediaUrl: true },
     });
 
     expect(messages).toHaveLength(1);
