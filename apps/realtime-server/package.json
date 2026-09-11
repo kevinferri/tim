@@ -8,8 +8,7 @@
     "start": "node dist/app.js",
     "watch": "env $(grep -v '^#' .env.local | grep -v '^$') nodemon src/app.ts",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "migrate:encryption": "env $(grep -v '^#' .env.local | grep -v '^$') ts-node scripts/migrate-encryption.ts"
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
