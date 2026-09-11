@@ -23,6 +23,7 @@ import {
   getTwitchStreamFromUrl,
   getYoutubeVideoFromUrl,
   isValidCommand,
+  stripLeadingEmoji,
 } from "@/components/topics/message-utils";
 import { CommandName, CommandInfo, COMMANDS, parseCommand } from "@tim/commands";
 import { CommandAutocomplete } from "@/components/topics/command-autocomplete";
@@ -164,7 +165,9 @@ export function TopicMessageBar() {
               .some((part) => part.startsWith(query));
           })
           .map((topic) => ({ id: topic.id, name: topic.name }))
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .sort((a, b) =>
+            stripLeadingEmoji(a.name).localeCompare(stripLeadingEmoji(b.name))
+          );
   const showTopicLinkMenu =
     !topicLinkMenuDismissed && !isGenerating && matchingTopics.length > 0;
 

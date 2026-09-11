@@ -91,6 +91,12 @@ export function escapeRegExp(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+export function stripLeadingEmoji(str: string) {
+  return str
+    .replace(/^[\p{Extended_Pictographic}\p{Emoji_Modifier}️‍]+\s*/gu, "")
+    .trim();
+}
+
 export type MessageToken =
   | { type: "text"; value: string }
   | { type: "command"; value: string; name: CommandName }
