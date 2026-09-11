@@ -1,61 +1,40 @@
-// If you are updating this from shadcn, make sure you pass the ref to
-// ScrollAreaPrimitive.Viewport and not ScrollAreaPrimitive.Root
-
-// Default type="scroll" instead of Radix's default "hover": under React 19,
-// the "hover" variant's scrollbar never appears in production (verified
-// live) because its internal pointerenter listener is bound via a ref
-// (context.scrollArea) that never gets set on a single-pass production
-// render -- only dev's double-invoked StrictMode effects happen to wire it
-// correctly. "scroll" uses a different, working ref path (context.viewport).
+// This intentionally does NOT use @radix-ui/react-scroll-area. Its custom
+// scrollbar/thumb depends on internal context refs (context.scrollArea for
+// type="hover", context.viewport for type="scroll") wired through
+// useComposedRefs -- verified live against production that these refs never
+// get populated under React 19 on a single-pass render, so the thumb never
+// renders regardless of `type` even though native scrolling underneath
+// works fine. A plain native scrollable div with a CSS-themed scrollbar
+// (see .themed-scrollbar in globals.css) can't suffer that desync: the
+// browser draws the thumb itself from the real scroll position.
 
 "use client";
 
 import * as React from "react";
-import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 
 import { cn } from "@/lib/utils";
 
 const ScrollArea = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, type = "scroll", ...props }, ref) => (
-  <ScrollAreaPrimitive.Root
-    type={type}
-    className={cn("relative overflow-hidden", className)}
-    {...props}
-  >
-    <ScrollAreaPrimitive.Viewport
-      className="h-full w-full rounded-[inherit]"
-      ref={ref}
-    >
-      {children}
-    </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
-    <ScrollAreaPrimitive.Corner />
-  </ScrollAreaPrimitive.Root>
-));
-ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName;
-
-const ScrollBar = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
->(({ className, orientation = "vertical", ...props }, ref) => (
-  <ScrollAreaPrimitive.ScrollAreaScrollbar
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, children, ...props }, ref) => (
+  <div
     ref={ref}
-    orientation={orientation}
+    // overflow-x-hidden matters beyond clipping horizontal overflow: pairing
+    // it with overflow-y-auto gives this element an automatic min-width of 0
+    // per the flexbox spec, so as a flex child it can't grow past its
+    // container to fit a wide descendant. Radix's Viewport had this
+    // implicitly (it set both axes' overflow); a bare overflow-y-auto here
+    // does not, and the layout visibly breaks without it.
     className={cn(
-      "flex touch-none select-none transition-colors",
-      orientation === "vertical" &&
-        "h-full w-2.5 border-l border-l-transparent p-[1px]",
-      orientation === "horizontal" &&
-        "h-2.5 flex-col border-t border-t-transparent p-[1px]",
+      "relative overflow-x-hidden overflow-y-auto themed-scrollbar",
       className
     )}
     {...props}
   >
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
-  </ScrollAreaPrimitive.ScrollAreaScrollbar>
+    {children}
+  </div>
 ));
-ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName;
+ScrollArea.displayName = "ScrollArea";
 
-export { ScrollArea, ScrollBar };
+export { ScrollArea };
