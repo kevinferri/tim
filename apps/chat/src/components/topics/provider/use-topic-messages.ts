@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  MutableRefObject,
-} from "react";
+import { useCallback, useMemo, MutableRefObject } from "react";
 import uniqBy from "lodash.uniqby";
 import { useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { MessageProps, MessageData } from "@/components/topics/message";
@@ -19,7 +13,6 @@ type UseTopicMessagesProps = {
   existingMessages: MessageData[];
   messagesLimit: number;
   viewportRef: MutableRefObject<HTMLDivElement | null>;
-  suppressBottomPinRef: MutableRefObject<boolean>;
   isAtBottom: boolean;
   onNewMessage?: (message: MessageProps) => void;
   onMediaMessage?: (message: MessageProps) => void;
@@ -44,7 +37,6 @@ export function useTopicMessages({
   existingMessages,
   messagesLimit,
   viewportRef,
-  suppressBottomPinRef,
   isAtBottom,
   onNewMessage,
   onMediaMessage,
@@ -159,45 +151,23 @@ export function useTopicMessages({
     },
   );
 
-  const pendingScrollAnchor = useRef<{
-    scrollHeight: number;
-    scrollTop: number;
-  } | null>(null);
+  const onLoadMoreSuccess = useCallback(() => {
+    // Captures the scroll offset now and re-applies it (shifted by the added
+    // height) once the DOM reflects the prepended older messages.
+    const viewport = viewportRef.current;
+    const prevScrollHeight = viewport?.scrollHeight ?? 0;
+    const prevScrollTop = viewport?.scrollTop ?? 0;
+
+    requestAnimationFrame(() => {
+      if (!viewport) return;
+      viewport.scrollTop =
+        prevScrollTop + (viewport.scrollHeight - prevScrollHeight);
+    });
+  }, [viewportRef]);
 
   const loadMoreMessages = useCallback(() => {
-    // Captured before the fetch, not in its `.then()`, since React may have already committed the taller content by then.
-    const viewport = viewportRef.current;
-    if (viewport) {
-      pendingScrollAnchor.current = {
-        scrollHeight: viewport.scrollHeight,
-        scrollTop: viewport.scrollTop,
-      };
-    }
-
-    // Also holds off the bottom-pin ResizeObserver (use-topic-scroll.ts), which watches the same content and can mistake this prepend for a new-message growth spike.
-    suppressBottomPinRef.current = true;
-
-    fetchNextPage()
-      .catch(() => {
-        pendingScrollAnchor.current = null;
-      })
-      .finally(() => {
-        // A short grace period, not an immediate clear -- images in the newly loaded page can still be settling into their real size for a moment after.
-        setTimeout(() => {
-          suppressBottomPinRef.current = false;
-        }, 300);
-      });
-  }, [fetchNextPage, viewportRef, suppressBottomPinRef]);
-
-  // Runs before paint, unlike a requestAnimationFrame restore, so there's no visible jump.
-  useLayoutEffect(() => {
-    const anchor = pendingScrollAnchor.current;
-    const viewport = viewportRef.current;
-    if (!anchor || !viewport) return;
-
-    pendingScrollAnchor.current = null;
-    viewport.scrollTop = anchor.scrollTop + (viewport.scrollHeight - anchor.scrollHeight);
-  }, [messages, viewportRef]);
+    fetchNextPage().then(onLoadMoreSuccess);
+  }, [fetchNextPage, onLoadMoreSuccess]);
 
   // Re-fetches page 0 directly (react-query v5 dropped invalidateQueries's
   // refetchPage filter) to replace the live window after a reconnect, since
