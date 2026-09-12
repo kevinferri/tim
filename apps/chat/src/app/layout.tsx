@@ -121,17 +121,15 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
         <SocketProvider {...socketConfig}>
           <PresenceSync />
           <UserStatsHighlightSync />
-          <UserRoomConnect>
-            <CircleRoomConnect circleIds={circleIds ?? []}>
-              <div className="flex flex-col h-screen">
-                <div className="flex overflow-hidden basis-full">
-                  <CirclesNav circles={circles} />
-                  {children}
-                </div>
-              </div>
-              <GlobalVideoPlayer />
-            </CircleRoomConnect>
-          </UserRoomConnect>
+          <UserRoomConnect />
+          <CircleRoomConnect circleIds={circleIds ?? []} />
+          <div className="flex flex-col h-screen">
+            <div className="flex overflow-hidden basis-full">
+              <CirclesNav circles={circles} />
+              {children}
+            </div>
+          </div>
+          <GlobalVideoPlayer />
         </SocketProvider>
       </SelfProvider>
     </BaseLayout>

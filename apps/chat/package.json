@@ -7,7 +7,7 @@
     "predev": "node scripts/db.js",
     "dev": "next dev",
     "build": "next build",
-    "start": "npx prisma migrate deploy && next start",
+    "start": "npx prisma migrate deploy && exec next start",
     "db:up": "node scripts/db.js",
     "lint": "eslint .",
     "test": "vitest run",

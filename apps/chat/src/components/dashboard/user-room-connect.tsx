@@ -7,11 +7,8 @@ import {
   useRoomManagement,
 } from "@/components/socket/use-current-user-rooms";
 
-type Props = {
-  children: React.ReactNode;
-};
-
-export function UserRoomConnect({ children }: Props) {
+// Mount exactly once inside SocketProvider -- joins/leaves are keyed by self.id, so a duplicate mount would double-join the same room.
+export function UserRoomConnect() {
   const self = useSelf();
   const { joinRoom, leaveRoom } = useRoomManagement();
 
@@ -23,5 +20,5 @@ export function UserRoomConnect({ children }: Props) {
     };
   });
 
-  return children;
+  return null;
 }

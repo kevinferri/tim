@@ -5,7 +5,7 @@
   "main": "dist/app.js",
   "scripts": {
     "build": "pnpm install --frozen-lockfile && npx tsc && pnpm install --prod --frozen-lockfile --ignore-scripts",
-    "start": "node dist/app.js",
+    "start": "exec node dist/app.js",
     "watch": "env $(grep -v '^#' .env.local | grep -v '^$') nodemon src/app.ts",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -7,11 +7,11 @@ import {
 } from "@/components/socket/use-current-user-rooms";
 
 type Props = {
-  children: React.ReactNode;
   circleIds: string[];
 };
 
-export function CircleRoomConnect({ children, circleIds }: Props) {
+// Mount exactly once inside SocketProvider -- a duplicate mount would double-join the same circle rooms.
+export function CircleRoomConnect({ circleIds }: Props) {
   const { joinRoom, leaveRoom } = useRoomManagement();
 
   useEffectOnce(() => {
@@ -26,5 +26,5 @@ export function CircleRoomConnect({ children, circleIds }: Props) {
     };
   });
 
-  return children;
+  return null;
 }
