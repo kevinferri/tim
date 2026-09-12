@@ -41,6 +41,11 @@ jobs:
         run: pnpm --filter chat lint
       - name: Validate Prisma schema
         working-directory: apps/chat
+        # prisma validate resolves the schema's env("DATABASE_URL") to check
+        # the connection string shape, but never actually connects -- any
+        # well-formed value works.
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/tim"
         run: npx prisma validate
       - name: Test
         run: pnpm --filter chat test
