@@ -19,6 +19,7 @@ type UseTopicMessagesProps = {
   existingMessages: MessageData[];
   messagesLimit: number;
   viewportRef: MutableRefObject<HTMLDivElement | null>;
+  suppressBottomPinRef: MutableRefObject<boolean>;
   isAtBottom: boolean;
   onNewMessage?: (message: MessageProps) => void;
   onMediaMessage?: (message: MessageProps) => void;
@@ -43,6 +44,7 @@ export function useTopicMessages({
   existingMessages,
   messagesLimit,
   viewportRef,
+  suppressBottomPinRef,
   isAtBottom,
   onNewMessage,
   onMediaMessage,
@@ -172,10 +174,20 @@ export function useTopicMessages({
       };
     }
 
-    fetchNextPage().catch(() => {
-      pendingScrollAnchor.current = null;
-    });
-  }, [fetchNextPage, viewportRef]);
+    // Also holds off the bottom-pin ResizeObserver (use-topic-scroll.ts), which watches the same content and can mistake this prepend for a new-message growth spike.
+    suppressBottomPinRef.current = true;
+
+    fetchNextPage()
+      .catch(() => {
+        pendingScrollAnchor.current = null;
+      })
+      .finally(() => {
+        // A short grace period, not an immediate clear -- images in the newly loaded page can still be settling into their real size for a moment after.
+        setTimeout(() => {
+          suppressBottomPinRef.current = false;
+        }, 300);
+      });
+  }, [fetchNextPage, viewportRef, suppressBottomPinRef]);
 
   // Runs before paint, unlike a requestAnimationFrame restore, so there's no visible jump.
   useLayoutEffect(() => {

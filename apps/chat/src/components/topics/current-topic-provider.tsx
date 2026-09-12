@@ -235,8 +235,14 @@ export function CurrentTopicProvider(props: Props) {
     string | undefined
   >();
   const [unseenCount, setUnseenCount] = useState(0);
-  const { viewportRef, contentRef, bottomSentinelRef, isAtBottom, scrollToBottom } =
-    useTopicScroll();
+  const {
+    viewportRef,
+    contentRef,
+    bottomSentinelRef,
+    isAtBottom,
+    scrollToBottom,
+    suppressBottomPinRef,
+  } = useTopicScroll();
 
   const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
     topicId: props.topicId,
@@ -295,6 +301,7 @@ export function CurrentTopicProvider(props: Props) {
     existingMessages: props.existingMessages,
     messagesLimit: props.messagesLimit,
     viewportRef,
+    suppressBottomPinRef,
     isAtBottom,
     onNewMessage,
     onMediaMessage,

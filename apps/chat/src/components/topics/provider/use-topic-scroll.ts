@@ -16,6 +16,7 @@ export function useTopicScroll() {
 
   const [isAtBottom, setIsAtBottomState] = useState(true);
   const isAtBottomRef = useRef(true);
+  const suppressBottomPinRef = useRef(false);
 
   const setIsAtBottom = useCallback((value: boolean) => {
     isAtBottomRef.current = value;
@@ -77,7 +78,7 @@ export function useTopicScroll() {
 
       previousHeight = nextHeight;
 
-      if (heightChanged && wasAtBottom) {
+      if (heightChanged && wasAtBottom && !suppressBottomPinRef.current) {
         viewport?.scrollTo({ top: nextHeight, behavior: "instant" });
         setIsAtBottom(true);
 
@@ -103,5 +104,6 @@ export function useTopicScroll() {
     bottomSentinelRef,
     isAtBottom,
     scrollToBottom,
+    suppressBottomPinRef,
   };
 }
