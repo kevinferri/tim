@@ -12,7 +12,7 @@ export function mediaMessagesQueryKey(topicId: string) {
   return ["media-messages", topicId];
 }
 
-export function singleMessageQueryKey(messageId: string) {
+function singleMessageQueryKey(messageId: string) {
   return ["message", messageId];
 }
 

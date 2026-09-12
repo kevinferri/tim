@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 
 export const PLAYER_WIDTH = 480;
 // Starting guess only, until the container reports its real height -- can drift from the actual header height.
-export const PLAYER_HEIGHT_FALLBACK = 320;
+const PLAYER_HEIGHT_FALLBACK = 320;
 export const PLAYER_TOP_PADDING = 48;
-export const PLAYER_BOTTOM_PADDING = 44;
+const PLAYER_BOTTOM_PADDING = 44;
 
 type Position = { x: number; y: number };
 type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";

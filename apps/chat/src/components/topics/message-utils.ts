@@ -70,7 +70,7 @@ export function isValidCommand(message: string) {
   return isCommandMessage(message);
 }
 
-export function escapeRegExp(str: string) {
+function escapeRegExp(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
