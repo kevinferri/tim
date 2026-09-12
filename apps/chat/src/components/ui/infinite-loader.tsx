@@ -19,7 +19,7 @@ export const InfiniteLoader = ({
   const intersectionRef = useRef(null);
   const intersection = useIntersection(intersectionRef, {
     root: containerRef?.current,
-    rootMargin: "150px",
+    rootMargin: "600px",
   });
 
   useEffect(() => {

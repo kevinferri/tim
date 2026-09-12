@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { VideoPlayer } from "@/components/topics/video-player";
 import {
@@ -65,6 +67,7 @@ export function MediaViewer({
   skipVirtualization,
 }: Props) {
   const videoData = prepareVideoPlayer(url);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const { openInGlobal, closeGlobal } = useGlobalVideoPlayer();
   const isGlobalMode = useGlobalVideoPlayerStore((s) => s.isGlobalMode);
@@ -96,12 +99,24 @@ export function MediaViewer({
   return (
     <Dialog>
       <DialogTrigger asChild onClick={onImageExpanded}>
-        <div className="relative w-fit max-w-sm max-h-sm cursor-zoom-in">
+        <div
+          className={cn(
+            "relative w-fit max-w-sm max-h-sm cursor-zoom-in",
+            // Reserves a placeholder footprint until the real image dimensions are known, so it doesn't pop in from zero height.
+            !imageLoaded && "w-full aspect-[4/3] rounded-md bg-muted animate-pulse",
+          )}
+        >
           <MediaViewerImage
             src={url}
             priority={priority}
-            onLoad={onPreviewLoad}
-            className="w-full rounded-md shadow-lg hover:opacity-80"
+            onLoad={() => {
+              setImageLoaded(true);
+              onPreviewLoad?.();
+            }}
+            className={cn(
+              "w-full rounded-md shadow-lg hover:opacity-80",
+              !imageLoaded && "invisible absolute inset-0",
+            )}
           />
         </div>
       </DialogTrigger>
