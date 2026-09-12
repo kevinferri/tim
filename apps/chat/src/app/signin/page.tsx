@@ -4,10 +4,16 @@ import { redirect } from "next/navigation";
 import { Routes } from "@/routes";
 import { cn } from "@/lib/utils";
 import { getLoggedInUserId } from "@/lib/session";
+import { prismaClient } from "@/lib/prisma/client";
 import { SignIn } from "@/components/auth/signin";
 import { SignUp } from "@/components/auth/signup";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+
+// Keep in sync with TIM_SANDBOX_EMAIL in prisma/seed.ts (not imported directly --
+// that file runs its seed as a side effect at import time).
+const TIM_SANDBOX_EMAIL = "tim.sandbox@example.com";
 
 export default async function LogInPage({
   searchParams,
@@ -21,6 +27,14 @@ export default async function LogInPage({
     const redirectTo = params?.callbackUrl ? params.callbackUrl : Routes.Home;
     return redirect(redirectTo);
   }
+
+  const timSandbox =
+    process.env.NODE_ENV !== "production"
+      ? await prismaClient.user.findUnique({
+          where: { email: TIM_SANDBOX_EMAIL },
+          select: { email: true },
+        })
+      : null;
 
   return (
     <div className={cn("grid grid-cols-2 h-screen")}>
@@ -74,6 +88,27 @@ export default async function LogInPage({
             </Link>
             .
           </p>
+          {timSandbox && (
+            <div
+              className={cn(
+                "border rounded-md p-4 flex flex-col items-center gap-2 text-sm",
+              )}
+            >
+              <p className={cn("text-muted-foreground")}>Dev only</p>
+              <Button variant="secondary" asChild>
+                {/* Plain <a>, not next/link's <Link>: this hits a route handler
+                    that redirects after setting the session cookie, and a
+                    client-side <Link> navigation here leaves the root layout
+                    rendering its stale pre-login (logged-out) output instead
+                    of picking up the new session. */}
+                <a
+                  href={`/api/dev/login?email=${encodeURIComponent(timSandbox.email ?? "")}`}
+                >
+                  Log in to Tim Sandbox
+                </a>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
