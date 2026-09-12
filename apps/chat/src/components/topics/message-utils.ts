@@ -31,18 +31,6 @@ export function isGiphy(url?: string) {
   return url.includes("giphy.com/media");
 }
 
-export async function getFileFromUrl(
-  url: string,
-  name: string,
-  defaultType = "image/jpeg",
-) {
-  const response = await fetch(url);
-  const data = await response.blob();
-  return new File([data], name, {
-    type: data.type ?? defaultType,
-  });
-}
-
 export function extractImageFromMessage(text: string) {
   const imageMatch = text.match(
     /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|png|svg|webp))/i,
@@ -82,7 +70,7 @@ export function isValidCommand(message: string) {
   return isCommandMessage(message);
 }
 
-export function escapeRegExp(str: string) {
+function escapeRegExp(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 

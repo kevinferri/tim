@@ -7,7 +7,7 @@ import { saveTopicHistory } from "../db/topic-history";
 
 export { RoomType };
 
-export const ROOM_KEY_INDICATOR = "::";
+const ROOM_KEY_INDICATOR = "::";
 
 // A user connected from more than one socket (multiple tabs/devices) has
 // more than one socket in the same room, which would otherwise surface as
@@ -193,7 +193,7 @@ export async function emitUserChangeInTopic({
   }
 }
 
-export async function emitUserJoinedCircle({
+async function emitUserJoinedCircle({
   server,
   socket,
   circleId,
