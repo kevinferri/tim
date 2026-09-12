@@ -41,7 +41,7 @@ const getTopic = cache(
     });
 
     return topic;
-  }
+  },
 );
 
 export async function generateMetadata({ params }: Props) {

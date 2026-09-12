@@ -17,11 +17,11 @@ export function useUserTypingEmitter({ topicId, message }: Args) {
   const prev = usePrevious(message);
 
   const startedTyping = useSocketEmit<TypingPayload>(
-    SocketEvent.UserStartedTyping
+    SocketEvent.UserStartedTyping,
   );
 
   const stoppedTyping = useSocketEmit<TypingPayload>(
-    SocketEvent.UserStoppedTyping
+    SocketEvent.UserStoppedTyping,
   );
 
   useEffect(() => {

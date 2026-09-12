@@ -55,7 +55,7 @@ export const UpsertCircleForm = ({ trigger, existingCircle }: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
   const [avatar, setAvatar] = useState<File | string | undefined>(
-    existingCircle?.imageUrl ?? undefined
+    existingCircle?.imageUrl ?? undefined,
   );
   const avatarBlobUrl = useMemo(() => {
     if (typeof avatar === "string") return avatar;

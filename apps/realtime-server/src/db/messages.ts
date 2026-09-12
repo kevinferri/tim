@@ -108,7 +108,7 @@ export async function editMessage({
         text: encrypt(text, messageId),
         mediaUrl,
       },
-      ["id", "text", "mediaUrl"]
+      ["id", "text", "mediaUrl"],
     );
 
   return message[0];

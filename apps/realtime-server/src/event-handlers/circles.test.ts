@@ -21,7 +21,10 @@ describe("handleUpsertedCircle", () => {
     expect(server.to).toHaveBeenCalledWith("user::u2");
     expect(server.to).toHaveBeenCalledWith("user::u3");
     expect(server.emit).toHaveBeenCalledTimes(3);
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.UpsertedCircle, payload);
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UpsertedCircle,
+      payload,
+    );
   });
 });
 
@@ -37,6 +40,9 @@ describe("handleDeletedCircle", () => {
     expect(server.to).toHaveBeenCalledWith("user::u1");
     expect(server.to).toHaveBeenCalledWith("user::u2");
     expect(server.emit).toHaveBeenCalledTimes(2);
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.DeletedCircle, payload);
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.DeletedCircle,
+      payload,
+    );
   });
 });

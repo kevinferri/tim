@@ -27,7 +27,9 @@ describe("GET /api/message/[messageId]", () => {
   it("returns 401 when not logged in", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue(undefined);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ messageId: "message-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ messageId: "message-1" }),
+    });
 
     expect(res.status).toBe(401);
   });
@@ -35,7 +37,9 @@ describe("GET /api/message/[messageId]", () => {
   it("returns 400 when messageId is missing", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ messageId: "" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ messageId: "" }),
+    });
 
     expect(res.status).toBe(400);
   });
@@ -44,7 +48,9 @@ describe("GET /api/message/[messageId]", () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.message.getById).mockResolvedValue(null as any);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ messageId: "message-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ messageId: "message-1" }),
+    });
 
     expect(res.status).toBe(404);
   });
@@ -58,7 +64,9 @@ describe("GET /api/message/[messageId]", () => {
     } as any);
     vi.mocked(prismaClient.topic.isUserInTopic).mockResolvedValue(false);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ messageId: "message-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ messageId: "message-1" }),
+    });
 
     expect(res.status).toBe(404);
   });
@@ -72,7 +80,9 @@ describe("GET /api/message/[messageId]", () => {
     } as any);
     vi.mocked(prismaClient.topic.isUserInTopic).mockResolvedValue(true);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ messageId: "message-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ messageId: "message-1" }),
+    });
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({ id: "message-1" });
@@ -84,9 +94,13 @@ describe("GET /api/message/[messageId]", () => {
 
   it("returns 400 when the model layer throws", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.message.getById).mockRejectedValue(new Error("db down"));
+    vi.mocked(prismaClient.message.getById).mockRejectedValue(
+      new Error("db down"),
+    );
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ messageId: "message-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ messageId: "message-1" }),
+    });
 
     expect(res.status).toBe(400);
   });

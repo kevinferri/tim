@@ -14,7 +14,11 @@ beforeEach(resetDb);
 
 async function createUser() {
   const [user] = await pgClient("users")
-    .insert({ id: crypto.randomUUID(), googleId: `google-${crypto.randomUUID()}`, name: "Test User" })
+    .insert({
+      id: crypto.randomUUID(),
+      googleId: `google-${crypto.randomUUID()}`,
+      name: "Test User",
+    })
     .returning(["id"]);
   return user.id as string;
 }
@@ -43,7 +47,12 @@ describe("writeMessage", () => {
     const circleId = await createCircle(userId);
     const topicId = await createTopic(userId, circleId);
 
-    const message = await writeMessage({ userId, topicId, text: "hello world", mediaUrl: undefined as any });
+    const message = await writeMessage({
+      userId,
+      topicId,
+      text: "hello world",
+      mediaUrl: undefined as any,
+    });
 
     expect(decrypt(message.text!, message.id)).toBe("hello world");
 
@@ -59,7 +68,12 @@ describe("editMessage", () => {
     const topicId = await createTopic(userId, circleId);
     const message = await createMessage(userId, topicId);
 
-    const edited = await editMessage({ userId, messageId: message.id, text: "edited", mediaUrl: undefined });
+    const edited = await editMessage({
+      userId,
+      messageId: message.id,
+      text: "edited",
+      mediaUrl: undefined,
+    });
 
     expect(decrypt(edited.text!, edited.id)).toBe("edited");
   });
@@ -71,7 +85,12 @@ describe("editMessage", () => {
     const topicId = await createTopic(owner, circleId);
     const message = await createMessage(owner, topicId);
 
-    const result = await editMessage({ userId: attacker, messageId: message.id, text: "hijacked", mediaUrl: undefined });
+    const result = await editMessage({
+      userId: attacker,
+      messageId: message.id,
+      text: "hijacked",
+      mediaUrl: undefined,
+    });
 
     expect(result).toBeUndefined();
   });
@@ -85,7 +104,7 @@ describe("getMessageForUser", () => {
     const message = await createMessage(userId, topicId);
 
     await expect(
-      getMessageForUser({ messageId: message.id, userId })
+      getMessageForUser({ messageId: message.id, userId }),
     ).resolves.toEqual({ id: message.id, text: message.text });
   });
 
@@ -97,7 +116,7 @@ describe("getMessageForUser", () => {
     const message = await createMessage(owner, topicId);
 
     await expect(
-      getMessageForUser({ messageId: message.id, userId: outsider })
+      getMessageForUser({ messageId: message.id, userId: outsider }),
     ).resolves.toBeUndefined();
   });
 });
@@ -110,7 +129,7 @@ describe("getMessageOwnerInTopic", () => {
     const message = await createMessage(userId, topicId);
 
     await expect(
-      getMessageOwnerInTopic({ messageId: message.id, topicId })
+      getMessageOwnerInTopic({ messageId: message.id, topicId }),
     ).resolves.toEqual({ id: message.id, userId });
   });
 
@@ -122,7 +141,7 @@ describe("getMessageOwnerInTopic", () => {
     const message = await createMessage(userId, topicId);
 
     await expect(
-      getMessageOwnerInTopic({ messageId: message.id, topicId: otherTopicId })
+      getMessageOwnerInTopic({ messageId: message.id, topicId: otherTopicId }),
     ).resolves.toBeUndefined();
   });
 });
@@ -138,7 +157,10 @@ describe("getMessageHistoryForTopic", () => {
     const history = await getMessageHistoryForTopic({ topicId, limit: 10 });
 
     expect(history).toHaveLength(2);
-    expect(history.map((m) => decrypt(m.text, m.id))).toEqual(["first", "second"]);
+    expect(history.map((m) => decrypt(m.text, m.id))).toEqual([
+      "first",
+      "second",
+    ]);
     expect(history[0].name).toBe("Test User");
   });
 
@@ -152,7 +174,10 @@ describe("getMessageHistoryForTopic", () => {
 
     const history = await getMessageHistoryForTopic({ topicId, limit: 2 });
 
-    expect(history.map((m) => decrypt(m.text, m.id))).toEqual(["second", "third"]);
+    expect(history.map((m) => decrypt(m.text, m.id))).toEqual([
+      "second",
+      "third",
+    ]);
   });
 });
 
@@ -166,7 +191,7 @@ describe("deleteMessage", () => {
     await deleteMessage({ userId, messageId: message.id });
 
     await expect(
-      pgClient("messages").where("id", message.id).first()
+      pgClient("messages").where("id", message.id).first(),
     ).resolves.toBeUndefined();
   });
 });

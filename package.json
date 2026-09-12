@@ -4,9 +4,12 @@
   "private": true,
   "packageManager": "pnpm@12.4.1",
   "scripts": {
-    "dev": "concurrently -n chat,realtime-server -c blue.bold,green.bold \"pnpm --filter chat dev\" \"pnpm --filter tim-chat-server watch\""
+    "dev": "concurrently -n chat,realtime-server -c blue.bold,green.bold \"pnpm --filter chat dev\" \"pnpm --filter tim-chat-server watch\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "prettier": "^3.9.6"
   }
 }

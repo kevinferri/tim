@@ -50,7 +50,10 @@ export const normalizeMessages = <
   }));
 
 // One undecryptable row shouldn't take down the whole list it's part of -- degrade that single message instead of throwing out of the .map().
-function getReadableMessage(text: string | null | undefined, messageId: string) {
+function getReadableMessage(
+  text: string | null | undefined,
+  messageId: string,
+) {
   if (!text) return undefined;
 
   try {
@@ -193,9 +196,7 @@ export const messageModel = {
   async getMostRecentTimestampsByTopic({ topicIds }: { topicIds: string[] }) {
     if (!topicIds.length) return [];
 
-    return await prismaClient.$queryRaw<
-      { topicId: string; createdAt: Date }[]
-    >`
+    return await prismaClient.$queryRaw<{ topicId: string; createdAt: Date }[]>`
       SELECT "topicId", "createdAt" FROM (
         SELECT "topicId", "createdAt", ROW_NUMBER() OVER (PARTITION BY "topicId" ORDER BY "createdAt" DESC) as row_num
         FROM "messages"

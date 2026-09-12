@@ -48,7 +48,10 @@ export function useSocketState(socket: Socket) {
     // "connect"/"disconnect" only fire for a connection that was established and then dropped; if it never connects at all (bad URL, server down), "connect_error" is the only signal, so isConnected must be driven from here too.
     function onConnectError(err: Error) {
       // `auth` is captured once at socket construction and never refreshed, so a socket older than the 24h JWT expiry retries forever with the same stale token -- reload to pick up a fresh one instead of looping on "Invalid credentials".
-      if (err.message === "Invalid credentials" && !hasTriggeredAuthReload.current) {
+      if (
+        err.message === "Invalid credentials" &&
+        !hasTriggeredAuthReload.current
+      ) {
         hasTriggeredAuthReload.current = true;
         window.location.reload();
         return;

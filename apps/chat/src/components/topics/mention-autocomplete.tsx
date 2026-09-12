@@ -71,7 +71,7 @@ export function MentionAutocomplete({
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
                     isSelected ? "bg-accent text-accent-foreground" : "",
-                    member.isOnline ? "" : "opacity-60"
+                    member.isOnline ? "" : "opacity-60",
                   )}
                 >
                   <Avatar className="h-6 w-6">
@@ -82,9 +82,7 @@ export function MentionAutocomplete({
                   </Avatar>
                   {/* Selecting inserts this same display name -- full name is
                       only ever a hover tooltip, never shown outright. */}
-                  <span title={member.name}>
-                    {getDisplayName(member.name)}
-                  </span>
+                  <span title={member.name}>{getDisplayName(member.name)}</span>
                 </div>
               </div>
             );

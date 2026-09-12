@@ -20,14 +20,18 @@ beforeEach(() => {
 });
 
 function makeRequest(search = "") {
-  return new NextRequest(`http://localhost/api/topics/topic-1/messages${search}`);
+  return new NextRequest(
+    `http://localhost/api/topics/topic-1/messages${search}`,
+  );
 }
 
 describe("GET /api/topics/[topicId]/messages", () => {
   it("returns 401 when not logged in", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue(undefined);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ topicId: "topic-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
 
     expect(res.status).toBe(401);
   });
@@ -36,7 +40,9 @@ describe("GET /api/topics/[topicId]/messages", () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.topic.isUserInTopic).mockResolvedValue(false);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ topicId: "topic-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
 
     expect(res.status).toBe(404);
   });
@@ -59,15 +65,19 @@ describe("GET /api/topics/[topicId]/messages", () => {
         requestingUserId: "user-1",
         topicId: "topic-1",
         before: "message-0",
-      })
+      }),
     );
   });
 
   it("returns 400 when the model layer throws", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.topic.isUserInTopic).mockRejectedValue(new Error("db down"));
+    vi.mocked(prismaClient.topic.isUserInTopic).mockRejectedValue(
+      new Error("db down"),
+    );
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ topicId: "topic-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
 
     expect(res.status).toBe(400);
   });

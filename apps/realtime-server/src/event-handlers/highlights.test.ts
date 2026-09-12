@@ -8,7 +8,10 @@ vi.mock("../db/users", () => ({
   getUserSummary: vi.fn(),
 }));
 vi.mock("../lib/notifications", () => ({
-  NotificationType: { HighlightRecieved: "highlight:recieved", HighlightRemoved: "highlight:removed" },
+  NotificationType: {
+    HighlightRecieved: "highlight:recieved",
+    HighlightRemoved: "highlight:removed",
+  },
   emitNotification: vi.fn(),
 }));
 
@@ -24,15 +27,26 @@ beforeEach(() => {
 
 describe("handleToggleHighlight", () => {
   it("adds a highlight, emits it with the creator, and notifies", async () => {
-    vi.mocked(toggleHighlight).mockResolvedValue({ id: "h1", userId: "user-1", messageId: "msg-1" } as any);
-    vi.mocked(getUserSummary).mockResolvedValue({ id: "user-1", imageUrl: "img", name: "Test User" } as any);
+    vi.mocked(toggleHighlight).mockResolvedValue({
+      id: "h1",
+      userId: "user-1",
+      messageId: "msg-1",
+    } as any);
+    vi.mocked(getUserSummary).mockResolvedValue({
+      id: "user-1",
+      imageUrl: "img",
+      name: "Test User",
+    } as any);
 
     const socket = createMockSocket({ id: "user-1" });
     socket.rooms.add("topic::topic-1");
     const server = createMockServer();
     handleToggleHighlight({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.ToggleHighlight, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.ToggleHighlight, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(server.to).toHaveBeenCalledWith("topic::topic-1");
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.AddedHighlight, {
@@ -40,7 +54,9 @@ describe("handleToggleHighlight", () => {
       createdBy: { id: "user-1", imageUrl: "img", name: "Test User" },
     });
     expect(emitNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ notificationType: NotificationType.HighlightRecieved })
+      expect.objectContaining({
+        notificationType: NotificationType.HighlightRecieved,
+      }),
     );
   });
 
@@ -52,14 +68,19 @@ describe("handleToggleHighlight", () => {
     const server = createMockServer();
     handleToggleHighlight({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.ToggleHighlight, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.ToggleHighlight, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.RemovedHighlight, {
       messageId: "msg-1",
       userId: "user-1",
     });
     expect(emitNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ notificationType: NotificationType.HighlightRemoved })
+      expect.objectContaining({
+        notificationType: NotificationType.HighlightRemoved,
+      }),
     );
     expect(getUserSummary).not.toHaveBeenCalled();
   });
@@ -69,7 +90,10 @@ describe("handleToggleHighlight", () => {
     const server = createMockServer();
     handleToggleHighlight({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.ToggleHighlight, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.ToggleHighlight, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(toggleHighlight).not.toHaveBeenCalled();
   });

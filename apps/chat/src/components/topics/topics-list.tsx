@@ -84,11 +84,11 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
   const { unreadTopics, hydrateUnreadTopics } = useUnreadTopics();
   const [isMinimized, setIsMinimized] = useLocalStorage(
     `tim:topics-nav-minimized:${self.id}`,
-    false
+    false,
   );
   const [mutedTopics, setMutedTopics] = useLocalStorage<string[]>(
     `tim:muted-topics:${self.id}`,
-    []
+    [],
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -168,7 +168,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
           </ToastAction>
         ),
       });
-    }
+    },
   );
 
   useSocketHandler<DeletedTopicHandlerProps>(
@@ -189,7 +189,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
         title: `Topic deleted in ${circle.name}`,
         description: `${name} deleted the topic called "${payload.name}"`,
       });
-    }
+    },
   );
 
   if (!topics) {
@@ -202,13 +202,13 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
         `flex flex-col shadow-md border-r shrink-0`,
         isMinimized
           ? ""
-          : "max-w-sidebar-nav min-w-sidebar-nav lg:max-w-sidebar-nav-lg lg:min-w-sidebar-nav-lg"
+          : "max-w-sidebar-nav min-w-sidebar-nav lg:max-w-sidebar-nav-lg lg:min-w-sidebar-nav-lg",
       )}
     >
       <div
         className={cn(
           `flex block p-3 border-b whitespace-nowrap text-ellipsis font-medium flex`,
-          isMinimized ? "justify-center" : ""
+          isMinimized ? "justify-center" : "",
         )}
       >
         {!isMinimized && circle.name}
@@ -294,8 +294,8 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                                         {getInitials(
                                           topic.name.replace(
                                             /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
-                                            ""
-                                          )
+                                            "",
+                                          ),
                                         )}
                                       </span>
                                     )}
@@ -361,7 +361,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                             className={cn(
                               isUnread &&
                                 "underline decoration-wavy decoration-mention underline-offset-4",
-                              isMuted && "text-muted-foreground"
+                              isMuted && "text-muted-foreground",
                             )}
                           >
                             {topic.name}
@@ -409,7 +409,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                     <ContextMenuItem
                       onClick={() => {
                         navigator.clipboard.writeText(
-                          `${window.location.host}${link}`
+                          `${window.location.host}${link}`,
                         );
                         toast({
                           duration: 3000,

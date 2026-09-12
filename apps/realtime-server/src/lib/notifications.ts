@@ -33,7 +33,7 @@ async function notifyUser({
   if (receiverId === actor.id) return;
 
   const receiverSocket = (await server.in(roomKey).fetchSockets()).find(
-    ({ data }) => data.user.id === receiverId
+    ({ data }) => data.user.id === receiverId,
   );
 
   if (!receiverSocket) return;
@@ -114,7 +114,7 @@ export async function emitMentionNotifications({
         topicId,
         messageId,
         notificationType: NotificationType.Mentioned,
-      })
-    )
+      }),
+    ),
   );
 }

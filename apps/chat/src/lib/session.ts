@@ -56,7 +56,7 @@ export const authOptions: AuthOptions = {
 
       if (user.image) {
         const avatarImage = await uploadImage(
-          user.image.replace("s96-c", "s384-c")
+          user.image.replace("s96-c", "s384-c"),
         );
 
         if (avatarImage) {

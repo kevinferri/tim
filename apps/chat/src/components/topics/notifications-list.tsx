@@ -63,7 +63,7 @@ export function NotificationsList(props: Props) {
 
   const messagesById = useMemo(
     () => keyBy([...messages, ...topHighlights, ...mediaMessages], "id"),
-    [messages, topHighlights, mediaMessages]
+    [messages, topHighlights, mediaMessages],
   );
 
   return (

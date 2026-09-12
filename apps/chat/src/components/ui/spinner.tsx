@@ -16,7 +16,7 @@ const Spinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
     return (
       <div ref={ref} className={cn(spinnerVariants, className)} {...rest} />
     );
-  }
+  },
 );
 
 Spinner.displayName = "LoadingSpinner";

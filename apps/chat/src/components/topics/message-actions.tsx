@@ -42,7 +42,7 @@ export function MessageActions(props: Props) {
     <div
       className={cn(
         "absolute top-[-8px] right-[10px] text-primary",
-        props.className
+        props.className,
       )}
     >
       <div className="flex gap-1">

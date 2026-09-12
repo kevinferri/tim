@@ -44,7 +44,7 @@ describe("emitNotification", () => {
         messageId: "msg-1",
         topicId: "topic-1",
         actor,
-      })
+      }),
     );
   });
 
@@ -85,7 +85,7 @@ describe("emitNotification", () => {
         messageId: "msg-1",
         actor,
         notificationType: NotificationType.HighlightRecieved,
-      })
+      }),
     ).resolves.toBeUndefined();
   });
 });
@@ -112,11 +112,11 @@ describe("emitMentionNotifications", () => {
       expect.objectContaining({
         notificationType: NotificationType.Mentioned,
         messageId: "msg-1",
-      })
+      }),
     );
     expect(bob.emit).toHaveBeenCalledWith(
       "notification:create",
-      expect.objectContaining({ notificationType: NotificationType.Mentioned })
+      expect.objectContaining({ notificationType: NotificationType.Mentioned }),
     );
   });
 

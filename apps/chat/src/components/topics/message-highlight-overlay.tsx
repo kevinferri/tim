@@ -12,7 +12,11 @@ type Props = {
 // spans for how @mention/#topic/command will render once sent -- font,
 // padding, and wrapping must match the textarea exactly to stay
 // character-aligned.
-export function MessageHighlightOverlay({ text, mentionNames, topicNames }: Props) {
+export function MessageHighlightOverlay({
+  text,
+  mentionNames,
+  topicNames,
+}: Props) {
   const tokens = tokenizeMessage(text, mentionNames, topicNames);
 
   return (

@@ -38,7 +38,7 @@ export function TopicActiveUsers(props: Props) {
         ...typingMap,
         [payload.userId]: true,
       });
-    }
+    },
   );
 
   useSocketHandler<ActivityPayload>(
@@ -48,7 +48,7 @@ export function TopicActiveUsers(props: Props) {
         ...typingMap,
         [payload.userId]: false,
       });
-    }
+    },
   );
 
   return (

@@ -6,11 +6,17 @@ vi.mock("../lib/user-change-handler", () => ({
   handleActiveUserAttributeChange: vi.fn(),
 }));
 vi.mock("../lib/notifications", () => ({
-  NotificationType: { ExpandedImage: "image:expanded", ClickedLink: "link:clicked" },
+  NotificationType: {
+    ExpandedImage: "image:expanded",
+    ClickedLink: "link:clicked",
+  },
   emitNotification: vi.fn(),
 }));
 
-import { handleActiveUserStateChange, handleActiveUserAttributeChange } from "../lib/user-change-handler";
+import {
+  handleActiveUserStateChange,
+  handleActiveUserAttributeChange,
+} from "../lib/user-change-handler";
 import { emitNotification, NotificationType } from "../lib/notifications";
 import {
   handleUserTabFocused,
@@ -36,7 +42,9 @@ describe("handleUserTabFocused", () => {
 
     await socket.trigger(SocketEvent.UserTabFocused, { topicId: "topic-1" });
 
-    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, { isIdle: false });
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isIdle: false,
+    });
     expect(server.to).toHaveBeenCalledWith("topic::topic-1");
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserTabFocused, {
       userId: "user-1",
@@ -64,8 +72,13 @@ describe("handleUserTabBlurred", () => {
 
     await socket.trigger(SocketEvent.UserTabBlurred, { topicId: "topic-1" });
 
-    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, { isIdle: true });
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserTabBlurred, expect.any(Object));
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isIdle: true,
+    });
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserTabBlurred,
+      expect.any(Object),
+    );
   });
 });
 
@@ -78,8 +91,13 @@ describe("handleUserStartedTyping / handleUserStoppedTyping", () => {
 
     await socket.trigger(SocketEvent.UserStartedTyping, { topicId: "topic-1" });
 
-    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, { isTyping: true });
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserStartedTyping, expect.any(Object));
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isTyping: true,
+    });
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserStartedTyping,
+      expect.any(Object),
+    );
   });
 
   it("stopped: flips isTyping false and re-emits presence", async () => {
@@ -90,8 +108,13 @@ describe("handleUserStartedTyping / handleUserStoppedTyping", () => {
 
     await socket.trigger(SocketEvent.UserStoppedTyping, { topicId: "topic-1" });
 
-    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, { isTyping: false });
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserStoppedTyping, expect.any(Object));
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isTyping: false,
+    });
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserStoppedTyping,
+      expect.any(Object),
+    );
   });
 });
 
@@ -102,14 +125,17 @@ describe("handleUserExpandedImage", () => {
     const server = createMockServer();
     handleUserExpandedImage({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.UserExpandedImage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.UserExpandedImage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(emitNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         topicId: "topic-1",
         messageId: "msg-1",
         notificationType: NotificationType.ExpandedImage,
-      })
+      }),
     );
   });
 
@@ -118,7 +144,10 @@ describe("handleUserExpandedImage", () => {
     const server = createMockServer();
     handleUserExpandedImage({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.UserExpandedImage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.UserExpandedImage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(emitNotification).not.toHaveBeenCalled();
   });
@@ -131,10 +160,15 @@ describe("handleUserClickedLink", () => {
     const server = createMockServer();
     handleUserClickedLink({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.UserClickedLink, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.UserClickedLink, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(emitNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ notificationType: NotificationType.ClickedLink })
+      expect.objectContaining({
+        notificationType: NotificationType.ClickedLink,
+      }),
     );
   });
 });
@@ -157,7 +191,10 @@ describe("handleUserUpdatedStatus", () => {
       lastStatusUpdate: "2026-01-01",
     });
     expect(server.to).toHaveBeenCalledWith(["circle::circle-1"]);
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserUpdatedStatus, payload);
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserUpdatedStatus,
+      payload,
+    );
   });
 
   it("broadcasts once across all shared circle rooms instead of once per circle", async () => {
@@ -174,7 +211,10 @@ describe("handleUserUpdatedStatus", () => {
     await socket.trigger(SocketEvent.UserUpdatedStatus, payload);
 
     expect(server.to).toHaveBeenCalledTimes(1);
-    expect(server.to).toHaveBeenCalledWith(["circle::circle-1", "circle::circle-2"]);
+    expect(server.to).toHaveBeenCalledWith([
+      "circle::circle-1",
+      "circle::circle-2",
+    ]);
     expect(server.emit).toHaveBeenCalledTimes(1);
   });
 

@@ -18,7 +18,7 @@ beforeEach(() => {
 
 function makeRequest(url: string) {
   return new NextRequest(
-    `http://localhost/api/link-metadata?url=${encodeURIComponent(url)}`
+    `http://localhost/api/link-metadata?url=${encodeURIComponent(url)}`,
   );
 }
 

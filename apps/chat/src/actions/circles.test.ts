@@ -40,7 +40,7 @@ describe("upsertCircle", () => {
         imageUrl: null,
         members: null,
         defaultTopicName: null,
-      })
+      }),
     );
 
     expect(result).toBe(false);
@@ -61,7 +61,7 @@ describe("upsertCircle", () => {
         imageUrl: null,
         members: "a@example.com, b@example.com",
         defaultTopicName: null,
-      })
+      }),
     );
 
     expect(prismaClient.circle.upsertForUser).toHaveBeenCalledWith({
@@ -80,7 +80,9 @@ describe("upsertCircle", () => {
 describe("deleteCircle", () => {
   it("delegates to the model with the logged-in user id", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.deleteByIdForUser).mockResolvedValue(true as any);
+    vi.mocked(prismaClient.circle.deleteByIdForUser).mockResolvedValue(
+      true as any,
+    );
 
     const result = await deleteCircle({ circleId: "circle-1" });
 

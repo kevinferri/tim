@@ -14,7 +14,7 @@ export function getInitialActiveUserState(): ActiveUserState {
 
 export function handleActiveUserStateChange(
   socket: Socket,
-  next: Partial<ActiveUserState>
+  next: Partial<ActiveUserState>,
 ) {
   const cur = socket.data.user.state;
 
@@ -28,7 +28,7 @@ export function handleActiveUserStateChange(
 
 export function handleActiveUserAttributeChange(
   socket: Socket,
-  next: Record<string, unknown>
+  next: Record<string, unknown>,
 ) {
   const cur = socket.data.user;
 

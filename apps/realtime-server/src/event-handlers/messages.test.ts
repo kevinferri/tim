@@ -59,12 +59,16 @@ describe("handleSendMessage", () => {
     });
 
     expect(writeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "user-1", text: "hello", topicId: "topic-1" })
+      expect.objectContaining({
+        userId: "user-1",
+        text: "hello",
+        topicId: "topic-1",
+      }),
     );
     expect(server.to).toHaveBeenCalledWith("circle::circle-1");
     expect(server.emit).toHaveBeenCalledWith(
       SocketEvent.SendMessage,
-      expect.objectContaining({ text: "hello", circleId: "circle-1" })
+      expect.objectContaining({ text: "hello", circleId: "circle-1" }),
     );
   });
 
@@ -104,7 +108,7 @@ describe("handleSendMessage", () => {
 
     expect(getRandomGif).toHaveBeenCalledWith("cats");
     expect(writeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ mediaUrl: "http://gif.example/cats.gif" })
+      expect.objectContaining({ mediaUrl: "http://gif.example/cats.gif" }),
     );
   });
 
@@ -131,7 +135,7 @@ describe("handleSendMessage", () => {
 
     expect(bobSocket.emit).toHaveBeenCalledWith(
       "notification:create",
-      expect.objectContaining({ messageId: "msg-1", topicId: "topic-1" })
+      expect.objectContaining({ messageId: "msg-1", topicId: "topic-1" }),
     );
   });
 });
@@ -145,10 +149,18 @@ describe("handleDeleteMessage", () => {
     const server = createMockServer();
     handleDeleteMessage({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.DeleteMessage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.DeleteMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
-    expect(deleteMessage).toHaveBeenCalledWith({ userId: "user-1", messageId: "msg-1" });
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.DeleteMessage, { deletedMessageId: "msg-1" });
+    expect(deleteMessage).toHaveBeenCalledWith({
+      userId: "user-1",
+      messageId: "msg-1",
+    });
+    expect(server.emit).toHaveBeenCalledWith(SocketEvent.DeleteMessage, {
+      deletedMessageId: "msg-1",
+    });
   });
 
   it("does not emit when the mutation deletes nothing (not owner/not found)", async () => {
@@ -159,7 +171,10 @@ describe("handleDeleteMessage", () => {
     const server = createMockServer();
     handleDeleteMessage({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.DeleteMessage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.DeleteMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(server.emit).not.toHaveBeenCalled();
   });
@@ -169,7 +184,10 @@ describe("handleDeleteMessage", () => {
     const server = createMockServer();
     handleDeleteMessage({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.DeleteMessage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.DeleteMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(deleteMessage).not.toHaveBeenCalled();
   });
@@ -194,10 +212,14 @@ describe("handleEditMessage", () => {
       text: "updated",
     });
 
-    expect(editMessage).toHaveBeenCalledWith({ userId: "user-1", messageId: "msg-1", text: "updated" });
+    expect(editMessage).toHaveBeenCalledWith({
+      userId: "user-1",
+      messageId: "msg-1",
+      text: "updated",
+    });
     expect(server.emit).toHaveBeenCalledWith(
       SocketEvent.EditMessage,
-      expect.objectContaining({ text: "updated" })
+      expect.objectContaining({ text: "updated" }),
     );
   });
 
@@ -207,7 +229,11 @@ describe("handleEditMessage", () => {
     const server = createMockServer();
     handleEditMessage({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.EditMessage, { topicId: "topic-1", messageId: "msg-1", text: "" });
+    await socket.trigger(SocketEvent.EditMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+      text: "",
+    });
 
     expect(editMessage).not.toHaveBeenCalled();
   });
@@ -220,7 +246,11 @@ describe("handleEditMessage", () => {
     const server = createMockServer();
     handleEditMessage({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.EditMessage, { topicId: "topic-1", messageId: "msg-1", text: "x" });
+    await socket.trigger(SocketEvent.EditMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+      text: "x",
+    });
 
     expect(server.emit).not.toHaveBeenCalled();
   });
@@ -233,14 +263,20 @@ describe("handleShuffleGif", () => {
       text: encrypt("/giphy cats", "msg-1"),
     } as any);
     vi.mocked(getRandomGif).mockResolvedValue("http://gif.example/new.gif");
-    vi.mocked(editMessage).mockResolvedValue({ id: "msg-1", mediaUrl: "http://gif.example/new.gif" } as any);
+    vi.mocked(editMessage).mockResolvedValue({
+      id: "msg-1",
+      mediaUrl: "http://gif.example/new.gif",
+    } as any);
 
     const socket = createMockSocket({ id: "user-1" });
     socket.rooms.add("topic::topic-1");
     const server = createMockServer();
     handleShuffleGif({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.ShuffleGifMessage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.ShuffleGifMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(getRandomGif).toHaveBeenCalledWith("cats");
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.ShuffleGifMessage, {
@@ -257,7 +293,10 @@ describe("handleShuffleGif", () => {
     const server = createMockServer();
     handleShuffleGif({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.ShuffleGifMessage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.ShuffleGifMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(getRandomGif).not.toHaveBeenCalled();
     expect(server.emit).not.toHaveBeenCalled();
@@ -268,7 +307,10 @@ describe("handleShuffleGif", () => {
     const server = createMockServer();
     handleShuffleGif({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.ShuffleGifMessage, { topicId: "topic-1", messageId: "msg-1" });
+    await socket.trigger(SocketEvent.ShuffleGifMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
 
     expect(getMessageForUser).not.toHaveBeenCalled();
   });

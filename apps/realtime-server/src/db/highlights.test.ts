@@ -7,7 +7,11 @@ beforeEach(resetDb);
 
 async function createUser() {
   const [user] = await pgClient("users")
-    .insert({ id: crypto.randomUUID(), googleId: `google-${crypto.randomUUID()}`, name: "Test User" })
+    .insert({
+      id: crypto.randomUUID(),
+      googleId: `google-${crypto.randomUUID()}`,
+      name: "Test User",
+    })
     .returning(["id"]);
   return user.id as string;
 }
@@ -27,7 +31,12 @@ async function createTopic(userId: string, circleId: string) {
 }
 
 async function createMessage(userId: string, topicId: string) {
-  return writeMessage({ userId, topicId, text: "hello", mediaUrl: undefined as any });
+  return writeMessage({
+    userId,
+    topicId,
+    text: "hello",
+    mediaUrl: undefined as any,
+  });
 }
 
 describe("toggleHighlight", () => {
@@ -43,7 +52,7 @@ describe("toggleHighlight", () => {
     await toggleHighlight({ userId, messageId: message.id });
 
     await expect(
-      pgClient("highlights").where("messageId", message.id).first()
+      pgClient("highlights").where("messageId", message.id).first(),
     ).resolves.toBeUndefined();
   });
 });

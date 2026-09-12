@@ -26,7 +26,7 @@ export async function getTopicIdsForCircle({ circleId }: { circleId: string }) {
 
 export async function getCircleMembers({ circleId }: { circleId: string }) {
   const members: { id: string; name: string }[] = await pgClient(
-    "_circleMembershipsForUser"
+    "_circleMembershipsForUser",
   )
     .select("users.id", "users.name")
     .where("_circleMembershipsForUser.A", circleId)

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+
+  chat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @tim/socket-types build
+      - run: pnpm --filter @tim/db-types build
+      - name: Typecheck
+        working-directory: apps/chat
+        run: npx tsc --noEmit
+      - name: Lint
+        run: pnpm --filter chat lint
+      - name: Validate Prisma schema
+        working-directory: apps/chat
+        run: npx prisma validate
+      - name: Test
+        run: pnpm --filter chat test
+      - name: Build
+        run: pnpm --filter chat build
+
+  realtime-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @tim/socket-types build
+      - run: pnpm --filter @tim/db-types build
+      - name: Typecheck
+        working-directory: apps/realtime-server
+        run: npx tsc --noEmit
+      - name: Lint
+        run: pnpm --filter tim-chat-server lint
+      - name: Test
+        run: pnpm --filter tim-chat-server test
+      # Runs last: this script does its own `pnpm install --prod` pass which
+      # strips devDependencies workspace-wide (fine on a throwaway CI runner,
+      # but would break any step after it in this same job).
+      - name: Build
+        run: pnpm --filter tim-chat-server build

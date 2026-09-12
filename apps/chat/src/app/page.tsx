@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 
 export default async function HomePage() {
   const userId = await getLoggedInUserId();
-  const mostRecentTopic = await prismaClient.topicHistory.getMostRecentForUser(
-    { userId }
-  );
+  const mostRecentTopic = await prismaClient.topicHistory.getMostRecentForUser({
+    userId,
+  });
 
   const isStillInCircle = mostRecentTopic?.topic.parentCircle.members.find(
-    ({ id }) => id === userId
+    ({ id }) => id === userId,
   );
 
   if (mostRecentTopic && !isStillInCircle) {
@@ -22,7 +22,7 @@ export default async function HomePage() {
   // Server redirect (not a client component redirecting on mount) so we go straight to the target route's real loading.tsx instead of showing a bespoke skeleton first and then a second, different-looking one.
   if (mostRecentTopic) {
     redirect(
-      `/circles/${mostRecentTopic.topic.circleId}/topics/${mostRecentTopic.topicId}`
+      `/circles/${mostRecentTopic.topic.circleId}/topics/${mostRecentTopic.topicId}`,
     );
   }
 

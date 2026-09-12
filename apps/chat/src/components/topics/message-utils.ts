@@ -3,7 +3,7 @@ import { find } from "linkifyjs";
 import { CommandName, isCommandMessage, parseCommand } from "@tim/commands";
 
 export function adjustHeight(
-  target: ChangeEvent<HTMLTextAreaElement>["target"]
+  target: ChangeEvent<HTMLTextAreaElement>["target"],
 ) {
   target.style.height = "";
   target.style.height = `${target.scrollHeight + 0.5}px`;
@@ -34,7 +34,7 @@ export function isGiphy(url?: string) {
 export async function getFileFromUrl(
   url: string,
   name: string,
-  defaultType = "image/jpeg"
+  defaultType = "image/jpeg",
 ) {
   const response = await fetch(url);
   const data = await response.blob();
@@ -45,7 +45,7 @@ export async function getFileFromUrl(
 
 export function extractImageFromMessage(text: string) {
   const imageMatch = text.match(
-    /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|png|svg|webp))/i
+    /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|png|svg|webp))/i,
   );
   if (imageMatch) return imageMatch[0];
 
@@ -58,7 +58,7 @@ export function getYoutubeVideoFromUrl(url: string) {
   }
 
   const match = url.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|shorts\/))([^#&?]*)/
+    /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|shorts\/))([^#&?]*)/,
   );
 
   const id = match && match[1].length === 11 ? match[1] : undefined;
@@ -142,7 +142,10 @@ export function encodeMention(displayName: string, id: string): string {
 // to resolve one -- a plain "@Name" with no payload is skipped rather than
 // guessed at.
 export function extractMentionedUserIds(text: string): string[] {
-  const pattern = new RegExp(`@[^\\s@#${MENTION_ID_START}]+${MENTION_ID_PATTERN}`, "g");
+  const pattern = new RegExp(
+    `@[^\\s@#${MENTION_ID_START}]+${MENTION_ID_PATTERN}`,
+    "g",
+  );
   const ids = new Set<string>();
   let match: RegExpExecArray | null;
 
@@ -159,7 +162,7 @@ export function extractMentionedUserIds(text: string): string[] {
 export function tokenizeMessage(
   text: string,
   mentionNames: string[],
-  topicNames: string[]
+  topicNames: string[],
 ): MessageToken[] {
   if (!text) return [];
 
@@ -193,12 +196,12 @@ export function tokenizeMessage(
   ];
   if (mentionNames.length > 0) {
     patternParts.push(
-      `@(?<mentionOld>${mentionNames.map(escapeRegExp).join("|")})\\b`
+      `@(?<mentionOld>${mentionNames.map(escapeRegExp).join("|")})\\b`,
     );
   }
   if (topicNames.length > 0) {
     patternParts.push(
-      `#(?<topicLink>${topicNames.map(escapeRegExp).join("|")})\\b`
+      `#(?<topicLink>${topicNames.map(escapeRegExp).join("|")})\\b`,
     );
   }
 

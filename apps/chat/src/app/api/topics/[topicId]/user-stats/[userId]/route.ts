@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, { params }: Route) {
       await Promise.all(queries);
 
     const highlightScore = Math.round(
-      (Number(highlightsRecieved) / Number(messagesSent)) * 100
+      (Number(highlightsRecieved) / Number(messagesSent)) * 100,
     );
 
     return NextResponse.json(
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest, { params }: Route) {
         highlightsRecieved,
         topHighlights,
       } as unknown as UserStatsForTopicResponse,
-      { status: 200 }
+      { status: 200 },
     );
   } catch (e) {
     return badRequest;

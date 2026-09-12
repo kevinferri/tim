@@ -9,7 +9,7 @@ const isProd = process.env.NODE_ENV === "production";
 const ssl = isProd
   ? {
       ca: Buffer.from(process.env.DATABASE_SSL_CERT, "base64").toString(
-        "utf-8"
+        "utf-8",
       ),
       rejectUnauthorized: true,
     }

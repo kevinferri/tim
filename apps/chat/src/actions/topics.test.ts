@@ -33,7 +33,12 @@ describe("upsertTopic", () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
 
     const result = await upsertTopic(
-      formData({ name: "", circleId: "circle-1", description: null, topicId: null })
+      formData({
+        name: "",
+        circleId: "circle-1",
+        description: null,
+        topicId: null,
+      }),
     );
 
     expect(result).toBe(false);
@@ -42,10 +47,17 @@ describe("upsertTopic", () => {
 
   it("delegates to the model with the logged-in user id on a valid payload", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.topic.upsertForUser).mockResolvedValue({ data: { id: "topic-1" } } as any);
+    vi.mocked(prismaClient.topic.upsertForUser).mockResolvedValue({
+      data: { id: "topic-1" },
+    } as any);
 
     const result = await upsertTopic(
-      formData({ name: "General", circleId: "circle-1", description: null, topicId: null })
+      formData({
+        name: "General",
+        circleId: "circle-1",
+        description: null,
+        topicId: null,
+      }),
     );
 
     expect(prismaClient.topic.upsertForUser).toHaveBeenCalledWith({
@@ -62,9 +74,14 @@ describe("upsertTopic", () => {
 describe("deleteTopic", () => {
   it("delegates to the model with the logged-in user id", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.topic.deleteByIdForUser).mockResolvedValue(true as any);
+    vi.mocked(prismaClient.topic.deleteByIdForUser).mockResolvedValue(
+      true as any,
+    );
 
-    const result = await deleteTopic({ topicId: "topic-1", circleId: "circle-1" });
+    const result = await deleteTopic({
+      topicId: "topic-1",
+      circleId: "circle-1",
+    });
 
     expect(prismaClient.topic.deleteByIdForUser).toHaveBeenCalledWith({
       userId: "user-1",

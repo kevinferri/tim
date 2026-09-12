@@ -3,7 +3,9 @@ import { prismaClient, resetDb } from "@/test/db";
 
 beforeEach(resetDb);
 
-async function createUser(overrides: Partial<{ name: string; status: string | null }> = {}) {
+async function createUser(
+  overrides: Partial<{ name: string; status: string | null }> = {},
+) {
   return prismaClient.user.create({
     data: {
       googleId: `google-${crypto.randomUUID()}`,
@@ -19,13 +21,13 @@ describe("userModel.getById", () => {
     const user = await createUser({ name: "Alice" });
 
     await expect(
-      prismaClient.user.getById({ userId: user.id, select: { name: true } })
+      prismaClient.user.getById({ userId: user.id, select: { name: true } }),
     ).resolves.toEqual({ name: "Alice" });
   });
 
   it("returns undefined when userId is missing", async () => {
     await expect(
-      prismaClient.user.getById({ userId: undefined, select: { name: true } })
+      prismaClient.user.getById({ userId: undefined, select: { name: true } }),
     ).resolves.toBeUndefined();
   });
 });
@@ -57,7 +59,7 @@ describe("userModel.getMembersForCircle", () => {
         userId: undefined,
         circleId: "x",
         select: { name: true },
-      })
+      }),
     ).resolves.toEqual([]);
   });
 });
@@ -66,7 +68,10 @@ describe("userModel.updateStatus", () => {
   it("updates the user's status and sets lastStatusUpdate", async () => {
     const user = await createUser({ status: "away" });
 
-    const result = await prismaClient.user.updateStatus({ userId: user.id, status: "online" });
+    const result = await prismaClient.user.updateStatus({
+      userId: user.id,
+      status: "online",
+    });
 
     expect(result).not.toBe(false);
     if (result === false) return;
@@ -77,7 +82,10 @@ describe("userModel.updateStatus", () => {
   it("clears lastStatusUpdate when status is set to null", async () => {
     const user = await createUser({ status: "online" });
 
-    const result = await prismaClient.user.updateStatus({ userId: user.id, status: null });
+    const result = await prismaClient.user.updateStatus({
+      userId: user.id,
+      status: null,
+    });
 
     expect(result).not.toBe(false);
     if (result === false) return;
@@ -88,14 +96,17 @@ describe("userModel.updateStatus", () => {
   it("is a no-op when the status hasn't changed", async () => {
     const user = await createUser({ status: "online" });
 
-    const result = await prismaClient.user.updateStatus({ userId: user.id, status: "online" });
+    const result = await prismaClient.user.updateStatus({
+      userId: user.id,
+      status: "online",
+    });
 
     expect(result).toBe(false);
   });
 
   it("returns false when userId is missing", async () => {
     await expect(
-      prismaClient.user.updateStatus({ userId: undefined, status: "online" })
+      prismaClient.user.updateStatus({ userId: undefined, status: "online" }),
     ).resolves.toBe(false);
   });
 });

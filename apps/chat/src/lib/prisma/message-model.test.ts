@@ -17,7 +17,11 @@ async function createUser() {
 
 async function createTopic(ownerId: string) {
   const circle = await prismaClient.circle.create({
-    data: { name: "Test Circle", userId: ownerId, members: { connect: [{ id: ownerId }] } },
+    data: {
+      name: "Test Circle",
+      userId: ownerId,
+      members: { connect: [{ id: ownerId }] },
+    },
   });
   return prismaClient.topic.create({
     data: { name: "Test Topic", userId: ownerId, circleId: circle.id },
@@ -27,7 +31,7 @@ async function createTopic(ownerId: string) {
 async function createMessage(
   userId: string,
   topicId: string,
-  overrides: Partial<{ text: string; mediaUrl: string | null }> = {}
+  overrides: Partial<{ text: string; mediaUrl: string | null }> = {},
 ) {
   // The AAD binds ciphertext to its row id, so it must be known before encrypting -- generate it up front instead of relying on Prisma's DB-side @default(uuid()).
   const id = crypto.randomUUID();
@@ -50,13 +54,19 @@ describe("messageModel.getById", () => {
     const message = await createMessage(user.id, topic.id);
 
     await expect(
-      prismaClient.message.getById({ messageId: message.id, select: { id: true } })
+      prismaClient.message.getById({
+        messageId: message.id,
+        select: { id: true },
+      }),
     ).resolves.toEqual({ id: message.id });
   });
 
   it("returns undefined when messageId is missing", async () => {
     await expect(
-      prismaClient.message.getById({ messageId: undefined, select: { id: true } })
+      prismaClient.message.getById({
+        messageId: undefined,
+        select: { id: true },
+      }),
     ).resolves.toBeUndefined();
   });
 });
@@ -84,7 +94,7 @@ describe("messageModel.getMessagesForTopic", () => {
         requestingUserId: undefined,
         topicId: "x",
         select: { text: true },
-      })
+      }),
     ).resolves.toEqual([]);
   });
 });
@@ -94,14 +104,19 @@ describe("messageModel.getTopHighlightedMessagesForTopic", () => {
     const user = await createUser();
     const topic = await createTopic(user.id);
     await createMessage(user.id, topic.id, { text: "no highlights" });
-    const highlighted = await createMessage(user.id, topic.id, { text: "highlighted" });
-    await prismaClient.highlight.create({ data: { userId: user.id, messageId: highlighted.id } });
-
-    const messages = await prismaClient.message.getTopHighlightedMessagesForTopic({
-      requestingUserId: user.id,
-      topicId: topic.id,
-      select: { id: true, text: true, highlights: { select: { id: true } } },
+    const highlighted = await createMessage(user.id, topic.id, {
+      text: "highlighted",
     });
+    await prismaClient.highlight.create({
+      data: { userId: user.id, messageId: highlighted.id },
+    });
+
+    const messages =
+      await prismaClient.message.getTopHighlightedMessagesForTopic({
+        requestingUserId: user.id,
+        topicId: topic.id,
+        select: { id: true, text: true, highlights: { select: { id: true } } },
+      });
 
     expect(messages).toHaveLength(1);
     expect(messages[0].text).toBe("highlighted");
@@ -114,7 +129,7 @@ describe("messageModel.getTopHighlightedMessagesForTopic", () => {
         requestingUserId: undefined,
         topicId: "x",
         select: { text: true, highlights: { select: { id: true } } },
-      })
+      }),
     ).resolves.toEqual([]);
   });
 });
@@ -124,7 +139,10 @@ describe("messageModel.getMediaMessagesForTopic", () => {
     const user = await createUser();
     const topic = await createTopic(user.id);
     await createMessage(user.id, topic.id, { text: "no media" });
-    await createMessage(user.id, topic.id, { text: "has media", mediaUrl: "https://example.com/img.png" });
+    await createMessage(user.id, topic.id, {
+      text: "has media",
+      mediaUrl: "https://example.com/img.png",
+    });
 
     const messages = await prismaClient.message.getMediaMessagesForTopic({
       requestingUserId: user.id,
@@ -155,7 +173,7 @@ describe("messageModel.getMostRecentTimestampsByTopic", () => {
 
   it("returns an empty list for an empty topicIds array", async () => {
     await expect(
-      prismaClient.message.getMostRecentTimestampsByTopic({ topicIds: [] })
+      prismaClient.message.getMostRecentTimestampsByTopic({ topicIds: [] }),
     ).resolves.toEqual([]);
   });
 });

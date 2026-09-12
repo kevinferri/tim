@@ -74,6 +74,7 @@ export function updateUserStatsTopHighlightsCache(
 ) {
   queryClient.setQueriesData<UserStatsForTopicResponse>(
     { queryKey: ["user-stats"] },
-    (prev) => (prev ? { ...prev, topHighlights: updater(prev.topHighlights) } : prev),
+    (prev) =>
+      prev ? { ...prev, topHighlights: updater(prev.topHighlights) } : prev,
   );
 }

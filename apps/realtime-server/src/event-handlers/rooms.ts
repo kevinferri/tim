@@ -109,7 +109,7 @@ export function handleJoinRoom({ socket, server }: HandlerArgs) {
       if (roomType === RoomType.Circle) {
         emitUserJoinedCircle({ server, socket, circleId: id });
       }
-    }
+    },
   );
 }
 
@@ -155,7 +155,7 @@ export async function emitUserChangeInTopic({
   const sockets = await server.in(topicKey).fetchSockets();
 
   const activeUsers = dedupeUsersById(
-    sockets.map(({ data }) => data.user)
+    sockets.map(({ data }) => data.user),
   ).filter((user) => {
     if (
       disconnectingUser &&
@@ -187,7 +187,7 @@ export async function emitUserChangeInTopic({
   if (recordHistory) {
     try {
       await saveTopicHistory({ userId: socket.data.user.id, topicId });
-    } catch (e) {
+    } catch {
       // On topic delete, topic doesn't exist anymore
     }
   }
@@ -210,14 +210,14 @@ export async function emitUserJoinedCircle({
         socketsInTopic.map(({ data }) => ({
           ...data.user,
           circleId,
-        }))
+        })),
       );
 
       topicMap[id] = {
         activeUsers,
         circleId,
       };
-    })
+    }),
   );
 
   // Gives the joining user the state of all the topics within the circle

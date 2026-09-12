@@ -24,8 +24,8 @@ export function PlayerHeader({
   const action = isGlobal
     ? { icon: Cross1Icon, onClick: onCloseClick }
     : isPlayingInGlobal
-    ? { icon: ArrowBottomLeftIcon, onClick: onCloseClick }
-    : { icon: ArrowTopRightIcon, onClick: onExpandClick };
+      ? { icon: ArrowBottomLeftIcon, onClick: onCloseClick }
+      : { icon: ArrowTopRightIcon, onClick: onExpandClick };
 
   const { icon: Icon, onClick } = action;
 
@@ -33,7 +33,7 @@ export function PlayerHeader({
     <div
       className={cn(
         "flex items-center justify-end bg-secondary p-2",
-        isGlobal && "cursor-grab"
+        isGlobal && "cursor-grab",
       )}
     >
       <Button

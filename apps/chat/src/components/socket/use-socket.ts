@@ -9,7 +9,7 @@ export { SocketEvent };
 export function useSocketHandler<T>(
   eventName: SocketEvent,
   handler: (args: T) => void,
-  skip = false
+  skip = false,
 ) {
   const { socket } = useSocketContext();
   const savedHandler = useRef(handler);
@@ -39,7 +39,7 @@ export function useSocketEmit<T>(eventName: SocketEvent) {
     (payload: T) => {
       socket.emit(eventName, payload);
     },
-    [eventName, socket]
+    [eventName, socket],
   );
 
   return { emit };

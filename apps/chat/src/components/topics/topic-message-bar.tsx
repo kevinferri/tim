@@ -27,7 +27,12 @@ import {
   isValidCommand,
   stripLeadingEmoji,
 } from "@/components/topics/message-utils";
-import { CommandName, CommandInfo, COMMANDS, parseCommand } from "@tim/commands";
+import {
+  CommandName,
+  CommandInfo,
+  COMMANDS,
+  parseCommand,
+} from "@tim/commands";
 import { CommandAutocomplete } from "@/components/topics/command-autocomplete";
 import {
   MentionAutocomplete,
@@ -70,8 +75,12 @@ export function TopicMessageBar() {
   const { topicId, circleId, circleMembers, circleTopics } =
     useTopicMetaContext();
   const { getActiveMembersInCircle } = useActiveCircleMembers();
-  const { scrollToBottom, isAtBottom, generatingCommand, setGeneratingCommand } =
-    useTopicUiContext();
+  const {
+    scrollToBottom,
+    isAtBottom,
+    generatingCommand,
+    setGeneratingCommand,
+  } = useTopicUiContext();
   const isGenerating = isUploadingImage || Boolean(generatingCommand);
   const isTim = parseCommand(generatingCommand ?? "")?.name === CommandName.Tim;
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
@@ -82,8 +91,8 @@ export function TopicMessageBar() {
     commandToken !== undefined
       ? COMMANDS.filter((command) =>
           command.tokens.some((token) =>
-            token.startsWith(commandToken.toLowerCase())
-          )
+            token.startsWith(commandToken.toLowerCase()),
+          ),
         )
       : [];
   const showCommandMenu =
@@ -107,7 +116,7 @@ export function TopicMessageBar() {
     : undefined;
 
   const onlineMemberIds = new Set(
-    getActiveMembersInCircle(circleId).map((u) => u.id)
+    getActiveMembersInCircle(circleId).map((u) => u.id),
   );
 
   const matchingMembers: MentionCandidate[] =
@@ -163,7 +172,7 @@ export function TopicMessageBar() {
           })
           .map((topic) => ({ id: topic.id, name: topic.name }))
           .sort((a, b) =>
-            stripLeadingEmoji(a.name).localeCompare(stripLeadingEmoji(b.name))
+            stripLeadingEmoji(a.name).localeCompare(stripLeadingEmoji(b.name)),
           );
   const showTopicLinkMenu =
     !topicLinkMenuDismissed && !isGenerating && matchingTopics.length > 0;
@@ -207,7 +216,7 @@ export function TopicMessageBar() {
     textAreaRef.current?.focus();
     textAreaRef.current?.setSelectionRange(
       pendingCaretPosition,
-      pendingCaretPosition
+      pendingCaretPosition,
     );
     setCaretIndex(pendingCaretPosition);
     setPendingCaretPosition(null);
@@ -221,7 +230,7 @@ export function TopicMessageBar() {
 
   const mediaBlobUrl = useMemo(
     () => (image ? URL.createObjectURL(image) : undefined),
-    [image]
+    [image],
   );
 
   useEffect(() => {
@@ -267,7 +276,7 @@ export function TopicMessageBar() {
     // Filters the encoded ids against current circleMembers so a stale one
     // (e.g. a member who's since left) can't sneak in.
     const mentionedUserIds = extractMentionedUserIds(message).filter((id) =>
-      circleMembers.some((member) => member.id === id)
+      circleMembers.some((member) => member.id === id),
     );
 
     sendMessage.emit({
@@ -291,11 +300,11 @@ export function TopicMessageBar() {
       circleMembers
         .filter((member) => member.name)
         .map((member) => getDisplayName(member.name!)),
-    [circleMembers]
+    [circleMembers],
   );
   const topicNames = useMemo(
     () => circleTopics.map((topic) => topic.name),
-    [circleTopics]
+    [circleTopics],
   );
 
   return (
@@ -328,7 +337,7 @@ export function TopicMessageBar() {
         <div
           className={cn(
             "flex items-center rounded-md",
-            isGenerating ? "bg-slate-100 dark:bg-slate-900" : ""
+            isGenerating ? "bg-slate-100 dark:bg-slate-900" : "",
           )}
         >
           <div className="relative min-w-0 flex-1">
@@ -356,9 +365,7 @@ export function TopicMessageBar() {
               className="relative border-none bg-transparent text-transparent caret-[hsl(var(--foreground))]"
               onChange={(e) => {
                 setMessage(e.target.value);
-                setCaretIndex(
-                  e.target.selectionStart ?? e.target.value.length
-                );
+                setCaretIndex(e.target.selectionStart ?? e.target.value.length);
               }}
               onSelect={(e) => {
                 setCaretIndex(e.currentTarget.selectionStart ?? 0);
@@ -368,7 +375,7 @@ export function TopicMessageBar() {
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setCommandMenuSelectedIndex(
-                      (i) => (i + 1) % matchingCommands.length
+                      (i) => (i + 1) % matchingCommands.length,
                     );
                     return;
                   }
@@ -378,7 +385,7 @@ export function TopicMessageBar() {
                     setCommandMenuSelectedIndex(
                       (i) =>
                         (i - 1 + matchingCommands.length) %
-                        matchingCommands.length
+                        matchingCommands.length,
                     );
                     return;
                   }
@@ -398,7 +405,7 @@ export function TopicMessageBar() {
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setMentionMenuSelectedIndex(
-                      (i) => (i + 1) % matchingMembers.length
+                      (i) => (i + 1) % matchingMembers.length,
                     );
                     return;
                   }
@@ -408,7 +415,7 @@ export function TopicMessageBar() {
                     setMentionMenuSelectedIndex(
                       (i) =>
                         (i - 1 + matchingMembers.length) %
-                        matchingMembers.length
+                        matchingMembers.length,
                     );
                     return;
                   }
@@ -428,7 +435,7 @@ export function TopicMessageBar() {
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setTopicLinkMenuSelectedIndex(
-                      (i) => (i + 1) % matchingTopics.length
+                      (i) => (i + 1) % matchingTopics.length,
                     );
                     return;
                   }
@@ -437,16 +444,14 @@ export function TopicMessageBar() {
                     e.preventDefault();
                     setTopicLinkMenuSelectedIndex(
                       (i) =>
-                        (i - 1 + matchingTopics.length) % matchingTopics.length
+                        (i - 1 + matchingTopics.length) % matchingTopics.length,
                     );
                     return;
                   }
 
                   if (e.key === "Enter" || e.key === "Tab") {
                     e.preventDefault();
-                    selectTopicLink(
-                      matchingTopics[topicLinkMenuSelectedIndex]
-                    );
+                    selectTopicLink(matchingTopics[topicLinkMenuSelectedIndex]);
                     return;
                   }
 

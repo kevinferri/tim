@@ -35,7 +35,7 @@ export const HighlightTooltip = (props: Props) => {
           <div
             className={cn(
               "flex gap-0.5 items-center w-9 mt-2",
-              props.className
+              props.className,
             )}
           >
             <Button

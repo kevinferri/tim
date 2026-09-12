@@ -26,9 +26,8 @@ function mockOpenAiResponse(content: string) {
     "fetch",
     vi.fn().mockResolvedValue({
       ok: true,
-      text: async () =>
-        JSON.stringify({ choices: [{ message: { content } }] }),
-    })
+      text: async () => JSON.stringify({ choices: [{ message: { content } }] }),
+    }),
   );
 }
 
@@ -50,7 +49,12 @@ beforeEach(() => {
 describe("getChatGpt", () => {
   it("attributes each history message to its sender by name", async () => {
     vi.mocked(getMessageHistoryForTopic).mockResolvedValue([
-      { id: "m1", text: encrypt("hey everyone", "m1"), mediaUrl: "", name: "Alice Smith" },
+      {
+        id: "m1",
+        text: encrypt("hey everyone", "m1"),
+        mediaUrl: "",
+        name: "Alice Smith",
+      },
       {
         id: "m2",
         text: encrypt("/tim summarize the thread", "m2"),
@@ -86,7 +90,12 @@ describe("getChatGpt", () => {
 
   it("carries speaker names into the transcript for a summary request", async () => {
     vi.mocked(getMessageHistoryForTopic).mockResolvedValue([
-      { id: "m1", text: encrypt("shipped the fix", "m1"), mediaUrl: "", name: "Alice Smith" },
+      {
+        id: "m1",
+        text: encrypt("shipped the fix", "m1"),
+        mediaUrl: "",
+        name: "Alice Smith",
+      },
     ] as any);
     mockOpenAiResponse("a recap");
 
@@ -151,8 +160,9 @@ describe("getChatGpt", () => {
       activeUsers,
     });
 
-    const transcript = lastRequestMessages().find((m) => m.role === "user")!
-      .content;
+    const transcript = lastRequestMessages().find(
+      (m) => m.role === "user",
+    )!.content;
 
     expect(transcript).toContain("Tim: Tim's earlier reply");
   });

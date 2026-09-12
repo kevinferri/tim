@@ -18,7 +18,7 @@ function EmojiIcon({
     <span
       className={cn(
         "inline-flex shrink-0 items-center justify-center text-base leading-none",
-        className
+        className,
       )}
     >
       {emoji}

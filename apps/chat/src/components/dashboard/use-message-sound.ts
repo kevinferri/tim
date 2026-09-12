@@ -17,6 +17,6 @@ export const useMessageSound = create<MessageSoundStore>()(
     }),
     {
       name: "tim:message-sound-enabled",
-    }
-  )
+    },
+  ),
 );

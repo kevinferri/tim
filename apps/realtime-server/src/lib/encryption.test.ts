@@ -62,7 +62,7 @@ describe("encrypt/decrypt", () => {
 
   it("throws on a malformed envelope", () => {
     expect(() => decrypt("not-a-valid-envelope", "msg-1")).toThrow(
-      DecryptionError
+      DecryptionError,
     );
   });
 });

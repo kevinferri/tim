@@ -2,7 +2,7 @@ import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 
 export function useLocalStorage<T>(
   key: string,
-  defaultValue: T
+  defaultValue: T,
 ): [T, Dispatch<SetStateAction<T>>] {
   const isMounted = useRef(false);
   const [value, setValue] = useState<T>(defaultValue);

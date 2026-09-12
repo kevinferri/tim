@@ -19,7 +19,7 @@ type CommandContext = {
 
 type CommandExecutor = (
   prompt: string,
-  context: CommandContext
+  context: CommandContext,
 ) => Promise<string | undefined>;
 
 // "an" before a number spoken with a leading vowel sound (eight, eleven,
@@ -34,9 +34,7 @@ function rollDice(prompt: string): string {
   const sidesText = prompt.trim().replace(/^d/i, "");
   const requestedSides = parseInt(sidesText, 10);
   const sides =
-    Number.isInteger(requestedSides) && requestedSides > 0
-      ? requestedSides
-      : 6;
+    Number.isInteger(requestedSides) && requestedSides > 0 ? requestedSides : 6;
   const result = Math.floor(Math.random() * sides) + 1;
 
   return `🎲 rolled ${articleFor(result)} ${result}`;
@@ -98,7 +96,7 @@ const commandExecutors: Record<CommandName, CommandExecutor> = {
 
 export async function executeCommand(
   text: string,
-  context: CommandContext
+  context: CommandContext,
 ): Promise<string | undefined> {
   const command = parseCommand(text);
   if (!command) return undefined;

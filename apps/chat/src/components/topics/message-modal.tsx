@@ -53,7 +53,7 @@ export function MessageModal() {
   const { messages, recency } = useTopicMessagesContext();
   const { topHighlights } = useTopicHighlightsContext();
   const thisMessage = [...messages, ...topHighlights].find(
-    ({ id }) => id === messageId
+    ({ id }) => id === messageId,
   );
 
   const { data, isLoading: loading } = useQuery({

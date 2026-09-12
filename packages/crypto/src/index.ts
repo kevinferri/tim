@@ -17,7 +17,7 @@ function loadKey(): Buffer {
 
   if (!raw) {
     throw new Error(
-      "CRYPTO_KEY environment variable is not set (expected a base64-encoded 32-byte key)"
+      "CRYPTO_KEY environment variable is not set (expected a base64-encoded 32-byte key)",
     );
   }
 
@@ -26,7 +26,7 @@ function loadKey(): Buffer {
   if (key.length !== KEY_LENGTH) {
     throw new Error(
       `CRYPTO_KEY must decode to ${KEY_LENGTH} bytes, got ${key.length}. ` +
-        "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\""
+        "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
     );
   }
 
@@ -99,7 +99,7 @@ export function decrypt(envelope: string, aad: string): string {
     );
   } catch (cause) {
     console.error(
-      "[crypto] decryption failed: auth tag verification failed (tampered/corrupt ciphertext, or wrong AAD)"
+      "[crypto] decryption failed: auth tag verification failed (tampered/corrupt ciphertext, or wrong AAD)",
     );
     throw new DecryptionError("Failed to decrypt: authentication failed", {
       cause,

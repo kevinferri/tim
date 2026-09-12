@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 A Next.js 14 (App Router) chat/community app ("Tim") built on React Server Components:
+
 - **Language**: TypeScript (strict mode)
 - **Database**: PostgreSQL via Prisma ORM, with a custom model-extension layer
 - **Styling**: TailwindCSS + shadcn/ui (Radix primitives)

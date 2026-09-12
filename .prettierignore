@@ -1,0 +1,13 @@
+node_modules
+dist
+.next
+out
+coverage
+build
+.pgdata
+.pgdata-test
+pnpm-lock.yaml
+*.tsbuildinfo
+next-env.d.ts
+apps/chat/prisma/migrations
+apps/chat/todo.txt

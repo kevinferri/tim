@@ -27,7 +27,9 @@ describe("GET /api/topics/[topicId]/top-highlights", () => {
   it("returns 401 when not logged in", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue(undefined);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ topicId: "topic-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
 
     expect(res.status).toBe(401);
   });
@@ -36,7 +38,9 @@ describe("GET /api/topics/[topicId]/top-highlights", () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.topic.isUserInTopic).mockResolvedValue(false);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ topicId: "topic-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
 
     expect(res.status).toBe(404);
   });
@@ -44,24 +48,35 @@ describe("GET /api/topics/[topicId]/top-highlights", () => {
   it("returns the top highlighted messages for a member", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.topic.isUserInTopic).mockResolvedValue(true);
-    vi.mocked(prismaClient.message.getTopHighlightedMessagesForTopic).mockResolvedValue([
-      { id: "message-1" },
-    ] as any);
+    vi.mocked(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).mockResolvedValue([{ id: "message-1" }] as any);
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ topicId: "topic-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual([{ id: "message-1" }]);
-    expect(prismaClient.message.getTopHighlightedMessagesForTopic).toHaveBeenCalledWith(
-      expect.objectContaining({ requestingUserId: "user-1", topicId: "topic-1" })
+    expect(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestingUserId: "user-1",
+        topicId: "topic-1",
+      }),
     );
   });
 
   it("returns 400 when the model layer throws", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.topic.isUserInTopic).mockRejectedValue(new Error("db down"));
+    vi.mocked(prismaClient.topic.isUserInTopic).mockRejectedValue(
+      new Error("db down"),
+    );
 
-    const res = await GET(makeRequest(), { params: Promise.resolve({ topicId: "topic-1" }) });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
 
     expect(res.status).toBe(400);
   });

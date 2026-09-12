@@ -6,7 +6,7 @@ import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ topicId: string }> }
+  { params }: { params: Promise<{ topicId: string }> },
 ) {
   const userId = await getLoggedInUserId();
   const { topicId } = await params;

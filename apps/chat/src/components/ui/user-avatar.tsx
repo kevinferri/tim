@@ -113,13 +113,10 @@ export function UserAvatar(props: Props) {
   const { data } = useQuery({
     queryKey: ["user-stats", props.topicId, props.id],
     queryFn: () =>
-      fetch(`/api/topics/${props.topicId}/user-stats/${props.id}`).then(
-        (r) => {
-          if (!r.ok)
-            throw new Error(`Request failed with status ${r.status}`);
-          return r.json() as Promise<UserStatsForTopicResponse>;
-        },
-      ),
+      fetch(`/api/topics/${props.topicId}/user-stats/${props.id}`).then((r) => {
+        if (!r.ok) throw new Error(`Request failed with status ${r.status}`);
+        return r.json() as Promise<UserStatsForTopicResponse>;
+      }),
     enabled: !!props.topicId && open,
   });
 
@@ -140,7 +137,7 @@ export function UserAvatar(props: Props) {
         onClick={() => setOpen(true)}
         className={cn(
           variants({ size: props.size, variant: props.variant }),
-          props.topicId ? "cursor-pointer hover:opacity-80" : ""
+          props.topicId ? "cursor-pointer hover:opacity-80" : "",
         )}
       >
         <AvatarImage

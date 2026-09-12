@@ -126,7 +126,7 @@ export function handleUserUpdatedStatus({ socket, server }: HandlerArgs) {
 
     const roomKeys = (payload.circleIds as string[])
       .map((circleId) =>
-        getRoomKeyOrFail({ socket, id: circleId, roomType: RoomType.Circle })
+        getRoomKeyOrFail({ socket, id: circleId, roomType: RoomType.Circle }),
       )
       .filter((roomKey): roomKey is string => Boolean(roomKey));
 

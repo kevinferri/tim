@@ -24,7 +24,7 @@ describe("getUserSummary", () => {
 
   it("returns undefined for a nonexistent user", async () => {
     await expect(
-      getUserSummary({ userId: crypto.randomUUID() })
+      getUserSummary({ userId: crypto.randomUUID() }),
     ).resolves.toBeUndefined();
   });
 });

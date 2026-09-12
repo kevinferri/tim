@@ -52,9 +52,7 @@ type MetaContextValue = {
   circleTopics: CircleTopic[];
 };
 
-const TopicMetaContext = createContext<MetaContextValue | undefined>(
-  undefined,
-);
+const TopicMetaContext = createContext<MetaContextValue | undefined>(undefined);
 
 export function useTopicMetaContext() {
   const context = useContext(TopicMetaContext);
@@ -235,8 +233,13 @@ export function CurrentTopicProvider(props: Props) {
     string | undefined
   >();
   const [unseenCount, setUnseenCount] = useState(0);
-  const { viewportRef, contentRef, bottomSentinelRef, isAtBottom, scrollToBottom } =
-    useTopicScroll();
+  const {
+    viewportRef,
+    contentRef,
+    bottomSentinelRef,
+    isAtBottom,
+    scrollToBottom,
+  } = useTopicScroll();
 
   const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
     topicId: props.topicId,

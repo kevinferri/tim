@@ -68,7 +68,7 @@ export function DraggableVideoContainer({
 
       onDragStart(event, uiData);
     },
-    [onDragStart]
+    [onDragStart],
   );
 
   return (

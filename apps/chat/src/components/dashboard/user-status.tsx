@@ -37,7 +37,7 @@ export function UserStatus(props: Props) {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }
+    },
   );
 
   const variant = props.variant ?? "tooltip";

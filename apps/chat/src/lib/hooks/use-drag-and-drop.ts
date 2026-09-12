@@ -53,7 +53,7 @@ export function useDragAndDrop({
         event.dataTransfer.clearData();
       }
     },
-    [onDrop]
+    [onDrop],
   );
 
   useEffect(() => {

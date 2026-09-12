@@ -55,7 +55,7 @@ export function TopicLinkAutocomplete({
                 onMouseEnter={() => onHover(index)}
                 className={cn(
                   "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
-                  isSelected ? "bg-accent text-accent-foreground" : ""
+                  isSelected ? "bg-accent text-accent-foreground" : "",
                 )}
               >
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">

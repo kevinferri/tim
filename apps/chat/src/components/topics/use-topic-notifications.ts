@@ -32,7 +32,7 @@ export function useTopicNotifications({
 
   const [unreadCount, setUnreadCount] = useLocalStorage<number>(
     `tim:topic-unread-notifications-count:${self.id}:${topicId}`,
-    0
+    0,
   );
 
   const clearUnreadNotifications = useCallback(() => {
@@ -71,6 +71,6 @@ export function useTopicNotifications({
       unreadCount,
       clearUnreadNotifications,
     }),
-    [notificationList, unreadCount, clearUnreadNotifications]
+    [notificationList, unreadCount, clearUnreadNotifications],
   );
 }

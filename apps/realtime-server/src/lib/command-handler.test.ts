@@ -14,15 +14,13 @@ describe("executeCommand", () => {
     });
 
     expect(mediaFetchers.getRandomGif).toHaveBeenCalledWith(
-      "cat riding a skateboard"
+      "cat riding a skateboard",
     );
     expect(result).toBe("gif-url");
   });
 
   it("lowercases the command token", async () => {
-    vi.spyOn(mediaFetchers, "getYoutubeVideo").mockResolvedValue(
-      "youtube-url"
-    );
+    vi.spyOn(mediaFetchers, "getYoutubeVideo").mockResolvedValue("youtube-url");
 
     const result = await executeCommand("/YT never gonna give you up", {
       socket: {} as any,
@@ -99,24 +97,40 @@ describe("executeCommand roll", () => {
     const randomSpy = vi.spyOn(Math, "random");
 
     randomSpy.mockReturnValueOnce(7 / 20); // floor(7) + 1 = 8, sides = 20
-    expect(await executeCommand("/roll 20", { socket: {} as any, server: {} as any, payload: {} as any })).toBe(
-      "🎲 rolled an 8"
-    );
+    expect(
+      await executeCommand("/roll 20", {
+        socket: {} as any,
+        server: {} as any,
+        payload: {} as any,
+      }),
+    ).toBe("🎲 rolled an 8");
 
     randomSpy.mockReturnValueOnce(10 / 20); // floor(10) + 1 = 11, sides = 20
-    expect(await executeCommand("/roll 20", { socket: {} as any, server: {} as any, payload: {} as any })).toBe(
-      "🎲 rolled an 11"
-    );
+    expect(
+      await executeCommand("/roll 20", {
+        socket: {} as any,
+        server: {} as any,
+        payload: {} as any,
+      }),
+    ).toBe("🎲 rolled an 11");
 
     randomSpy.mockReturnValueOnce(17 / 20); // floor(17) + 1 = 18, sides = 20
-    expect(await executeCommand("/roll 20", { socket: {} as any, server: {} as any, payload: {} as any })).toBe(
-      "🎲 rolled an 18"
-    );
+    expect(
+      await executeCommand("/roll 20", {
+        socket: {} as any,
+        server: {} as any,
+        payload: {} as any,
+      }),
+    ).toBe("🎲 rolled an 18");
 
     randomSpy.mockReturnValueOnce(84 / 100); // floor(84) + 1 = 85, sides = 100
-    expect(await executeCommand("/roll 100", { socket: {} as any, server: {} as any, payload: {} as any })).toBe(
-      "🎲 rolled an 85"
-    );
+    expect(
+      await executeCommand("/roll 100", {
+        socket: {} as any,
+        server: {} as any,
+        payload: {} as any,
+      }),
+    ).toBe("🎲 rolled an 85");
 
     randomSpy.mockRestore();
   });
@@ -147,7 +161,7 @@ describe("executeCommand 8ball", () => {
 describe("CommandName", () => {
   it("covers giphy, youtube, tim, roll, and 8ball", () => {
     expect(Object.values(CommandName).sort()).toEqual(
-      ["8ball", "giphy", "roll", "tim", "youtube"].sort()
+      ["8ball", "giphy", "roll", "tim", "youtube"].sort(),
     );
   });
 });
@@ -155,7 +169,7 @@ describe("CommandName", () => {
 describe("COMMANDS", () => {
   it("lists every command exactly once, matching the alias map", () => {
     expect(COMMANDS.map((c) => c.name).sort()).toEqual(
-      Object.values(CommandName).sort()
+      Object.values(CommandName).sort(),
     );
 
     for (const command of COMMANDS) {

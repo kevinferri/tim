@@ -10,7 +10,7 @@ type Options = {
 // Latches to true the first time `ref`'s element enters the viewport and never flips back -- for lazy-mounting something expensive-to-reload once, not for tracking live visibility.
 export function useLazyVisible(
   ref: RefObject<Element | null>,
-  { root, rootMargin, threshold, skip = false }: Options = {}
+  { root, rootMargin, threshold, skip = false }: Options = {},
 ): boolean {
   const [isVisible, setIsVisible] = useState(skip);
 
@@ -26,7 +26,7 @@ export function useLazyVisible(
         setIsVisible(true);
         observer.disconnect();
       },
-      { root, rootMargin, threshold }
+      { root, rootMargin, threshold },
     );
 
     observer.observe(node);

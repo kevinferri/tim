@@ -53,7 +53,7 @@ export function CommandAutocomplete({
                 onMouseEnter={() => onHover(index)}
                 className={cn(
                   "flex cursor-pointer items-center justify-between gap-3 rounded-sm px-2 py-1.5 text-sm",
-                  isSelected ? "bg-accent text-accent-foreground" : ""
+                  isSelected ? "bg-accent text-accent-foreground" : "",
                 )}
               >
                 <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">

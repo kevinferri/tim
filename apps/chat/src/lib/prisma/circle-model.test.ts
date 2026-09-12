@@ -3,7 +3,9 @@ import { prismaClient, resetDb } from "@/test/db";
 
 beforeEach(resetDb);
 
-async function createUser(overrides: Partial<{ googleId: string; name: string; email: string }> = {}) {
+async function createUser(
+  overrides: Partial<{ googleId: string; name: string; email: string }> = {},
+) {
   return prismaClient.user.create({
     data: {
       googleId: overrides.googleId ?? `google-${crypto.randomUUID()}`,
@@ -25,7 +27,10 @@ describe("circleModel.isUserInCircle", () => {
     });
 
     await expect(
-      prismaClient.circle.isUserInCircle({ circleId: circle.id, userId: owner.id })
+      prismaClient.circle.isUserInCircle({
+        circleId: circle.id,
+        userId: owner.id,
+      }),
     ).resolves.toBe(true);
   });
 
@@ -41,16 +46,19 @@ describe("circleModel.isUserInCircle", () => {
     });
 
     await expect(
-      prismaClient.circle.isUserInCircle({ circleId: circle.id, userId: outsider.id })
+      prismaClient.circle.isUserInCircle({
+        circleId: circle.id,
+        userId: outsider.id,
+      }),
     ).resolves.toBe(false);
   });
 
   it("returns false when circleId or userId is missing", async () => {
     await expect(
-      prismaClient.circle.isUserInCircle({ circleId: undefined, userId: "x" })
+      prismaClient.circle.isUserInCircle({ circleId: undefined, userId: "x" }),
     ).resolves.toBe(false);
     await expect(
-      prismaClient.circle.isUserInCircle({ circleId: "x", userId: undefined })
+      prismaClient.circle.isUserInCircle({ circleId: "x", userId: undefined }),
     ).resolves.toBe(false);
   });
 });
@@ -60,10 +68,18 @@ describe("circleModel.getForUser", () => {
     const member = await createUser();
     const outsider = await createUser();
     await prismaClient.circle.create({
-      data: { name: "Mine", userId: member.id, members: { connect: [{ id: member.id }] } },
+      data: {
+        name: "Mine",
+        userId: member.id,
+        members: { connect: [{ id: member.id }] },
+      },
     });
     await prismaClient.circle.create({
-      data: { name: "Not mine", userId: outsider.id, members: { connect: [{ id: outsider.id }] } },
+      data: {
+        name: "Not mine",
+        userId: outsider.id,
+        members: { connect: [{ id: outsider.id }] },
+      },
     });
 
     const circles = await prismaClient.circle.getForUser({
@@ -76,7 +92,10 @@ describe("circleModel.getForUser", () => {
 
   it("returns undefined when userId is missing", async () => {
     await expect(
-      prismaClient.circle.getForUser({ userId: undefined, select: { name: true } })
+      prismaClient.circle.getForUser({
+        userId: undefined,
+        select: { name: true },
+      }),
     ).resolves.toBeUndefined();
   });
 });
@@ -112,7 +131,11 @@ describe("circleModel.upsertForUser", () => {
     const owner = await createUser();
     const attacker = await createUser();
     const circle = await prismaClient.circle.create({
-      data: { name: "Original", userId: owner.id, members: { connect: [{ id: owner.id }] } },
+      data: {
+        name: "Original",
+        userId: owner.id,
+        members: { connect: [{ id: owner.id }] },
+      },
     });
 
     const result = await prismaClient.circle.upsertForUser({
@@ -133,7 +156,11 @@ describe("circleModel.deleteByIdForUser", () => {
   it("deletes a circle owned by the user", async () => {
     const owner = await createUser();
     const circle = await prismaClient.circle.create({
-      data: { name: "Doomed", userId: owner.id, members: { connect: [{ id: owner.id }] } },
+      data: {
+        name: "Doomed",
+        userId: owner.id,
+        members: { connect: [{ id: owner.id }] },
+      },
     });
 
     const result = await prismaClient.circle.deleteByIdForUser({
@@ -143,7 +170,7 @@ describe("circleModel.deleteByIdForUser", () => {
 
     expect(result).not.toBe(false);
     await expect(
-      prismaClient.circle.findUnique({ where: { id: circle.id } })
+      prismaClient.circle.findUnique({ where: { id: circle.id } }),
     ).resolves.toBeNull();
   });
 
@@ -151,7 +178,11 @@ describe("circleModel.deleteByIdForUser", () => {
     const owner = await createUser();
     const attacker = await createUser();
     const circle = await prismaClient.circle.create({
-      data: { name: "Not yours", userId: owner.id, members: { connect: [{ id: owner.id }] } },
+      data: {
+        name: "Not yours",
+        userId: owner.id,
+        members: { connect: [{ id: owner.id }] },
+      },
     });
 
     const result = await prismaClient.circle.deleteByIdForUser({
@@ -161,7 +192,7 @@ describe("circleModel.deleteByIdForUser", () => {
 
     expect(result).toBe(false);
     await expect(
-      prismaClient.circle.findUnique({ where: { id: circle.id } })
+      prismaClient.circle.findUnique({ where: { id: circle.id } }),
     ).resolves.not.toBeNull();
   });
 });

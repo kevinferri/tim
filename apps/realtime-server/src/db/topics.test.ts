@@ -1,12 +1,20 @@
 import { beforeEach, describe, it, expect } from "vitest";
 import { pgClient, resetDb } from "../test/db";
-import { isUserInTopic, getParentCircleIdForTopic, getTopicSummary } from "./topics";
+import {
+  isUserInTopic,
+  getParentCircleIdForTopic,
+  getTopicSummary,
+} from "./topics";
 
 beforeEach(resetDb);
 
 async function createUser() {
   const [user] = await pgClient("users")
-    .insert({ id: crypto.randomUUID(), googleId: `google-${crypto.randomUUID()}`, name: "Test User" })
+    .insert({
+      id: crypto.randomUUID(),
+      googleId: `google-${crypto.randomUUID()}`,
+      name: "Test User",
+    })
     .returning(["id"]);
   return user.id as string;
 }
@@ -15,7 +23,10 @@ async function createCircle(userId: string) {
   const [circle] = await pgClient("circles")
     .insert({ id: crypto.randomUUID(), name: "Test Circle", userId })
     .returning(["id"]);
-  await pgClient("_circleMembershipsForUser").insert({ A: circle.id, B: userId });
+  await pgClient("_circleMembershipsForUser").insert({
+    A: circle.id,
+    B: userId,
+  });
   return circle.id as string;
 }
 
@@ -41,14 +52,16 @@ describe("isUserInTopic", () => {
     const circleId = await createCircle(owner);
     const topicId = await createTopic(owner, circleId);
 
-    await expect(isUserInTopic({ userId: outsider, topicId })).resolves.toBe(false);
+    await expect(isUserInTopic({ userId: outsider, topicId })).resolves.toBe(
+      false,
+    );
   });
 
   it("returns false for a nonexistent topic", async () => {
     const userId = await createUser();
 
     await expect(
-      isUserInTopic({ userId, topicId: crypto.randomUUID() })
+      isUserInTopic({ userId, topicId: crypto.randomUUID() }),
     ).resolves.toBe(false);
   });
 });
@@ -59,9 +72,9 @@ describe("getParentCircleIdForTopic", () => {
     const circleId = await createCircle(userId);
     const topicId = await createTopic(userId, circleId);
 
-    await expect(
-      getParentCircleIdForTopic({ topicId })
-    ).resolves.toEqual({ id: circleId });
+    await expect(getParentCircleIdForTopic({ topicId })).resolves.toEqual({
+      id: circleId,
+    });
   });
 });
 
@@ -79,7 +92,7 @@ describe("getTopicSummary", () => {
 
   it("returns undefined for a nonexistent topic", async () => {
     await expect(
-      getTopicSummary({ topicId: crypto.randomUUID() })
+      getTopicSummary({ topicId: crypto.randomUUID() }),
     ).resolves.toBeUndefined();
   });
 });

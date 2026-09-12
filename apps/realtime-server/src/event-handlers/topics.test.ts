@@ -18,7 +18,10 @@ describe("handleUpsertedTopic", () => {
     await socket.trigger(SocketEvent.UpsertedTopic, payload);
 
     expect(server.to).toHaveBeenCalledWith("circle::circle-1");
-    expect(server.emit).toHaveBeenCalledWith(SocketEvent.UpsertedTopic, payload);
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UpsertedTopic,
+      payload,
+    );
   });
 
   it("does nothing when the socket isn't in the circle room", async () => {
@@ -26,7 +29,10 @@ describe("handleUpsertedTopic", () => {
     const server = createMockServer();
     handleUpsertedTopic({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.UpsertedTopic, { circleId: "circle-1", id: "topic-1" });
+    await socket.trigger(SocketEvent.UpsertedTopic, {
+      circleId: "circle-1",
+      id: "topic-1",
+    });
 
     expect(server.emit).not.toHaveBeenCalled();
   });
@@ -51,7 +57,10 @@ describe("handleDeletedTopic", () => {
     const server = createMockServer();
     handleDeletedTopic({ socket: socket as any, server: server as any });
 
-    await socket.trigger(SocketEvent.DeletedTopic, { circleId: "circle-1", id: "topic-1" });
+    await socket.trigger(SocketEvent.DeletedTopic, {
+      circleId: "circle-1",
+      id: "topic-1",
+    });
 
     expect(server.emit).not.toHaveBeenCalled();
   });

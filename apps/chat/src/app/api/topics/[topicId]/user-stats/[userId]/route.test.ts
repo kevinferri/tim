@@ -27,7 +27,9 @@ beforeEach(() => {
 });
 
 function makeRequest() {
-  return new NextRequest("http://localhost/api/topics/topic-1/user-stats/user-2");
+  return new NextRequest(
+    "http://localhost/api/topics/topic-1/user-stats/user-2",
+  );
 }
 
 function makeParams() {
@@ -45,7 +47,9 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
 
   it("returns 400 when the topic doesn't exist", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.topic.getNameWithMemberIds).mockResolvedValue(null as any);
+    vi.mocked(prismaClient.topic.getNameWithMemberIds).mockResolvedValue(
+      null as any,
+    );
 
     const res = await GET(makeRequest(), makeParams());
 
@@ -70,12 +74,16 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       name: "General",
       memberIds: ["user-1", "user-2"],
     } as any);
-    vi.mocked(prismaClient.message.getTopHighlightedMessagesForTopic).mockResolvedValue([
-      { id: "message-1" },
-    ] as any);
+    vi.mocked(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).mockResolvedValue([{ id: "message-1" }] as any);
     vi.mocked(prismaClient.message.count).mockResolvedValue(4 as any);
-    vi.mocked(prismaClient.highlight.countGivenByUser).mockResolvedValue(1 as any);
-    vi.mocked(prismaClient.highlight.countReceivedByUser).mockResolvedValue(2 as any);
+    vi.mocked(prismaClient.highlight.countGivenByUser).mockResolvedValue(
+      1 as any,
+    );
+    vi.mocked(prismaClient.highlight.countReceivedByUser).mockResolvedValue(
+      2 as any,
+    );
 
     const res = await GET(makeRequest(), makeParams());
 
@@ -96,10 +104,16 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       name: "General",
       memberIds: ["user-1", "user-2"],
     } as any);
-    vi.mocked(prismaClient.message.getTopHighlightedMessagesForTopic).mockResolvedValue([] as any);
+    vi.mocked(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).mockResolvedValue([] as any);
     vi.mocked(prismaClient.message.count).mockResolvedValue(0 as any);
-    vi.mocked(prismaClient.highlight.countGivenByUser).mockResolvedValue(0 as any);
-    vi.mocked(prismaClient.highlight.countReceivedByUser).mockResolvedValue(0 as any);
+    vi.mocked(prismaClient.highlight.countGivenByUser).mockResolvedValue(
+      0 as any,
+    );
+    vi.mocked(prismaClient.highlight.countReceivedByUser).mockResolvedValue(
+      0 as any,
+    );
 
     const res = await GET(makeRequest(), makeParams());
 
@@ -109,7 +123,9 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
 
   it("returns 400 when the model layer throws", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.topic.getNameWithMemberIds).mockRejectedValue(new Error("db down"));
+    vi.mocked(prismaClient.topic.getNameWithMemberIds).mockRejectedValue(
+      new Error("db down"),
+    );
 
     const res = await GET(makeRequest(), makeParams());
 

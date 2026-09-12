@@ -9,7 +9,7 @@ function invalidCredentialsError(next: (err?: ExtendedError) => void) {
 
 export function middleware(
   socket: Socket,
-  next: (err?: ExtendedError) => void
+  next: (err?: ExtendedError) => void,
 ) {
   const token = socket.handshake.auth.token;
   if (!token) return invalidCredentialsError(next);
@@ -21,7 +21,7 @@ export function middleware(
     const state = getInitialActiveUserState();
 
     socket.data.user = { ...user, state };
-  } catch (err) {
+  } catch {
     return invalidCredentialsError(next);
   }
 

@@ -6,11 +6,13 @@ export { pgClient };
 // starts from a clean database, regardless of what earlier tests inserted.
 export async function resetDb() {
   const { rows } = await pgClient.raw(
-    `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
   );
 
   if (rows.length === 0) return;
 
-  const names = rows.map((r: { tablename: string }) => `"${r.tablename}"`).join(", ");
+  const names = rows
+    .map((r: { tablename: string }) => `"${r.tablename}"`)
+    .join(", ");
   await pgClient.raw(`TRUNCATE TABLE ${names} RESTART IDENTITY CASCADE`);
 }

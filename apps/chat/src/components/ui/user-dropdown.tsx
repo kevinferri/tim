@@ -41,11 +41,11 @@ export function UserDropDown() {
       if (payload.user.status) {
         toast({
           description: `${getDisplayName(
-            payload.user.name
+            payload.user.name,
           )} updated their status to "${payload.user.status}"`,
         });
       }
-    }
+    },
   );
 
   return (

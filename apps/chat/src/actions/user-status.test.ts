@@ -22,7 +22,9 @@ beforeEach(() => {
 describe("updateUserStatus", () => {
   it("delegates to the model with the logged-in user id and given status", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.user.updateStatus).mockResolvedValue({ status: "away" } as any);
+    vi.mocked(prismaClient.user.updateStatus).mockResolvedValue({
+      status: "away",
+    } as any);
 
     const result = await updateUserStatus("away");
 
@@ -35,7 +37,9 @@ describe("updateUserStatus", () => {
 
   it("passes a null status through unchanged", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.user.updateStatus).mockResolvedValue({ status: null } as any);
+    vi.mocked(prismaClient.user.updateStatus).mockResolvedValue({
+      status: null,
+    } as any);
 
     await updateUserStatus(null);
 

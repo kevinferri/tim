@@ -38,7 +38,7 @@ const getViewport = (): Viewport => ({
 
 const getCornerPositions = (
   { width, height }: Viewport,
-  playerHeight: number
+  playerHeight: number,
 ): Record<Corner, Position> => ({
   "top-left": { x: 0, y: PLAYER_TOP_PADDING },
   "top-right": { x: width - PLAYER_WIDTH, y: PLAYER_TOP_PADDING },
@@ -55,19 +55,19 @@ const getCornerPositions = (
 const clampPosition = (
   pos: Position,
   { width, height }: Viewport,
-  playerHeight: number
+  playerHeight: number,
 ): Position => ({
   x: Math.min(Math.max(0, pos.x), width - PLAYER_WIDTH),
   y: Math.min(
     Math.max(PLAYER_TOP_PADDING, pos.y),
-    height - playerHeight - PLAYER_BOTTOM_PADDING
+    height - playerHeight - PLAYER_BOTTOM_PADDING,
   ),
 });
 
 const getNearestCorner = (
   pos: Position,
   viewport: Viewport,
-  playerHeight: number
+  playerHeight: number,
 ): Corner => {
   const corners = getCornerPositions(viewport, playerHeight);
 
@@ -76,19 +76,19 @@ const getNearestCorner = (
       const dist = Math.hypot(pos.x - cornerPos.x, pos.y - cornerPos.y);
       return dist < closest.dist ? { corner, dist } : closest;
     },
-    { corner: "top-right" as Corner, dist: Infinity }
+    { corner: "top-right" as Corner, dist: Infinity },
   ).corner;
 };
 
 export function useDraggableVideo(
   isEnabled: boolean,
-  storageKey = "floating-video"
+  storageKey = "floating-video",
 ) {
   // Read synchronously, not via an effect, so the first paint already
   // reflects the last-docked corner instead of flashing top-right for one
   // frame.
   const [persisted, setPersistedState] = useState<PersistedState>(() =>
-    readPersistedCorner(storageKey)
+    readPersistedCorner(storageKey),
   );
 
   const [playerHeight, setPlayerHeight] = useState(PLAYER_HEIGHT_FALLBACK);
@@ -109,20 +109,17 @@ export function useDraggableVideo(
         window.localStorage.setItem(storageKey, JSON.stringify(next));
       } catch (e) {}
     },
-    [storageKey]
+    [storageKey],
   );
 
   // Once the container measures its real rendered height, re-settle onto
   // the persisted corner using that height instead of the fallback guess.
-  const onMeasureHeight = useCallback(
-    (height: number) => {
-      setPlayerHeight((prev) => {
-        if (Math.abs(prev - height) < 1) return prev;
-        return height;
-      });
-    },
-    []
-  );
+  const onMeasureHeight = useCallback((height: number) => {
+    setPlayerHeight((prev) => {
+      if (Math.abs(prev - height) < 1) return prev;
+      return height;
+    });
+  }, []);
 
   useEffect(() => {
     if (!isEnabled) return;
@@ -136,9 +133,7 @@ export function useDraggableVideo(
 
     const handleResize = () => {
       const viewport = getViewport();
-      setPosition(
-        getCornerPositions(viewport, playerHeight)[persisted.corner]
-      );
+      setPosition(getCornerPositions(viewport, playerHeight)[persisted.corner]);
     };
 
     window.addEventListener("resize", handleResize);

@@ -11,7 +11,8 @@ A Node.js/TypeScript Socket.IO server (`tim-chat-server`) providing real-time ch
 - `pnpm watch` — run the dev server with nodemon/ts-node, loading env from `.env.local` (comment/blank lines filtered out before being passed to `env`).
 - `pnpm build` — install, compile TypeScript to `dist/`, then reinstall with `--prod` to drop devDependencies from the shipped `node_modules`. This is the deploy build, not a typical local dev command.
 - `pnpm start` — run the compiled server from `dist/app.js` (production).
-- There is no test suite (`pnpm test` is a placeholder that exits with an error) and no lint script configured.
+- `pnpm test` — run the vitest suite (shares `apps/chat`'s embedded-postgres test instance, see `vitest.global-setup.mts`).
+- `pnpm lint` — eslint (flat config in `eslint.config.mjs`; typescript-eslint recommended rules, non-type-checked).
 
 ## Architecture
 

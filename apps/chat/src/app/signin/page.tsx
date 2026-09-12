@@ -26,7 +26,7 @@ export default async function LogInPage({
     <div className={cn("grid grid-cols-2 h-screen")}>
       <div
         className={cn(
-          "bg-zinc-900 px-12 py-14 text-white font-light tracking-wide flex flex-col"
+          "bg-zinc-900 px-12 py-14 text-white font-light tracking-wide flex flex-col",
         )}
       >
         <div className={cn("flex items-center mb-4 gap-3")}>
@@ -52,7 +52,7 @@ export default async function LogInPage({
         </div>
         <div
           className={cn(
-            "flex items-center flex-1 flex-col justify-center gap-4"
+            "flex items-center flex-1 flex-col justify-center gap-4",
           )}
         >
           <h2 className={cn("text-2xl font-semibold")}>Create an account</h2>

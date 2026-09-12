@@ -6,7 +6,9 @@ import uniqBy from "lodash.uniqby";
 import { Self } from "@/components/auth/self-provider";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 
-export type ActiveUser = Self & { state: { isIdle: boolean; isTyping: boolean } };
+export type ActiveUser = Self & {
+  state: { isIdle: boolean; isTyping: boolean };
+};
 
 type TopicPresence = { activeUsers: ActiveUser[]; circleId: string };
 type TopicMap = Record<string, TopicPresence>;

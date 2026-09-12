@@ -120,7 +120,7 @@ export const topicHistoryModel = {
 
         return acc;
       },
-      {}
+      {},
     );
   },
 

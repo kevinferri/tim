@@ -15,7 +15,11 @@ async function createUser() {
 
 async function createMessageWithTopic(authorId: string) {
   const circle = await prismaClient.circle.create({
-    data: { name: "Test Circle", userId: authorId, members: { connect: [{ id: authorId }] } },
+    data: {
+      name: "Test Circle",
+      userId: authorId,
+      members: { connect: [{ id: authorId }] },
+    },
   });
   const topic = await prismaClient.topic.create({
     data: { name: "Test Topic", userId: authorId, circleId: circle.id },
@@ -30,19 +34,21 @@ describe("highlightModel.countGivenByUser", () => {
     const author = await createUser();
     const highlighter = await createUser();
     const message = await createMessageWithTopic(author.id);
-    await prismaClient.highlight.create({ data: { userId: highlighter.id, messageId: message.id } });
+    await prismaClient.highlight.create({
+      data: { userId: highlighter.id, messageId: message.id },
+    });
 
     await expect(
-      prismaClient.highlight.countGivenByUser({ userId: highlighter.id })
+      prismaClient.highlight.countGivenByUser({ userId: highlighter.id }),
     ).resolves.toBe(1);
     await expect(
-      prismaClient.highlight.countGivenByUser({ userId: author.id })
+      prismaClient.highlight.countGivenByUser({ userId: author.id }),
     ).resolves.toBe(0);
   });
 
   it("returns 0 when userId is missing", async () => {
     await expect(
-      prismaClient.highlight.countGivenByUser({ userId: undefined })
+      prismaClient.highlight.countGivenByUser({ userId: undefined }),
     ).resolves.toBe(0);
   });
 });
@@ -52,19 +58,21 @@ describe("highlightModel.countReceivedByUser", () => {
     const author = await createUser();
     const highlighter = await createUser();
     const message = await createMessageWithTopic(author.id);
-    await prismaClient.highlight.create({ data: { userId: highlighter.id, messageId: message.id } });
+    await prismaClient.highlight.create({
+      data: { userId: highlighter.id, messageId: message.id },
+    });
 
     await expect(
-      prismaClient.highlight.countReceivedByUser({ userId: author.id })
+      prismaClient.highlight.countReceivedByUser({ userId: author.id }),
     ).resolves.toBe(1);
     await expect(
-      prismaClient.highlight.countReceivedByUser({ userId: highlighter.id })
+      prismaClient.highlight.countReceivedByUser({ userId: highlighter.id }),
     ).resolves.toBe(0);
   });
 
   it("returns 0 when userId is missing", async () => {
     await expect(
-      prismaClient.highlight.countReceivedByUser({ userId: undefined })
+      prismaClient.highlight.countReceivedByUser({ userId: undefined }),
     ).resolves.toBe(0);
   });
 });

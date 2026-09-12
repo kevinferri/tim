@@ -44,7 +44,7 @@ export function useTopicActivity({
       if (message.topicId !== topicId) {
         markTopicAsUnread(message.topicId!);
       }
-    }
+    },
   );
 
   const notifyOnNewMessage = useCallback(() => {

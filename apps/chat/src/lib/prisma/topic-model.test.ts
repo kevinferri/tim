@@ -18,12 +18,18 @@ async function createCircle(ownerId: string, memberIds: string[] = []) {
     data: {
       name: "Test Circle",
       userId: ownerId,
-      members: { connect: [{ id: ownerId }, ...memberIds.map((id) => ({ id }))] },
+      members: {
+        connect: [{ id: ownerId }, ...memberIds.map((id) => ({ id }))],
+      },
     },
   });
 }
 
-async function createTopic(ownerId: string, circleId: string, name = "Test Topic") {
+async function createTopic(
+  ownerId: string,
+  circleId: string,
+  name = "Test Topic",
+) {
   return prismaClient.topic.create({
     data: { name, userId: ownerId, circleId },
   });
@@ -65,7 +71,7 @@ describe("topicModel.getAllForCircleAndUser", () => {
         userId: undefined,
         circleId: "x",
         select: { name: true },
-      })
+      }),
     ).resolves.toBeUndefined();
   });
 });
@@ -77,7 +83,7 @@ describe("topicModel.isUserInTopic", () => {
     const topic = await createTopic(owner.id, circle.id);
 
     await expect(
-      prismaClient.topic.isUserInTopic({ userId: owner.id, topicId: topic.id })
+      prismaClient.topic.isUserInTopic({ userId: owner.id, topicId: topic.id }),
     ).resolves.toBe(true);
   });
 
@@ -88,7 +94,10 @@ describe("topicModel.isUserInTopic", () => {
     const topic = await createTopic(owner.id, circle.id);
 
     await expect(
-      prismaClient.topic.isUserInTopic({ userId: outsider.id, topicId: topic.id })
+      prismaClient.topic.isUserInTopic({
+        userId: outsider.id,
+        topicId: topic.id,
+      }),
     ).resolves.toBe(false);
   });
 
@@ -96,7 +105,10 @@ describe("topicModel.isUserInTopic", () => {
     const owner = await createUser();
 
     await expect(
-      prismaClient.topic.isUserInTopic({ userId: owner.id, topicId: crypto.randomUUID() })
+      prismaClient.topic.isUserInTopic({
+        userId: owner.id,
+        topicId: crypto.randomUUID(),
+      }),
     ).resolves.toBe(false);
   });
 });
@@ -123,7 +135,9 @@ describe("topicModel.upsertForUser", () => {
     const histories = await prismaClient.topicHistory.findMany({
       where: { topicId: result.data.id },
     });
-    expect(histories.map((h) => h.userId).sort()).toEqual([owner.id, member.id].sort());
+    expect(histories.map((h) => h.userId).sort()).toEqual(
+      [owner.id, member.id].sort(),
+    );
   });
 
   it("refuses to create a topic when the user isn't in the circle", async () => {
@@ -167,7 +181,9 @@ describe("topicModel.getNameWithMemberIds", () => {
     const circle = await createCircle(owner.id, [member.id]);
     const topic = await createTopic(owner.id, circle.id, "My Topic");
 
-    const result = await prismaClient.topic.getNameWithMemberIds({ topicId: topic.id });
+    const result = await prismaClient.topic.getNameWithMemberIds({
+      topicId: topic.id,
+    });
 
     expect(result?.name).toBe("My Topic");
     expect(result?.memberIds.sort()).toEqual([owner.id, member.id].sort());
@@ -175,7 +191,7 @@ describe("topicModel.getNameWithMemberIds", () => {
 
   it("returns undefined for a nonexistent topic", async () => {
     await expect(
-      prismaClient.topic.getNameWithMemberIds({ topicId: crypto.randomUUID() })
+      prismaClient.topic.getNameWithMemberIds({ topicId: crypto.randomUUID() }),
     ).resolves.toBeUndefined();
   });
 });
@@ -194,7 +210,7 @@ describe("topicModel.deleteByIdForUser", () => {
 
     expect(result).not.toBe(false);
     await expect(
-      prismaClient.topic.findUnique({ where: { id: topic.id } })
+      prismaClient.topic.findUnique({ where: { id: topic.id } }),
     ).resolves.toBeNull();
   });
 
@@ -212,7 +228,7 @@ describe("topicModel.deleteByIdForUser", () => {
 
     expect(result).toBe(false);
     await expect(
-      prismaClient.topic.findUnique({ where: { id: topic.id } })
+      prismaClient.topic.findUnique({ where: { id: topic.id } }),
     ).resolves.not.toBeNull();
   });
 });

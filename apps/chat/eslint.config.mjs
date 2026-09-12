@@ -1,4 +1,5 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import eslintConfigPrettier from "eslint-config-prettier";
 
 const eslintConfig = [
   ...nextCoreWebVitals,
@@ -12,8 +13,13 @@ const eslintConfig = [
       // and aren't being rewritten as a side effect of a dependency bump.
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/refs": "off",
+      // Same story: flags mutating a render-scoped local (reset every
+      // render, never escapes) used to group a single .map pass -- not a
+      // correctness issue, see mention-autocomplete.tsx's `lastSection`.
+      "react-hooks/immutability": "off",
     },
   },
+  eslintConfigPrettier,
 ];
 
 export default eslintConfig;

@@ -67,12 +67,12 @@ export function LinkPreview(props: Props) {
   const { data, error } = useQuery({
     queryKey: ["link-metadata", props.link],
     queryFn: () =>
-      fetch(
-        `/api/link-metadata?url=${encodeURIComponent(props.link)}`,
-      ).then((r) => {
-        if (!r.ok) throw new Error(`Request failed with status ${r.status}`);
-        return r.json() as Promise<LinkMetadataResponse>;
-      }),
+      fetch(`/api/link-metadata?url=${encodeURIComponent(props.link)}`).then(
+        (r) => {
+          if (!r.ok) throw new Error(`Request failed with status ${r.status}`);
+          return r.json() as Promise<LinkMetadataResponse>;
+        },
+      ),
     enabled: !alreadyEmbedded && isVisible,
   });
 

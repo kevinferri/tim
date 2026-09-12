@@ -10,7 +10,10 @@ import {
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { CommandIcon } from "@/components/topics/command-icon";
 import { getDisplayName } from "@tim/user-display";
-import { MessageToken, tokenizeMessage } from "@/components/topics/message-utils";
+import {
+  MessageToken,
+  tokenizeMessage,
+} from "@/components/topics/message-utils";
 import Linkify from "linkify-react";
 
 type Props = {
@@ -29,7 +32,7 @@ function renderTokens(
   circleId: string,
   membersById: Map<string, CircleMember>,
   membersByName: Map<string, CircleMember>,
-  topicsByName: Map<string, CircleTopic>
+  topicsByName: Map<string, CircleTopic>,
 ) {
   return tokens.map((token, index) => {
     switch (token.type) {
@@ -99,14 +102,14 @@ function parseMessage(
   circleId: string,
   membersById: Map<string, CircleMember>,
   membersByName: Map<string, CircleMember>,
-  topicsByName: Map<string, CircleTopic>
+  topicsByName: Map<string, CircleTopic>,
 ) {
   if (!text) return text;
 
   const tokens = tokenizeMessage(
     text,
     Array.from(membersByName.keys()),
-    Array.from(topicsByName.keys())
+    Array.from(topicsByName.keys()),
   );
 
   return (
@@ -117,7 +120,7 @@ function parseMessage(
         circleId,
         membersById,
         membersByName,
-        topicsByName
+        topicsByName,
       )}
     </>
   );
@@ -149,11 +152,11 @@ export function MessageText(props: Props) {
 
   const isOnlyEmoji = useMemo(
     () => (props.text ? isEmojiOnly(props.text) : false),
-    [props.text]
+    [props.text],
   );
 
   const clickedLink = useSocketEmit<{ messageId: string; topicId: string }>(
-    SocketEvent.UserClickedLink
+    SocketEvent.UserClickedLink,
   );
 
   return (
@@ -181,7 +184,7 @@ export function MessageText(props: Props) {
       <div
         className={cn(
           "whitespace-pre-line break-word leading-normal",
-          isOnlyEmoji ? "text-4xl" : ""
+          isOnlyEmoji ? "text-4xl" : "",
         )}
         style={{ overflowWrap: "anywhere" }}
       >
@@ -192,7 +195,7 @@ export function MessageText(props: Props) {
               circleId,
               membersById,
               membersByName,
-              topicsByName
+              topicsByName,
             )
           : null}
       </div>

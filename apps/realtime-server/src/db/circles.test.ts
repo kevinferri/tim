@@ -1,12 +1,20 @@
 import { beforeEach, describe, it, expect } from "vitest";
 import { pgClient, resetDb } from "../test/db";
-import { isUserInCircle, getTopicIdsForCircle, getCircleMembers } from "./circles";
+import {
+  isUserInCircle,
+  getTopicIdsForCircle,
+  getCircleMembers,
+} from "./circles";
 
 beforeEach(resetDb);
 
 async function createUser() {
   const [user] = await pgClient("users")
-    .insert({ id: crypto.randomUUID(), googleId: `google-${crypto.randomUUID()}`, name: "Test User" })
+    .insert({
+      id: crypto.randomUUID(),
+      googleId: `google-${crypto.randomUUID()}`,
+      name: "Test User",
+    })
     .returning(["id"]);
   return user.id as string;
 }
@@ -15,7 +23,10 @@ async function createCircle(userId: string) {
   const [circle] = await pgClient("circles")
     .insert({ id: crypto.randomUUID(), name: "Test Circle", userId })
     .returning(["id"]);
-  await pgClient("_circleMembershipsForUser").insert({ A: circle.id, B: userId });
+  await pgClient("_circleMembershipsForUser").insert({
+    A: circle.id,
+    B: userId,
+  });
   return circle.id as string;
 }
 
@@ -39,9 +50,9 @@ describe("isUserInCircle", () => {
     const outsider = await createUser();
     const circleId = await createCircle(owner);
 
-    await expect(
-      isUserInCircle({ userId: outsider, circleId })
-    ).resolves.toBe(false);
+    await expect(isUserInCircle({ userId: outsider, circleId })).resolves.toBe(
+      false,
+    );
   });
 });
 
@@ -50,14 +61,25 @@ describe("getCircleMembers", () => {
     const owner = await createUser();
     const circleId = await createCircle(owner);
     const [otherMember] = await pgClient("users")
-      .insert({ id: crypto.randomUUID(), googleId: `google-${crypto.randomUUID()}`, name: "Other Member" })
+      .insert({
+        id: crypto.randomUUID(),
+        googleId: `google-${crypto.randomUUID()}`,
+        name: "Other Member",
+      })
       .returning(["id"]);
-    await pgClient("_circleMembershipsForUser").insert({ A: circleId, B: otherMember.id });
+    await pgClient("_circleMembershipsForUser").insert({
+      A: circleId,
+      B: otherMember.id,
+    });
 
     const members = await getCircleMembers({ circleId });
 
-    expect(members.map((m) => m.id).sort()).toEqual([owner, otherMember.id].sort());
-    expect(members.find((m) => m.id === otherMember.id)?.name).toBe("Other Member");
+    expect(members.map((m) => m.id).sort()).toEqual(
+      [owner, otherMember.id].sort(),
+    );
+    expect(members.find((m) => m.id === otherMember.id)?.name).toBe(
+      "Other Member",
+    );
   });
 });
 

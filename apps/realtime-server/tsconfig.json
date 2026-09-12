@@ -8,5 +8,12 @@
     "outDir": "dist"
   },
   "lib": ["es2015"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test", "vitest.config.mts", "vitest.global-setup.mts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "src/test",
+    "vitest.config.mts",
+    "vitest.global-setup.mts"
+  ]
 }

@@ -6,7 +6,11 @@ beforeEach(resetDb);
 
 async function createUser() {
   const [user] = await pgClient("users")
-    .insert({ id: crypto.randomUUID(), googleId: `google-${crypto.randomUUID()}`, name: "Test User" })
+    .insert({
+      id: crypto.randomUUID(),
+      googleId: `google-${crypto.randomUUID()}`,
+      name: "Test User",
+    })
     .returning(["id"]);
   return user.id as string;
 }

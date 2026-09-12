@@ -37,7 +37,7 @@ async function resolveBinaries() {
 
   if (!pkg) {
     throw new Error(
-      `Unsupported platform/arch for embedded postgres: ${os.platform()}/${os.arch()}`
+      `Unsupported platform/arch for embedded postgres: ${os.platform()}/${os.arch()}`,
     );
   }
 
@@ -78,7 +78,7 @@ async function waitForPort(port, timeoutMs = 15000) {
   }
 
   throw new Error(
-    `Postgres did not become ready on port ${port} within ${timeoutMs}ms`
+    `Postgres did not become ready on port ${port} within ${timeoutMs}ms`,
   );
 }
 
@@ -95,7 +95,7 @@ async function ensureDatabase() {
 
   const { rowCount } = await client.query(
     "SELECT 1 FROM pg_database WHERE datname = $1",
-    [DB_NAME]
+    [DB_NAME],
   );
 
   if (rowCount === 0) {
@@ -135,7 +135,7 @@ async function main() {
   const pgCtl = spawn(
     pg_ctl,
     ["-D", DATABASE_DIR, "-l", LOG_FILE, "-o", `-p ${PORT}`, "-w", "start"],
-    { detached: true, stdio: "ignore" }
+    { detached: true, stdio: "ignore" },
   );
   pgCtl.unref();
 

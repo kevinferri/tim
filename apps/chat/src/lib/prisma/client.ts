@@ -15,7 +15,7 @@ const withPoolLimits = (databaseUrl: string) => {
   if (!url.searchParams.has("connection_limit")) {
     url.searchParams.set(
       "connection_limit",
-      process.env.DB_CONNECTION_LIMIT ?? "5"
+      process.env.DB_CONNECTION_LIMIT ?? "5",
     );
   }
   if (!url.searchParams.has("pool_timeout")) {
