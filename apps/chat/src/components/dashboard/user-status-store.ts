@@ -31,13 +31,7 @@ const useStore = create<Store>((set) => ({
     })),
 }));
 
-// Registers the status socket listener exactly once. Mount this a single
-// time, near the socket root (see PresenceSync) -- otherwise every
-// UserAvatar/UserDropDown instance subscribing itself means as many
-// redundant listeners as there are visible avatars, each holding its own
-// stale-on-remount copy of the status it happened to render with. See
-// active-circle-members-store's usePresenceSync for the same fix applied
-// to presence.
+// Mount exactly once near the socket root -- subscribing per-avatar would create as many redundant listeners as visible avatars, each with its own stale-on-remount status.
 export function useUserStatusSync() {
   const setStatus = useStore((state) => state.setStatus);
 
@@ -47,16 +41,7 @@ export function useUserStatusSync() {
   );
 }
 
-// `initial` is the status a server component rendered this user with --
-// used until a live update for this id arrives over the socket, at which
-// point the store takes over as the source of truth.
-//
-// The fallback merge happens here, outside the store selector: callers
-// pass a fresh `initial` object every render, so folding it into the
-// selector's return value would hand Zustand a new reference on every
-// call and defeat its equality check, forcing endless re-renders. Selecting
-// the raw (possibly undefined) entry keeps that return value stable across
-// renders where nothing in the store changed.
+// The `entry ?? initial` merge happens outside the selector because callers pass a fresh `initial` object every render -- folding it into the selector's return value would break Zustand's reference equality check and force endless re-renders.
 export function useUserStatus(userId: string, initial: UserStatusEntry) {
   const entry = useStore((state) => state.byUserId[userId]);
   return entry ?? initial;

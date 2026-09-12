@@ -8,13 +8,10 @@ type Props = {
   topicNames: string[];
 };
 
-// Sits behind the composer's textarea (see topic-message-bar.tsx), which
-// renders its own text fully transparent -- a native textarea can't color
-// individual substrings, so this mirrors the same content with @mention/
-// #topic/command spans colored the way they'll actually render once sent
-// (same tokenizeMessage used by message-text.tsx). Font size, padding, and
-// wrapping must match the textarea's exactly (see the className there) or
-// the two won't line up character-for-character.
+// Mirrors the composer's fully-transparent textarea content with colored
+// spans for how @mention/#topic/command will render once sent -- font,
+// padding, and wrapping must match the textarea exactly to stay
+// character-aligned.
 export function MessageHighlightOverlay({ text, mentionNames, topicNames }: Props) {
   const tokens = tokenizeMessage(text, mentionNames, topicNames);
 

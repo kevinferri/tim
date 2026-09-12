@@ -2,9 +2,7 @@
 
 import { useUserStatsHighlightSync } from "@/components/dashboard/use-user-stats-highlight-sync";
 
-// Mounted exactly once, inside SocketProvider -- see
-// use-user-stats-highlight-sync.ts for why this must not be called from
-// more than one place.
+// Mount exactly once inside SocketProvider -- duplicate mounts would double-patch the cache on every highlight event.
 export function UserStatsHighlightSync() {
   useUserStatsHighlightSync();
   return null;

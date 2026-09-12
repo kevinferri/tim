@@ -38,7 +38,6 @@ export function useTopicActivity({
     },
   });
 
-  // Global handler to mark other topics as unread
   useSocketHandler<MessageProps>(
     SocketEvent.SendMessage,
     (message: MessageProps) => {
@@ -49,7 +48,6 @@ export function useTopicActivity({
   );
 
   const notifyOnNewMessage = useCallback(() => {
-    // Always increment unread count for new messages when window is not focused
     if (!windowFocused) {
       setUnreadMessageCount((count) => {
         const newCount = count + 1;

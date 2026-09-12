@@ -19,12 +19,9 @@ export function VideoPlayerFrame({
 }: Props) {
   const intersectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Load the embed once it first scrolls into view, then leave it mounted.
-  // Re-deriving "should render" from live intersection state (the previous
-  // approach) tore the iframe down every time it scrolled out and rebuilt it
-  // from scratch on the way back in -- for YouTube/Twitch that reload can
-  // silently fail to re-initialize, leaving the bordered frame visible with
-  // no video inside it.
+  // Loads once visible and stays mounted -- tearing the iframe down on
+  // scroll-out and rebuilding it (the previous approach) could leave
+  // YouTube/Twitch silently blank on return.
   const isVisible = useLazyVisible(intersectionRef, {
     rootMargin: "200px",
     skip: skipVirtualization,

@@ -1,8 +1,4 @@
-// Canonical slash-command names. This is the single source of truth for
-// what commands exist -- apps/realtime-server dispatches on these, and
-// apps/chat uses them to drive UI (loading state, edit/shuffle gating,
-// command-token styling) without hand-rolling its own command list that can
-// drift out of sync with what the server actually supports.
+// Single source of truth for command names -- both apps read from here instead of keeping their own list that could drift.
 export enum CommandName {
   Giphy = "giphy",
   Youtube = "youtube",
@@ -11,9 +7,7 @@ export enum CommandName {
   EightBall = "8ball",
 }
 
-// Every token a user can type after "/", mapped to the canonical command it
-// resolves to. Add aliases here (not in either app) the same way new socket
-// events are added to @tim/socket-types first.
+// Every token a user can type after "/", mapped to the canonical command it resolves to.
 export const COMMAND_ALIASES: Record<string, CommandName> = {
   giphy: CommandName.Giphy,
   gif: CommandName.Giphy,
@@ -61,10 +55,7 @@ const COMMAND_DESCRIPTIONS: Record<CommandName, string> = {
   [CommandName.EightBall]: "Ask the magic 8-ball a question",
 };
 
-// A worked example of the command's argument shape, shown alongside its
-// description in the autocomplete -- separate from COMMAND_DESCRIPTIONS so
-// examples don't have to be crammed into prose (as /roll's description used
-// to do).
+// Kept separate from COMMAND_DESCRIPTIONS so usage examples aren't crammed into descriptive prose.
 const COMMAND_USAGE: Record<CommandName, string> = {
   [CommandName.Tim]: "/tim summarize the chat",
   [CommandName.Giphy]: "/giphy rise and grind",
@@ -73,11 +64,7 @@ const COMMAND_USAGE: Record<CommandName, string> = {
   [CommandName.EightBall]: "/8ball will it rain tomorrow?",
 };
 
-// Display order for command UI (e.g. chat's "/" autocomplete): alphabetical
-// by name, computed rather than hand-listed so a newly added CommandName
-// sorts itself in instead of needing the order updated separately. Tokens
-// are grouped from COMMAND_ALIASES rather than re-listed here, so this
-// can't drift from what's actually dispatchable.
+// Computed (alphabetical), not hand-listed, so a newly added CommandName sorts itself in.
 const COMMAND_ORDER: CommandName[] = Object.values(CommandName).sort();
 
 export const COMMANDS: CommandInfo[] = COMMAND_ORDER.map((name) => ({

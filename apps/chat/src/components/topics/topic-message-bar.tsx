@@ -76,9 +76,7 @@ export function TopicMessageBar() {
   const isTim = parseCommand(generatingCommand ?? "")?.name === CommandName.Tim;
   const sendMessage = useSocketEmit<MessagePayload>(SocketEvent.SendMessage);
 
-  // Only while the user is still typing the command word itself (no space
-  // yet) -- "/gi" matches, "/giphy cats" doesn't, since at that point
-  // they've moved on to the command's arguments.
+  // Matches only while still typing the command word itself -- "/gi" matches, "/giphy cats" doesn't (already past it).
   const commandToken = /^\/(\S*)$/.exec(message)?.[1];
   const matchingCommands =
     commandToken !== undefined
@@ -101,10 +99,7 @@ export function TopicMessageBar() {
     textAreaRef.current?.focus();
   };
 
-  // Only while typing the mention word itself: "@" preceded by start-of-
-  // string or whitespace, with no whitespace since -- "@al" in "hey @al"
-  // matches, but "email@example.com" (no leading whitespace before "@")
-  // and "@al there" (already moved past it) don't.
+  // Matches only while typing the mention word itself -- "hey @al" matches, but "email@example.com" or "@al there" don't.
   const mentionMatch = /(^|\s)@(\S*)$/.exec(message.slice(0, caretIndex));
   const mentionQuery = mentionMatch?.[2];
   const mentionStart = mentionMatch
@@ -181,12 +176,9 @@ export function TopicMessageBar() {
   const selectMention = (member: MentionCandidate) => {
     if (mentionStart === undefined) return;
 
-    // First name only -- that's the display name everywhere else in the
-    // app (sender names, notifications), so a mention should read the same
-    // way. Two members can share a first name; the member's id is encoded
-    // invisibly alongside it (see encodeMention) so the exact person
-    // clicked -- not just whichever same-named member happens to match --
-    // is who gets notified and linked once this is sent.
+    // First name only, matching the display name used everywhere else; the
+    // id is encoded invisibly alongside it so the exact member clicked (not
+    // just whichever shares that name) is who gets notified.
     const insertion = `${encodeMention(getDisplayName(member.name), member.id)} `;
     const newMessage =
       message.slice(0, mentionStart) + insertion + message.slice(caretIndex);
@@ -206,11 +198,9 @@ export function TopicMessageBar() {
     setPendingCaretPosition(topicStart + insertion.length);
   };
 
-  // Selecting a mention rewrites `message` with the inserted "@Name ", so
-  // the caret needs to move to just after it -- done as an effect (not
-  // inline in selectMention) because the textarea's DOM value must catch
-  // up to the new React state before setSelectionRange has anywhere valid
-  // to point.
+  // Done as an effect, not inline in selectMention, because the textarea's
+  // DOM value must catch up to the new React state before setSelectionRange
+  // has anywhere valid to point.
   useEffect(() => {
     if (pendingCaretPosition === null) return;
 
@@ -234,7 +224,6 @@ export function TopicMessageBar() {
     [image]
   );
 
-  // Focus textarea when command generation completes
   useEffect(() => {
     if (!generatingCommand) textAreaRef.current?.focus();
   }, [generatingCommand]);
@@ -275,10 +264,8 @@ export function TopicMessageBar() {
       setIsUploadingImage(false);
     }
 
-    // Reads the ids encoded into the message by selectMention, so which
-    // exact member was clicked (not just whichever shares their first name)
-    // is who gets notified -- filtered against current circleMembers so a
-    // stale id (e.g. the member has since left the circle) can't sneak in.
+    // Filters the encoded ids against current circleMembers so a stale one
+    // (e.g. a member who's since left) can't sneak in.
     const mentionedUserIds = extractMentionedUserIds(message).filter((id) =>
       circleMembers.some((member) => member.id === id)
     );
@@ -297,9 +284,8 @@ export function TopicMessageBar() {
 
   useUserTypingEmitter({ topicId, message });
 
-  // Feeds the live highlight overlay -- same display-name/topic-name
-  // vocabulary the dropdowns above insert and message-text.tsx recognizes
-  // once sent, so what lights up while typing matches what becomes a link.
+  // Same display-name/topic-name vocabulary the dropdowns insert, so what
+  // highlights while typing matches what becomes a link once sent.
   const mentionNames = useMemo(
     () =>
       circleMembers
@@ -490,9 +476,9 @@ export function TopicMessageBar() {
               file={image}
               onFileChange={(file) => {
                 setImage(file);
-                // The composer growing to show the attachment preview can
-                // push the last message out of view -- keep it visible,
-                // but only if the user was already caught up.
+                // Composer growing to show the attachment preview can push
+                // the last message out of view -- keep it visible only if
+                // the user was already caught up.
                 if (isAtBottom) scrollToBottom({ behavior: "instant" });
                 textAreaRef.current?.focus();
               }}

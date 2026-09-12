@@ -2,8 +2,7 @@ import { prismaClient } from "@/lib/prisma/client";
 
 export { prismaClient };
 
-// Truncates every table in the public schema so each integration test
-// starts from a clean database, regardless of what earlier tests inserted.
+// Truncates every table in the public schema so each integration test starts from a clean database.
 export async function resetDb() {
   const tables: { tablename: string }[] = await prismaClient.$queryRawUnsafe(
     `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`

@@ -28,9 +28,7 @@ export function SetStatusModal(props: Props) {
   const [status, setStatus] = useState(liveStatus.status);
   const { updateStatus } = useUpdateUserStatus();
 
-  // The dialog never unmounts (its parent always renders it, toggling
-  // `open`), so this local draft would otherwise keep whatever value it
-  // had the first time the dialog opened -- resync it each time it opens.
+  // The dialog never unmounts (parent just toggles `open`), so resync the local draft each time it opens instead of only on mount.
   useEffect(() => {
     if (props.open) setStatus(liveStatus.status);
     // eslint-disable-next-line react-hooks/exhaustive-deps

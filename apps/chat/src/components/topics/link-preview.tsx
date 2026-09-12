@@ -40,11 +40,9 @@ function getVideoIdentity(url?: string | null) {
   return undefined;
 }
 
-// True only for the specific youtube/twitch link that's already shown
-// inline via MediaViewer's `mediaUrl` (compared by video id, not just
-// domain -- a message can contain more than one youtube/twitch link, and
-// only the first gets captured as `mediaUrl` when the message is sent; any
-// other such link should still get its own preview).
+// True only for the one youtube/twitch link already shown via MediaViewer's
+// mediaUrl (compared by video id, not domain) -- a message can have more
+// than one such link, and only the first becomes mediaUrl.
 function isAlreadyEmbeddedAsMedia(link: string, mediaUrl?: string | null) {
   const linkVideo = getVideoIdentity(link);
   if (!linkVideo) return false;
@@ -86,11 +84,10 @@ export function LinkPreview(props: Props) {
 
   return (
     <div ref={containerRef} className="hidden md:block">
-      {/* No header/PiP here (unlike the youtube/twitch VideoPlayer usages) --
-          ogVideo is an arbitrary scraped URL with no stable provider/videoId,
-          so it can't be matched against global-player state the way
-          prepareVideoPlayer's youtube/twitch results can. This is a plain
-          inline embed by design, not a missing feature. */}
+      {/* No header/PiP here -- ogVideo is an arbitrary scraped URL with no
+          stable provider/videoId to match against global-player state,
+          unlike the youtube/twitch VideoPlayer usages. Plain inline embed by
+          design. */}
       {data?.ogVideo && !getYoutubeVideoFromUrl(data?.ogVideo) && (
         <VideoPlayer src={data.ogVideo} />
       )}

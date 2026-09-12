@@ -33,15 +33,7 @@ function loadKey(): Buffer {
   return key;
 }
 
-// Loaded lazily (not at import time) and memoized: apps/chat's Next.js
-// build statically evaluates every page's module graph (including this
-// one, via decryption.ts) to collect page data, and DigitalOcean's
-// Dockerfile-based builds don't inject RUN_AND_BUILD_TIME env vars into
-// that build step -- an eager top-level throw here would fail `next build`
-// itself, not just a misconfigured runtime. A missing/malformed key still
-// throws immediately on the first real encrypt()/decrypt() call, which in
-// practice happens within moments of either app actually starting to serve
-// traffic, so this is still effectively fail-fast for a real deployment.
+// Loaded lazily and memoized, not at import time: apps/chat's Next.js build statically evaluates this module's page graph without RUN_AND_BUILD_TIME env vars present, so an eager top-level throw here would break `next build` itself rather than just a misconfigured runtime.
 let key: Buffer | undefined;
 
 function getKey(): Buffer {

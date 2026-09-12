@@ -14,12 +14,7 @@ export default async function CircleLayout(props: Props) {
 
   return (
     <>
-      {/* TopicsNav has its own data fetch and no loading state of its
-          own -- without this Suspense boundary, its suspension bubbles
-          up past this layout (which has none either) and gets caught by
-          whatever boundary is above it, blocking/overriding the topic
-          page's own [topicId]/loading.tsx instead of letting it show on
-          its own. */}
+      {/* Without this boundary, TopicsNav's own suspension (it has no loading state) would bubble up and block the topic page's own loading.tsx instead of letting it show on its own. */}
       <Suspense fallback={<TopicsNavSkeleton />}>
         <TopicsNav circleId={params.circleId} />
       </Suspense>

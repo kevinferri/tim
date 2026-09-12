@@ -19,15 +19,7 @@ export default async function HomePage() {
     });
   }
 
-  // Redirect on the server (as `/circles/[circleId]/page.tsx` already does
-  // for its own default-topic redirect) rather than rendering a client
-  // component that redirects on mount. The client-redirect version painted
-  // its own bespoke loading skeleton first, then -- once the client-side
-  // navigation actually landed -- the target route's real loading.tsx/
-  // Suspense skeletons took over, which look different (different
-  // component, different shape) and land a beat later. That read as two
-  // different loading states in sequence. A server redirect skips straight
-  // to the target route's real (single) loading UI.
+  // Server redirect (not a client component redirecting on mount) so we go straight to the target route's real loading.tsx instead of showing a bespoke skeleton first and then a second, different-looking one.
   if (mostRecentTopic) {
     redirect(
       `/circles/${mostRecentTopic.topic.circleId}/topics/${mostRecentTopic.topicId}`

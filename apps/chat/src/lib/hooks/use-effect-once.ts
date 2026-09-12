@@ -13,18 +13,15 @@ export function useEffectOnce(effect: () => void | (() => void)) {
   }
 
   useEffect(() => {
-    // only execute the effect first time around
     if (!effectCalled.current) {
       destroyFunc.current = effect();
       effectCalled.current = true;
     }
 
-    // this forces one render after the effect is run
     setVal((val) => val + 1);
 
     return () => {
-      // if the comp didn't render since the useEffect was called,
-      // we know it's the dummy React cycle
+      // No render happened since the effect ran -- this is StrictMode's phantom mount/unmount cycle, not a real unmount, so skip cleanup.
       if (!renderAfterCalled.current) {
         return;
       }

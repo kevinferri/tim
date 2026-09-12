@@ -5,12 +5,9 @@ import { Highlight, User } from "@prisma/client";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { updateSingleMessageCache } from "@/components/topics/provider/topic-query-cache";
 
-// Keeps a standalone `["message", messageId]` cache entry (a message
-// fetched on its own via /api/message/:id -- see message-modal.tsx) in
-// sync with highlight events, the same way use-topic-highlights.ts does
-// for a topic's own message caches. Only relevant when that entry exists
-// at all, so this is a no-op whenever the modal is showing a message
-// that's already covered by the current topic's own caches instead.
+// No-op unless a standalone `["message", messageId]` cache entry exists --
+// irrelevant when the modal shows a message already covered by the current
+// topic's own caches.
 export function useMessageHighlightSync(messageId?: string | null) {
   const queryClient = useQueryClient();
 

@@ -59,11 +59,9 @@ export function useTopicMessages({
       },
     });
 
-  // pages[0] is the initial/live window (fetched with no `before` cursor,
-  // i.e. the newest messages) -- each `fetchNextPage()` call appends an
-  // older window to the end of the array as history is paged in. So the
-  // array runs newest-page-first; flatten in reverse to get chronological
-  // (oldest-first) render order.
+  // pages[0] is the newest window and each fetchNextPage() appends an older
+  // one, so the array runs newest-first -- flatten in reverse for
+  // chronological order.
   const pages = data?.pages;
   const messages = useMemo(
     () => uniqBy([...(pages ?? [])].reverse().flat(), "id"),
@@ -88,20 +86,16 @@ export function useTopicMessages({
         // De-dup safety net for the append-on-socket-event path, which
         // isn't a queryFn react-query dedupes on its own.
         const withNew = uniqBy([...prev.pages[0], newMsg], "id");
-        // Only trim the live window out of state while the user is at
-        // the bottom -- trimming while they're scrolled up reading
-        // history would yank content out from under them.
+        // Trims the live window only while the user is at the bottom --
+        // trimming while scrolled up reading history would yank content
+        // from under them.
         const needsSlice = withNew.length > messagesLimit && isAtBottom;
 
         if (needsSlice) {
           const slicer = Math.max(withNew.length - messagesLimit, 0);
-          // Drop whole older (already-loaded-history) pages too -- once
-          // the live window itself has been trimmed, those pages are
-          // stale relative to it and would leave a gap in the timeline
-          // if kept. Trimming to exactly `messagesLimit` also keeps
-          // `hasNextPage` correctly true afterward (same as today's
-          // `setHasMoreMessages(true)`), since it's derived from this
-          // page's length.
+          // Drops already-loaded older pages too, since they'd be stale
+          // relative to the trimmed live window and leave a gap; trimming to
+          // exactly messagesLimit also keeps hasNextPage accurate.
           return {
             ...prev,
             pages: [withNew.slice(slicer)],
@@ -158,10 +152,8 @@ export function useTopicMessages({
   );
 
   const onLoadMoreSuccess = useCallback(() => {
-    // Preserve the user's reading position when older messages are
-    // prepended: capture the scroll offset now, then re-apply it
-    // after the DOM reflects the prepended content, shifted by
-    // however much taller the content got.
+    // Captures the scroll offset now and re-applies it (shifted by the added
+    // height) once the DOM reflects the prepended older messages.
     const viewport = viewportRef.current;
     const prevScrollHeight = viewport?.scrollHeight ?? 0;
     const prevScrollTop = viewport?.scrollTop ?? 0;
@@ -177,14 +169,9 @@ export function useTopicMessages({
     fetchNextPage().then(onLoadMoreSuccess);
   }, [fetchNextPage, onLoadMoreSuccess]);
 
-  // Reconciles the live window against the server after a reconnect --
-  // anything sent, edited, or deleted while disconnected never reached us
-  // as a socket event, so the local copy can be wrong until this runs.
-  // Re-fetches the same no-cursor/"latest messages" request the initial
-  // load made and replaces just page 0 with it, leaving already-loaded
-  // older history (pages[1:]) untouched. (react-query v5 dropped
-  // `invalidateQueries`'s `refetchPage` filter, so this fetches directly
-  // instead of going through the query's own refetch machinery.)
+  // Re-fetches page 0 directly (react-query v5 dropped invalidateQueries's
+  // refetchPage filter) to replace the live window after a reconnect, since
+  // missed socket events while disconnected leave it stale.
   const reconcileRecentMessages = useCallback(async () => {
     try {
       const latest = await fetchMessagesPage(topicId);

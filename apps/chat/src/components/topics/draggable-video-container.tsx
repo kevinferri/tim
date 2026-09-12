@@ -32,10 +32,9 @@ export function DraggableVideoContainer({
     right: 0,
   });
 
-  // Report the container's actual rendered height (header + frame) instead
-  // of letting corner/bounds math in useDraggableVideo assume a fixed
-  // constant -- that constant drifts from reality whenever the header or
-  // frame aspect ratio changes, throwing off where the player snaps to.
+  // Reports the real rendered height instead of the fixed fallback constant,
+  // which drifts from reality whenever the header or frame aspect ratio
+  // changes.
   useEffect(() => {
     const node = draggableRef.current;
     if (!node || !onMeasureHeight || typeof ResizeObserver !== "function") {

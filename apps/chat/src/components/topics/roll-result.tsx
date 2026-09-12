@@ -2,10 +2,8 @@ type Props = {
   content: string;
 };
 
-// Matches the fixed format rollDice() in command-handler.ts produces --
-// "🎲 rolled a 10" / "🎲 rolled an 8" -- so the result number can be pulled
-// out and styled on its own. Falls back to plain text for anything that
-// doesn't match rather than erroring, in case that format ever changes out
+// Matches the fixed format rollDice() in command-handler.ts produces ("🎲
+// rolled a 10") -- falls back to plain text if that format ever drifts out
 // of sync.
 const ROLL_PATTERN = /^🎲 rolled (a|an) (\d+)$/;
 

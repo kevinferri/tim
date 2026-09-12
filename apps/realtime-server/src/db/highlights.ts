@@ -5,11 +5,7 @@ import { pgClient } from "./client";
 type ToggleHighlightArgs = Pick<Highlight, "userId"> & { messageId: string };
 
 async function writeHighlight({ userId, messageId }: ToggleHighlightArgs) {
-  // ON CONFLICT DO NOTHING makes this a single atomic "insert iff absent" --
-  // returns the row on success, or an empty array if a highlight for this
-  // (userId, messageId) already existed. Without this, a plain insert raced
-  // against another toggle for the same pair could violate the unique
-  // constraint, or -- with a check-then-insert -- create duplicate rows.
+  // ON CONFLICT DO NOTHING makes this an atomic "insert iff absent" (empty array if already highlighted), avoiding a race or duplicate rows from a check-then-insert.
   const highlight = await pgClient<Highlight>("highlights")
     .insert({
       id: v4(),

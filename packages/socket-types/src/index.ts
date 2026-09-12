@@ -43,20 +43,14 @@ export enum SocketEvent {
   CreateNotification = "notification:create",
 }
 
-// Carried in JoinRoom/LeaveRoom payloads -- shared here (not duplicated
-// per-app) since both the client (deciding what to join) and the server
-// (building/parsing room key strings) need the exact same values.
+// Carried in JoinRoom/LeaveRoom payloads -- shared here so both sides use the exact same values.
 export enum RoomType {
   Topic = "topic",
   Circle = "circle",
   User = "user",
 }
 
-// Carried in a CreateNotification payload's `notificationType` field --
-// shared here (not duplicated per-app) since both the emitting side
-// (realtime-server) and the rendering side (chat) need the exact same
-// values, and previously did each keep their own hand-copied enum that had
-// already drifted (same string values, different member names).
+// Carried in a CreateNotification payload's `notificationType` field -- shared here since each side previously kept its own hand-copied enum that had drifted out of sync.
 export enum NotificationType {
   HighlightRecieved = "highlight:recieved",
   HighlightRemoved = "highlight:removed",

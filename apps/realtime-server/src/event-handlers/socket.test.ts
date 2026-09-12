@@ -1,18 +1,9 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { createMockSocket, createMockServer } from "../test/socket-mocks";
 
-// handleClientConnected/handleClientDisconnected are plain console.log
-// wrappers around server.engine.clientsCount with no branching logic --
-// not worth testing. handleClientDisconnecting has real behavior (room
-// filtering + a disconnect-aware presence update) and is covered below.
+// handleClientConnected/handleClientDisconnected are plain console.log wrappers with no branching -- untested; handleClientDisconnecting has real behavior and is covered below.
 //
-// NOTE: an async `vi.mock("./rooms", async (importOriginal) => ({...await
-// importOriginal(), emitUserChangeInTopic: vi.fn() }))` partial mock here
-// silently does NOT replace the binding socket.ts sees -- the real
-// emitUserChangeInTopic runs instead (its own internal try/catch around a
-// real, unmocked DB call then swallows the resulting FK error, so nothing
-// visibly fails; the mock's call count just stays 0). A plain synchronous
-// full-object mock avoids that trap.
+// An async `vi.mock("./rooms", async (importOriginal) => ({...}))` partial mock here silently doesn't replace the binding socket.ts sees (the real emitUserChangeInTopic runs and swallows a real DB error internally) -- use a plain synchronous full-object mock instead.
 vi.mock("./rooms", () => ({
   RoomType: { Topic: "topic", Circle: "circle", User: "user" },
   ROOM_KEY_INDICATOR: "::",

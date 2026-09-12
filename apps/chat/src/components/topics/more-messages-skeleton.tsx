@@ -18,10 +18,9 @@ export function MoreMessagesSkeleton({ count = 3 }: Props) {
   return (
     <>
       {[...Array(count)].map((_, i) => {
-        // Deterministic, not random -- this can remount mid-transition
-        // (e.g. when a Suspense boundary above it resolves), and a
-        // random pick would visibly jump to different widths on
-        // remount, looking like a totally different loading state.
+        // Deterministic, not random -- a remount mid-transition (e.g. a
+        // Suspense boundary resolving) would otherwise visibly jump to
+        // different widths.
         const widthClass = widths[i % widths.length];
 
         return (

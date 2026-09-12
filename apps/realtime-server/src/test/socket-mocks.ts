@@ -1,9 +1,6 @@
 import { vi } from "vitest";
 
-// Minimal Socket.IO Socket/Server doubles for unit-testing event handlers
-// (src/event-handlers/*.ts) without a real network connection. Handlers
-// register via `socket.on(event, cb)`; call `trigger(event, payload)` to
-// invoke the registered callback the way Socket.IO would.
+// Minimal Socket.IO Socket/Server doubles for unit-testing event handlers without a real connection; call `trigger(event, payload)` to invoke a registered handler.
 export function createMockSocket(user: Record<string, unknown> = { id: "user-1" }) {
   const listeners = new Map<string, (...args: any[]) => any>();
   const rooms = new Set<string>();

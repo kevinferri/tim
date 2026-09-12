@@ -29,9 +29,7 @@ async function createMessage(
   topicId: string,
   overrides: Partial<{ text: string; mediaUrl: string | null }> = {}
 ) {
-  // The AAD binds ciphertext to its row id, so the id has to be known
-  // before encrypting -- generate it up front instead of relying on
-  // Prisma's DB-side @default(uuid()).
+  // The AAD binds ciphertext to its row id, so it must be known before encrypting -- generate it up front instead of relying on Prisma's DB-side @default(uuid()).
   const id = crypto.randomUUID();
 
   return prismaClient.message.create({

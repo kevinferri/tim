@@ -27,7 +27,6 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
       actor: socket.data.user,
     };
 
-    // Highlight added
     if (Boolean(highlight)) {
       const createdBy = await getUserSummary({ userId: highlight.userId });
 
@@ -44,7 +43,6 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
       return;
     }
 
-    // Highlight removed
     server.to(roomKey).emit(SocketEvent.RemovedHighlight, {
       messageId: payload.messageId,
       userId: socket.data.user.id,

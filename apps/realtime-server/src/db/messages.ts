@@ -71,12 +71,7 @@ export async function getMessageHistoryForTopic({
   topicId: string;
   limit: number;
 }) {
-  // createdAt alone isn't a reliable order for rapid-fire messages -- it's
-  // millisecond precision, and sequential inserts can land in the same
-  // millisecond (ties observed even in this table's own test suite), which
-  // leaves Postgres free to return them in either order. ctid (physical row
-  // location) breaks the tie: it tracks insertion order for appended rows,
-  // which is all this table does outside of in-place edits.
+  // createdAt is only millisecond precision and ties are possible for rapid-fire messages, so break ties with ctid (physical insertion order) for a stable ordering.
   const rows: { id: string; text: string; mediaUrl: string; name: string }[] =
     await pgClient("messages")
       .select("messages.id", "messages.text", "messages.mediaUrl", "users.name")

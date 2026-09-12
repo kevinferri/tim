@@ -108,9 +108,9 @@ export function useTopicHighlights({
           return updatedMessage;
         });
 
-      // Patch the message's `highlights` field wherever else it's
-      // cached (main chat history, media rail) directly -- no callback
-      // threading needed now that both live in react-query's cache.
+      // Patches the message's highlights in the main chat history and media
+      // rail caches directly -- no callback threading needed since both live
+      // in react-query's cache.
       updateMessagesCache(queryClient, topicId, updateMessages);
       updateMediaMessagesCache(queryClient, topicId, updateMessages);
 

@@ -70,9 +70,7 @@ type Props = VariantProps<typeof variants> & {
   disableSheet?: boolean;
   showStatus?: boolean;
   isOnline?: boolean;
-  // Renders this instead of the avatar circle as the clickable element that
-  // opens the profile sheet -- e.g. a sender's name next to a message. The
-  // sheet itself (avatar, stats, highlights) is unaffected either way.
+  // Renders this instead of the avatar circle as the clickable element that opens the profile sheet -- the sheet's own content is unaffected either way.
   children?: ReactNode;
 };
 

@@ -13,9 +13,7 @@ type ChatMessage = {
   content: string;
 };
 
-// Shared between the live-reply prompt and the summary prompt so both sound
-// like the same bot -- without this the summary path had no anti-robotic
-// guidance at all and defaulted to stiff, formulaic output.
+// Shared between the live-reply and summary prompts so both sound like the same bot.
 const VOICE_RULES = `
 - Direct, concise, and content-only
 - No conversational wrap-ups or self-references like "I'm an AI" or "I'm here to help"
@@ -103,9 +101,7 @@ async function fetchMessageHistory(topicId: string, forSummary: boolean) {
   return await getMessageHistoryForTopic({ topicId, limit });
 }
 
-// A non-Tim slash command (giphy/youtube) reads as noise if it's left as raw
-// "/giphy cat" text in the transcript -- describe what actually happened
-// instead so both the live reply and the summary can reason about it naturally.
+// Describes what a non-Tim slash command did instead of leaving raw "/giphy cat" text in the transcript.
 function describeMediaCommand(
   name: Exclude<CommandName, CommandName.Tim>,
   prompt: string,
@@ -119,10 +115,7 @@ function describeMediaCommand(
     : "shared a YouTube video";
 }
 
-// Each history row is one prior message in the topic, joined with its
-// sender's name. Every turn is attributed ("Name: text") since this is a
-// group chat -- without that, every speaker collapses into one anonymous
-// "user" role and the model can't tell who said what.
+// Every turn is attributed ("Name: text") so the model can tell speakers apart in a group chat.
 function convertDbRowToMessages(row: {
   id: string;
   text: string;
@@ -154,10 +147,7 @@ function convertDbRowToMessages(row: {
 }
 
 async function summarizeMessages(messages: ChatMessage[]) {
-  // Tim's own past replies aren't attributed by convertDbRowToMessages
-  // (that would make the live reply prompt echo a "Tim:" prefix into its own
-  // output) -- label them only here, where the transcript is flattened to
-  // plain text and that risk doesn't apply.
+  // Tim's own replies are labeled "Tim:" only here, not in convertDbRowToMessages -- doing it there would make the live-reply prompt echo the prefix into its own output.
   const transcript = messages
     .map((m) => (m.role === "assistant" ? `Tim: ${m.content}` : m.content))
     .join("\n");
@@ -204,10 +194,7 @@ export async function getChatGpt({
   circleId: string;
   activeUsers: User[];
 }) {
-  // "catch\s?up" alone only matches "catchup"/"catch up" -- it misses the
-  // most natural phrasing, "catch me up", since \s? allows at most one
-  // character between the words. Match "catch" ... "up" anywhere in the
-  // query instead.
+  // \bcatch\b.*\bup\b (not "catch\s?up") so "catch me up" also matches, not just "catchup"/"catch up".
   const isSummaryRequest =
     /\b(summary|summarize|recap)\b/i.test(query) ||
     /\bcatch\b.*\bup\b/i.test(query);

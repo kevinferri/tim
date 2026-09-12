@@ -18,14 +18,9 @@ export function truncateText(str: string, maxLength = 50) {
 export function getLinksFromMessage(message?: string) {
   if (!message) return [];
 
-  // Same matcher message-text.tsx already uses (via linkify-react) to decide
-  // what's clickable in the message body -- reusing it here means a preview
-  // only fires for text the UI itself treats as a link. The previous
-  // hand-rolled version (any word with a letter, accepted as a URL if its
-  // last dot-segment was 2+ chars) had no real TLD check, so ordinary
-  // technical words like "config.yml" or "package.json" parsed as "valid
-  // URLs" and triggered a real preview fetch/scrape for text that was never
-  // a link.
+  // Uses the same linkify matcher as the rest of the UI so previews only
+  // fire for genuine links -- the old hand-rolled check treated things like
+  // "config.yml" as valid URLs.
   return find(message, "url", { defaultProtocol: "https" })
     .filter((match) => match.isLink)
     .map((match) => match.href);
@@ -103,19 +98,9 @@ export type MessageToken =
   | { type: "mention"; value: string; id?: string }
   | { type: "topicLink"; value: string };
 
-// A mention carries the selected member's id invisibly right after the
-// visible "@Name" text, so which of several same-named members was actually
-// clicked survives into the stored message (see selectMention in
-// topic-message-bar.tsx) instead of being re-guessed by name every time the
-// message is rendered or notified on. The id is bit-encoded across zero-
-// width Unicode format characters -- real fonts/browsers give these zero
-// advance width -- rather than embedded as visible characters, which would
-// show up as garbage text wherever the raw string is displayed unstyled
-// (e.g. message-edit.tsx's plain textarea) and would break the composer's
-// textarea/highlight-overlay character-for-character alignment (see
-// message-highlight-overlay.tsx): a genuinely zero-width payload occupies
-// the same rendered width whether or not the overlay repeats it, so the
-// overlay can just render the plain "@Name" and stay in sync.
+// Mention ids are bit-encoded into zero-width Unicode characters (not visible
+// ones) so the payload has no rendered width and can't corrupt plain-text
+// display or the composer's character-alignment with its highlight overlay.
 const MENTION_ID_START = "\u2060"; // WORD JOINER
 const MENTION_ID_END = "\u200d"; // ZERO WIDTH JOINER
 const MENTION_ID_BIT0 = "\u200b"; // ZERO WIDTH SPACE
@@ -148,18 +133,14 @@ function decodeMentionId(bits: string): string | undefined {
   return id;
 }
 
-// Inserted by selectMention when a candidate is chosen from the dropdown --
-// displays as "@Name" (the invisible id payload takes no rendered width).
+// Displays as "@Name" -- the invisible id payload takes no rendered width.
 export function encodeMention(displayName: string, id: string): string {
   return `@${displayName}${encodeMentionId(id)}`;
 }
 
-// Pulls the ids out of any ID-tagged mentions in a raw message, for
-// send-time notification routing (see emitMessage in topic-message-bar.tsx)
-// -- self-describing via the invisible payload, so no member list is needed
-// to recognize one. A plain "@Name" typed without using the dropdown (or a
-// mention from before this format existed) carries no id and is skipped
-// rather than guessed at by name.
+// Self-describing via the invisible id payload, so no member list is needed
+// to resolve one -- a plain "@Name" with no payload is skipped rather than
+// guessed at.
 export function extractMentionedUserIds(text: string): string[] {
   const pattern = new RegExp(`@[^\\s@#${MENTION_ID_START}]+${MENTION_ID_PATTERN}`, "g");
   const ids = new Set<string>();
@@ -173,12 +154,8 @@ export function extractMentionedUserIds(text: string): string[] {
   return Array.from(ids);
 }
 
-// Splits a raw message into ordered, whitespace-preserving segments so one
-// tokenizer can back both the sent-message renderer (message-text.tsx) and
-// the live composer highlight overlay (topic-message-bar.tsx) -- each just
-// maps the same tokens to its own visual treatment (clickable elements vs.
-// plain colored spans), instead of keeping two separate regexes that could
-// drift out of sync on what counts as a mention/topic link.
+// One tokenizer backs both the message renderer and the composer highlight
+// overlay, so they can't drift apart on what counts as a mention/topic link.
 export function tokenizeMessage(
   text: string,
   mentionNames: string[],
@@ -208,12 +185,9 @@ export function tokenizeMessage(
     return tokens;
   }
 
-  // ID-tagged mentions are self-describing (any "@word" immediately
-  // followed by the invisible id payload), so they're matched first and
-  // don't need to appear in mentionNames -- this also covers a member
-  // mentioned under a name that's since changed. Plain "@Name" (no id
-  // payload) still only counts as a mention when it matches a real member,
-  // same as before.
+  // ID-tagged mentions are matched first since they're self-describing and
+  // don't need to appear in mentionNames (this also covers a since-renamed
+  // member); a plain "@Name" still needs a mentionNames match.
   const patternParts: string[] = [
     `@(?<mention>[^\\s@#${MENTION_ID_START}]+)${MENTION_ID_PATTERN}`,
   ];

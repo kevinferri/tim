@@ -1,14 +1,4 @@
-// A user's `name` (from Prisma's User model) is a nullable free-text
-// field -- both apps independently derived a display-friendly first name
-// from it (apps/chat in three places, apps/realtime-server for the /tim
-// prompt), which had already produced one behavioral difference between
-// them: some call sites handled a null/undefined name and some didn't.
-// One implementation here instead.
-//
-// Named for what it's used for (the name shown everywhere -- messages,
-// notifications, mentions), not for today's implementation (first name).
-// When custom display names ship, this is the one place that changes --
-// `displayName ?? getDisplayName(name)` -- rather than every call site.
+// Consolidates each app's independently-derived (and inconsistently null-safe) first-name logic; named for its use (display name) rather than today's implementation, so `displayName ?? getDisplayName(name)` is the one call site that changes when custom display names ship.
 export function getDisplayName(name?: string | null): string {
   return name?.split(" ")[0] ?? "";
 }

@@ -39,7 +39,6 @@ export function useTopicNotifications({
     setUnreadCount(0);
   }, [setUnreadCount]);
 
-  // Handle created notification
   useSocketHandler<{
     messageId: string;
     actor: NotificationActor;

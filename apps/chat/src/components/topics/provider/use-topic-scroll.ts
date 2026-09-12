@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// How close to the bottom (in px) still counts as "at the bottom" for
-// auto-scroll purposes -- the same slack most chat apps give you before
-// they stop pinning you to new messages.
+// Slack before auto-scroll considers itself off the bottom -- same cushion most chat apps use.
 const BOTTOM_SLACK_PX = 150;
 
 type ScrollToBottomOptions = {
@@ -30,12 +28,9 @@ export function useTopicScroll() {
       // mid-scroll doesn't get missed.
       setIsAtBottom(true);
 
-      // Callers often trigger this in the same tick as a state update
-      // that's about to add the very content we're scrolling to (e.g.
-      // the message that was just sent). React hasn't committed that
-      // yet, so scrollHeight here would still be the *previous* bottom.
-      // Deferring to a frame guarantees the DOM (and therefore
-      // scrollHeight) reflects the update first.
+      // Deferred to a frame because scrollHeight would otherwise reflect the
+      // DOM before React commits the content we're scrolling to (e.g. a
+      // just-sent message).
       requestAnimationFrame(() => {
         const viewport = viewportRef.current;
         if (!viewport) return;
@@ -46,9 +41,7 @@ export function useTopicScroll() {
     [setIsAtBottom],
   );
 
-  // Tracks whether the bottom of the list is currently in view. Replaces
-  // the old scrollTop/scrollHeight math with a sentinel element -- no
-  // magic padding numbers to estimate.
+  // Sentinel-based instead of scrollTop/scrollHeight math, to avoid estimating with magic padding numbers.
   useEffect(() => {
     const viewport = viewportRef.current;
     const sentinel = bottomSentinelRef.current;
@@ -63,30 +56,10 @@ export function useTopicScroll() {
     return () => observer.disconnect();
   }, [setIsAtBottom]);
 
-  // Keeps the list pinned to the bottom as its content changes size for any
-  // reason -- a new message, an image or embed finishing load, an edit
-  // box expanding, etc. This single mechanism replaces every ad-hoc
-  // "scroll after this thing loads" callback the old implementation
-  // needed scattered through message/media/link-preview components.
-  //
-  // Deliberately doesn't gate on isAtBottomRef here -- that ref is set
-  // by the IntersectionObserver above, which is async and races this
-  // one. A tall incoming message can push the bottom sentinel out of
-  // the "near bottom" zone before that observer's callback runs, so by
-  // the time this callback checked isAtBottomRef it could already read
-  // `false` for growth that *caused* it to go false, and skip the very
-  // scroll that would fix it. Instead we judge "was at bottom" directly
-  // off the viewport's scroll position against the pre-change height --
-  // synchronous, and not dependent on the other observer's timing.
-  //
-  // Reacts to a net *shrink* too, not just growth: once the live window
-  // hits its cap (see MESSAGE_LIMIT), a new message arrives trimmed
-  // together with the oldest one dropping out in the very same update
-  // (use-topic-messages.ts). If the dropped message was taller than the
-  // new one, total height goes down even though a message the user should
-  // see just got appended below the fold -- gating on "grew" would skip
-  // the very re-pin that's needed and leave them silently a bit short of
-  // the true bottom.
+  // Checks scroll position against the pre-change height directly (not the
+  // async isAtBottomRef) so a fast resize can't race the IntersectionObserver,
+  // and also reacts to net shrinks (e.g. window trimming) that a "grew" check
+  // alone would miss.
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;

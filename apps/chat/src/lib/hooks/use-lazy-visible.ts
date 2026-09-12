@@ -7,11 +7,7 @@ type Options = {
   skip?: boolean;
 };
 
-// Reports whether `ref`'s element has ever entered the viewport, and keeps
-// reporting true forever after that -- unlike a raw IntersectionObserver
-// subscription, it never flips back to false once the element has been seen.
-// Meant for lazy-mounting something expensive-to-reload (e.g. a third-party
-// video embed) once, not for tracking live visibility.
+// Latches to true the first time `ref`'s element enters the viewport and never flips back -- for lazy-mounting something expensive-to-reload once, not for tracking live visibility.
 export function useLazyVisible(
   ref: RefObject<Element | null>,
   { root, rootMargin, threshold, skip = false }: Options = {}

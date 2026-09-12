@@ -6,9 +6,7 @@ type Props = {
   className?: string;
 };
 
-// Used where there's no lucide equivalent and no brand to source a real
-// logo from (Roll, EightBall) -- the emoji already reads unambiguously as
-// the thing it represents, so it stands in as the icon directly.
+// Used where there's no lucide equivalent and no brand logo to source (Roll, EightBall) -- the emoji already reads unambiguously as the icon.
 function EmojiIcon({
   emoji,
   className,
@@ -28,12 +26,9 @@ function EmojiIcon({
   );
 }
 
-// Giphy/YouTube marks are official artwork pulled from each brand's own
-// asset kit (brand.youtube's "Core YouTube icon" download, and the
-// attribution glyph cropped out of developers.giphy.com's "Giphy
-// Attribution Marks" pack) rather than a generic icon set, so they render
-// as real logo images -- not square, hence object-contain so neither gets
-// squashed to fit the icon box.
+// Official brand artwork (YouTube's icon kit, Giphy's attribution pack)
+// rather than a generic icon set -- not square, hence object-contain so
+// neither gets squashed.
 export function CommandIcon({ name, className }: Props) {
   switch (name) {
     case CommandName.Giphy:

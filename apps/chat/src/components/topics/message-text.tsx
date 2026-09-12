@@ -20,24 +20,9 @@ type Props = {
   isNewestMessage?: boolean;
 };
 
-// Renders "@Name" and "#Topic" as clickable elements only for names/topics
-// that actually exist in the circle, so an arbitrary "@" or "#" the user
-// typed doesn't get styled as if it were a real link -- tokenizeMessage only
-// recognizes the names/topics it's given. Styled like the embedded links
-// below (underline + text-mention), not like the font-pronounced command
-// highlighting -- both are actually clickable (a mention opens a profile
-// via the same trigger the sender name uses in message.tsx; a topic link
-// navigates to that topic), so they should read as links, not as
-// decoration. The hover fade lives on that shared trigger wrapper.
-//
-// A mention selected from the dropdown carries the exact member's id (see
-// selectMention in topic-message-bar.tsx), so it resolves unambiguously via
-// membersById even when two members share a first name. A mention with no
-// id -- a plain "@Name" typed by hand, or one sent before this format
-// existed -- falls back to matching display name, which membersByName
-// resolves to whichever same-named member comes last in circleMembers.
-// Topic links match on the full topic name (see selectTopicLink), which is
-// unique per circle.
+// Only renders @Name/#Topic as links when they match a real member/topic; an
+// id-less mention falls back to matching by display name, which resolves
+// duplicates to whichever member comes last in circleMembers.
 function renderTokens(
   tokens: MessageToken[],
   topicId: string,

@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 export const PLAYER_WIDTH = 480;
-// Fallback used only until the container reports its real rendered height
-// (see onMeasureHeight below) -- header height can drift from this, so it's
-// a starting guess, not the value corner/bounds math actually relies on.
+// Starting guess only, until the container reports its real height -- can drift from the actual header height.
 export const PLAYER_HEIGHT_FALLBACK = 320;
 export const PLAYER_TOP_PADDING = 48;
 export const PLAYER_BOTTOM_PADDING = 44;
@@ -86,10 +84,9 @@ export function useDraggableVideo(
   isEnabled: boolean,
   storageKey = "floating-video"
 ) {
-  // Read synchronously (not via an effect) so the very first paint already
-  // reflects the corner the user last docked at -- an effect-based load
-  // would render at the fallback top-right corner for one frame first,
-  // producing a visible flash-then-jump every time the player reopens.
+  // Read synchronously, not via an effect, so the first paint already
+  // reflects the last-docked corner instead of flashing top-right for one
+  // frame.
   const [persisted, setPersistedState] = useState<PersistedState>(() =>
     readPersistedCorner(storageKey)
   );

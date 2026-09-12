@@ -71,10 +71,7 @@ export const circleModel = {
     });
   },
 
-  // Duplicates the membership check in
-  // apps/realtime-server/src/db/queries.ts's isUserInCircle (Prisma
-  // nested-where here vs. a raw join-table query there). If
-  // circle-membership semantics ever change in schema.prisma, update both.
+  // Duplicates the membership check in apps/realtime-server/src/db/circles.ts's isUserInCircle -- if circle-membership semantics change in schema.prisma, update both.
   async isUserInCircle({
     circleId,
     userId,
@@ -131,12 +128,9 @@ export const circleModel = {
         })
       : undefined;
 
-    // Make sure cur user is creator of current circle
     if (existingCircle && existingCircle.userId !== userId) return false;
 
-    // `email: { in: undefined }` is Prisma's "no filter," not "match
-    // nothing" -- guard explicitly or an empty/absent memberEmails would
-    // match every user in the database.
+    // `email: { in: undefined }` is Prisma's "no filter," not "match nothing" -- guard explicitly or an empty/absent memberEmails would match every user in the database.
     const members = memberEmails
       ? await prismaClient.user.findMany({
           where: {
@@ -165,7 +159,7 @@ export const circleModel = {
         };
 
         if (existingCircle) {
-          // Remove existing members to be updated with new payload
+          // Prisma's `connect` only adds, so members must be cleared first to fully replace the set.
           await tx.circle.update({
             where: { id: existingCircle.id },
             data: { members: { set: [] } },
@@ -183,7 +177,6 @@ export const circleModel = {
           });
         }
 
-        // Create default topic on circle creation
         if (!existingCircle && newCircle.id) {
           defaultTopic = await tx.topic.create({
             data: {

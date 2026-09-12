@@ -40,20 +40,10 @@ type ScrollToBottomOptions = {
   behavior?: ScrollBehavior;
 };
 
-// This used to be a single context carrying everything about the
-// current topic (messages, media, highlights, scroll state, composer
-// state...) built from one big useMemo. Any single field changing --
-// a new socket message, isAtBottom flipping, a gif shuffle starting --
-// produced a new object reference for the whole thing, so every
-// consumer re-rendered regardless of which slice it actually read
-// (every message row included, since Message read from it too). It's
-// now split by how often each slice actually changes, so e.g. the
-// member list (identity/membership, effectively static) doesn't
-// re-render on chat traffic, and the media rail doesn't re-render on
-// every new text message.
+// Split by how often each slice changes (e.g. member list vs. chat messages)
+// so a change in one doesn't re-render consumers of the others.
 
-// --- Meta: topic/circle identity + membership. Set once per topic
-// mount and essentially never changes again. ---
+// --- Meta: topic/circle identity + membership -- set once per mount, stays static. ---
 
 type MetaContextValue = {
   topicId: string;
@@ -78,17 +68,9 @@ export function useTopicMetaContext() {
   return context;
 }
 
-// Where a message sits in the timeline (newest / among the last few /
-// oldest-loaded), derived once from `messages` here instead of every
-// `Message` instance scanning the full array itself with findIndex --
-// that was an O(n) scan per message, i.e. O(n^2) total per incoming
-// message for a topic with n messages loaded. Callers that render
-// <Message> compute these flags via getMessagePositionFlags and pass
-// them down as props rather than having Message read this context
-// directly -- a changed context value re-renders every consumer
-// regardless of memoization, so Message needs plain props to stay
-// memoizable and skip re-rendering when its own position hasn't
-// changed.
+// Computed once here (not per-Message findIndex, which was O(n^2) overall)
+// and passed down as plain props via getMessagePositionFlags so Message stays
+// memoizable.
 
 export type MessageRecency = {
   newestMessageId?: string;
@@ -117,8 +99,7 @@ export function getMessagePositionFlags(
 
 const RECENT_MESSAGE_WINDOW = 5;
 
-// --- Messages: the main chat history. Changes on every send/edit/
-// delete/pagination -- the highest-churn slice. ---
+// --- Messages: the main chat history -- changes on every send/edit/delete/pagination, the highest-churn slice. ---
 
 type MessagesContextValue = {
   messages: MessageProps[];
@@ -144,8 +125,7 @@ export function useTopicMessagesContext() {
   return context;
 }
 
-// --- Media, highlights, and gif-shuffle each change independently of
-// the main message list and of each other. ---
+// --- Media, highlights, and gif-shuffle each change independently of the main list and of each other. ---
 
 type MediaContextValue = { mediaMessages: MessageProps[] };
 
@@ -202,8 +182,7 @@ export function useTopicGifContext() {
   return context;
 }
 
-// --- Scroll/composer UI state: scroll position, unread count, and
-// slash-command generation. None of the above slices care about this. ---
+// --- Scroll/composer UI state: scroll position, unread count, slash-command generation -- none of the above slices care about this. ---
 
 type UiContextValue = {
   viewportRef: MutableRefObject<HTMLDivElement | null>;
@@ -327,12 +306,9 @@ export function CurrentTopicProvider(props: Props) {
     topHighlightsLimit: props.topHighlightsLimit,
   });
 
-  // The socket only tells us about changes while it's actually
-  // connected -- anything sent, edited, deleted, or highlighted while
-  // disconnected never reaches us as an event. Catch up on reconnect
-  // (a real "was disconnected, now isn't" transition, not the initial
-  // connect -- we already have fresh data for that from the server
-  // render).
+  // Catches up after a real disconnect->reconnect (not the initial connect,
+  // which already has fresh SSR data) since missed socket events while
+  // disconnected are never replayed.
   const wasConnectedRef = useRef(isConnected);
 
   useEffect(() => {

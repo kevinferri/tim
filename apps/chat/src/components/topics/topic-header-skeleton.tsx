@@ -1,11 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Stand-in for TopicHeader while the topic itself is still loading -- see
-// topic-header.tsx for the real thing. h-6 matches the 24px line-height of
-// the real header's title text/iconSm button, so this row comes out to the
-// same 48px height (with p-3) as the real header and as
-// topics-nav-header-skeleton.tsx's row in the left sidebar -- keeping the
-// border-b under each aligned across the page while both are loading.
+// h-6 matches the real header's 24px line-height, so this comes out to the
+// same 48px row height (with p-3) -- keeps the border-b aligned across the
+// page while things load.
 export function TopicHeaderSkeleton() {
   return (
     <div className="flex flex-row justify-left p-3 border-b items-center gap-1">

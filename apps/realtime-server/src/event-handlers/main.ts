@@ -44,37 +44,29 @@ export function registerEventHandlers(server: Server) {
       next();
     });
 
-    // Log emitted and handled events
     handleOnAny({ socket, server });
     handleOnAnyOutgoing({ socket, server });
 
-    // Handle client connection/disconnection
     handleClientConnected({ socket, server });
     handleClientDisconnecting({ socket, server });
     handleClientDisconnected({ socket, server });
 
-    // Room handlers
     handleJoinRoom({ socket, server });
     handleLeaveRoom({ socket, server });
 
-    // Chat message handlers
     handleSendMessage({ socket, server });
     handleDeleteMessage({ socket, server });
     handleEditMessage({ socket, server });
     handleShuffleGif({ socket, server });
 
-    // Circle action handlers
     handleUpsertedCircle({ socket, server });
     handleDeletedCircle({ socket, server });
 
-    // Topic action handlers
     handleUpsertedTopic({ socket, server });
     handleDeletedTopic({ socket, server });
 
-    // Highlights
     handleToggleHighlight({ socket, server });
 
-    // User activity
     handleUserTabFocused({ socket, server });
     handleUserTabBlurred({ socket, server });
     handleUserStartedTyping({ socket, server });

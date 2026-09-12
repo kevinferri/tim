@@ -22,11 +22,7 @@ export function useIntersection(
       };
     }
     return () => {};
-    // `ref` is a stable RefObject and is already attached by the time this
-    // effect runs, so it's read (not depended on) inside the effect body --
-    // including `ref.current` here caused the deps array to change on the
-    // render right after mount (null -> element), tearing the observer down
-    // and resetting the entry to null just as the first real reading arrived.
+    // `ref.current` is deliberately omitted: including it changes the deps array on the render right after mount (null -> element), tearing down the observer and resetting the entry just as the first real reading arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.threshold, options.root, options.rootMargin]);
 

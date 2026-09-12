@@ -29,9 +29,7 @@ function articleFor(n: number): "a" | "an" {
   return "a";
 }
 
-// Defaults to a d6; "/roll 20" or "/roll d20" (D&D notation) both roll
-// 1-20. Anything else non-numeric (or <= 0) falls back to a d6 rather than
-// erroring on a malformed prompt.
+// Falls back to a d6 for anything non-numeric (or <= 0) rather than erroring on a malformed prompt.
 function rollDice(prompt: string): string {
   const sidesText = prompt.trim().replace(/^d/i, "");
   const requestedSides = parseInt(sidesText, 10);
@@ -98,9 +96,6 @@ const commandExecutors: Record<CommandName, CommandExecutor> = {
   },
 };
 
-// Parses a message's leading `/command` (if any) and runs its executor,
-// returning the resulting mediaUrl -- or undefined if the message isn't a
-// recognized command.
 export async function executeCommand(
   text: string,
   context: CommandContext

@@ -23,10 +23,7 @@ type Store = {
   removeRoom: (room: RoomMembership) => void;
 };
 
-// The set of rooms this client *wants* to be in, independent of the
-// current connection state. This is the single source of truth room
-// membership is synced from -- both right after a join/leave call and
-// in bulk every time the socket (re)connects.
+// The set of rooms this client *wants* to be in, independent of connection state -- the single source of truth room membership is synced from, both per join/leave and in bulk on every (re)connect.
 const useRoomStore = create<Store>((set) => ({
   joinedRooms: [],
 
@@ -51,11 +48,7 @@ export function useRoomManagement() {
   const joinRoom = (id: string, roomType: RoomType) => {
     const room = { id, roomType };
 
-    // Record the desired room first, then announce it. socket.io buffers
-    // emits made before the connection is up and flushes them once it
-    // connects, so this is safe to call immediately on mount regardless
-    // of connection state -- no need to defer or wait for a "connected"
-    // signal.
+    // Safe to call immediately regardless of connection state -- socket.io buffers emits made before connecting and flushes them once it does.
     addRoom(room);
     emitJoin.emit(room);
   };
@@ -70,12 +63,7 @@ export function useRoomManagement() {
   return { joinRoom, leaveRoom };
 }
 
-// Mount once, at the socket's root (SocketProvider). Every reconnection
-// establishes a brand new connection from the server's perspective, so
-// any rooms it had joined before are gone -- this re-announces the full
-// desired set on every "connect", which covers the very first connect
-// and every reconnect through the same single code path instead of
-// treating them as two different cases.
+// Every reconnection is a brand new connection server-side, so previously-joined rooms are gone -- re-announcing the full desired set on every "connect" handles the first connect and every reconnect through one code path.
 export function useRoomResyncOnConnect(socket: Socket) {
   useEffect(() => {
     function onConnect() {

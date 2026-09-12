@@ -45,15 +45,7 @@ const useStore = create<Store>((set) => ({
     }),
 }));
 
-// Registers the presence socket listeners exactly once. Mount this a
-// single time, near the socket root (see PresenceSync) -- previously
-// every component that wanted presence data (circles list, topics list,
-// members list, active-users row) called useSocketHandler itself, which
-// meant up to four redundant listeners for the same events, and any of
-// them mounting after the server's initial snapshot arrived would just
-// miss it for good since socket.io doesn't replay past events. Reading
-// presence is now decoupled from subscribing to it -- see
-// useActiveCircleMembers below.
+// Mount exactly once near the socket root -- per-component subscriptions used to mean redundant listeners, and one mounting after the server's initial snapshot would miss it for good since socket.io doesn't replay past events.
 export function usePresenceSync() {
   const mergeCircleSnapshot = useStore((state) => state.mergeCircleSnapshot);
   const setTopicPresence = useStore((state) => state.setTopicPresence);
@@ -75,9 +67,7 @@ export function usePresenceSync() {
     }),
   );
 
-  // mergeCircleSnapshot/setTopicPresence only ever add or overwrite keys, so
-  // a deleted topic's stale presence entry (including our own) would
-  // otherwise never leave topicMap -- explicitly drop it here.
+  // mergeCircleSnapshot/setTopicPresence only ever add or overwrite keys, so a deleted topic's stale entry would otherwise never leave topicMap.
   useSocketHandler<{ id: string }>(SocketEvent.DeletedTopic, (payload) =>
     removeTopic(payload.id),
   );

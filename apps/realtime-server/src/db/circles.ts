@@ -1,10 +1,7 @@
 import { Topic } from "@tim/db-types";
 import { pgClient } from "./client";
 
-// Duplicates the membership check in
-// apps/chat/src/lib/prisma/circle-model.ts's `isUserInCirle` (a raw
-// join-table query here vs. Prisma nested-where there). If circle-membership
-// semantics ever change in schema.prisma, update both.
+// Duplicates the membership check in apps/chat/src/lib/prisma/circle-model.ts's `isUserInCircle` (a raw join-table query here vs. Prisma nested-where there) -- if circle-membership semantics ever change in schema.prisma, update both.
 export async function isUserInCircle({
   userId,
   circleId,

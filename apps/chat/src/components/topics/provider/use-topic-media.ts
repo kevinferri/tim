@@ -19,13 +19,10 @@ export function useTopicMedia({
   const queryClient = useQueryClient();
   const queryKey = useMemo(() => mediaMessagesQueryKey(topicId), [topicId]);
 
-  // No backing fetch endpoint -- this is socket-only local state, seeded
-  // from SSR props (`skipToken` means react-query never calls a queryFn
-  // for it). It lives in react-query's cache anyway so message/media/
-  // highlight cross-updates can all go through the same setQueryData
-  // mechanism instead of three different state containers.
-  // `skipToken` types `data` as possibly undefined, but `initialData`
-  // guarantees it's never actually undefined at runtime.
+  // Socket-only state seeded from SSR props (skipToken means no queryFn
+  // runs), kept in react-query's cache so cross-updates share setQueryData;
+  // initialData guarantees data is never actually undefined despite
+  // skipToken's type.
   const { data: mediaMessages } = useQuery({
     queryKey,
     queryFn: skipToken,
@@ -60,9 +57,9 @@ export function useTopicMedia({
           return m;
         });
 
-      // Patch the message's `mediaUrl` wherever else it's cached (main
-      // chat history) directly -- no callback threading needed now that
-      // both live in react-query's cache.
+      // Patches the message's mediaUrl in the main chat history cache
+      // directly -- no callback threading needed since both live in
+      // react-query's cache.
       updateMessagesCache(queryClient, topicId, updateHandler);
       setMediaMessages(updateHandler);
       setShufflingGifs((prev) => prev.filter((id) => id !== payload.messageId));

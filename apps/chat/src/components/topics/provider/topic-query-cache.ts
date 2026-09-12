@@ -16,14 +16,8 @@ export function singleMessageQueryKey(messageId: string) {
   return ["message", messageId];
 }
 
-// Applies a same-length, same-order map transform across every loaded
-// page of a topic's paginated message cache. Lets socket handlers that
-// live outside use-topic-messages.ts (highlights, media) patch a
-// message's fields wherever it appears -- via setQueryData on this same
-// cache entry -- instead of threading an update callback through
-// CurrentTopicProvider. Only safe for length-preserving updaters (a
-// `.map()`, never a filter/insert): the rebucketing below re-splits the
-// result using each page's original size.
+// Only safe for length-preserving updaters (map, never filter/insert) --
+// rebucketing below re-splits the result using each page's original size.
 export function updateMessagesCache(
   queryClient: QueryClient,
   topicId: string,
@@ -58,11 +52,9 @@ export function updateMediaMessagesCache(
   );
 }
 
-// A message fetched on its own via /api/message/:id (see message-modal.tsx)
-// lives outside any topic's paginated cache -- this patches that standalone
-// entry the same way the caches above get patched, so a message shown in
-// isolation (e.g. an old permalinked message not currently loaded in the
-// topic) still stays live for highlight events.
+// A message fetched standalone via /api/message/:id lives outside any
+// topic's paginated cache -- this keeps that entry live too (e.g. an old
+// permalinked message not currently loaded).
 export function updateSingleMessageCache(
   queryClient: QueryClient,
   messageId: string,
@@ -74,11 +66,8 @@ export function updateSingleMessageCache(
   );
 }
 
-// Patches every cached `["user-stats", topicId, userId]` entry (the "top
-// highlights" list in a user's profile sheet, see user-avatar.tsx) via a
-// partial query-key match -- there's no single topicId/userId to key off
-// of here, since a highlight event should update whichever of these are
-// currently cached, possibly for a topic other than the one open right now.
+// Uses a partial query-key match since a highlight event may need to update
+// a cached user-stats entry for a topic other than the one currently open.
 export function updateUserStatsTopHighlightsCache(
   queryClient: QueryClient,
   updater: (prev: MessageData[]) => MessageData[],

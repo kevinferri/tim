@@ -6,9 +6,7 @@ export const topicHistoryModel = {
     if (!userId) return undefined;
 
     return await prismaClient.topicHistory.findFirst({
-      // updatedAt, not createdAt: history rows are upserted in place on
-      // every topic visit (see saveTopicHistory in apps/realtime-server),
-      // so createdAt only reflects the first-ever visit to a topic.
+      // updatedAt, not createdAt: history rows are upserted in place on every visit, so createdAt only reflects the first-ever visit to a topic.
       orderBy: {
         updatedAt: "desc",
       },
@@ -91,10 +89,6 @@ export const topicHistoryModel = {
     });
   },
 
-  // Compares each topic's most recent message against the requesting
-  // user's history for that topic to decide which topics have unread
-  // activity -- pulled out of topics-nav.tsx so the diff logic is one
-  // reusable, independently testable unit.
   async getUnreadTopicIds({
     userId,
     circleId,

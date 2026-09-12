@@ -88,8 +88,7 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action;
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Side effect (not pure): schedules the removal timeout here rather than in a separate dismissToast action.
       if (toastId) {
         addToRemoveQueue(toastId);
       } else {

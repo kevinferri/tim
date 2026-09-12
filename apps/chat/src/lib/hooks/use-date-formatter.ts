@@ -16,9 +16,7 @@ function format(date: Date, options?: Intl.DateTimeFormatOptions) {
   return new Date(date).toLocaleDateString("en-US", { ...opts, timeZone });
 }
 
-/**
- * Forces the date to be formatted client side
- */
+// Returns undefined until formatted client-side, avoiding an SSR/client locale or timezone hydration mismatch.
 export function useDateFormatter(
   date?: Date,
   options?: Intl.DateTimeFormatOptions,

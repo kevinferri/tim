@@ -62,9 +62,7 @@ export const topicModel = {
     });
   },
 
-  // Fetches the topic, then delegates to circleModel.isUserInCircle on its
-  // parent circle. Mirrors apps/realtime-server/src/db/queries.ts's
-  // isUserInTopic/isUserInCircle split.
+  // Mirrors the isUserInTopic/isUserInCircle split between apps/realtime-server/src/db/topics.ts and db/circles.ts.
   async isUserInTopic({
     userId,
     topicId,
@@ -122,7 +120,6 @@ export const topicModel = {
         })
       : undefined;
 
-    // Make sure cur user is creator of current topic
     if (existingTopic && existingTopic.userId !== userId) return false;
 
     const payload = {
@@ -155,7 +152,6 @@ export const topicModel = {
           select,
         });
 
-    // If new topic, create histories for members
     if (!existingTopic) {
       const circleMembers = await prismaClient.circle.findUnique({
         where: {

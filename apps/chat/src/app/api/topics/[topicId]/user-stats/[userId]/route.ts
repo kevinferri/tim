@@ -37,21 +37,14 @@ export async function GET(req: NextRequest, { params }: Route) {
     const where = { userId };
 
     const queries = [
-      // Top highlights for user
       prismaClient.message.getTopHighlightedMessagesForTopic({
         requestingUserId: loggedInUserId,
         topicId: topicId,
         select: DEFAULT_MESSAGE_SELECT,
         ...where,
       }),
-
-      // Total messages sent
       prismaClient.message.count({ where }),
-
-      // Total highlights given
       prismaClient.highlight.countGivenByUser({ userId }),
-
-      // Total highlights recieved
       prismaClient.highlight.countReceivedByUser({ userId }),
     ];
 

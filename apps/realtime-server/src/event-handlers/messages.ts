@@ -23,11 +23,7 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
 
     if (!roomKey) return;
 
-    // payload.circleId only proves membership in *some* circle room -- it
-    // doesn't prove payload.topicId (used below to persist the message)
-    // actually belongs to that circle, so a member of one circle could
-    // otherwise inject a message into an unrelated topic they were never
-    // added to.
+    // payload.circleId only proves membership in *some* circle -- doesn't prove payload.topicId belongs to it, so a member of one circle could otherwise post into an unrelated topic.
     const canSendToTopic = await isUserInTopic({
       userId: socket.data.user.id,
       topicId: payload.topicId,

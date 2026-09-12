@@ -1,10 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { decrypt, DecryptionError } from "@/lib/decryption";
 
-// chat only ever decrypts (realtime-server owns encrypt, see
-// packages/crypto/src/index.ts) -- this imports the same package's encrypt
-// so the round trip can be tested from this side using the CRYPTO_KEY set
-// in vitest.config.mts.
+// chat only ever decrypts -- encrypt is imported here just to test the round trip using the CRYPTO_KEY set in vitest.config.mts.
 import { encrypt } from "@tim/crypto";
 
 describe("decrypt", () => {

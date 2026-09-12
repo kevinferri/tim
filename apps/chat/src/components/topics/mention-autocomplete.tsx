@@ -14,9 +14,9 @@ export type MentionCandidate = {
 };
 
 type Props = {
-  // Pre-sorted by the caller: online members alphabetically, then offline
-  // members alphabetically -- this component just groups consecutive runs
-  // under an "Online"/"Offline" header rather than re-deriving the order.
+  // Pre-sorted by the caller (online then offline, each alphabetical) --
+  // this just groups consecutive runs under a header rather than
+  // re-deriving order.
   members: MentionCandidate[];
   selectedIndex: number;
   onSelect: (member: MentionCandidate) => void;
@@ -80,8 +80,7 @@ export function MentionAutocomplete({
                       {member.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  {/* Selecting inserts this same display name (see
-                      selectMention in topic-message-bar.tsx) -- full name is
+                  {/* Selecting inserts this same display name -- full name is
                       only ever a hover tooltip, never shown outright. */}
                   <span title={member.name}>
                     {getDisplayName(member.name)}

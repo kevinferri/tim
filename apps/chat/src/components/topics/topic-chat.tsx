@@ -63,11 +63,10 @@ export function TopicChat() {
   return (
     <div className="flex flex-col basis-full overflow-hidden relative">
       <ScrollArea className="flex flex-col basis-full" ref={viewportRef}>
-        {/* Always rendered (even with zero messages) so viewportRef/contentRef/
-            bottomSentinelRef attach on the very first render -- useTopicScroll's
-            observers are set up in effects that run once and never retry, so if
-            these refs were null on mount (e.g. a brand-new empty topic), auto-scroll
-            would silently never work for the rest of the session. */}
+        {/* Always rendered, even with zero messages, so viewportRef/contentRef/
+            bottomSentinelRef attach on the first render -- useTopicScroll's
+            effects run once and never retry, so a null ref on mount would
+            break auto-scroll for the session. */}
         <div ref={contentRef} className="flex flex-col min-h-full shrink-0">
           {messages.length === 0 && (
             <div className="flex flex-1 flex-col justify-center items-center gap-3 p-3 text-center">

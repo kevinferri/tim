@@ -63,11 +63,8 @@ export type MessageProps = MessageData & {
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
   context?: "topic" | "sidebar" | "user-sheet" | "modal";
-  // Where this message sits in the topic's timeline -- computed once
-  // by whoever renders the list (see getMessagePositionFlags) rather
-  // than by this component, so unrelated messages don't have to
-  // re-render just because a new one arrived. See current-topic-
-  // provider.tsx for why.
+  // Computed once by whoever renders the list, not by this component, so
+  // unrelated messages don't re-render when a new one arrives.
   isNewestMessage?: boolean;
   isRecentMessage?: boolean;
   isFirstMessage?: boolean;
