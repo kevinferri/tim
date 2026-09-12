@@ -32,8 +32,8 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @tim/socket-types build
-      - run: pnpm --filter @tim/db-types build
+      - name: Build shared packages
+        run: pnpm --filter "./packages/*" build
       - name: Typecheck
         working-directory: apps/chat
         run: npx tsc --noEmit
@@ -41,6 +41,11 @@ jobs:
         run: pnpm --filter chat lint
       - name: Validate Prisma schema
         working-directory: apps/chat
+        # prisma validate resolves the schema's env("DATABASE_URL") to check
+        # the connection string shape, but never actually connects -- any
+        # well-formed value works.
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/tim"
         run: npx prisma validate
       - name: Test
         run: pnpm --filter chat test
@@ -57,8 +62,8 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @tim/socket-types build
-      - run: pnpm --filter @tim/db-types build
+      - name: Build shared packages
+        run: pnpm --filter "./packages/*" build
       - name: Typecheck
         working-directory: apps/realtime-server
         run: npx tsc --noEmit
