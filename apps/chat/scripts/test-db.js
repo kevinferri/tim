@@ -164,7 +164,7 @@ async function ensureTestDb() {
   return DATABASE_URL;
 }
 
-module.exports = { ensureTestDb, DATABASE_URL, PORT, DB_NAME };
+module.exports = { ensureTestDb };
 
 if (require.main === module) {
   ensureTestDb()
