@@ -107,6 +107,16 @@ export function useTopicScroll() {
       if (heightChanged && wasAtBottom) {
         viewport?.scrollTo({ top: nextHeight, behavior: "instant" });
         setIsAtBottom(true);
+
+        requestAnimationFrame(() => {
+          const v = viewportRef.current;
+          if (!v) return;
+          const liveHeight = content.scrollHeight;
+          if (v.scrollTop + v.clientHeight < liveHeight) {
+            v.scrollTo({ top: liveHeight, behavior: "instant" });
+          }
+          previousHeight = liveHeight;
+        });
       }
     });
 

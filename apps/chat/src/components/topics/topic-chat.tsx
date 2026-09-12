@@ -68,7 +68,7 @@ export function TopicChat() {
             observers are set up in effects that run once and never retry, so if
             these refs were null on mount (e.g. a brand-new empty topic), auto-scroll
             would silently never work for the rest of the session. */}
-        <div ref={contentRef} className="flex flex-col min-h-full">
+        <div ref={contentRef} className="flex flex-col min-h-full shrink-0">
           {messages.length === 0 && (
             <div className="flex flex-1 flex-col justify-center items-center gap-3 p-3 text-center">
               <div className="bg-secondary p-8 rounded-full border shadow-sm">
