@@ -543,7 +543,9 @@ const CIRCLES: CircleSpec[] = [
 ];
 
 function pickRandomOwner(memberEmails: string[]): string {
-  const candidates = memberEmails.filter((email) => email !== TIM_SANDBOX_EMAIL);
+  const candidates = memberEmails.filter(
+    (email) => email !== TIM_SANDBOX_EMAIL,
+  );
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
@@ -561,7 +563,9 @@ async function seedCircle(
   const memberIds = Array.from(new Set(spec.memberEmails)).map((email) => ({
     id: getId(email),
   }));
-  const createdAt = new Date(Date.now() - (CIRCLES.length - circleIndex) * 60 * 1000);
+  const createdAt = new Date(
+    Date.now() - (CIRCLES.length - circleIndex) * 60 * 1000,
+  );
 
   // Looked up by name alone (not name+owner) so re-running after changing an
   // admin, or randomizing one, still finds and backfills the same circle
