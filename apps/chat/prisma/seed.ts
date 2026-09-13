@@ -35,6 +35,8 @@ const OTHER_USERS = (
   [
     ["Socrates", "socrates"],
     ["Simone de Beauvoir", "simone.debeauvoir"],
+    ["Marcus Aurelius", "marcus.aurelius"],
+    ["Confucius", "confucius"],
   ] satisfies [string, string, string?][]
 ).map(toSeedUser);
 
@@ -96,6 +98,8 @@ const CIRCLES: CircleSpec[] = [
       TIM_SANDBOX_EMAIL,
       "socrates@example.com",
       "simone.debeauvoir@example.com",
+      "marcus.aurelius@example.com",
+      "confucius@example.com",
     ],
     topics: [
       {
@@ -119,6 +123,10 @@ const CIRCLES: CircleSpec[] = [
             text: "/roll d20",
             mediaUrl: rollResult(17),
           },
+          {
+            senderEmail: "marcus.aurelius@example.com",
+            text: "Reporting for duty. Or whatever the group chat equivalent is.",
+          },
         ],
       },
       {
@@ -132,6 +140,10 @@ const CIRCLES: CircleSpec[] = [
             senderEmail: "socrates@example.com",
             text: "/8ball is the unexamined life really not worth living?",
             mediaUrl: eightBallResult("Without a doubt."),
+          },
+          {
+            senderEmail: "confucius@example.com",
+            text: "He who mutes the chat still hears wisdom.",
           },
           {
             senderEmail: TIM_SANDBOX_EMAIL,

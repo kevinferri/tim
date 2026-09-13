@@ -43,12 +43,18 @@ export async function GET(req: NextRequest) {
     secret,
   });
 
+  // No fallback: must match the name proxy.ts/layout.tsx read the cookie under.
+  const cookieName = process.env.NEXTAUTH_COOKIE_KEY;
+  if (!cookieName) {
+    throw new Error("NEXTAUTH_COOKIE_KEY is not set");
+  }
+
   const response = NextResponse.redirect(new URL(Routes.Home, req.url));
-  response.cookies.set(
-    process.env.NEXTAUTH_COOKIE_KEY ?? "next-auth.session-token",
-    token,
-    { httpOnly: true, sameSite: "lax", path: "/" },
-  );
+  response.cookies.set(cookieName, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+  });
 
   return response;
 }

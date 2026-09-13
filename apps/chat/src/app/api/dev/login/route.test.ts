@@ -75,6 +75,23 @@ describe("GET /api/dev/login", () => {
     expect(encode).not.toHaveBeenCalled();
   });
 
+  it("throws when NEXTAUTH_COOKIE_KEY is unset, rather than minting an unfindable cookie", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXTAUTH_SECRET", "test-secret");
+    vi.stubEnv("NEXTAUTH_COOKIE_KEY", "");
+    vi.mocked(prismaClient.user.getSeedUserByEmail).mockResolvedValue({
+      id: "user-1",
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+      imageUrl: null,
+    } as any);
+    vi.mocked(encode).mockResolvedValue("signed-jwt");
+
+    await expect(GET(makeRequest("ada@example.com"))).rejects.toThrow(
+      "NEXTAUTH_COOKIE_KEY is not set",
+    );
+  });
+
   it("mints a session cookie for the matched user on the happy path", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("NEXTAUTH_SECRET", "test-secret");
