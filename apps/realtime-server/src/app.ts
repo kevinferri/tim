@@ -1,12 +1,4 @@
-// Must run before any other import: pg (via knex) serializes JS Date values
-// for the wire using the process's own local timezone, not the Postgres
-// session's -- on a host whose local zone isn't UTC, every "timestamp
-// without time zone" column this service writes (messages.createdAt,
-// topic_histories.updatedAt) ends up shifted by that offset once read back
-// through apps/chat's Prisma client, which always treats those columns'
-// literal digits as UTC (e.g. topics wrongly flip back to "unread" after
-// being read). This only compiles first because tsconfig's CommonJS target
-// makes `require` calls run in file order, unlike hoisted ESM imports.
+// Before any import: pg/knex write Dates in local time, which Prisma reads back as UTC.
 process.env.TZ = "UTC";
 
 import { createServer } from "http";

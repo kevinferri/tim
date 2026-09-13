@@ -10,10 +10,7 @@ import { SignUp } from "@/components/auth/signup";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-
-// Keep in sync with TIM_SANDBOX_EMAIL in prisma/seed.ts (not imported directly --
-// that file runs its seed as a side effect at import time).
-const TIM_SANDBOX_EMAIL = "tim.sandbox@example.com";
+import { TIM_SANDBOX_EMAIL } from "../../../prisma/seed-constants";
 
 export default async function LogInPage({
   searchParams,
@@ -30,8 +27,8 @@ export default async function LogInPage({
 
   const timSandbox =
     process.env.NODE_ENV !== "production"
-      ? await prismaClient.user.findUnique({
-          where: { email: TIM_SANDBOX_EMAIL },
+      ? await prismaClient.user.getSeedUserByEmail({
+          email: TIM_SANDBOX_EMAIL,
           select: { email: true },
         })
       : null;
@@ -96,11 +93,7 @@ export default async function LogInPage({
             >
               <p className={cn("text-muted-foreground")}>Dev only</p>
               <Button variant="secondary" asChild>
-                {/* Plain <a>, not next/link's <Link>: this hits a route handler
-                    that redirects after setting the session cookie, and a
-                    client-side <Link> navigation here leaves the root layout
-                    rendering its stale pre-login (logged-out) output instead
-                    of picking up the new session. */}
+                {/* Plain <a>, not <Link>: needs a full reload to pick up the new session. */}
                 <a
                   href={`/api/dev/login?email=${encodeURIComponent(timSandbox.email ?? "")}`}
                 >

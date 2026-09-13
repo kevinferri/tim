@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prismaClient } from "@/lib/prisma/client";
 import { Routes } from "@/routes";
 
-// Dev-only stand-in for Google sign-in: mints a real next-auth session JWT
-// for a seeded user (see prisma/seed.ts) without going through OAuth.
+// Dev-only stand-in for Google sign-in: mints a session for a seeded user.
 export async function GET(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
     return new NextResponse("Not found", { status: 404 });
@@ -16,9 +15,21 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Missing ?email=", { status: 400 });
   }
 
-  const user = await prismaClient.user.findUnique({ where: { email } });
+  // Scoped to seeded accounts only, so this can't become a login-as-anyone.
+  const user = await prismaClient.user.getSeedUserByEmail({
+    email,
+    select: { id: true, name: true, email: true, imageUrl: true },
+  });
   if (!user) {
-    return new NextResponse(`No user with email ${email}`, { status: 404 });
+    return new NextResponse(`No seeded user with email ${email}`, {
+      status: 404,
+    });
+  }
+
+  // No fallback: must match authOptions.secret (src/lib/session.ts) exactly.
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is not set");
   }
 
   const token = await encode({
@@ -29,7 +40,7 @@ export async function GET(req: NextRequest) {
       sub: user.id,
       id: user.id,
     },
-    secret: process.env.NEXTAUTH_SECRET ?? "",
+    secret,
   });
 
   const response = NextResponse.redirect(new URL(Routes.Home, req.url));

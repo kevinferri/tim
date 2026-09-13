@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma/client", () => ({
   prismaClient: {
-    user: { findUnique: vi.fn() },
+    user: { getSeedUserByEmail: vi.fn() },
   },
 }));
 vi.mock("next-auth/jwt", () => ({
@@ -36,7 +36,7 @@ describe("GET /api/dev/login", () => {
     const res = await GET(makeRequest("ada@example.com"));
 
     expect(res.status).toBe(404);
-    expect(prismaClient.user.findUnique).not.toHaveBeenCalled();
+    expect(prismaClient.user.getSeedUserByEmail).not.toHaveBeenCalled();
   });
 
   it("returns 400 when email is missing", async () => {
@@ -45,23 +45,41 @@ describe("GET /api/dev/login", () => {
     const res = await GET(makeRequest());
 
     expect(res.status).toBe(400);
-    expect(prismaClient.user.findUnique).not.toHaveBeenCalled();
+    expect(prismaClient.user.getSeedUserByEmail).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when no user matches the email", async () => {
+  it("returns 404 when no seed user matches the email", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.mocked(prismaClient.user.findUnique).mockResolvedValue(null as any);
+    vi.mocked(prismaClient.user.getSeedUserByEmail).mockResolvedValue(
+      undefined as any,
+    );
 
     const res = await GET(makeRequest("nobody@example.com"));
 
     expect(res.status).toBe(404);
   });
 
+  it("throws when NEXTAUTH_SECRET is unset, rather than minting an unvalidatable cookie", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXTAUTH_SECRET", "");
+    vi.mocked(prismaClient.user.getSeedUserByEmail).mockResolvedValue({
+      id: "user-1",
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+      imageUrl: null,
+    } as any);
+
+    await expect(GET(makeRequest("ada@example.com"))).rejects.toThrow(
+      "NEXTAUTH_SECRET is not set",
+    );
+    expect(encode).not.toHaveBeenCalled();
+  });
+
   it("mints a session cookie for the matched user on the happy path", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("NEXTAUTH_SECRET", "test-secret");
     vi.stubEnv("NEXTAUTH_COOKIE_KEY", "next-auth.session-token");
-    vi.mocked(prismaClient.user.findUnique).mockResolvedValue({
+    vi.mocked(prismaClient.user.getSeedUserByEmail).mockResolvedValue({
       id: "user-1",
       name: "Ada Lovelace",
       email: "ada@example.com",

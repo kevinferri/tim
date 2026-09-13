@@ -1,24 +1,16 @@
-// Seeds local dev data. Since the only real sign-in path is Google OAuth,
-// seeded users get a synthetic googleId instead of a real one. "Tim Sandbox"
-// is the account the /signin page's dev-only button logs you into via
-// GET /api/dev/login?email=<email> (non-production only) -- keep
-// TIM_SANDBOX_EMAIL in sync with src/app/signin/page.tsx.
+// Seeds local dev data; "Tim Sandbox" is the account /signin's dev-only button logs into.
 import { randomUUID } from "crypto";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { encrypt } from "@tim/crypto";
+import { TIM_SANDBOX_EMAIL } from "./seed-constants";
 
 const prisma = new PrismaClient();
-
-export const TIM_SANDBOX_EMAIL = "tim.sandbox@example.com";
 
 type SeedUserSpec = {
   googleId: string;
   name: string;
   email: string;
-  // Wikipedia article title to pull an avatar photo from (see
-  // fetchWikipediaImage). Defaults to the name with spaces -> underscores;
-  // pass an explicit title only where that default resolves to the wrong
-  // (or a disambiguation) page.
+  // Wikipedia article to pull an avatar from; defaults to name with "_" for spaces.
   wikiTitle?: string;
 };
 
@@ -64,11 +56,7 @@ const PHILOSOPHERS = (
   ] satisfies [string, string, string?][]
 ).map(toSeedUser);
 
-// Wikipedia's REST summary API is public and needs no key -- returns each
-// article's lead image, which we use directly as the seeded user's avatar.
-// A descriptive User-Agent is required by Wikipedia's API etiquette; a
-// missing/renamed article or any network failure just means no avatar for
-// that one user, not a failed seed run.
+// Wikipedia's public REST API; a missing article or network failure just skips that avatar.
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchWikipediaImage(title: string): Promise<string | undefined> {
@@ -99,9 +87,7 @@ async function fetchWikipediaImage(title: string): Promise<string | undefined> {
   return undefined;
 }
 
-// Mirrors the fixed formats apps/realtime-server's command-handler.ts
-// produces, so RollResult/EightBallResult render these the same way a real
-// command response would.
+// Mirrors apps/realtime-server's command-handler.ts output format.
 function articleFor(n: number): "a" | "an" {
   if (n === 8 || n === 11 || n === 18 || (n >= 80 && n < 90)) return "an";
   return "a";
@@ -116,12 +102,10 @@ type TopicSpec = { name: string; messages: MessageSpec[] };
 
 type CircleSpec = {
   name: string;
-  // Fixed admin (Circle.userId). Omit to pick a random non-Tim-Sandbox
-  // member as admin when the circle is first created.
+  // Omit to pick a random non-Tim-Sandbox admin when the circle is first created.
   ownerEmail?: string;
   memberEmails: string[];
-  // First topic becomes the circle's default topic.
-  topics: TopicSpec[];
+  topics: TopicSpec[]; // first topic becomes the circle's default topic
 };
 
 const CIRCLES: CircleSpec[] = [
@@ -546,18 +530,18 @@ function pickRandomOwner(memberEmails: string[]): string {
   const candidates = memberEmails.filter(
     (email) => email !== TIM_SANDBOX_EMAIL,
   );
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  // Falls back if candidates is empty (only member is Tim Sandbox).
+  return (
+    candidates[Math.floor(Math.random() * candidates.length)] ??
+    TIM_SANDBOX_EMAIL
+  );
 }
 
 async function seedCircle(
   tx: Prisma.TransactionClient,
   spec: CircleSpec,
   usersByEmail: Map<string, { id: string }>,
-  // Index within CIRCLES, used to derive a deterministic createdAt so the
-  // sidebar (ordered by createdAt asc) always lists circles in CIRCLES'
-  // order -- regardless of the wall-clock order they actually got created
-  // or backfilled in across repeated seed runs.
-  circleIndex: number,
+  circleIndex: number, // fixes sidebar order (by createdAt) to match CIRCLES
 ) {
   const getId = (email: string) => usersByEmail.get(email)!.id;
   const memberIds = Array.from(new Set(spec.memberEmails)).map((email) => ({
@@ -567,15 +551,17 @@ async function seedCircle(
     Date.now() - (CIRCLES.length - circleIndex) * 60 * 1000,
   );
 
-  // Looked up by name alone (not name+owner) so re-running after changing an
-  // admin, or randomizing one, still finds and backfills the same circle
-  // instead of creating a duplicate.
+  // Looked up by name only, so reruns find and backfill the same circle.
   const existing = await tx.circle.findFirst({ where: { name: spec.name } });
 
   if (existing) {
-    // `connect` is additive, so this never drops existing members. createdAt
-    // is re-stamped too, so ordering self-heals even if circles were seeded
-    // out of order in a prior run.
+    // Skip circles this script didn't create (name collision with a real one).
+    const seedUserIds = new Set([...usersByEmail.values()].map((u) => u.id));
+    if (!seedUserIds.has(existing.userId)) {
+      console.warn(`Skipping "${spec.name}": not owned by a seed user.`);
+      return;
+    }
+
     await tx.circle.update({
       where: { id: existing.id },
       data: { members: { connect: memberIds }, createdAt },
@@ -624,11 +610,7 @@ async function seedCircle(
       }),
     });
 
-    // Mirrors topicModel.upsertForUser's real side effect on topic creation
-    // (src/lib/prisma/topic-model.ts): every current member gets a
-    // TopicHistory row, i.e. "caught up as of now". Skip Tim Sandbox so his
-    // first login still lands on the fresh "Welcome to Tim" screen instead
-    // of auto-redirecting into whichever topic has the newest history row.
+    // Excludes Tim Sandbox so his first login still lands on "Welcome to Tim".
     const historyUserIds = memberIds
       .map((m) => m.id)
       .filter((id) => id !== getId(TIM_SANDBOX_EMAIL));
@@ -655,8 +637,7 @@ async function main() {
     ),
   );
 
-  // Sequential, not Promise.all: one at a time is kinder to Wikipedia's API
-  // and this only ever runs once per user (skipped below once imageUrl is set).
+  // Sequential (not Promise.all) to be kind to Wikipedia's API.
   let avatarsFetched = 0;
   for (const [i, user] of users.entries()) {
     const spec = allUsers[i];
