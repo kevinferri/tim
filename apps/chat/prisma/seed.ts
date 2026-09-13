@@ -526,7 +526,7 @@ const CIRCLES: CircleSpec[] = [
   },
 ];
 
-function pickRandomOwner(memberEmails: string[]): string {
+export function pickRandomOwner(memberEmails: string[]): string {
   const candidates = memberEmails.filter(
     (email) => email !== TIM_SANDBOX_EMAIL,
   );
@@ -537,7 +537,7 @@ function pickRandomOwner(memberEmails: string[]): string {
   );
 }
 
-async function seedCircle(
+export async function seedCircle(
   tx: Prisma.TransactionClient,
   spec: CircleSpec,
   usersByEmail: Map<string, { id: string }>,
@@ -665,11 +665,14 @@ async function main() {
   console.log(`Log in as Tim Sandbox locally via the /signin page.`);
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Guards against running (and hitting a real DB/Wikipedia) on import for tests.
+if (require.main === module) {
+  main()
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
