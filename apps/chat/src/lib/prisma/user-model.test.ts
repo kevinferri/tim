@@ -4,11 +4,15 @@ import { prismaClient, resetDb } from "@/test/db";
 beforeEach(resetDb);
 
 async function createUser(
-  overrides: Partial<{ name: string; status: string | null }> = {},
+  overrides: Partial<{
+    name: string;
+    status: string | null;
+    googleId: string;
+  }> = {},
 ) {
   return prismaClient.user.create({
     data: {
-      googleId: `google-${crypto.randomUUID()}`,
+      googleId: overrides.googleId ?? `google-${crypto.randomUUID()}`,
       name: overrides.name ?? "Test User",
       email: `${crypto.randomUUID()}@example.com`,
       status: overrides.status,
@@ -108,5 +112,41 @@ describe("userModel.updateStatus", () => {
     await expect(
       prismaClient.user.updateStatus({ userId: undefined, status: "online" }),
     ).resolves.toBe(false);
+  });
+});
+
+describe("userModel.getSeedUserByEmail", () => {
+  it("returns a seeded user by email", async () => {
+    const user = await createUser({
+      name: "Ada Lovelace",
+      googleId: "seed-ada.lovelace",
+    });
+
+    await expect(
+      prismaClient.user.getSeedUserByEmail({
+        email: user.email!,
+        select: { name: true },
+      }),
+    ).resolves.toEqual({ name: "Ada Lovelace" });
+  });
+
+  it("returns undefined for a real (non-seed) user's email", async () => {
+    const user = await createUser({ name: "Real Person" });
+
+    await expect(
+      prismaClient.user.getSeedUserByEmail({
+        email: user.email!,
+        select: { name: true },
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("returns undefined when no user matches the email at all", async () => {
+    await expect(
+      prismaClient.user.getSeedUserByEmail({
+        email: "nobody@example.com",
+        select: { name: true },
+      }),
+    ).resolves.toBeUndefined();
   });
 });
