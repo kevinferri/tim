@@ -31,28 +31,10 @@ const toSeedUser = ([name, slug, wikiTitle]: [
   wikiTitle: wikiTitle ?? name.replace(/ /g, "_"),
 });
 
-// Famous philosophers.
-const PHILOSOPHERS = (
+const OTHER_USERS = (
   [
     ["Socrates", "socrates"],
-    ["Plato", "plato"],
-    ["Aristotle", "aristotle"],
-    ["Immanuel Kant", "immanuel.kant"],
-    ["Friedrich Nietzsche", "friedrich.nietzsche"],
     ["Simone de Beauvoir", "simone.debeauvoir"],
-    ["Hannah Arendt", "hannah.arendt"],
-    ["Confucius", "confucius"],
-    ["Rene Descartes", "rene.descartes", "René_Descartes"],
-    ["John Locke", "john.locke"],
-    ["Marcus Aurelius", "marcus.aurelius"],
-    ["Epictetus", "epictetus"],
-    ["Seneca", "seneca", "Seneca_the_Younger"],
-    ["Karl Marx", "karl.marx"],
-    ["Jean-Paul Sartre", "jeanpaul.sartre"],
-    ["Bertrand Russell", "bertrand.russell"],
-    ["Arthur Schopenhauer", "arthur.schopenhauer"],
-    ["Soren Kierkegaard", "soren.kierkegaard", "Søren_Kierkegaard"],
-    ["Albert Camus", "albert.camus"],
   ] satisfies [string, string, string?][]
 ).map(toSeedUser);
 
@@ -95,15 +77,13 @@ function articleFor(n: number): "a" | "an" {
 const rollResult = (n: number) => `🎲 rolled ${articleFor(n)} ${n}`;
 const eightBallResult = (answer: string) => `🎱 ${answer}`;
 const photo = (seed: string) => `https://picsum.photos/seed/${seed}/600/400`;
-const YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
 type MessageSpec = { senderEmail: string; text: string; mediaUrl?: string };
 type TopicSpec = { name: string; messages: MessageSpec[] };
 
 type CircleSpec = {
   name: string;
-  // Omit to pick a random non-Tim-Sandbox admin when the circle is first created.
-  ownerEmail?: string;
+  ownerEmail: string;
   memberEmails: string[];
   topics: TopicSpec[]; // first topic becomes the circle's default topic
 };
@@ -112,7 +92,11 @@ const CIRCLES: CircleSpec[] = [
   {
     name: "Great Minds",
     ownerEmail: TIM_SANDBOX_EMAIL,
-    memberEmails: [...PHILOSOPHERS.map((u) => u.email), TIM_SANDBOX_EMAIL],
+    memberEmails: [
+      TIM_SANDBOX_EMAIL,
+      "socrates@example.com",
+      "simone.debeauvoir@example.com",
+    ],
     topics: [
       {
         name: "General",
@@ -126,136 +110,14 @@ const CIRCLES: CircleSpec[] = [
             text: "I know that I know nothing. Figured I'd bring that energy here too.",
           },
           {
-            senderEmail: "soren.kierkegaard@example.com",
-            text: "Anxiety is the dizziness of freedom. Also, unread messages.",
-          },
-          {
-            senderEmail: "marcus.aurelius@example.com",
-            text: "Reporting for duty. Or whatever the group chat equivalent is.",
-          },
-          {
-            senderEmail: "confucius@example.com",
-            text: "A journey of a thousand messages begins with a single 'hello'.",
-          },
-          {
             senderEmail: "simone.debeauvoir@example.com",
             text: "One is not born, but rather becomes, a regular in this chat.",
-          },
-          {
-            senderEmail: "plato@example.com",
-            text: "The unexamined chat is not worth reading.",
-          },
-          {
-            senderEmail: "karl.marx@example.com",
-            text: "Solidarity, comrades. Also, has anyone seen the shared docs?",
-          },
-          {
-            senderEmail: "friedrich.nietzsche@example.com",
-            text: "Stared into this chat's abyss. It stared back, mostly memes.",
-          },
-          {
-            senderEmail: "aristotle@example.com",
-            text: "Finally made it to the general channel. Someone had to bring the syllogisms.",
-          },
-          {
-            senderEmail: "immanuel.kant@example.com",
-            text: "Arrived precisely when I intended to.",
-          },
-          {
-            senderEmail: "rene.descartes@example.com",
-            text: "I think, therefore I finally joined this channel.",
-          },
-          {
-            senderEmail: "john.locke@example.com",
-            text: "Tabula rasa, but for this specific chat.",
-          },
-          {
-            senderEmail: "jeanpaul.sartre@example.com",
-            text: "No exit from this notification badge.",
-          },
-          {
-            senderEmail: "bertrand.russell@example.com",
-            text: "Logically, someone had to say hello eventually.",
-          },
-          {
-            senderEmail: "arthur.schopenhauer@example.com",
-            text: "I'd rather not be here, but here I am.",
-          },
-          {
-            senderEmail: "albert.camus@example.com",
-            text: "The absurd hero also checks notifications.",
-          },
-          {
-            senderEmail: "plato@example.com",
-            text: "A shadow of a shadow of an image.",
-            mediaUrl: photo("forms"),
-          },
-          {
-            senderEmail: "confucius@example.com",
-            text: "Balance in all things, including message frequency.",
-          },
-          {
-            senderEmail: "simone.debeauvoir@example.com",
-            text: "One becomes, gradually, over the course of many messages.",
-          },
-          {
-            senderEmail: "hannah.arendt@example.com",
-            text: "Some things are better left without images. Just my opinion.",
-          },
-          {
-            senderEmail: "marcus.aurelius@example.com",
-            text: "Bore all of this with patience, images or not.",
-          },
-          {
-            senderEmail: "karl.marx@example.com",
-            text: "Anyway, has anyone actually seized the means of scheduling yet?",
-          },
-          {
-            senderEmail: "friedrich.nietzsche@example.com",
-            text: "One must still have chaos in oneself to give birth to a dancing star. This chat certainly has chaos.",
+            mediaUrl: photo("existence"),
           },
           {
             senderEmail: "socrates@example.com",
-            text: "Another question: why do we have 17 members and only 3 circles?",
-          },
-          {
-            senderEmail: "soren.kierkegaard@example.com",
-            text: "/8ball should I read the thread or just reply anyway?",
-            mediaUrl: eightBallResult("Better not tell you now."),
-          },
-          {
-            senderEmail: "rene.descartes@example.com",
-            text: "Still doubting whether this counts as socializing.",
-          },
-        ],
-      },
-      {
-        name: "Philosophy of Mind & AI",
-        messages: [
-          {
-            senderEmail: "immanuel.kant@example.com",
-            text: "The categorical imperative doesn't care whether you're carbon or silicon.",
-          },
-          {
-            senderEmail: "rene.descartes@example.com",
-            text: "If a machine could doubt its own existence, would that settle anything?",
-          },
-          {
-            senderEmail: "john.locke@example.com",
-            text: "/giphy blank slate",
-            mediaUrl: photo("blankslate"),
-          },
-          {
-            senderEmail: "aristotle@example.com",
-            text: "A calculator has no soul, but it does have excellent recall.",
-          },
-          {
-            senderEmail: "hannah.arendt@example.com",
-            text: "The banality of an algorithm might be worse than the banality of evil.",
-          },
-          {
-            senderEmail: "bertrand.russell@example.com",
-            text: "Machines might compute, but do they doubt? That's the interesting part.",
+            text: "/roll d20",
+            mediaUrl: rollResult(17),
           },
         ],
       },
@@ -263,262 +125,17 @@ const CIRCLES: CircleSpec[] = [
         name: "Ethics",
         messages: [
           {
-            senderEmail: "aristotle@example.com",
-            text: "Virtue is a mean between two vices. Chat etiquette is no different.",
+            senderEmail: "simone.debeauvoir@example.com",
+            text: "One is not born, but rather becomes, a good admin.",
           },
-          {
-            senderEmail: "albert.camus@example.com",
-            text: "One must imagine Sisyphus happy. Or at least caffeinated.",
-          },
-          {
-            senderEmail: "karl.marx@example.com",
-            text: "Workers of this chat, unite. Or at least agree on a meeting time.",
-          },
-          {
-            senderEmail: "hannah.arendt@example.com",
-            text: "Thoughtlessness is how banal things become dangerous. Read your messages twice.",
-          },
-          {
-            senderEmail: "friedrich.nietzsche@example.com",
-            text: "Master morality versus slave morality. Also, who assigned the group project roles?",
-          },
-        ],
-      },
-      {
-        name: "Free Will & Consciousness",
-        messages: [
-          {
-            senderEmail: "jeanpaul.sartre@example.com",
-            text: "We are condemned to be free. Also condemned to this group chat.",
-          },
-          {
-            senderEmail: "friedrich.nietzsche@example.com",
-            text: "What doesn't kill this chat makes it stronger.",
-          },
-          {
-            senderEmail: "bertrand.russell@example.com",
-            text: "/8ball do we have free will?",
-            mediaUrl: eightBallResult("Ask again later."),
-          },
-          {
-            senderEmail: "arthur.schopenhauer@example.com",
-            text: "The world is my representation. Also, apparently, my notifications.",
-          },
-        ],
-      },
-      {
-        name: "Stoicism",
-        messages: [
-          {
-            senderEmail: "marcus.aurelius@example.com",
-            text: "This is basically what I do all day. Write things down, hope they help someone.",
-          },
-          {
-            senderEmail: "epictetus@example.com",
-            text: "It's not what happens to you, but how you react to it. Also, don't feed the trolls.",
-          },
-          {
-            senderEmail: "seneca@example.com",
-            text: "We suffer more in imagination than in reality. Case in point: opening this app.",
-          },
-          {
-            senderEmail: "albert.camus@example.com",
-            text: "Sisyphus would have fit right in with you three.",
-          },
-          {
-            senderEmail: "friedrich.nietzsche@example.com",
-            text: "/roll d20",
-            mediaUrl: rollResult(9),
-          },
-        ],
-      },
-    ],
-  },
-  {
-    name: "Philosophers' Corner",
-    memberEmails: [...PHILOSOPHERS.map((u) => u.email), TIM_SANDBOX_EMAIL],
-    topics: [
-      {
-        name: "General",
-        messages: [
           {
             senderEmail: "socrates@example.com",
-            text: "I know that I know nothing. Still checking my messages though.",
-          },
-          {
-            senderEmail: "plato@example.com",
-            text: "This chat is but a shadow of the true Chat.",
-          },
-          {
-            senderEmail: "aristotle@example.com",
-            text: "Everything in moderation. Except this chat, apparently.",
-          },
-          {
-            senderEmail: "confucius@example.com",
-            text: "He who mutes the chat still hears wisdom.",
-          },
-        ],
-      },
-      {
-        name: "Ethics",
-        messages: [
-          {
-            senderEmail: "immanuel.kant@example.com",
-            text: "Always message others as an end, never merely as a means.",
-          },
-          {
-            senderEmail: "simone.debeauvoir@example.com",
-            text: "One is not born, but rather becomes, an admin.",
-          },
-          {
-            senderEmail: "hannah.arendt@example.com",
-            text: "/tim is evil ever banal?",
-            mediaUrl:
-              "Arendt's idea of the banality of evil suggests atrocity can come from ordinary, thoughtless bureaucratic behavior rather than only from monstrous intent.",
-          },
-        ],
-      },
-      {
-        name: "Free Will & Determinism",
-        messages: [
-          {
-            senderEmail: "friedrich.nietzsche@example.com",
-            text: "God is dead, but the group chat lives on.",
-          },
-          {
-            senderEmail: "rene.descartes@example.com",
-            text: "/8ball do we have free will?",
-            mediaUrl: eightBallResult("Reply hazy, try again."),
-          },
-          {
-            senderEmail: "arthur.schopenhauer@example.com",
-            text: "The will is free, but its actions are determined. I definitely didn't choose to be this pessimistic.",
-          },
-        ],
-      },
-      {
-        name: "Epistemology",
-        messages: [
-          {
-            senderEmail: "plato@example.com",
-            text: "The cave allegory really holds up as a metaphor for bad wifi.",
-          },
-          {
-            senderEmail: "aristotle@example.com",
-            text: "Empirical observation. Still undefeated.",
-          },
-          {
-            senderEmail: "immanuel.kant@example.com",
-            text: "/tim can we ever truly know the thing-in-itself?",
-            mediaUrl:
-              "Kant argued we only ever know *phenomena* (things as they appear to us), never the *noumena* (things as they are in themselves) -- our minds always shape what we perceive.",
-          },
-          {
-            senderEmail: "confucius@example.com",
-            text: "Knowing what you know, and knowing what you do not know -- that is knowledge.",
-          },
-          {
-            senderEmail: "bertrand.russell@example.com",
-            text: "/youtube here's a solid primer on epistemology",
-            mediaUrl: YOUTUBE_URL,
-          },
-        ],
-      },
-      {
-        name: "Political & Ethical Philosophy",
-        messages: [
-          {
-            senderEmail: "soren.kierkegaard@example.com",
-            text: "Life can only be understood backwards but must be lived forwards. Also, scroll up.",
-          },
-          {
-            senderEmail: "albert.camus@example.com",
-            text: "The struggle itself toward the inbox is enough to fill a man's heart.",
-          },
-          {
-            senderEmail: "karl.marx@example.com",
-            text: "From each according to their typing speed, to each according to their need for memes.",
-          },
-          {
-            senderEmail: "jeanpaul.sartre@example.com",
-            text: "Existence precedes essence. Also, I mostly exist to argue in this thread.",
-          },
-          {
-            senderEmail: "bertrand.russell@example.com",
-            text: "The trouble with the world is that the foolish are cocksure and the wise are full of doubt. Also, who read the pinned message?",
-          },
-          {
-            senderEmail: "marcus.aurelius@example.com",
-            text: "You have power over your mind, not outside events. Definitely not over notification badges.",
-          },
-          {
-            senderEmail: "friedrich.nietzsche@example.com",
-            text: "The will to power explains most of this thread, honestly.",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    name: "Tim's Sandbox",
-    ownerEmail: TIM_SANDBOX_EMAIL,
-    memberEmails: [TIM_SANDBOX_EMAIL],
-    topics: [
-      {
-        name: "General",
-        messages: [
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "Just me testing things in here.",
+            text: "/8ball is the unexamined life really not worth living?",
+            mediaUrl: eightBallResult("Without a doubt."),
           },
           {
             senderEmail: TIM_SANDBOX_EMAIL,
-            text: "/roll d20",
-            mediaUrl: rollResult(11),
-          },
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "/8ball does this feature work?",
-            mediaUrl: eightBallResult("Signs point to yes."),
-          },
-        ],
-      },
-      {
-        name: "Command Testing",
-        messages: [
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "/giphy testing",
-            mediaUrl: photo("timtest"),
-          },
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "/youtube",
-            mediaUrl: YOUTUBE_URL,
-          },
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "/tim what's 2 + 2?",
-            mediaUrl: "2 + 2 is **4**.",
-          },
-        ],
-      },
-      {
-        name: "Random Testing",
-        messages: [
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "/roll d100",
-            mediaUrl: rollResult(42),
-          },
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "/8ball is this seed data good enough?",
-            mediaUrl: eightBallResult("It is certain."),
-          },
-          {
-            senderEmail: TIM_SANDBOX_EMAIL,
-            text: "One more for good measure.",
+            text: "Noted. Circling back to this later.",
           },
         ],
       },
@@ -526,18 +143,7 @@ const CIRCLES: CircleSpec[] = [
   },
 ];
 
-export function pickRandomOwner(memberEmails: string[]): string {
-  const candidates = memberEmails.filter(
-    (email) => email !== TIM_SANDBOX_EMAIL,
-  );
-  // Falls back if candidates is empty (only member is Tim Sandbox).
-  return (
-    candidates[Math.floor(Math.random() * candidates.length)] ??
-    TIM_SANDBOX_EMAIL
-  );
-}
-
-export async function seedCircle(
+async function seedCircle(
   tx: Prisma.TransactionClient,
   spec: CircleSpec,
   usersByEmail: Map<string, { id: string }>,
@@ -569,8 +175,7 @@ export async function seedCircle(
     return;
   }
 
-  const ownerEmail = spec.ownerEmail ?? pickRandomOwner(spec.memberEmails);
-  const ownerId = getId(ownerEmail);
+  const ownerId = getId(spec.ownerEmail);
 
   const circle = await tx.circle.create({
     data: {
@@ -625,7 +230,7 @@ export async function seedCircle(
 }
 
 async function main() {
-  const allUsers = [TIM_SANDBOX, ...PHILOSOPHERS];
+  const allUsers = [TIM_SANDBOX, ...OTHER_USERS];
 
   const users = await Promise.all(
     allUsers.map((user) =>
@@ -676,3 +281,5 @@ if (require.main === module) {
       await prisma.$disconnect();
     });
 }
+
+export { seedCircle };

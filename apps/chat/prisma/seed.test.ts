@@ -1,22 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { pickRandomOwner, seedCircle } from "./seed";
+import { seedCircle } from "./seed";
 import { TIM_SANDBOX_EMAIL } from "./seed-constants";
-
-describe("pickRandomOwner", () => {
-  it("picks from candidates other than Tim Sandbox", () => {
-    const owner = pickRandomOwner([
-      TIM_SANDBOX_EMAIL,
-      "ada@example.com",
-      "alan@example.com",
-    ]);
-
-    expect(["ada@example.com", "alan@example.com"]).toContain(owner);
-  });
-
-  it("falls back to Tim Sandbox when no other candidates exist", () => {
-    expect(pickRandomOwner([TIM_SANDBOX_EMAIL])).toBe(TIM_SANDBOX_EMAIL);
-  });
-});
 
 function makeTx(existingCircle: { id: string; userId: string } | null) {
   return {
