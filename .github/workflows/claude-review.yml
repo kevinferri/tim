@@ -6,7 +6,10 @@ on:
 
 jobs:
   review:
-    if: github.event.pull_request.draft == false
+    # Repo is public; gate the bot to an allowlist of PR authors (add more logins as needed).
+    if: >
+      github.event.pull_request.draft == false &&
+      contains(fromJSON('["kevinferri"]'), github.event.pull_request.user.login)
     runs-on: ubuntu-latest
     permissions:
       contents: read
