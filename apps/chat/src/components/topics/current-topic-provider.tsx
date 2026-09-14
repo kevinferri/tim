@@ -239,6 +239,7 @@ export function CurrentTopicProvider(props: Props) {
     bottomSentinelRef,
     isAtBottom,
     scrollToBottom,
+    suppressAutoStickRef,
   } = useTopicScroll();
 
   const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
@@ -298,6 +299,7 @@ export function CurrentTopicProvider(props: Props) {
     existingMessages: props.existingMessages,
     messagesLimit: props.messagesLimit,
     viewportRef,
+    suppressAutoStickRef,
     isAtBottom,
     onNewMessage,
     onMediaMessage,
