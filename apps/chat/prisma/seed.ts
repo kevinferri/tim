@@ -92,7 +92,7 @@ type CircleSpec = {
 
 const CIRCLES: CircleSpec[] = [
   {
-    name: "Great Minds",
+    name: "Sandbox",
     ownerEmail: TIM_SANDBOX_EMAIL,
     memberEmails: [
       TIM_SANDBOX_EMAIL,
@@ -126,6 +126,10 @@ const CIRCLES: CircleSpec[] = [
           {
             senderEmail: "marcus.aurelius@example.com",
             text: "Reporting for duty. Or whatever the group chat equivalent is.",
+          },
+          {
+            senderEmail: "confucius@example.com",
+            text: "A journey of a thousand messages begins with a single 'hello'.",
           },
         ],
       },
