@@ -62,7 +62,11 @@ export function TopicChat() {
 
   return (
     <div className="flex flex-col basis-full overflow-hidden relative">
-      <ScrollArea className="flex flex-col basis-full" ref={viewportRef}>
+      <ScrollArea
+        // Disables native scroll anchoring, which fights load-more's own compensation.
+        className="flex flex-col basis-full [overflow-anchor:none]"
+        ref={viewportRef}
+      >
         {/* Always rendered, even with zero messages, so viewportRef/contentRef/
             bottomSentinelRef attach on the first render -- useTopicScroll's
             effects run once and never retry, so a null ref on mount would

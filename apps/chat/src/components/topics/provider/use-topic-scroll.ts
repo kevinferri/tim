@@ -16,6 +16,8 @@ export function useTopicScroll() {
 
   const [isAtBottom, setIsAtBottomState] = useState(true);
   const isAtBottomRef = useRef(true);
+  // Set by load-more so the resize observer below ignores its prepend.
+  const suppressAutoStickRef = useRef(false);
 
   const setIsAtBottom = useCallback((value: boolean) => {
     isAtBottomRef.current = value;
@@ -77,6 +79,12 @@ export function useTopicScroll() {
 
       previousHeight = nextHeight;
 
+      // Consumed on read rather than cleared by a timer, which raced this callback.
+      if (suppressAutoStickRef.current) {
+        suppressAutoStickRef.current = false;
+        return;
+      }
+
       if (heightChanged && wasAtBottom) {
         viewport?.scrollTo({ top: nextHeight, behavior: "instant" });
         setIsAtBottom(true);
@@ -103,5 +111,6 @@ export function useTopicScroll() {
     bottomSentinelRef,
     isAtBottom,
     scrollToBottom,
+    suppressAutoStickRef,
   };
 }
