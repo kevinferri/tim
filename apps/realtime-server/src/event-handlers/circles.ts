@@ -11,9 +11,7 @@ export function handleUpsertedCircle({ socket, server }: HandlerArgs) {
         roomType: RoomType.User,
       });
 
-      if (roomKey) {
-        server.to(roomKey).emit(SocketEvent.UpsertedCircle, payload);
-      }
+      server.to(roomKey).emit(SocketEvent.UpsertedCircle, payload);
     });
   });
 }
@@ -26,9 +24,7 @@ export function handleDeletedCircle({ socket, server }: HandlerArgs) {
         roomType: RoomType.User,
       });
 
-      if (roomKey) {
-        server.to(roomKey).emit(SocketEvent.DeletedCircle, payload);
-      }
+      server.to(roomKey).emit(SocketEvent.DeletedCircle, payload);
     });
   });
 }

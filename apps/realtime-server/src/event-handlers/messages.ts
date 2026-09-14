@@ -8,143 +8,141 @@ import {
 import { isUserInTopic } from "../db/topics";
 import { getRandomGif } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
-import { RoomType, getRoomKeyOrFail } from "./rooms";
+import { RoomType, registerRoomEvent } from "./rooms";
 import { executeCommand } from "../lib/command-handler";
 import { parseCommand } from "@tim/commands";
 import { emitMentionNotifications } from "../lib/notifications";
 
 export function handleSendMessage({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.SendMessage, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.circleId,
-      roomType: RoomType.Circle,
-    });
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.SendMessage,
+    roomType: RoomType.Circle,
+    getId: (payload) => payload.circleId,
+    handler: async ({ socket, server, payload, roomKey }) => {
+      // payload.circleId only proves membership in *some* circle -- doesn't prove payload.topicId belongs to it, so a member of one circle could otherwise post into an unrelated topic.
+      const canSendToTopic = await isUserInTopic({
+        userId: socket.data.user.id,
+        topicId: payload.topicId,
+      });
 
-    if (!roomKey) return;
+      if (!canSendToTopic) return;
 
-    // payload.circleId only proves membership in *some* circle -- doesn't prove payload.topicId belongs to it, so a member of one circle could otherwise post into an unrelated topic.
-    const canSendToTopic = await isUserInTopic({
-      userId: socket.data.user.id,
-      topicId: payload.topicId,
-    });
+      const commandMediaUrl = await executeCommand(payload.message, {
+        socket,
+        server,
+        payload,
+      });
+      const _mediaUrl = commandMediaUrl ?? payload.mediaUrl;
 
-    if (!canSendToTopic) return;
+      const savedMessage = await writeMessage({
+        userId: socket.data.user.id,
+        text: payload.message,
+        topicId: payload.topicId,
+        mediaUrl: _mediaUrl,
+      });
 
-    const commandMediaUrl = await executeCommand(payload.message, {
-      socket,
-      server,
-      payload,
-    });
-    const _mediaUrl = commandMediaUrl ?? payload.mediaUrl;
+      const emittedMessage = {
+        ...savedMessage,
+        circleId: payload.circleId,
+        text: decrypt(savedMessage.text, savedMessage.id),
+        sentBy: socket.data.user,
+        createdAt: new Date(),
+        highlights: [],
+      };
 
-    const savedMessage = await writeMessage({
-      userId: socket.data.user.id,
-      text: payload.message,
-      topicId: payload.topicId,
-      mediaUrl: _mediaUrl,
-    });
+      server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
 
-    const emittedMessage = {
-      ...savedMessage,
-      circleId: payload.circleId,
-      text: decrypt(savedMessage.text, savedMessage.id),
-      sentBy: socket.data.user,
-      createdAt: new Date(),
-      highlights: [],
-    };
-
-    server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
-
-    await emitMentionNotifications({
-      server,
-      roomKey,
-      topicId: payload.topicId,
-      messageId: savedMessage.id,
-      actor: socket.data.user,
-      mentionedUserIds: payload.mentionedUserIds ?? [],
-    });
+      await emitMentionNotifications({
+        server,
+        roomKey,
+        topicId: payload.topicId,
+        messageId: savedMessage.id,
+        actor: socket.data.user,
+        mentionedUserIds: payload.mentionedUserIds ?? [],
+      });
+    },
   });
 }
 
 export function handleDeleteMessage({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.DeleteMessage, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.topicId,
-      roomType: RoomType.Topic,
-    });
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.DeleteMessage,
+    roomType: RoomType.Topic,
+    getId: (payload) => payload.topicId,
+    handler: async ({ socket, server, payload, roomKey }) => {
+      const deletedMessage = await deleteMessage({
+        userId: socket.data.user.id,
+        messageId: payload.messageId,
+      });
 
-    if (!roomKey) return;
+      if (!deletedMessage) return;
 
-    const deletedMessage = await deleteMessage({
-      userId: socket.data.user.id,
-      messageId: payload.messageId,
-    });
-
-    if (!deletedMessage) return;
-
-    server
-      .to(roomKey)
-      .emit(SocketEvent.DeleteMessage, { deletedMessageId: deletedMessage.id });
+      server.to(roomKey).emit(SocketEvent.DeleteMessage, {
+        deletedMessageId: deletedMessage.id,
+      });
+    },
   });
 }
 
 export function handleEditMessage({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.EditMessage, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.topicId,
-      roomType: RoomType.Topic,
-    });
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.EditMessage,
+    roomType: RoomType.Topic,
+    getId: (payload) => payload.topicId,
+    handler: async ({ socket, server, payload, roomKey }) => {
+      if (!payload.text) return;
 
-    if (!roomKey || !payload.text) return;
+      const editiedMessage = await editMessage({
+        userId: socket.data.user.id,
+        messageId: payload.messageId,
+        text: payload.text,
+      });
 
-    const editiedMessage = await editMessage({
-      userId: socket.data.user.id,
-      messageId: payload.messageId,
-      text: payload.text,
-    });
+      if (!editiedMessage) return;
 
-    if (!editiedMessage) return;
-
-    server.to(roomKey).emit(SocketEvent.EditMessage, {
-      ...editiedMessage,
-      text: decrypt(editiedMessage.text, editiedMessage.id),
-    });
+      server.to(roomKey).emit(SocketEvent.EditMessage, {
+        ...editiedMessage,
+        text: decrypt(editiedMessage.text, editiedMessage.id),
+      });
+    },
   });
 }
 
 export function handleShuffleGif({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.ShuffleGifMessage, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.topicId,
-      roomType: RoomType.Topic,
-    });
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.ShuffleGifMessage,
+    roomType: RoomType.Topic,
+    getId: (payload) => payload.topicId,
+    handler: async ({ socket, server, payload, roomKey }) => {
+      const message = await getMessageForUser({
+        messageId: payload.messageId,
+        userId: socket.data.user.id,
+      });
 
-    if (!roomKey) return;
+      if (!message) return;
 
-    const message = await getMessageForUser({
-      messageId: payload.messageId,
-      userId: socket.data.user.id,
-    });
+      const text = decrypt(message.text, message.id);
+      const newGif = await getRandomGif(parseCommand(text)?.prompt ?? "");
 
-    if (!message) return;
+      const shuffledMessage = await editMessage({
+        text,
+        userId: socket.data.user.id,
+        messageId: message.id,
+        mediaUrl: newGif,
+      });
 
-    const text = decrypt(message.text, message.id);
-    const newGif = await getRandomGif(parseCommand(text)?.prompt ?? "");
-
-    const shuffledMessage = await editMessage({
-      text,
-      userId: socket.data.user.id,
-      messageId: message.id,
-      mediaUrl: newGif,
-    });
-
-    server.to(roomKey).emit(SocketEvent.ShuffleGifMessage, {
-      messageId: shuffledMessage.id,
-      mediaUrl: shuffledMessage.mediaUrl,
-    });
+      server.to(roomKey).emit(SocketEvent.ShuffleGifMessage, {
+        messageId: shuffledMessage.id,
+        mediaUrl: shuffledMessage.mediaUrl,
+      });
+    },
   });
 }

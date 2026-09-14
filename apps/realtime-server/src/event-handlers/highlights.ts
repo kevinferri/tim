@@ -1,56 +1,55 @@
 import { HandlerArgs, SocketEvent } from "./main";
 import { toggleHighlight } from "../db/highlights";
 import { getUserSummary } from "../db/users";
-import { RoomType, getRoomKeyOrFail } from "./rooms";
+import { RoomType, registerRoomEvent } from "./rooms";
 import { NotificationType, emitNotification } from "../lib/notifications";
 
 export function handleToggleHighlight({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.ToggleHighlight, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.topicId,
-      roomType: RoomType.Topic,
-    });
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.ToggleHighlight,
+    roomType: RoomType.Topic,
+    getId: (payload) => payload.topicId,
+    handler: async ({ socket, server, payload, roomKey }) => {
+      const highlight = await toggleHighlight({
+        userId: socket.data.user.id,
+        messageId: payload.messageId,
+      });
 
-    if (!roomKey) return;
+      const notificationPayload = {
+        server,
+        roomKey,
+        messageId: payload.messageId,
+        topicId: payload.topicId,
+        actor: socket.data.user,
+      };
 
-    const highlight = await toggleHighlight({
-      userId: socket.data.user.id,
-      messageId: payload.messageId,
-    });
+      if (highlight) {
+        const createdBy = await getUserSummary({ userId: highlight.userId });
 
-    const notificationPayload = {
-      server,
-      roomKey,
-      messageId: payload.messageId,
-      topicId: payload.topicId,
-      actor: socket.data.user,
-    };
+        server.to(roomKey).emit(SocketEvent.AddedHighlight, {
+          highlight,
+          createdBy,
+        });
 
-    if (highlight) {
-      const createdBy = await getUserSummary({ userId: highlight.userId });
+        await emitNotification({
+          ...notificationPayload,
+          notificationType: NotificationType.HighlightRecieved,
+        });
 
-      server.to(roomKey).emit(SocketEvent.AddedHighlight, {
-        highlight,
-        createdBy,
+        return;
+      }
+
+      server.to(roomKey).emit(SocketEvent.RemovedHighlight, {
+        messageId: payload.messageId,
+        userId: socket.data.user.id,
       });
 
       await emitNotification({
         ...notificationPayload,
-        notificationType: NotificationType.HighlightRecieved,
+        notificationType: NotificationType.HighlightRemoved,
       });
-
-      return;
-    }
-
-    server.to(roomKey).emit(SocketEvent.RemovedHighlight, {
-      messageId: payload.messageId,
-      userId: socket.data.user.id,
-    });
-
-    await emitNotification({
-      ...notificationPayload,
-      notificationType: NotificationType.HighlightRemoved,
-    });
+    },
   });
 }

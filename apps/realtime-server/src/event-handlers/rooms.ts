@@ -60,6 +60,37 @@ export function getRoomKeyOrFail({
   return false;
 }
 
+// Registers a handler for `event` that first verifies the acting socket is
+// in the room derived from `getId(payload)`/`roomType`, bailing out silently
+// otherwise -- the authorization pattern most handlers in this directory need.
+export function registerRoomEvent<P = any>({
+  socket,
+  server,
+  event,
+  roomType,
+  getId,
+  handler,
+}: HandlerArgs & {
+  event: SocketEvent;
+  roomType: RoomType;
+  getId: (payload: P) => string;
+  handler: (
+    args: HandlerArgs & { payload: P; roomKey: string },
+  ) => void | Promise<void>;
+}) {
+  socket.on(event, async (payload: P) => {
+    const roomKey = getRoomKeyOrFail({
+      socket,
+      id: getId(payload),
+      roomType,
+    });
+
+    if (!roomKey) return;
+
+    await handler({ socket, server, payload, roomKey });
+  });
+}
+
 async function canJoinRoom({
   id,
   roomType,

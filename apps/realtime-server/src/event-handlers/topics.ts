@@ -1,30 +1,28 @@
 import { SocketEvent, HandlerArgs } from "./main";
-import { RoomType, getRoomKeyOrFail } from "./rooms";
+import { RoomType, registerRoomEvent } from "./rooms";
 
 export function handleUpsertedTopic({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.UpsertedTopic, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.circleId,
-      roomType: RoomType.Circle,
-    });
-
-    if (!roomKey) return;
-
-    server.to(roomKey).emit(SocketEvent.UpsertedTopic, payload);
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.UpsertedTopic,
+    roomType: RoomType.Circle,
+    getId: (payload) => payload.circleId,
+    handler: ({ server, payload, roomKey }) => {
+      server.to(roomKey).emit(SocketEvent.UpsertedTopic, payload);
+    },
   });
 }
 
 export function handleDeletedTopic({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.DeletedTopic, async (payload) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: payload.circleId,
-      roomType: RoomType.Circle,
-    });
-
-    if (!roomKey) return;
-
-    server.to(roomKey).emit(SocketEvent.DeletedTopic, payload);
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.DeletedTopic,
+    roomType: RoomType.Circle,
+    getId: (payload) => payload.circleId,
+    handler: ({ server, payload, roomKey }) => {
+      server.to(roomKey).emit(SocketEvent.DeletedTopic, payload);
+    },
   });
 }
