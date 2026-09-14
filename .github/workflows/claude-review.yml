@@ -56,10 +56,37 @@ jobs:
               just a coverage gap. Don't flag trivial changes (config, types,
               formatting, simple prop threading) for lacking tests.
 
+            The list above is what to look for, not something to report on.
+            Never restate, summarize, or checklist these categories in a
+            comment (e.g. "I checked for auth gaps, test coverage, ..."). Only
+            output actual findings -- if a category turned up nothing, say
+            nothing about it.
+
             Note: The PR branch is already checked out in the current working directory.
 
-            Use `gh pr comment` for top-level feedback.
-            Use `mcp__github_inline_comment__create_inline_comment` (with `confirmed: true`) to highlight specific code issues.
+            Inline comments (`mcp__github_inline_comment__create_inline_comment`,
+            with `confirmed: true`):
+            - One issue per comment, anchored to the specific line(s) it
+              applies to -- don't post a comment spanning or summarizing a
+              whole file/hunk when the issue is local to one line.
+            - Keep each comment concise and direct: state the problem and,
+              if not obvious, the fix, and stop there. Skip preamble like "In
+              this section..." or restating what the diff already shows.
+            - No praise-only or purely observational comments -- only comment
+              where something should change.
+
+            End-of-review summary (required on every review, including
+            re-reviews after new commits): after posting inline comments,
+            post exactly one top-level `gh pr comment` that gives a verdict.
+            Keep it concise, direct, and easy to scan/grep -- a short bullet
+            list (one line each, referencing file:line) rather than prose:
+            - If there are no issues worth addressing, say so plainly, e.g.
+              "Looks good to go."
+            - Otherwise, say review is needed before merging and list the
+              specific items, not a restatement of the full inline comment
+              text.
+            This summary comment is mandatory even if you found zero issues.
+
             Only post GitHub comments - don't submit review text as messages.
 
           claude_args: |
