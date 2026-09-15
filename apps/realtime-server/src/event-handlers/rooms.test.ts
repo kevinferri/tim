@@ -19,6 +19,7 @@ import {
   RoomType,
   toRoomKey,
   getRoomKeyOrFail,
+  registerRoomEvent,
   handleJoinRoom,
   handleLeaveRoom,
 } from "./rooms";
@@ -63,6 +64,50 @@ describe("getRoomKeyOrFail", () => {
         roomType: RoomType.Topic,
       }),
     ).toBe(false);
+  });
+});
+
+describe("registerRoomEvent", () => {
+  it("calls the handler with the roomKey when the socket is in the room", async () => {
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("topic::topic-1");
+    const server = createMockServer();
+    const handler = vi.fn();
+
+    registerRoomEvent({
+      socket: socket as any,
+      server: server as any,
+      event: SocketEvent.ToggleHighlight,
+      roomType: RoomType.Topic,
+      getId: (payload: { topicId: string }) => payload.topicId,
+      handler,
+    });
+
+    const payload = { topicId: "topic-1" };
+    await socket.trigger(SocketEvent.ToggleHighlight, payload);
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ payload, roomKey: "topic::topic-1" }),
+    );
+  });
+
+  it("does not call the handler when the socket is not in the room", async () => {
+    const socket = createMockSocket({ id: "user-1" });
+    const server = createMockServer();
+    const handler = vi.fn();
+
+    registerRoomEvent({
+      socket: socket as any,
+      server: server as any,
+      event: SocketEvent.ToggleHighlight,
+      roomType: RoomType.Topic,
+      getId: (payload: { topicId: string }) => payload.topicId,
+      handler,
+    });
+
+    await socket.trigger(SocketEvent.ToggleHighlight, { topicId: "topic-1" });
+
+    expect(handler).not.toHaveBeenCalled();
   });
 });
 
