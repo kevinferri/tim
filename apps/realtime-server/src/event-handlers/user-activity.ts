@@ -6,20 +6,17 @@ import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail, registerRoomEvent } from "./rooms";
 
-// The local state change must run unconditionally -- a stale/racing topicId
+// The local state change must run unconditionally -- a stale/racing room id
 // (e.g. a client mid room-switch) should only skip the broadcast below, not
 // silently drop the socket's own isIdle/isTyping flag.
 function respondToStateChange({
   socket,
   server,
-  topicId,
+  id,
+  roomType,
   event,
-}: HandlerArgs & { topicId: string; event: SocketEvent }) {
-  const roomKey = getRoomKeyOrFail({
-    socket,
-    id: topicId,
-    roomType: RoomType.Topic,
-  });
+}: HandlerArgs & { id: string; roomType: RoomType; event: SocketEvent }) {
+  const roomKey = getRoomKeyOrFail({ socket, id, roomType });
 
   if (!roomKey) return;
 
@@ -35,7 +32,8 @@ export function handleUserTabFocused({ socket, server }: HandlerArgs) {
     respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserTabFocused,
     });
   });
@@ -47,7 +45,8 @@ export function handleUserTabBlurred({ socket, server }: HandlerArgs) {
     respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserTabBlurred,
     });
   });
@@ -59,7 +58,8 @@ export function handleUserStartedTyping({ socket, server }: HandlerArgs) {
     respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserStartedTyping,
     });
   });
@@ -71,7 +71,8 @@ export function handleUserStoppedTyping({ socket, server }: HandlerArgs) {
     respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserStoppedTyping,
     });
   });
