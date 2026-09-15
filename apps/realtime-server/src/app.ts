@@ -1,8 +1,9 @@
 import { createServer } from "http";
-import { Server } from "socket.io";
+import { DefaultEventsMap, Server } from "socket.io";
 import { registerEventHandlers } from "./event-handlers/main";
 import { middleware } from "./middleware";
 import { parse } from "url";
+import { SocketData } from "./lib/socket";
 
 const port = process.env.WS_PORT;
 const httpServer = createServer((req, res) => {
@@ -12,7 +13,12 @@ const httpServer = createServer((req, res) => {
   }
 });
 
-const wsServer = new Server(httpServer, {
+const wsServer = new Server<
+  DefaultEventsMap,
+  DefaultEventsMap,
+  DefaultEventsMap,
+  SocketData
+>(httpServer, {
   path: "/ws/",
   cors: {
     origin: process.env.FRONTEND_URL,

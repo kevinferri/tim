@@ -22,6 +22,7 @@ import {
   registerRoomEvent,
   handleJoinRoom,
   handleLeaveRoom,
+  emitUserChangeInTopic,
 } from "./rooms";
 import { SocketEvent } from "@tim/socket-types";
 
@@ -108,6 +109,44 @@ describe("registerRoomEvent", () => {
     await socket.trigger(SocketEvent.ToggleHighlight, { topicId: "topic-1" });
 
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+describe("emitUserChangeInTopic", () => {
+  it("merges a user's duplicate sockets (multiple tabs) instead of picking one arbitrarily", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue({
+      id: "circle-1",
+    } as any);
+
+    const idleSocket = createMockSocket({
+      id: "user-1",
+      state: { isIdle: true, isTyping: false },
+    });
+    const typingSocket = createMockSocket({
+      id: "user-1",
+      state: { isIdle: false, isTyping: true },
+    });
+    const server = createMockServer({
+      socketsInRoom: [idleSocket as any, typingSocket as any],
+    });
+    const actingSocket = createMockSocket({ id: "user-1" });
+
+    await emitUserChangeInTopic({
+      server: server as any,
+      socket: actingSocket as any,
+      topicId: "topic-1",
+    });
+
+    // Idle only if every one of the user's sockets is idle (false here,
+    // since typingSocket isn't); typing if any of them is (true here).
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserJoinedOrLeftTopic,
+      expect.objectContaining({
+        activeUsers: [
+          { id: "user-1", state: { isIdle: false, isTyping: true } },
+        ],
+      }),
+    );
   });
 });
 

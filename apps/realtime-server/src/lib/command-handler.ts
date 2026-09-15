@@ -1,8 +1,8 @@
-import { Server, Socket } from "socket.io";
 import { CommandName, parseCommand } from "@tim/commands";
 import { RoomType, toRoomKey } from "../event-handlers/rooms";
 import { getRandomGif, getYoutubeVideo } from "./media-fetchers";
 import { getChatGpt } from "./open-ai";
+import { AppServer, AppSocket } from "./socket";
 
 type MessagePayload = {
   circleId: string;
@@ -12,8 +12,8 @@ type MessagePayload = {
 };
 
 type CommandContext = {
-  socket: Socket;
-  server: Server;
+  socket: AppSocket;
+  server: AppServer;
   payload: MessagePayload;
 };
 

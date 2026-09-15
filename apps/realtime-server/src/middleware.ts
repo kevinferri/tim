@@ -1,14 +1,14 @@
-import { Socket } from "socket.io";
 import { ExtendedError } from "socket.io/dist/namespace";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { getInitialActiveUserState } from "./lib/user-change-handler";
+import { AppSocket, SocketUserIdentity } from "./lib/socket";
 
 function invalidCredentialsError(next: (err?: ExtendedError) => void) {
   next(new Error("Invalid credentials"));
 }
 
 export function middleware(
-  socket: Socket,
+  socket: AppSocket,
   next: (err?: ExtendedError) => void,
 ) {
   const token = socket.handshake.auth.token;
@@ -17,7 +17,7 @@ export function middleware(
   try {
     const user = jwt.verify(token, process.env.JWT_SECRET, {
       algorithms: ["HS256"],
-    }) as JwtPayload;
+    }) as JwtPayload & SocketUserIdentity;
     const state = getInitialActiveUserState();
 
     socket.data.user = { ...user, state };

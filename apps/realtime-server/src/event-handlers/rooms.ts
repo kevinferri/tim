@@ -1,9 +1,9 @@
-import { Socket } from "socket.io";
 import { RoomType } from "@tim/socket-types";
 import { getTopicIdsForCircle, isUserInCircle } from "../db/circles";
 import { getParentCircleIdForTopic, isUserInTopic } from "../db/topics";
 import { SocketEvent, HandlerArgs } from "./main";
 import { saveTopicHistory } from "../db/topic-history";
+import { ActiveUserState, AppSocket } from "../lib/socket";
 
 export { RoomType };
 
@@ -11,9 +11,38 @@ const ROOM_KEY_INDICATOR = "::";
 
 // A user connected from more than one socket (multiple tabs/devices) has
 // more than one socket in the same room, which would otherwise surface as
-// that user appearing twice in a single room's active-user list.
-function dedupeUsersById<T extends { id: string }>(users: T[]): T[] {
-  return [...new Map(users.map((user) => [user.id, user])).values()];
+// that user appearing twice in a single room's active-user list. Merges
+// rather than picking one arbitrarily (last-write-wins on fetchSockets()'s
+// order would make presence flicker depending on which tab connected last):
+// idle only counts once every one of the user's sockets is idle, and typing
+// counts as soon as any one of them is.
+function mergeActiveUserState(
+  a: ActiveUserState,
+  b: ActiveUserState,
+): ActiveUserState {
+  return {
+    isIdle: a.isIdle && b.isIdle,
+    isTyping: a.isTyping || b.isTyping,
+  };
+}
+
+function dedupeUsersById<T extends { id: string; state: ActiveUserState }>(
+  users: T[],
+): T[] {
+  const byId = new Map<string, T>();
+
+  for (const user of users) {
+    const existing = byId.get(user.id);
+
+    byId.set(
+      user.id,
+      existing
+        ? { ...user, state: mergeActiveUserState(existing.state, user.state) }
+        : user,
+    );
+  }
+
+  return [...byId.values()];
 }
 
 export function toRoomKey({
@@ -44,7 +73,7 @@ export function getRoomKeyOrFail({
   roomType,
   socket,
 }: {
-  socket: Socket;
+  socket: AppSocket;
   id: string;
   roomType: RoomType;
 }) {
@@ -98,7 +127,7 @@ async function canJoinRoom({
 }: {
   id: string;
   roomType: RoomType;
-  socket: Socket;
+  socket: AppSocket;
 }) {
   if (roomType === RoomType.Topic) {
     return await isUserInTopic({ userId: socket.data.user.id, topicId: id });

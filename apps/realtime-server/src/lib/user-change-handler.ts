@@ -1,9 +1,6 @@
-import { Socket } from "socket.io";
+import { ActiveUserState, AppSocket, SocketUserIdentity } from "./socket";
 
-export type ActiveUserState = {
-  isIdle: boolean;
-  isTyping: boolean;
-};
+export type { ActiveUserState };
 
 export function getInitialActiveUserState(): ActiveUserState {
   return {
@@ -13,13 +10,11 @@ export function getInitialActiveUserState(): ActiveUserState {
 }
 
 export function handleActiveUserStateChange(
-  socket: Socket,
+  socket: AppSocket,
   next: Partial<ActiveUserState>,
 ) {
-  const cur = socket.data.user.state;
-
   socket.data.user.state = {
-    ...cur,
+    ...socket.data.user.state,
     ...next,
   };
 
@@ -27,13 +22,11 @@ export function handleActiveUserStateChange(
 }
 
 export function handleActiveUserAttributeChange(
-  socket: Socket,
-  next: Record<string, unknown>,
+  socket: AppSocket,
+  next: Partial<SocketUserIdentity>,
 ) {
-  const cur = socket.data.user;
-
   socket.data.user = {
-    ...cur,
+    ...socket.data.user,
     ...next,
   };
 
