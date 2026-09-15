@@ -4,19 +4,19 @@ import {
 } from "../lib/user-change-handler";
 import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
-import { RoomType, getRoomKeyOrFail } from "./rooms";
+import { RoomType, getRoomKeyOrFail, registerRoomEvent } from "./rooms";
 
-function respondHandler({
+// The local state change must run unconditionally -- a stale/racing room id
+// (e.g. a client mid room-switch) should only skip the broadcast below, not
+// silently drop the socket's own isIdle/isTyping flag.
+function respondToStateChange({
   socket,
   server,
-  topicId,
+  id,
+  roomType,
   event,
-}: HandlerArgs & { topicId: string; event: SocketEvent }) {
-  const roomKey = getRoomKeyOrFail({
-    socket,
-    id: topicId,
-    roomType: RoomType.Topic,
-  });
+}: HandlerArgs & { id: string; roomType: RoomType; event: SocketEvent }) {
+  const roomKey = getRoomKeyOrFail({ socket, id, roomType });
 
   if (!roomKey) return;
 
@@ -27,96 +27,94 @@ function respondHandler({
 }
 
 export function handleUserTabFocused({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.UserTabFocused, async ({ topicId }) => {
+  socket.on(SocketEvent.UserTabFocused, ({ topicId }) => {
     handleActiveUserStateChange(socket, { isIdle: false });
-
-    respondHandler({
+    respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserTabFocused,
     });
   });
 }
 
 export function handleUserTabBlurred({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.UserTabBlurred, async ({ topicId }) => {
+  socket.on(SocketEvent.UserTabBlurred, ({ topicId }) => {
     handleActiveUserStateChange(socket, { isIdle: true });
-
-    respondHandler({
+    respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserTabBlurred,
     });
   });
 }
 
 export function handleUserStartedTyping({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.UserStartedTyping, async ({ topicId }) => {
+  socket.on(SocketEvent.UserStartedTyping, ({ topicId }) => {
     handleActiveUserStateChange(socket, { isTyping: true });
-
-    respondHandler({
+    respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserStartedTyping,
     });
   });
 }
 
 export function handleUserStoppedTyping({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.UserStoppedTyping, async ({ topicId }) => {
+  socket.on(SocketEvent.UserStoppedTyping, ({ topicId }) => {
     handleActiveUserStateChange(socket, { isTyping: false });
-
-    respondHandler({
+    respondToStateChange({
       socket,
       server,
-      topicId,
+      id: topicId,
+      roomType: RoomType.Topic,
       event: SocketEvent.UserStoppedTyping,
     });
   });
 }
 
 export function handleUserExpandedImage({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.UserExpandedImage, async ({ topicId, messageId }) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: topicId,
-      roomType: RoomType.Topic,
-    });
-
-    if (!roomKey) return;
-
-    await emitNotification({
-      server,
-      roomKey,
-      messageId,
-      topicId,
-      actor: socket.data.user,
-      notificationType: NotificationType.ExpandedImage,
-    });
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.UserExpandedImage,
+    roomType: RoomType.Topic,
+    getId: (payload) => payload.topicId,
+    handler: async ({ socket, server, payload, roomKey }) => {
+      await emitNotification({
+        server,
+        roomKey,
+        messageId: payload.messageId,
+        topicId: payload.topicId,
+        actor: socket.data.user,
+        notificationType: NotificationType.ExpandedImage,
+      });
+    },
   });
 }
 
 export function handleUserClickedLink({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.UserClickedLink, async ({ topicId, messageId }) => {
-    const roomKey = getRoomKeyOrFail({
-      socket,
-      id: topicId,
-      roomType: RoomType.Topic,
-    });
-
-    if (!roomKey) return;
-
-    await emitNotification({
-      server,
-      roomKey,
-      messageId,
-      topicId,
-      actor: socket.data.user,
-      notificationType: NotificationType.ClickedLink,
-    });
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.UserClickedLink,
+    roomType: RoomType.Topic,
+    getId: (payload) => payload.topicId,
+    handler: async ({ socket, server, payload, roomKey }) => {
+      await emitNotification({
+        server,
+        roomKey,
+        messageId: payload.messageId,
+        topicId: payload.topicId,
+        actor: socket.data.user,
+        notificationType: NotificationType.ClickedLink,
+      });
+    },
   });
 }
 

@@ -52,13 +52,16 @@ describe("handleUserTabFocused", () => {
     });
   });
 
-  it("does not emit presence when not in the topic room", async () => {
+  it("still updates local state when not in the topic room, but doesn't emit", async () => {
     const socket = createMockSocket({ id: "user-1" });
     const server = createMockServer();
     handleUserTabFocused({ socket: socket as any, server: server as any });
 
     await socket.trigger(SocketEvent.UserTabFocused, { topicId: "topic-1" });
 
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isIdle: false,
+    });
     expect(server.emit).not.toHaveBeenCalled();
   });
 });
@@ -79,6 +82,19 @@ describe("handleUserTabBlurred", () => {
       SocketEvent.UserTabBlurred,
       expect.any(Object),
     );
+  });
+
+  it("still updates local state when not in the topic room, but doesn't emit", async () => {
+    const socket = createMockSocket({ id: "user-1" });
+    const server = createMockServer();
+    handleUserTabBlurred({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.UserTabBlurred, { topicId: "topic-1" });
+
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isIdle: true,
+    });
+    expect(server.emit).not.toHaveBeenCalled();
   });
 });
 
@@ -115,6 +131,32 @@ describe("handleUserStartedTyping / handleUserStoppedTyping", () => {
       SocketEvent.UserStoppedTyping,
       expect.any(Object),
     );
+  });
+
+  it("started: still updates local state when not in the topic room, but doesn't emit", async () => {
+    const socket = createMockSocket({ id: "user-1" });
+    const server = createMockServer();
+    handleUserStartedTyping({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.UserStartedTyping, { topicId: "topic-1" });
+
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isTyping: true,
+    });
+    expect(server.emit).not.toHaveBeenCalled();
+  });
+
+  it("stopped: still updates local state when not in the topic room, but doesn't emit", async () => {
+    const socket = createMockSocket({ id: "user-1" });
+    const server = createMockServer();
+    handleUserStoppedTyping({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.UserStoppedTyping, { topicId: "topic-1" });
+
+    expect(handleActiveUserStateChange).toHaveBeenCalledWith(socket, {
+      isTyping: false,
+    });
+    expect(server.emit).not.toHaveBeenCalled();
   });
 });
 
