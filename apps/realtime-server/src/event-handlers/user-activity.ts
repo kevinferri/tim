@@ -6,12 +6,23 @@ import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, getRoomKeyOrFail, registerRoomEvent } from "./rooms";
 
-function emitUserState({
-  server,
+// The local state change must run unconditionally -- a stale/racing topicId
+// (e.g. a client mid room-switch) should only skip the broadcast below, not
+// silently drop the socket's own isIdle/isTyping flag.
+function respondToStateChange({
   socket,
-  roomKey,
+  server,
+  topicId,
   event,
-}: HandlerArgs & { roomKey: string; event: SocketEvent }) {
+}: HandlerArgs & { topicId: string; event: SocketEvent }) {
+  const roomKey = getRoomKeyOrFail({
+    socket,
+    id: topicId,
+    roomType: RoomType.Topic,
+  });
+
+  if (!roomKey) return;
+
   server.to(roomKey).emit(event, {
     userId: socket.data.user.id,
     state: socket.data.user.state,
@@ -19,78 +30,50 @@ function emitUserState({
 }
 
 export function handleUserTabFocused({ socket, server }: HandlerArgs) {
-  registerRoomEvent({
-    socket,
-    server,
-    event: SocketEvent.UserTabFocused,
-    roomType: RoomType.Topic,
-    getId: (payload) => payload.topicId,
-    handler: ({ socket, server, roomKey }) => {
-      handleActiveUserStateChange(socket, { isIdle: false });
-      emitUserState({
-        server,
-        socket,
-        roomKey,
-        event: SocketEvent.UserTabFocused,
-      });
-    },
+  socket.on(SocketEvent.UserTabFocused, ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isIdle: false });
+    respondToStateChange({
+      socket,
+      server,
+      topicId,
+      event: SocketEvent.UserTabFocused,
+    });
   });
 }
 
 export function handleUserTabBlurred({ socket, server }: HandlerArgs) {
-  registerRoomEvent({
-    socket,
-    server,
-    event: SocketEvent.UserTabBlurred,
-    roomType: RoomType.Topic,
-    getId: (payload) => payload.topicId,
-    handler: ({ socket, server, roomKey }) => {
-      handleActiveUserStateChange(socket, { isIdle: true });
-      emitUserState({
-        server,
-        socket,
-        roomKey,
-        event: SocketEvent.UserTabBlurred,
-      });
-    },
+  socket.on(SocketEvent.UserTabBlurred, ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isIdle: true });
+    respondToStateChange({
+      socket,
+      server,
+      topicId,
+      event: SocketEvent.UserTabBlurred,
+    });
   });
 }
 
 export function handleUserStartedTyping({ socket, server }: HandlerArgs) {
-  registerRoomEvent({
-    socket,
-    server,
-    event: SocketEvent.UserStartedTyping,
-    roomType: RoomType.Topic,
-    getId: (payload) => payload.topicId,
-    handler: ({ socket, server, roomKey }) => {
-      handleActiveUserStateChange(socket, { isTyping: true });
-      emitUserState({
-        server,
-        socket,
-        roomKey,
-        event: SocketEvent.UserStartedTyping,
-      });
-    },
+  socket.on(SocketEvent.UserStartedTyping, ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isTyping: true });
+    respondToStateChange({
+      socket,
+      server,
+      topicId,
+      event: SocketEvent.UserStartedTyping,
+    });
   });
 }
 
 export function handleUserStoppedTyping({ socket, server }: HandlerArgs) {
-  registerRoomEvent({
-    socket,
-    server,
-    event: SocketEvent.UserStoppedTyping,
-    roomType: RoomType.Topic,
-    getId: (payload) => payload.topicId,
-    handler: ({ socket, server, roomKey }) => {
-      handleActiveUserStateChange(socket, { isTyping: false });
-      emitUserState({
-        server,
-        socket,
-        roomKey,
-        event: SocketEvent.UserStoppedTyping,
-      });
-    },
+  socket.on(SocketEvent.UserStoppedTyping, ({ topicId }) => {
+    handleActiveUserStateChange(socket, { isTyping: false });
+    respondToStateChange({
+      socket,
+      server,
+      topicId,
+      event: SocketEvent.UserStoppedTyping,
+    });
   });
 }
 
