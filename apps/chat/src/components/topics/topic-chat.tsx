@@ -9,7 +9,10 @@ import {
   useTopicUiContext,
 } from "./current-topic-provider";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
-import { useAddSelfToTopic } from "@/components/dashboard/active-circle-members-store";
+import {
+  useAddSelfToTopic,
+  useRemoveSelfFromTopic,
+} from "@/components/dashboard/active-circle-members-store";
 import { useSelf } from "@/components/auth/self-provider";
 import {
   RoomType,
@@ -27,6 +30,7 @@ export function TopicChat() {
   const { markTopicAsRead } = useUnreadTopics();
   const { joinRoom, leaveRoom } = useRoomManagement();
   const addSelfToTopic = useAddSelfToTopic();
+  const removeSelfFromTopic = useRemoveSelfFromTopic();
   const self = useSelf();
 
   const { topicId, circleId } = useTopicMetaContext();
@@ -64,6 +68,7 @@ export function TopicChat() {
     return () => {
       markTopicAsRead(topicId);
       leaveRoom(topicId, RoomType.Topic);
+      removeSelfFromTopic(topicId, self.id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId]);

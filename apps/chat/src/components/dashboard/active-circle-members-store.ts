@@ -21,6 +21,7 @@ type Store = {
   mergeCircleSnapshot: (topicMap: TopicMap) => void;
   setTopicPresence: (topicId: string, presence: TopicPresence) => void;
   addSelfToTopic: (topicId: string, circleId: string, self: ActiveUser) => void;
+  removeSelfFromTopic: (topicId: string, selfId: string) => void;
   removeTopic: (topicId: string) => void;
 };
 
@@ -126,6 +127,26 @@ const useStore = create<Store>((set) => ({
       };
     }),
 
+  removeSelfFromTopic: (topicId, selfId) =>
+    set((state) => {
+      const pendingSelf = { ...state.pendingSelf };
+      delete pendingSelf[topicId];
+
+      const existing = state.topicMap[topicId];
+      if (!existing) return { pendingSelf };
+
+      return {
+        pendingSelf,
+        topicMap: {
+          ...state.topicMap,
+          [topicId]: {
+            ...existing,
+            activeUsers: existing.activeUsers.filter((u) => u.id !== selfId),
+          },
+        },
+      };
+    }),
+
   removeTopic: (topicId) =>
     set((state) => {
       if (!(topicId in state.topicMap)) return state;
@@ -171,6 +192,14 @@ export function usePresenceSync() {
 export function useAddSelfToTopic() {
   return useStore((state) => state.addSelfToTopic);
 }
+
+export function useRemoveSelfFromTopic() {
+  return useStore((state) => state.removeSelfFromTopic);
+}
+
+// Exported for direct store-level testing (see active-circle-members-store.test.ts)
+// -- components should use the selector hooks above instead.
+export { useStore as __useActiveCircleMembersStore };
 
 export function useActiveCircleMembers() {
   const topicMap = useStore(useShallow((state) => state.topicMap));
