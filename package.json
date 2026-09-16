@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@12.4.1",
   "scripts": {
+    "setup:env": "node scripts/setup-env.mjs",
     "dev": "concurrently -n chat,realtime-server -c blue.bold,green.bold \"pnpm --filter chat dev\" \"pnpm --filter tim-chat-server watch\"",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

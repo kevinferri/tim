@@ -40,4 +40,4 @@ Handlers consistently follow: validate payload → verify room membership/author
 
 ## Environment variables
 
-`WS_PORT`, `FRONTEND_URL` (CORS origin), `JWT_SECRET`, `DATABASE_URL`, `DATABASE_SSL_CERT` (base64 CA cert, required only in production), `CRYPTO_KEY` (base64 32-byte AES-256-GCM key, message encryption -- see `packages/crypto`), `GIPHY_KEY`, `YOUTUBE_ID`/`YOUTUBE_KEY`/`YOUTUBE_SECRET`, `OPENAI_API_KEY`, `DEBUG`.
+`WS_PORT`, `FRONTEND_URL` (CORS origin), `JWT_SECRET`, `DATABASE_URL`, `DATABASE_SSL_CERT` (base64 CA cert, required only in production), `CRYPTO_KEY` (base64 32-byte AES-256-GCM key, message encryption -- see `packages/crypto`), `GIPHY_KEY`, `YOUTUBE_ID`/`YOUTUBE_KEY`/`YOUTUBE_SECRET`, `OPENAI_API_KEY`, `DEBUG`. See `.env.example` and the root `CLAUDE.md`'s "Local environment setup" section for which of these `pnpm setup:env` fills in automatically and which are optional locally.
