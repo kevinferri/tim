@@ -1,7 +1,5 @@
 import { ActiveUserState, AppSocket, SocketUserIdentity } from "./socket";
 
-export type { ActiveUserState };
-
 export function getInitialActiveUserState(): ActiveUserState {
   return {
     isIdle: false,
