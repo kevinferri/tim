@@ -426,6 +426,9 @@ importers:
       '@types/uuid':
         specifier: ^9.0.8
         version: 9.0.8
+      dotenv-cli:
+        specifier: ^7.3.0
+        version: 7.4.4
       eslint:
         specifier: ^9.0.0
         version: 9.39.5(jiti@1.21.7)(supports-color@5.5.0)

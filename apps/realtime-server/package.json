@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm install --frozen-lockfile && npx tsc && pnpm install --prod --frozen-lockfile --ignore-scripts",
     "start": "exec node dist/app.js",
-    "watch": "env $(grep -v '^#' .env.local | grep -v '^$') nodemon src/app.ts",
+    "watch": "dotenv -e .env.local -- nodemon src/app.ts",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -19,6 +19,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^22.10.7",
     "@types/uuid": "^9.0.8",
+    "dotenv-cli": "^7.3.0",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
