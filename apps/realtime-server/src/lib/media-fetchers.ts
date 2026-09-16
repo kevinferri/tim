@@ -1,8 +1,6 @@
 // Excludes "test" too, not just "production" -- keeps a future direct unit
 // test (mocked fetch) exercising the real network path, matching open-ai.ts.
-const isLocalDev = !["production", "test"].includes(
-  process.env.NODE_ENV ?? "",
-);
+const isLocalDev = !["production", "test"].includes(process.env.NODE_ENV ?? "");
 
 // Stands in for a real Giphy lookup when GIPHY_KEY isn't set locally -- a real,
 // permanent Giphy CDN URL so the message renders exactly like a live result.
