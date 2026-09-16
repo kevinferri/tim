@@ -18,9 +18,8 @@ export function useSocketState(socket: Socket) {
     function showDisconnectedToast() {
       if (!disconnectToastRef.current) {
         disconnectToastRef.current = toast({
-          title: `Your connection to our server has been lost`,
-          description: `Attempting to reconnect...`,
-          variant: "destructive",
+          title: `Reconnecting...`,
+          variant: "quiet-destructive",
           duration: Number.POSITIVE_INFINITY,
         });
       }
@@ -65,8 +64,8 @@ export function useSocketState(socket: Socket) {
       // Room membership and topic data resync themselves off `isConnected`/useRoomResyncOnConnect -- this handler only owns reconnect UX plus refreshing the server-rendered nav lists, which neither of those cover.
       if (!reconnectToastRef.current) {
         reconnectToastRef.current = toast({
-          title: `Your connection has been restored`,
-          variant: "success",
+          title: `Connected`,
+          variant: "quiet-success",
           duration: 5000,
         });
       }
