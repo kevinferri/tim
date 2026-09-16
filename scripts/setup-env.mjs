@@ -2,11 +2,17 @@
 // Fills in apps/*/.env.local from apps/*/.env.example: generates random
 // values for vars tagged "# auto", copies known-safe local defaults verbatim,
 // and leaves vars that need a real third-party credential blank. Safe to
-// rerun -- never overwrites a value that's already set.
+// rerun -- never overwrites a value that's already set, and backfills any
+// var added to .env.example since .env.local was created.
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  parseEnvLines,
+  reconcileMissing,
+  resolveShared,
+} from "./lib/env-file.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const APPS = ["apps/chat", "apps/realtime-server"];
@@ -18,15 +24,6 @@ function generateSecret() {
   return randomBytes(32).toString("base64");
 }
 
-function parseEnvLines(content) {
-  return content.split("\n").map((line) => {
-    const match = line.match(/^([A-Z0-9_]+)=(.*?)(\s*#\s*auto\s*)?$/);
-    if (!match) return { raw: line };
-    const [, key, value, autoTag] = match;
-    return { raw: line, key, value: value.trim(), auto: Boolean(autoTag) };
-  });
-}
-
 function readEnvValues(filePath) {
   if (!existsSync(filePath)) return {};
   const values = {};
@@ -36,12 +33,19 @@ function readEnvValues(filePath) {
   return values;
 }
 
-function loadOrInitLocal(appDir) {
+// Ensures .env.local exists (seeded from .env.example) and has every key
+// .env.example currently declares, without touching any value already set.
+function syncLocalWithExample(appDir) {
   const examplePath = path.join(appDir, ".env.example");
   const localPath = path.join(appDir, ".env.local");
+  const exampleContent = readFileSync(examplePath, "utf8");
 
   if (!existsSync(localPath)) {
-    writeFileSync(localPath, readFileSync(examplePath, "utf8"));
+    writeFileSync(localPath, exampleContent);
+  } else {
+    const localContent = readFileSync(localPath, "utf8");
+    const reconciled = reconcileMissing(localContent, exampleContent);
+    if (reconciled !== localContent) writeFileSync(localPath, reconciled);
   }
 
   return localPath;
@@ -49,18 +53,16 @@ function loadOrInitLocal(appDir) {
 
 function main() {
   const appDirs = APPS.map((app) => path.join(ROOT, app));
-  const localPaths = appDirs.map(loadOrInitLocal);
+  const localPaths = appDirs.map(syncLocalWithExample);
 
   // Resolve shared secrets once: reuse an existing value if any app already
   // has one set, otherwise generate a single fresh value for all apps.
   const sharedValues = {};
   for (const key of SHARED_KEYS) {
-    const existing = localPaths
-      .map((p) => readEnvValues(p)[key])
-      .filter(Boolean);
-    const distinct = new Set(existing);
+    const existingValues = localPaths.map((p) => readEnvValues(p)[key]);
+    const resolved = resolveShared(existingValues, generateSecret);
 
-    if (distinct.size > 1) {
+    if (resolved.conflict) {
       console.warn(
         `Warning: ${key} differs between .env.local files -- leaving both as-is. ` +
           "These must match; fix manually.",
@@ -68,7 +70,7 @@ function main() {
       continue;
     }
 
-    sharedValues[key] = existing[0] ?? generateSecret();
+    sharedValues[key] = resolved.value;
   }
 
   const generated = [];

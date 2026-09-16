@@ -19,6 +19,8 @@ pnpm --filter chat <script>                       # Run a script in apps/chat (s
 pnpm --filter tim-chat-server <script>            # Run a script in apps/realtime-server (see its package.json name)
 pnpm --filter @tim/socket-types build              # Rebuild after changing packages/socket-types/src/index.ts
 pnpm --filter @tim/db-types build                 # Rebuild after changing apps/chat/prisma/schema.prisma
+pnpm setup:env                         # Fill in .env.local for both apps (see "Local environment setup" below)
+pnpm test:scripts                      # Run scripts/*.test.mjs (node:test) -- covers scripts/setup-env.mjs's parsing/reconciliation logic
 ```
 
 Each app keeps its own `package.json` name (`chat`, `tim-chat-server`) — `pnpm --filter <name> ...` is how you target one of them from the root. Per-app commands (Prisma db scripts, etc.) are documented in each app's own `CLAUDE.md`.

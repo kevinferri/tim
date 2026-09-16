@@ -1,4 +1,4 @@
-import { beforeEach, describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { encrypt } from "./encryption";
 
 vi.mock("../db/messages", () => ({
@@ -181,5 +181,36 @@ describe("getChatGpt", () => {
 
     expect(result).toBe("Nothing's happened here yet.");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  describe("local-dev fallback", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("returns a canned reply and skips the network call when OPENAI_API_KEY is unset outside production/test", async () => {
+      vi.mocked(getMessageHistoryForTopic).mockResolvedValue([
+        {
+          id: "m1",
+          text: encrypt("hey everyone", "m1"),
+          mediaUrl: "",
+          name: "Alice Smith",
+        },
+      ] as any);
+      vi.stubEnv("NODE_ENV", "development");
+      vi.stubEnv("OPENAI_API_KEY", "");
+      vi.stubGlobal("fetch", vi.fn());
+
+      const result = await getChatGpt({
+        query: "what's new",
+        userId: "u1",
+        topicId: "topic-1",
+        circleId: "circle-1",
+        activeUsers,
+      });
+
+      expect(result).toMatch(/canned reply/);
+      expect(fetch).not.toHaveBeenCalled();
+    });
   });
 });

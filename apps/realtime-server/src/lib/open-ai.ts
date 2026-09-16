@@ -5,6 +5,7 @@ import { decrypt } from "./encryption";
 import { getMessageHistoryForTopic } from "../db/messages";
 import { getTopicSummary } from "../db/topics";
 import { getCircleMembers } from "../db/circles";
+import { isLocalDev } from "./is-local-dev";
 
 type User = Pick<DbUser, "id" | "name">;
 
@@ -62,12 +63,7 @@ const LOCAL_DEV_REPLY =
   "(local dev: no OPENAI_API_KEY set, this is a canned reply)";
 
 async function callOpenAI(messages: ChatMessage[]) {
-  // Excludes "test" too, not just "production" -- open-ai.test.ts exercises this
-  // function directly against a mocked fetch and needs the real network path.
-  if (
-    !["production", "test"].includes(process.env.NODE_ENV ?? "") &&
-    !process.env.OPENAI_API_KEY
-  ) {
+  if (isLocalDev() && !process.env.OPENAI_API_KEY) {
     return LOCAL_DEV_REPLY;
   }
 
