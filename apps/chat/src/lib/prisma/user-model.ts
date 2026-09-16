@@ -17,6 +17,22 @@ export const userModel = {
     });
   },
 
+  // Scoped to synthetic accounts only (googleId prefix "seed-" from prisma/seed.ts).
+  async getSeedUserByEmail({
+    email,
+    select,
+  }: {
+    email: string;
+    select: Prisma.UserSelect;
+  }) {
+    return (
+      (await prismaClient.user.findFirst({
+        where: { email, googleId: { startsWith: "seed-" } },
+        select,
+      })) ?? undefined
+    );
+  },
+
   async getMembersForCircle({
     userId,
     circleId,

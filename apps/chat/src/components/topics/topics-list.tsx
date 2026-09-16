@@ -359,6 +359,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                         >
                           <span
                             className={cn(
+                              "truncate min-w-0",
                               isUnread &&
                                 "underline decoration-wavy decoration-mention underline-offset-4",
                               isMuted && "text-muted-foreground",
@@ -366,7 +367,7 @@ export const TopicsList = ({ topics, circle, unreadTopicIds }: Props) => {
                           >
                             {topic.name}
                           </span>
-                          <div className="flex gap-1 ml-auto">
+                          <div className="flex gap-1 ml-auto shrink-0">
                             {activeUsers.map((user) => (
                               <UserAvatar
                                 key={user.id}

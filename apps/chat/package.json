@@ -18,7 +18,11 @@
     "db:studio": "pnpm db:up && npx dotenv -e .env.local -- prisma studio",
     "db:genpush": "pnpm db:generate && pnpm db:push",
     "db:migrate": "pnpm db:up && npx dotenv -e .env.local -- prisma migrate dev",
-    "db:deploy": "npx prisma migrate deploy"
+    "db:deploy": "npx prisma migrate deploy",
+    "db:seed": "pnpm db:up && npx dotenv -e .env.local -- prisma db seed"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
@@ -87,6 +91,7 @@
     "postcss": "^8.4.35",
     "prisma": "^5.10.2",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"

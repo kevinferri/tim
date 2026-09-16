@@ -1,3 +1,6 @@
+// Before any import: pg/knex write Dates in local time, which Prisma reads back as UTC.
+process.env.TZ = "UTC";
+
 import { createServer } from "http";
 import { DefaultEventsMap, Server } from "socket.io";
 import { registerEventHandlers } from "./event-handlers/main";

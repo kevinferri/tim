@@ -4,10 +4,14 @@ import { redirect } from "next/navigation";
 import { Routes } from "@/routes";
 import { cn } from "@/lib/utils";
 import { getLoggedInUserId } from "@/lib/session";
+import { prismaClient } from "@/lib/prisma/client";
 import { SignIn } from "@/components/auth/signin";
 import { SignUp } from "@/components/auth/signup";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { CodeIcon } from "@radix-ui/react-icons";
+import { TIM_SANDBOX_EMAIL } from "../../../prisma/seed-constants";
 
 export default async function LogInPage({
   searchParams,
@@ -21,6 +25,14 @@ export default async function LogInPage({
     const redirectTo = params?.callbackUrl ? params.callbackUrl : Routes.Home;
     return redirect(redirectTo);
   }
+
+  const timSandbox =
+    process.env.NODE_ENV !== "production"
+      ? await prismaClient.user.getSeedUserByEmail({
+          email: TIM_SANDBOX_EMAIL,
+          select: { email: true },
+        })
+      : null;
 
   return (
     <div className={cn("grid grid-cols-2 h-screen")}>
@@ -47,6 +59,18 @@ export default async function LogInPage({
       </div>
       <div className={cn("px-10 py-12 flex flex-col")}>
         <div className={cn("flex justify-end gap-3")}>
+          {timSandbox && (
+            <Button variant="secondary" asChild>
+              {/* Plain <a>, not <Link>: needs a full reload to pick up the new session. */}
+              <a
+                href={`/api/dev/login?email=${encodeURIComponent(timSandbox.email ?? "")}`}
+                className={cn("flex items-center gap-2")}
+              >
+                <CodeIcon />
+                Sign into test sandbox
+              </a>
+            </Button>
+          )}
           <SignIn />
           <ThemeToggle />
         </div>
