@@ -19,6 +19,8 @@ pnpm --filter chat <script>                       # Run a script in apps/chat (s
 pnpm --filter tim-chat-server <script>            # Run a script in apps/realtime-server (see its package.json name)
 pnpm --filter @tim/socket-types build              # Rebuild after changing packages/socket-types/src/index.ts
 pnpm --filter @tim/db-types build                 # Rebuild after changing apps/chat/prisma/schema.prisma
+pnpm setup:env                         # Fill in .env.local for both apps (see "Local environment setup" below)
+pnpm test:scripts                      # Run scripts/*.test.mjs (node:test) -- covers scripts/setup-env.mjs's parsing/reconciliation logic
 ```
 
 Each app keeps its own `package.json` name (`chat`, `tim-chat-server`) — `pnpm --filter <name> ...` is how you target one of them from the root. Per-app commands (Prisma db scripts, etc.) are documented in each app's own `CLAUDE.md`.
@@ -31,3 +33,13 @@ Each app keeps its own `package.json` name (`chat`, `tim-chat-server`) — `pnpm
 - `packages/socket-types` and `packages/db-types` both build via `tsc` to `dist/` + `.d.ts`; both apps resolve them through the pnpm workspace symlink (`"workspace:*"` in each app's `package.json`), so rebuild the relevant one (`pnpm --filter @tim/socket-types build` / `pnpm --filter @tim/db-types build`) after editing its source before relying on the change from either app.
 - Deployment: both apps run as components (`tim-fe`, `tim-ws`) of a single DigitalOcean App Platform App, sharing one domain — one push produces one coordinated deployment across both services. Each component builds from its own `Dockerfile` (`apps/chat/Dockerfile`, `apps/realtime-server/Dockerfile`) rather than DO's buildpack auto-detection, since buildpacks can't see a monorepo's root `pnpm-lock.yaml` from inside a component's subdirectory. Both Dockerfiles install pnpm globally via `npm install -g pnpm@<version>` pinned to the root `package.json`'s `"packageManager"` field, rather than `corepack enable` — corepack's signature verification has had stale-keyid failures against recently-published pnpm releases.
 - `.env.local` files are per-app (`apps/chat/.env.local`, `apps/realtime-server/.env.local`), gitignored, and not shared at the root.
+
+## Local environment setup
+
+Each app has a committed `apps/*/.env.example` listing every var it reads, split into three tiers:
+
+1. **`# auto`-tagged** — pure-random secrets (`JWT_SECRET`, `CRYPTO_KEY`, `NEXTAUTH_SECRET`). `pnpm setup:env` (root `scripts/setup-env.mjs`) generates these into `.env.local` if missing, and is safe to rerun (never overwrites an existing value). `JWT_SECRET` and `CRYPTO_KEY` are shared between the two apps (JWT verification + message encryption) — the script generates them once and writes the identical value into both apps' `.env.local`.
+2. **Known-safe local defaults** — ports, `localhost` URLs, the local Postgres connection string (`apps/chat/scripts/db.js` spins up a matching embedded instance). Already filled in in `.env.example`; `pnpm setup:env` copies them into `.env.local` on first run.
+3. **Real third-party credentials** — Google OAuth is still required locally on this branch (no dev-auth bypass yet). Cloudinary/Giphy/YouTube/OpenAI keys are optional: when one is missing outside production, the corresponding call site returns a real-shaped canned response instead of failing, so local dev works without acquiring them. See `apps/chat/src/lib/cloudinary.ts:uploadImage` and `apps/realtime-server/src/lib/media-fetchers.ts` / `open-ai.ts:callOpenAI` — if you see a fixed gif/video/reply/image locally instead of a live one, that's this fallback, not a bug.
+
+Run `pnpm install && pnpm setup:env` before `pnpm dev` on a fresh checkout.

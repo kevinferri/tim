@@ -5,6 +5,7 @@ import { decrypt } from "./encryption";
 import { getMessageHistoryForTopic } from "../db/messages";
 import { getTopicSummary } from "../db/topics";
 import { getCircleMembers } from "../db/circles";
+import { isLocalDev } from "./is-local-dev";
 
 type User = Pick<DbUser, "id" | "name">;
 
@@ -57,7 +58,15 @@ function generatePrompt({
   `.trim();
 }
 
+// Stands in for a real OpenAI call when OPENAI_API_KEY isn't set locally.
+const LOCAL_DEV_REPLY =
+  "(local dev: no OPENAI_API_KEY set, this is a canned reply)";
+
 async function callOpenAI(messages: ChatMessage[]) {
+  if (isLocalDev() && !process.env.OPENAI_API_KEY) {
+    return LOCAL_DEV_REPLY;
+  }
+
   const resp = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
