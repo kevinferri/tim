@@ -148,6 +148,43 @@ describe("emitUserChangeInTopic", () => {
       }),
     );
   });
+
+  it("keeps a user's other tab active when only one of their sockets is disconnecting", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue({
+      id: "circle-1",
+    } as any);
+
+    // The "disconnecting" event fires before the socket leaves its rooms, so
+    // fetchSockets() still returns both of this user's tabs here -- only the
+    // one actually disconnecting should be excluded, not the whole user.
+    const disconnectingTab = createMockSocket(
+      { id: "user-1", state: { isIdle: false, isTyping: true } },
+      "socket-a",
+    );
+    const remainingTab = createMockSocket(
+      { id: "user-1", state: { isIdle: false, isTyping: false } },
+      "socket-b",
+    );
+    const server = createMockServer({
+      socketsInRoom: [disconnectingTab as any, remainingTab as any],
+    });
+
+    await emitUserChangeInTopic({
+      server: server as any,
+      socket: disconnectingTab as any,
+      topicId: "topic-1",
+      disconnectingSocketId: "socket-a",
+    });
+
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserJoinedOrLeftTopic,
+      expect.objectContaining({
+        activeUsers: [
+          { id: "user-1", state: { isIdle: false, isTyping: false } },
+        ],
+      }),
+    );
+  });
 });
 
 describe("handleJoinRoom", () => {

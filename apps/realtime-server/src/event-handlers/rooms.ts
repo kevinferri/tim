@@ -203,31 +203,26 @@ export async function emitUserChangeInTopic({
   server,
   socket,
   topicId,
-  disconnectingUser,
+  disconnectingSocketId,
   recordHistory,
 }: HandlerArgs & {
   topicId: string;
-  disconnectingUser?: string;
+  disconnectingSocketId?: string;
   recordHistory?: boolean;
 }) {
-  let hasDisconnected = false;
   const topicKey = toRoomKey({ id: topicId, roomType: RoomType.Topic });
-  const sockets = await server.in(topicKey).fetchSockets();
+  const roomSockets = await server.in(topicKey).fetchSockets();
 
+  // The "disconnecting" event fires before the socket actually leaves its
+  // rooms, so fetchSockets() above still includes it -- exclude it here by
+  // its own connection id (not the user id) so a user with another tab
+  // still open in this topic keeps showing up, merged from their remaining
+  // socket(s), instead of vanishing entirely.
   const activeUsers = dedupeUsersById(
-    sockets.map(({ data }) => data.user),
-  ).filter((user) => {
-    if (
-      disconnectingUser &&
-      disconnectingUser === user.id &&
-      !hasDisconnected
-    ) {
-      hasDisconnected = true;
-      return false;
-    }
-
-    return true;
-  });
+    roomSockets
+      .filter((roomSocket) => roomSocket.id !== disconnectingSocketId)
+      .map(({ data }) => data.user),
+  );
 
   const parentCircle = await getParentCircleIdForTopic({ topicId });
 

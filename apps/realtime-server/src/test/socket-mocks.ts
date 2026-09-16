@@ -1,13 +1,20 @@
 import { vi } from "vitest";
 
+let mockSocketIdCounter = 0;
+
 // Minimal Socket.IO Socket/Server doubles for unit-testing event handlers without a real connection; call `trigger(event, payload)` to invoke a registered handler.
+// `socketId` is the connection's own id (Socket.io's `socket.id`) -- distinct
+// from `user.id`, since one user can have multiple sockets (tabs/devices)
+// sharing the same user id but each with their own connection id.
 export function createMockSocket(
   user: Record<string, unknown> = { id: "user-1" },
+  socketId: string = `mock-socket-${++mockSocketIdCounter}`,
 ) {
   const listeners = new Map<string, (...args: any[]) => any>();
   const rooms = new Set<string>();
 
   const socket = {
+    id: socketId,
     data: { user },
     rooms,
     on: vi.fn((event: string, cb: (...args: any[]) => any) => {

@@ -42,7 +42,7 @@ describe("handleClientDisconnecting", () => {
       socket,
       topicId: "topic-1",
       recordHistory: true,
-      disconnectingUser: "user-1",
+      disconnectingSocketId: socket.id,
     });
   });
 
