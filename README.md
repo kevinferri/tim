@@ -1,5 +1,3 @@
-# Tim
-
 <img src="apps/chat/public/assets/logo.svg" alt="Tim logo" width="64" height="64">
 
 Topic Instant Messenger
