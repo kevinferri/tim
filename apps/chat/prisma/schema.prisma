@@ -132,9 +132,14 @@ model TopicHistory {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  // Specific 
+  // Specific
   userId    String
   topicId   String
+  // The user's manual sidebar position for this topic within its circle.
+  // Sparse: only set once a circle's topics have been manually reordered at
+  // least once -- null sorts after any explicitly-ordered topics (new/never-
+  // dragged topics land at the end, same as most chat apps).
+  order     Float?
 
   // Relations
   user     User    @relation("topicHistoryForUser", fields: [userId], references: [id], onDelete: Cascade)

@@ -18,6 +18,7 @@ export enum SocketEvent {
   UpsertedTopic = "topic:upserted",
   DeletedTopic = "topic:deleted",
   UserJoinedOrLeftTopic = "topic:userJoinedOrLeft",
+  ReorderedTopics = "topic:reordered",
 
   // circles
   UpsertedCircle = "circle:upserted",

@@ -26,3 +26,16 @@ export function handleDeletedTopic({ socket, server }: HandlerArgs) {
     },
   });
 }
+
+export function handleReorderedTopics({ socket, server }: HandlerArgs) {
+  registerRoomEvent({
+    socket,
+    server,
+    event: SocketEvent.ReorderedTopics,
+    roomType: RoomType.Circle,
+    getId: (payload) => payload.circleId,
+    handler: ({ server, payload, roomKey }) => {
+      server.to(roomKey).emit(SocketEvent.ReorderedTopics, payload);
+    },
+  });
+}

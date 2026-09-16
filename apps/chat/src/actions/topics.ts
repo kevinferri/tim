@@ -56,3 +56,19 @@ export async function deleteTopic({
     circleId,
   });
 }
+
+export async function reorderTopics({
+  circleId,
+  orderedTopicIds,
+}: {
+  circleId: string;
+  orderedTopicIds: string[];
+}) {
+  const userId = await getLoggedInUserId();
+
+  return await prismaClient.topicHistory.reorderForUser({
+    userId,
+    circleId,
+    orderedTopicIds,
+  });
+}
