@@ -131,6 +131,22 @@ const CIRCLES: CircleSpec[] = [
             senderEmail: "confucius@example.com",
             text: "A journey of a thousand messages begins with a single 'hello'.",
           },
+          {
+            senderEmail: TIM_SANDBOX_EMAIL,
+            text: "Good to see everyone made it in.",
+          },
+          {
+            senderEmail: "marcus.aurelius@example.com",
+            text: "You have power over your mind, not over this chat's notification settings.",
+          },
+          {
+            senderEmail: "simone.debeauvoir@example.com",
+            text: "I came, I saw, I got added to a group chat.",
+          },
+          {
+            senderEmail: "socrates@example.com",
+            text: "The only true wisdom is knowing you scrolled past a message.",
+          },
         ],
       },
       {
@@ -148,6 +164,14 @@ const CIRCLES: CircleSpec[] = [
           {
             senderEmail: "confucius@example.com",
             text: "He who mutes the chat still hears wisdom.",
+          },
+          {
+            senderEmail: "marcus.aurelius@example.com",
+            text: "Waste no more time arguing what a good group chat participant should be. Be one.",
+          },
+          {
+            senderEmail: "simone.debeauvoir@example.com",
+            text: "Ethics committee is now in session. Please mute your notifications.",
           },
           {
             senderEmail: TIM_SANDBOX_EMAIL,
