@@ -85,7 +85,10 @@ function main() {
 
       const value = sharedValues[line.key] ?? generateSecret();
       generated.push(`${line.key} (${path.relative(ROOT, localPath)})`);
-      return `${line.key}=${value}`;
+      // Keep the "# auto" tag so a later-cleared value still gets
+      // regenerated on a future rerun instead of being misreported as an
+      // optional/third-party var that's just blank.
+      return `${line.key}=${value} # auto`;
     });
 
     writeFileSync(localPath, updated.join("\n"));

@@ -22,6 +22,17 @@ test("parseEnvLines detects a trailing '# auto' tag on a blank value", () => {
   assert.equal(line.auto, true);
 });
 
+test("parseEnvLines keeps the '# auto' tag on a line with a generated value", () => {
+  // Regression: setup-env.mjs writes generated values back as "KEY=value # auto"
+  // (not bare "KEY=value") specifically so a later-cleared secret is still
+  // recognized as auto-generatable on the next run, instead of being
+  // misreported as a blank optional/third-party var.
+  const [line] = parseEnvLines("JWT_SECRET=abc123 # auto");
+
+  assert.equal(line.value, "abc123");
+  assert.equal(line.auto, true);
+});
+
 test("parseEnvLines preserves comment and blank lines verbatim, keyless", () => {
   const [comment, blank] = parseEnvLines("# a comment\n");
 
