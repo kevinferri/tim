@@ -17,6 +17,7 @@ type Store = {
   topicMap: TopicMap;
   mergeCircleSnapshot: (topicMap: TopicMap) => void;
   setTopicPresence: (topicId: string, presence: TopicPresence) => void;
+  addSelfToTopic: (topicId: string, circleId: string, self: ActiveUser) => void;
   removeTopic: (topicId: string) => void;
 };
 
@@ -36,6 +37,23 @@ const useStore = create<Store>((set) => ({
         },
       },
     })),
+
+  addSelfToTopic: (topicId, circleId, self) =>
+    set((state) => {
+      const existing = state.topicMap[topicId];
+      return {
+        topicMap: {
+          ...state.topicMap,
+          [topicId]: {
+            circleId: existing?.circleId ?? circleId,
+            activeUsers: uniqBy(
+              [...(existing?.activeUsers ?? []), self],
+              "id",
+            ),
+          },
+        },
+      };
+    }),
 
   removeTopic: (topicId) =>
     set((state) => {
@@ -73,6 +91,10 @@ export function usePresenceSync() {
   useSocketHandler<{ id: string }>(SocketEvent.DeletedTopic, (payload) =>
     removeTopic(payload.id),
   );
+}
+
+export function useAddSelfToTopic() {
+  return useStore((state) => state.addSelfToTopic);
 }
 
 export function useActiveCircleMembers() {

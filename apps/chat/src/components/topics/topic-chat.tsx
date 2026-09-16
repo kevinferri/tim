@@ -9,6 +9,8 @@ import {
   useTopicUiContext,
 } from "./current-topic-provider";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
+import { useAddSelfToTopic } from "@/components/dashboard/active-circle-members-store";
+import { useSelf } from "@/components/auth/self-provider";
 import {
   RoomType,
   useRoomManagement,
@@ -24,8 +26,10 @@ import { MoreMessagesSkeleton } from "@/components/topics/more-messages-skeleton
 export function TopicChat() {
   const { markTopicAsRead } = useUnreadTopics();
   const { joinRoom, leaveRoom } = useRoomManagement();
+  const addSelfToTopic = useAddSelfToTopic();
+  const self = useSelf();
 
-  const { topicId } = useTopicMetaContext();
+  const { topicId, circleId } = useTopicMetaContext();
   const {
     scrollToBottom,
     isAtBottom,
@@ -52,6 +56,10 @@ export function TopicChat() {
 
   useEffect(() => {
     joinRoom(topicId, RoomType.Topic);
+    addSelfToTopic(topicId, circleId, {
+      ...self,
+      state: { isIdle: false, isTyping: false },
+    });
 
     return () => {
       markTopicAsRead(topicId);
