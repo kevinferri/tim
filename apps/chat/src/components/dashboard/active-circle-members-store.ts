@@ -46,10 +46,7 @@ const useStore = create<Store>((set) => ({
           ...state.topicMap,
           [topicId]: {
             circleId: existing?.circleId ?? circleId,
-            activeUsers: uniqBy(
-              [...(existing?.activeUsers ?? []), self],
-              "id",
-            ),
+            activeUsers: uniqBy([...(existing?.activeUsers ?? []), self], "id"),
           },
         },
       };
