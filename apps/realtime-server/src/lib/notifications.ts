@@ -1,7 +1,7 @@
-import { type Server } from "socket.io";
 import { NotificationType } from "@tim/socket-types";
 import { SocketEvent } from "../event-handlers/main";
 import { getMessageOwnerInTopic } from "../db/messages";
+import { AppServer } from "./socket";
 
 export { NotificationType };
 
@@ -22,7 +22,7 @@ async function notifyUser({
   messageId,
   notificationType,
 }: {
-  server: Server;
+  server: AppServer;
   roomKey: string;
   receiverId: string;
   actor: Actor;
@@ -47,7 +47,7 @@ async function notifyUser({
 }
 
 type Args = {
-  server: Server;
+  server: AppServer;
   topicId: string;
   messageId: string;
   roomKey: string;
@@ -93,7 +93,7 @@ export async function emitMentionNotifications({
   actor,
   mentionedUserIds,
 }: {
-  server: Server;
+  server: AppServer;
   topicId: string;
   messageId: string;
   roomKey: string;

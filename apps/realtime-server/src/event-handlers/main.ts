@@ -1,4 +1,4 @@
-import { type Server, type Socket } from "socket.io";
+import { AppServer, AppSocket } from "../lib/socket";
 import {
   handleDeleteMessage,
   handleEditMessage,
@@ -30,11 +30,11 @@ import { SocketEvent } from "@tim/socket-types";
 export { SocketEvent };
 
 export type HandlerArgs = {
-  server: Server;
-  socket: Socket;
+  server: AppServer;
+  socket: AppSocket;
 };
 
-export function registerEventHandlers(server: Server) {
+export function registerEventHandlers(server: AppServer) {
   server.on(SocketEvent.Connection, (socket) => {
     socket.use((_, next) => {
       if (!socket.data.user) {

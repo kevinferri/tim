@@ -22,7 +22,7 @@ export function handleClientDisconnecting({ socket, server }: HandlerArgs) {
           socket,
           topicId: roomId,
           recordHistory: true,
-          disconnectingUser: socket.data.user.id,
+          disconnectingSocketId: socket.id,
         });
       }
     });

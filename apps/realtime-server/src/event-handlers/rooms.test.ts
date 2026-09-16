@@ -22,6 +22,7 @@ import {
   registerRoomEvent,
   handleJoinRoom,
   handleLeaveRoom,
+  emitUserChangeInTopic,
 } from "./rooms";
 import { SocketEvent } from "@tim/socket-types";
 
@@ -108,6 +109,81 @@ describe("registerRoomEvent", () => {
     await socket.trigger(SocketEvent.ToggleHighlight, { topicId: "topic-1" });
 
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+describe("emitUserChangeInTopic", () => {
+  it("merges a user's duplicate sockets (multiple tabs) instead of picking one arbitrarily", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue({
+      id: "circle-1",
+    } as any);
+
+    const idleSocket = createMockSocket({
+      id: "user-1",
+      state: { isIdle: true, isTyping: false },
+    });
+    const typingSocket = createMockSocket({
+      id: "user-1",
+      state: { isIdle: false, isTyping: true },
+    });
+    const server = createMockServer({
+      socketsInRoom: [idleSocket as any, typingSocket as any],
+    });
+    const actingSocket = createMockSocket({ id: "user-1" });
+
+    await emitUserChangeInTopic({
+      server: server as any,
+      socket: actingSocket as any,
+      topicId: "topic-1",
+    });
+
+    // Idle only if every one of the user's sockets is idle (false here,
+    // since typingSocket isn't); typing if any of them is (true here).
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserJoinedOrLeftTopic,
+      expect.objectContaining({
+        activeUsers: [
+          { id: "user-1", state: { isIdle: false, isTyping: true } },
+        ],
+      }),
+    );
+  });
+
+  it("keeps a user's other tab active when only one of their sockets is disconnecting", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue({
+      id: "circle-1",
+    } as any);
+
+    // The "disconnecting" event fires before the socket leaves its rooms, so
+    // fetchSockets() still returns both of this user's tabs here -- only the
+    // one actually disconnecting should be excluded, not the whole user.
+    const disconnectingTab = createMockSocket(
+      { id: "user-1", state: { isIdle: false, isTyping: true } },
+      "socket-a",
+    );
+    const remainingTab = createMockSocket(
+      { id: "user-1", state: { isIdle: false, isTyping: false } },
+      "socket-b",
+    );
+    const server = createMockServer({
+      socketsInRoom: [disconnectingTab as any, remainingTab as any],
+    });
+
+    await emitUserChangeInTopic({
+      server: server as any,
+      socket: disconnectingTab as any,
+      topicId: "topic-1",
+      disconnectingSocketId: "socket-a",
+    });
+
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.UserJoinedOrLeftTopic,
+      expect.objectContaining({
+        activeUsers: [
+          { id: "user-1", state: { isIdle: false, isTyping: false } },
+        ],
+      }),
+    );
   });
 });
 
