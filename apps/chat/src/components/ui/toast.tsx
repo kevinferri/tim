@@ -33,6 +33,10 @@ const toastVariants = cva(
           "success group border-success bg-success text-success-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
+        "quiet-success":
+          "quiet-success group border-l-2 border-l-success bg-background text-muted-foreground",
+        "quiet-destructive":
+          "quiet-destructive group border-l-2 border-l-destructive bg-background text-muted-foreground",
       },
     },
     defaultVariants: {
@@ -78,7 +82,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600 group-[.quiet-success]:top-1/2 group-[.quiet-success]:-translate-y-1/2 group-[.quiet-destructive]:top-1/2 group-[.quiet-destructive]:-translate-y-1/2",
       className,
     )}
     toast-close=""
