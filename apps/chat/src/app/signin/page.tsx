@@ -10,6 +10,7 @@ import { SignUp } from "@/components/auth/signup";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { CodeIcon } from "@radix-ui/react-icons";
 import { TIM_SANDBOX_EMAIL } from "../../../prisma/seed-constants";
 
 export default async function LogInPage({
@@ -58,6 +59,18 @@ export default async function LogInPage({
       </div>
       <div className={cn("px-10 py-12 flex flex-col")}>
         <div className={cn("flex justify-end gap-3")}>
+          {timSandbox && (
+            <Button variant="secondary" asChild>
+              {/* Plain <a>, not <Link>: needs a full reload to pick up the new session. */}
+              <a
+                href={`/api/dev/login?email=${encodeURIComponent(timSandbox.email ?? "")}`}
+                className={cn("flex items-center gap-2")}
+              >
+                <CodeIcon />
+                Sign into test sandbox
+              </a>
+            </Button>
+          )}
           <SignIn />
           <ThemeToggle />
         </div>
@@ -85,23 +98,6 @@ export default async function LogInPage({
             </Link>
             .
           </p>
-          {timSandbox && (
-            <div
-              className={cn(
-                "border rounded-md p-4 flex flex-col items-center gap-2 text-sm",
-              )}
-            >
-              <p className={cn("text-muted-foreground")}>Dev only</p>
-              <Button variant="secondary" asChild>
-                {/* Plain <a>, not <Link>: needs a full reload to pick up the new session. */}
-                <a
-                  href={`/api/dev/login?email=${encodeURIComponent(timSandbox.email ?? "")}`}
-                >
-                  Log in to Tim Sandbox
-                </a>
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     </div>
