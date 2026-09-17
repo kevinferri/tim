@@ -66,9 +66,28 @@ export async function reorderTopics({
 }) {
   const userId = await getLoggedInUserId();
 
-  return await prismaClient.topicHistory.reorderForUser({
+  return await prismaClient.topicPreference.reorderForUser({
     userId,
     circleId,
     orderedTopicIds,
+  });
+}
+
+export async function setTopicMuted({
+  topicId,
+  circleId,
+  isMuted,
+}: {
+  topicId: string;
+  circleId: string;
+  isMuted: boolean;
+}) {
+  const userId = await getLoggedInUserId();
+
+  return await prismaClient.topicPreference.setMutedForUser({
+    userId,
+    circleId,
+    topicId,
+    isMuted,
   });
 }

@@ -5,6 +5,7 @@ import { topicModel } from "@/lib/prisma/topic-model";
 import { messageModel } from "@/lib/prisma/message-model";
 import { highlightModel } from "@/lib/prisma/highlight-model";
 import { topicHistoryModel } from "@/lib/prisma/topic-history-model";
+import { topicPreferenceModel } from "@/lib/prisma/topic-preference-model";
 
 declare global {
   var prismaClient: ReturnType<typeof createClient> | undefined;
@@ -42,6 +43,7 @@ const createClient = () => {
       message: messageModel,
       highlight: highlightModel,
       topicHistory: topicHistoryModel,
+      topicPreference: topicPreferenceModel,
     },
   });
 };

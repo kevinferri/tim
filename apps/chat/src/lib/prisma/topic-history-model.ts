@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { prismaClient } from "@/lib/prisma/client";
 import keyBy from "lodash.keyby";
 
@@ -86,7 +85,6 @@ export const topicHistoryModel = {
       select: {
         updatedAt: true,
         topicId: true,
-        order: true,
       },
     });
   },
@@ -139,57 +137,5 @@ export const topicHistoryModel = {
       data: userIds.map((userId) => ({ topicId, userId })),
       skipDuplicates: true,
     });
-  },
-
-  // Persists the user's manual sidebar order for a circle's topics. Takes
-  // the full visible order rather than a single moved item -- simpler than
-  // fractional-index bookkeeping and cheap at per-circle topic counts.
-  async reorderForUser({
-    userId,
-    circleId,
-    orderedTopicIds,
-  }: {
-    userId?: string;
-    circleId: string;
-    orderedTopicIds: string[];
-  }) {
-    if (!userId || !orderedTopicIds.length) return false;
-
-    const isInCircle = await prismaClient.circle.isUserInCircle({
-      userId,
-      circleId,
-    });
-
-    if (!isInCircle) return false;
-
-    // Only persist order for topics that actually belong to this circle --
-    // guards against a stale/tampered id list reordering a user's history
-    // for a topic outside it.
-    const topicsInCircle = await prismaClient.topic.findMany({
-      where: { id: { in: orderedTopicIds }, circleId },
-      select: { id: true },
-    });
-    const validTopicIds = new Set(topicsInCircle.map(({ id }) => id));
-    const idsToOrder = orderedTopicIds.filter((id) => validTopicIds.has(id));
-
-    if (!idsToOrder.length) return false;
-
-    // Raw SQL rather than prismaClient.topicHistory.upsert(): an ORM-level
-    // upsert would touch @updatedAt on every row regardless of which fields
-    // changed, which getUnreadTopicIds reads as "last visited" -- a reorder
-    // would silently clear a topic's unread badge. This only ever writes
-    // `order` on conflict, leaving updatedAt (and createdAt) untouched.
-    await prismaClient.$transaction(
-      idsToOrder.map(
-        (topicId, index) => prismaClient.$executeRaw`
-          INSERT INTO "topic_histories" ("id", "userId", "topicId", "order")
-          VALUES (${randomUUID()}, ${userId}, ${topicId}, ${index * 1000})
-          ON CONFLICT ("userId", "topicId")
-          DO UPDATE SET "order" = EXCLUDED."order"
-        `,
-      ),
-    );
-
-    return true;
   },
 };

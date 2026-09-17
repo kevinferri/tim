@@ -12,11 +12,7 @@ import {
 } from "./socket";
 import { handleJoinRoom, handleLeaveRoom } from "./rooms";
 import { handleOnAny, handleOnAnyOutgoing } from "./any";
-import {
-  handleDeletedTopic,
-  handleReorderedTopics,
-  handleUpsertedTopic,
-} from "./topics";
+import { handleDeletedTopic, handleUpsertedTopic } from "./topics";
 import { handleToggleHighlight } from "./highlights";
 import { handleDeletedCircle, handleUpsertedCircle } from "./circles";
 import {
@@ -68,7 +64,6 @@ export function registerEventHandlers(server: AppServer) {
 
     handleUpsertedTopic({ socket, server });
     handleDeletedTopic({ socket, server });
-    handleReorderedTopics({ socket, server });
 
     handleToggleHighlight({ socket, server });
 

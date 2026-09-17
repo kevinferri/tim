@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Topic } from "@prisma/client";
 import {
   DndContext,
   DragEndEvent,
-  DraggableAttributes,
-  DraggableSyntheticListeners,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -23,11 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  useSocketHandler,
-  SocketEvent,
-  useSocketEmit,
-} from "@/components/socket/use-socket";
+import { useSocketHandler, SocketEvent } from "@/components/socket/use-socket";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
@@ -42,7 +36,7 @@ import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { UpsertCircleForm } from "@/components/circles/upsert-circle-form";
-import { reorderTopics } from "@/actions/topics";
+import { reorderTopics, setTopicMuted } from "@/actions/topics";
 import {
   ArrowRightIcon,
   ChevronDownIcon,
@@ -50,7 +44,6 @@ import {
   CopyIcon,
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
-  DragHandleDots2Icon,
   GearIcon,
   HomeIcon,
   PlusIcon,
@@ -79,6 +72,7 @@ type Props = {
   topics?: Topic[];
   unreadTopicIds: Record<string, boolean>;
   topicOrder: Record<string, number | null>;
+  mutedTopicIds: Record<string, boolean>;
   circle: Prisma.CircleGetPayload<{
     include: { members: true };
   }>;
@@ -105,11 +99,6 @@ type DeletedTopicHandlerProps = {
   };
 };
 
-type ReorderedTopicsHandlerProps = {
-  circleId: string;
-  orderedTopicIds: string[];
-};
-
 type TopicWithMeta = Topic & {
   isMuted: boolean;
   isUnread: boolean;
@@ -124,14 +113,14 @@ type TopicRowProps = {
   onToggleMute: () => void;
   onGoToTopic: () => void;
   onCopyLink: () => void;
-  dragHandle?: {
-    attributes: DraggableAttributes;
-    listeners: DraggableSyntheticListeners;
-  };
+  // Sortable rows pass this so the click that fires right after a drag's
+  // pointerup doesn't also navigate into the topic. Undefined for rows that
+  // can't be dragged (default topic, muted group).
+  consumeSuppressedClick?: () => boolean;
 };
 
 // Shared row content for both the sortable "active topics" group and the
-// static "muted" group -- only the former passes `dragHandle`.
+// static "muted" group.
 const TopicRow = ({
   topic,
   circle,
@@ -140,57 +129,50 @@ const TopicRow = ({
   onToggleMute,
   onGoToTopic,
   onCopyLink,
-  dragHandle,
+  consumeSuppressedClick,
 }: TopicRowProps) => {
   const link = `/circles/${circle.id}/topics/${topic.id}`;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div className="flex items-center gap-1">
-          {dragHandle && (
-            <button
-              {...dragHandle.attributes}
-              {...dragHandle.listeners}
-              className="shrink-0 touch-none cursor-grab text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
-              aria-label={`Reorder ${topic.name}`}
+        <Link
+          href={link}
+          onClick={(e) => {
+            if (consumeSuppressedClick?.()) e.preventDefault();
+          }}
+        >
+          <Button
+            variant={isCurrentTopic ? "secondary" : "ghost"}
+            className="w-full flex justify-start text-base font-normal p-3"
+          >
+            <span
+              className={cn(
+                "truncate min-w-0",
+                topic.isUnread &&
+                  "underline decoration-wavy decoration-mention underline-offset-4",
+                topic.isMuted && "text-muted-foreground",
+              )}
             >
-              <DragHandleDots2Icon />
-            </button>
-          )}
-          <Link href={link} className="min-w-0 flex-1">
-            <Button
-              variant={isCurrentTopic ? "secondary" : "ghost"}
-              className="w-full flex justify-start text-base font-normal p-3"
-            >
-              <span
-                className={cn(
-                  "truncate min-w-0",
-                  topic.isUnread &&
-                    "underline decoration-wavy decoration-mention underline-offset-4",
-                  topic.isMuted && "text-muted-foreground",
-                )}
-              >
-                {topic.name}
-              </span>
-              <div className="flex gap-1 ml-auto shrink-0">
-                {activeUsers.map((user) => (
-                  <UserAvatar
-                    key={user.id}
-                    id={user.id}
-                    name={user.name}
-                    imageUrl={user.imageUrl}
-                    createdAt={user.createdAt}
-                    size="xs"
-                    showStatus={false}
-                    status={user.status}
-                    lastStatusUpdate={user.lastStatusUpdate}
-                  />
-                ))}
-              </div>
-            </Button>
-          </Link>
-        </div>
+              {topic.name}
+            </span>
+            <div className="flex gap-1 ml-auto shrink-0">
+              {activeUsers.map((user) => (
+                <UserAvatar
+                  key={user.id}
+                  id={user.id}
+                  name={user.name}
+                  imageUrl={user.imageUrl}
+                  createdAt={user.createdAt}
+                  size="xs"
+                  showStatus={false}
+                  status={user.status}
+                  lastStatusUpdate={user.lastStatusUpdate}
+                />
+              ))}
+            </div>
+          </Button>
+        </Link>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-30">
         <ContextMenuItem onClick={onGoToTopic}>
@@ -216,18 +198,22 @@ const TopicRow = ({
   );
 };
 
-const SortableTopicRow = (props: Omit<TopicRowProps, "dragHandle">) => {
+// The whole row is the drag surface (no separate handle icon -- sidebar real
+// estate is scarce). PointerSensor's activationConstraint below means a
+// plain click/tap doesn't get swallowed as a drag.
+const SortableTopicRow = (props: TopicRowProps) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: props.topic.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    cursor: "grab",
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <TopicRow {...props} dragHandle={{ attributes, listeners }} />
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TopicRow {...props} />
     </div>
   );
 };
@@ -237,6 +223,7 @@ export const TopicsList = ({
   circle,
   unreadTopicIds,
   topicOrder,
+  mutedTopicIds,
 }: Props) => {
   const params = useParams();
   const self = useSelf();
@@ -249,18 +236,35 @@ export const TopicsList = ({
     `tim:topics-nav-minimized:${self.id}`,
     false,
   );
-  const [mutedTopics, setMutedTopics] = useLocalStorage<string[]>(
-    `tim:muted-topics:${self.id}`,
-    [],
-  );
   const [isMutedSectionCollapsed, setIsMutedSectionCollapsed] = useLocalStorage(
     `tim:muted-topics-collapsed:${self.id}`,
     false,
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [dragOverrideIds, setDragOverrideIds] = useState<string[] | null>(null);
 
-  const reorderedTopics = useSocketEmit(SocketEvent.ReorderedTopics);
+  // Optimistic overlays over the server-provided props. There's no socket
+  // event keeping these in sync across tabs/devices (order and mute are
+  // per-user and invisible to everyone else, so it isn't worth the extra
+  // wire event) -- each is cleared only on failure, reverting to whatever
+  // the server props actually say; on success it's left in place (already
+  // correct) and a background router.refresh() eventually folds it into
+  // fresh props for the next mount/navigation.
+  const [dragOverrideIds, setDragOverrideIds] = useState<string[] | null>(null);
+  const [muteOverrides, setMuteOverrides] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  // A drag's pointerup still fires a native click on the row afterward --
+  // suppress just that one click so dragging a topic doesn't also navigate
+  // into it. Set on drag start (which activationConstraint below guarantees
+  // only fires for a real drag, never a plain click) and consumed by
+  // whichever row's Link click handler runs next.
+  const suppressNextClickRef = useRef(false);
+  function consumeSuppressedClick() {
+    if (!suppressNextClickRef.current) return false;
+    suppressNextClickRef.current = false;
+    return true;
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -274,12 +278,36 @@ export const TopicsList = ({
     setShowTopics(true);
   });
 
-  // A fresh `topicOrder` prop means the server round-trip from our own (or
-  // someone else's) reorder has landed -- drop the optimistic override so
-  // real data takes over.
-  useEffect(() => {
-    setDragOverrideIds(null);
-  }, [topicOrder]);
+  function isMutedFor(topicId: string) {
+    return muteOverrides[topicId] ?? mutedTopicIds[topicId] ?? false;
+  }
+
+  async function handleToggleMute(topic: TopicWithMeta) {
+    const nextMuted = !isMutedFor(topic.id);
+    setMuteOverrides((prev) => ({ ...prev, [topic.id]: nextMuted }));
+
+    const success = await setTopicMuted({
+      topicId: topic.id,
+      circleId: circle.id,
+      isMuted: nextMuted,
+    });
+
+    if (success) {
+      router.refresh();
+      return;
+    }
+
+    setMuteOverrides((prev) => {
+      const next = { ...prev };
+      delete next[topic.id];
+      return next;
+    });
+    toast({
+      variant: "destructive",
+      title: "Couldn't update mute status",
+      description: "Please try again.",
+    });
+  }
 
   const isGroupedView = !isMinimized && !searchQuery;
 
@@ -290,7 +318,7 @@ export const TopicsList = ({
 
     return topics
       .map((topic) => {
-        const isMuted = mutedTopics.includes(topic.id);
+        const isMuted = isMutedFor(topic.id);
         const isUnread = unreadTopics[topic.id];
         const isDefault = circle.defaultTopicId === topic.id;
 
@@ -315,9 +343,11 @@ export const TopicsList = ({
 
         return 0;
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     topics,
-    mutedTopics,
+    muteOverrides,
+    mutedTopicIds,
     unreadTopics,
     circle.defaultTopicId,
     searchQuery,
@@ -338,7 +368,7 @@ export const TopicsList = ({
       createdIndex: number;
     })[] = topics.map((topic, createdIndex) => ({
       ...topic,
-      isMuted: mutedTopics.includes(topic.id),
+      isMuted: isMutedFor(topic.id),
       isUnread: unreadTopics[topic.id],
       isDefault: circle.defaultTopicId === topic.id,
       sortOrder: topicOrder[topic.id] ?? null,
@@ -366,20 +396,39 @@ export const TopicsList = ({
         .filter((topic) => !topic.isDefault && topic.isMuted)
         .sort(byOrder),
     };
-  }, [topics, mutedTopics, unreadTopics, circle.defaultTopicId, topicOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    topics,
+    muteOverrides,
+    mutedTopicIds,
+    unreadTopics,
+    circle.defaultTopicId,
+    topicOrder,
+  ]);
 
+  // Applies the sticky drag override on top of the freshly-computed active
+  // list: reorders whatever it can, then appends anything the override
+  // doesn't know about yet (a topic created after the last drag) so it
+  // can't silently disappear from the sidebar.
   const displayedActiveTopics = useMemo(() => {
     if (!dragOverrideIds) return grouped.activeTopics;
 
     const byId = new Map(
       grouped.activeTopics.map((topic) => [topic.id, topic]),
     );
-    return dragOverrideIds
+    const overridden = dragOverrideIds
       .map((id) => byId.get(id))
       .filter((topic): topic is TopicWithMeta => Boolean(topic));
+
+    const seen = new Set(overridden.map((topic) => topic.id));
+    const appended = grouped.activeTopics.filter(
+      (topic) => !seen.has(topic.id),
+    );
+
+    return [...overridden, ...appended];
   }, [grouped.activeTopics, dragOverrideIds]);
 
-  function handleDragEnd({ active, over }: DragEndEvent) {
+  async function handleDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return;
 
     const oldIndex = displayedActiveTopics.findIndex(
@@ -399,10 +448,21 @@ export const TopicsList = ({
 
     setDragOverrideIds(orderedTopicIds);
 
-    reorderTopics({ circleId: circle.id, orderedTopicIds }).then((success) => {
-      if (success) {
-        reorderedTopics.emit({ circleId: circle.id, orderedTopicIds });
-      }
+    const success = await reorderTopics({
+      circleId: circle.id,
+      orderedTopicIds,
+    });
+
+    if (success) {
+      router.refresh();
+      return;
+    }
+
+    setDragOverrideIds(null);
+    toast({
+      variant: "destructive",
+      title: "Couldn't save the new topic order",
+      description: "Please try again.",
     });
   }
 
@@ -455,14 +515,6 @@ export const TopicsList = ({
     },
   );
 
-  useSocketHandler<ReorderedTopicsHandlerProps>(
-    SocketEvent.ReorderedTopics,
-    (payload) => {
-      if (payload.circleId !== circle.id) return;
-      router.refresh();
-    },
-  );
-
   if (!topics) {
     return <>No topics yet...</>;
   }
@@ -473,19 +525,14 @@ export const TopicsList = ({
     isCurrentTopic: topic.id === params.topicId,
     activeUsers: getActiveMembersInTopic(topic.id),
     onGoToTopic: () => router.push(`/circles/${circle.id}/topics/${topic.id}`),
-    onToggleMute: () => {
-      setMutedTopics((mutedTopicIds) => {
-        return topic.isMuted
-          ? mutedTopicIds.filter((id) => id !== topic.id)
-          : [...mutedTopicIds, topic.id];
-      });
-    },
+    onToggleMute: () => handleToggleMute(topic),
     onCopyLink: () => {
       navigator.clipboard.writeText(
         `${window.location.host}/circles/${circle.id}/topics/${topic.id}`,
       );
       toast({ duration: 3000, title: `Link copied` });
     },
+    consumeSuppressedClick,
   });
 
   return (
@@ -553,11 +600,6 @@ export const TopicsList = ({
             flatTopics.map((topic) => {
               const activeUsers = getActiveMembersInTopic(topic.id);
               const link = `/circles/${circle.id}/topics/${topic.id}`;
-              const isMuted = mutedTopics.includes(topic.id);
-              const isUnread =
-                !isMuted &&
-                unreadTopics[topic.id] &&
-                params.topicId !== topic.id;
 
               return (
                 <ContextMenu key={topic.id}>
@@ -576,7 +618,7 @@ export const TopicsList = ({
                               >
                                 <AvatarFallback
                                   className={
-                                    isUnread
+                                    topic.isUnread
                                       ? "bg-highlight dark:bg-purple-900 border"
                                       : ""
                                   }
@@ -612,7 +654,7 @@ export const TopicsList = ({
                             <div className="flex flex-col gap-2">
                               <div className="text-sm leading-none flex items-center gap-1">
                                 <span>{topic.name}</span>
-                                {isUnread && (
+                                {topic.isUnread && (
                                   <Badge
                                     variant="secondary"
                                     className="text-[10px] p-1 tracking-wide dark:bg-purple-900"
@@ -655,9 +697,9 @@ export const TopicsList = ({
                           <span
                             className={cn(
                               "truncate min-w-0",
-                              isUnread &&
+                              topic.isUnread &&
                                 "underline decoration-wavy decoration-mention underline-offset-4",
-                              isMuted && "text-muted-foreground",
+                              topic.isMuted && "text-muted-foreground",
                             )}
                           >
                             {topic.name}
@@ -688,18 +730,14 @@ export const TopicsList = ({
                         <ArrowRightIcon />
                       </ContextMenuShortcut>
                     </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={() => {
-                        setMutedTopics((mutedTopicIds) => {
-                          return isMuted
-                            ? mutedTopicIds.filter((id) => id !== topic.id)
-                            : [...mutedTopicIds, topic.id];
-                        });
-                      }}
-                    >
-                      {isMuted ? "Unmute" : "Mute"}
+                    <ContextMenuItem onClick={() => handleToggleMute(topic)}>
+                      {topic.isMuted ? "Unmute" : "Mute"}
                       <ContextMenuShortcut>
-                        {isMuted ? <SpeakerLoudIcon /> : <SpeakerOffIcon />}
+                        {topic.isMuted ? (
+                          <SpeakerLoudIcon />
+                        ) : (
+                          <SpeakerOffIcon />
+                        )}
                       </ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem
@@ -732,7 +770,11 @@ export const TopicsList = ({
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
+                onDragStart={() => {
+                  suppressNextClickRef.current = true;
+                }}
                 onDragEnd={handleDragEnd}
+                autoScroll={false}
               >
                 <SortableContext
                   items={displayedActiveTopics.map((topic) => topic.id)}
