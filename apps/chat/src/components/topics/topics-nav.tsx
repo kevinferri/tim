@@ -47,17 +47,31 @@ export async function TopicsNav({ circleId }: Props) {
   const topicList = topics as Topic[];
   const topicIds = topicList.map(({ id }) => id);
 
-  const unreadTopicIds = await prismaClient.topicHistory.getUnreadTopicIds({
-    userId,
-    circleId,
-    topicIds,
-  });
+  const [unreadTopicIds, topicPreferences] = await Promise.all([
+    prismaClient.topicHistory.getUnreadTopicIds({
+      userId,
+      circleId,
+      topicIds,
+    }),
+    prismaClient.topicPreference.getAllForUserAndCircle({ userId, circleId }),
+  ]);
+
+  const topicOrder = topicPreferences.reduce<Record<string, number | null>>(
+    (acc, { topicId, order }) => ({ ...acc, [topicId]: order }),
+    {},
+  );
+  const mutedTopicIds = topicPreferences.reduce<Record<string, boolean>>(
+    (acc, { topicId, isMuted }) => ({ ...acc, [topicId]: isMuted }),
+    {},
+  );
 
   if (parentCircle) {
     return (
       <TopicsList
         topics={topicList}
         unreadTopicIds={unreadTopicIds}
+        topicOrder={topicOrder}
+        mutedTopicIds={mutedTopicIds}
         circle={
           parentCircle as Prisma.CircleGetPayload<{
             include: { members: true };
