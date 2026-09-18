@@ -132,12 +132,22 @@ const TopicRow = ({
   consumeSuppressedClick,
 }: TopicRowProps) => {
   const link = `/circles/${circle.id}/topics/${topic.id}`;
+  // topic.isUnread is the raw flag used for sorting; the unread *treatment*
+  // is suppressed on muted topics (the point of muting) and on the topic
+  // you're already looking at.
+  const showUnread = topic.isUnread && !topic.isMuted && !isCurrentTopic;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger>
         <Link
           href={link}
+          // An <a href> is natively draggable, so without this the browser
+          // runs its own link-drag alongside dnd-kit's -- and dropping a
+          // dragged link inside the page makes Chromium navigate to it, so
+          // reordering a topic would also open it (with no click event
+          // involved, which is why the click guard below can't catch it).
+          draggable={false}
           onClick={(e) => {
             if (consumeSuppressedClick?.()) e.preventDefault();
           }}
@@ -149,7 +159,7 @@ const TopicRow = ({
             <span
               className={cn(
                 "truncate min-w-0",
-                topic.isUnread &&
+                showUnread &&
                   "underline decoration-wavy decoration-mention underline-offset-4",
                 topic.isMuted && "text-muted-foreground",
               )}
@@ -201,6 +211,12 @@ const TopicRow = ({
 // The whole row is the drag surface (no separate handle icon -- sidebar real
 // estate is scarce). PointerSensor's activationConstraint below means a
 // plain click/tap doesn't get swallowed as a drag.
+//
+// `attributes` has to be spread here, not just `listeners`: dropping it was
+// verified to break the drag/click split -- a drop then both reordered and
+// navigated into the topic. The tradeoff is that it adds role="button" +
+// tabIndex=0 to this wrapper, so each row is two tab stops (wrapper + its
+// <Link>) and nests a button role around a link.
 const SortableTopicRow = (props: TopicRowProps) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: props.topic.id });
@@ -254,16 +270,24 @@ export const TopicsList = ({
     {},
   );
 
-  // A drag's pointerup still fires a native click on the row afterward --
-  // suppress just that one click so dragging a topic doesn't also navigate
-  // into it. Set on drag start (which activationConstraint below guarantees
-  // only fires for a real drag, never a plain click) and consumed by
-  // whichever row's Link click handler runs next.
+  // Belt-and-braces for the drag/navigate split: the Link is draggable={false}
+  // so the browser can't link-drag it, but some browsers still fire a click on
+  // the row after a drag's pointerup. Set on drag start (activationConstraint
+  // below means that only happens for a real drag, never a plain click) and
+  // consumed by whichever row's Link click handler runs next.
   const suppressNextClickRef = useRef(false);
   function consumeSuppressedClick() {
     if (!suppressNextClickRef.current) return false;
     suppressNextClickRef.current = false;
     return true;
+  }
+  // Cleared on a macrotask so it outlives the click that fires synchronously
+  // after pointerup, but can't go stale and swallow an unrelated click later
+  // if no click follows the drag at all.
+  function releaseSuppressedClick() {
+    setTimeout(() => {
+      suppressNextClickRef.current = false;
+    }, 0);
   }
 
   const sensors = useSensors(
@@ -311,8 +335,9 @@ export const TopicsList = ({
 
   const isGroupedView = !isMinimized && !searchQuery;
 
-  // Legacy flat sort -- used while minimized (avatar rail) or searching,
-  // where grouping/dragging doesn't apply.
+  // Flat sort -- used while minimized (avatar rail) or searching, where
+  // grouping/dragging doesn't apply. isUnread here is the raw flag driving
+  // the sort; TopicRow decides whether to *show* the unread treatment.
   const flatTopics = useMemo(() => {
     if (!topics) return [];
 
@@ -429,6 +454,10 @@ export const TopicsList = ({
   }, [grouped.activeTopics, dragOverrideIds]);
 
   async function handleDragEnd({ active, over }: DragEndEvent) {
+    // First statement so every exit path below (including a drop on itself)
+    // schedules the release.
+    releaseSuppressedClick();
+
     if (!over || active.id === over.id) return;
 
     const oldIndex = displayedActiveTopics.findIndex(
@@ -598,166 +627,103 @@ export const TopicsList = ({
           {showTopics &&
             !isGroupedView &&
             flatTopics.map((topic) => {
+              // Searching while expanded renders the same rows as the
+              // grouped view, just ungrouped and undraggable -- only the
+              // minimized rail needs its own avatar-only treatment.
+              if (!isMinimized) {
+                return <TopicRow key={topic.id} {...rowPropsFor(topic)} />;
+              }
+
               const activeUsers = getActiveMembersInTopic(topic.id);
-              const link = `/circles/${circle.id}/topics/${topic.id}`;
+              const isCurrentTopic = topic.id === params.topicId;
+              const showUnread =
+                topic.isUnread && !topic.isMuted && !isCurrentTopic;
 
               return (
-                <ContextMenu key={topic.id}>
-                  <Link href={link}>
-                    {isMinimized ? (
-                      <TooltipProvider>
-                        <Tooltip delayDuration={100}>
-                          <TooltipTrigger>
-                            <div className="relative">
-                              <Avatar
-                                className={`active:border ${
-                                  params.topicId === topic.id
-                                    ? "border shadow-glow"
-                                    : "shadow-lg hover:opacity-80"
-                                }`}
-                              >
-                                <AvatarFallback
-                                  className={
-                                    topic.isUnread
-                                      ? "bg-highlight dark:bg-purple-900 border"
-                                      : ""
-                                  }
-                                >
-                                  <div className="mt-[1.5px]">
-                                    {topic.id === circle.defaultTopicId ? (
-                                      <HomeIcon height={16} width={16} />
-                                    ) : (
-                                      <span>
-                                        {getInitials(
-                                          topic.name.replace(
-                                            /([✀-➿]|[-]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[‑-⛿]|\uD83E[\uDD10-\uDDFF])/g,
-                                            "",
-                                          ),
-                                        )}
-                                      </span>
-                                    )}
-                                  </div>
-                                </AvatarFallback>
-                              </Avatar>
-                              {activeUsers.length > 0 && (
-                                <div className="border absolute top-[-4px] right-[-4px] w-[16px] h-[16px] text-[10px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
-                                  {activeUsers.length}
-                                </div>
-                              )}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="right"
-                            className="p-2"
-                            sideOffset={8}
+                <Link
+                  key={topic.id}
+                  href={`/circles/${circle.id}/topics/${topic.id}`}
+                >
+                  <TooltipProvider>
+                    <Tooltip delayDuration={100}>
+                      <TooltipTrigger>
+                        <div className="relative">
+                          <Avatar
+                            className={`active:border ${
+                              isCurrentTopic
+                                ? "border shadow-glow"
+                                : "shadow-lg hover:opacity-80"
+                            }`}
                           >
-                            <div className="flex flex-col gap-2">
-                              <div className="text-sm leading-none flex items-center gap-1">
-                                <span>{topic.name}</span>
-                                {topic.isUnread && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] p-1 tracking-wide dark:bg-purple-900"
-                                  >
-                                    New messages
-                                  </Badge>
+                            <AvatarFallback
+                              className={
+                                showUnread
+                                  ? "bg-highlight dark:bg-purple-900 border"
+                                  : ""
+                              }
+                            >
+                              <div className="mt-[1.5px]">
+                                {topic.isDefault ? (
+                                  <HomeIcon height={16} width={16} />
+                                ) : (
+                                  <span>
+                                    {getInitials(
+                                      topic.name.replace(
+                                        /([✀-➿]|[-]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[‑-⛿]|\uD83E[\uDD10-\uDDFF])/g,
+                                        "",
+                                      ),
+                                    )}
+                                  </span>
                                 )}
                               </div>
-                              {activeUsers.length > 0 && (
-                                <div className="flex gap-1">
-                                  {activeUsers.map((user) => {
-                                    return (
-                                      <UserAvatar
-                                        key={user.id}
-                                        id={user.id}
-                                        name={user.name}
-                                        imageUrl={user.imageUrl}
-                                        createdAt={user.createdAt}
-                                        size="xs"
-                                        showStatus={false}
-                                        status={user.status}
-                                        lastStatusUpdate={user.lastStatusUpdate}
-                                      />
-                                    );
-                                  })}
-                                </div>
-                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          {activeUsers.length > 0 && (
+                            <div className="border absolute top-[-4px] right-[-4px] w-[16px] h-[16px] text-[10px] rounded-full bg-purple-500 text-slate-100 flex items-center justify-center">
+                              {activeUsers.length}
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      <ContextMenuTrigger>
-                        <Button
-                          variant={
-                            topic.id === params.topicId ? "secondary" : "ghost"
-                          }
-                          className="w-full flex justify-start text-base font-normal p-3"
-                        >
-                          <span
-                            className={cn(
-                              "truncate min-w-0",
-                              topic.isUnread &&
-                                "underline decoration-wavy decoration-mention underline-offset-4",
-                              topic.isMuted && "text-muted-foreground",
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="right"
+                        className="p-2"
+                        sideOffset={8}
+                      >
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm leading-none flex items-center gap-1">
+                            <span>{topic.name}</span>
+                            {showUnread && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] p-1 tracking-wide dark:bg-purple-900"
+                              >
+                                New messages
+                              </Badge>
                             )}
-                          >
-                            {topic.name}
-                          </span>
-                          <div className="flex gap-1 ml-auto shrink-0">
-                            {activeUsers.map((user) => (
-                              <UserAvatar
-                                key={user.id}
-                                id={user.id}
-                                name={user.name}
-                                imageUrl={user.imageUrl}
-                                createdAt={user.createdAt}
-                                size="xs"
-                                showStatus={false}
-                                status={user.status}
-                                lastStatusUpdate={user.lastStatusUpdate}
-                              />
-                            ))}
                           </div>
-                        </Button>
-                      </ContextMenuTrigger>
-                    )}
-                  </Link>
-                  <ContextMenuContent className="w-30">
-                    <ContextMenuItem onClick={() => router.push(link)}>
-                      Go to topic
-                      <ContextMenuShortcut>
-                        <ArrowRightIcon />
-                      </ContextMenuShortcut>
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => handleToggleMute(topic)}>
-                      {topic.isMuted ? "Unmute" : "Mute"}
-                      <ContextMenuShortcut>
-                        {topic.isMuted ? (
-                          <SpeakerLoudIcon />
-                        ) : (
-                          <SpeakerOffIcon />
-                        )}
-                      </ContextMenuShortcut>
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          `${window.location.host}${link}`,
-                        );
-                        toast({
-                          duration: 3000,
-                          title: `Link copied`,
-                        });
-                      }}
-                    >
-                      Copy link
-                      <ContextMenuShortcut>
-                        <CopyIcon />
-                      </ContextMenuShortcut>
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
+                          {activeUsers.length > 0 && (
+                            <div className="flex gap-1">
+                              {activeUsers.map((user) => (
+                                <UserAvatar
+                                  key={user.id}
+                                  id={user.id}
+                                  name={user.name}
+                                  imageUrl={user.imageUrl}
+                                  createdAt={user.createdAt}
+                                  size="xs"
+                                  showStatus={false}
+                                  status={user.status}
+                                  lastStatusUpdate={user.lastStatusUpdate}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Link>
               );
             })}
 
@@ -797,6 +763,7 @@ export const TopicsList = ({
                     onClick={() =>
                       setIsMutedSectionCollapsed(!isMutedSectionCollapsed)
                     }
+                    aria-expanded={!isMutedSectionCollapsed}
                     className="flex items-center gap-1 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                   >
                     {isMutedSectionCollapsed ? (
