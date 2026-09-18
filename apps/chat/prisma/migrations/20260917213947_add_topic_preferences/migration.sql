@@ -12,9 +12,6 @@ CREATE TABLE "topic_preferences" (
 );
 
 -- CreateIndex
-CREATE INDEX "topic_preferences_userId_idx" ON "topic_preferences"("userId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "topic_preferences_userId_topicId_key" ON "topic_preferences"("userId", "topicId");
 
 -- AddForeignKey

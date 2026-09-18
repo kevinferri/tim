@@ -171,8 +171,9 @@ model TopicPreference {
   user     User    @relation("topicPreferencesForUser", fields: [userId], references: [id], onDelete: Cascade)
   topic    Topic   @relation("userPreferencesForTopic", fields: [topicId], references: [id], onDelete: Cascade)
 
+  // No separate @@index([userId]): the unique index on (userId, topicId)
+  // already covers userId-only lookups via its leftmost prefix.
   @@unique([userId, topicId])
-  @@index([userId])
 
   @@map(name: "topic_preferences")
 }
