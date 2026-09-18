@@ -201,6 +201,45 @@ describe("handleSendMessage", () => {
     );
   });
 
+  it("replies to a media-only message without throwing on its null text", async () => {
+    vi.mocked(getMessageForReplyPreview).mockResolvedValue({
+      id: "original-msg",
+      text: null,
+      userId: "author-1",
+      name: "Author One",
+    } as any);
+    vi.mocked(getMessageOwnerInTopic).mockResolvedValue({
+      id: "original-msg",
+      userId: "author-1",
+    } as any);
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-4",
+      text: encrypt("nice pic", "msg-4"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+      replyToId: "original-msg",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const server = createMockServer();
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "nice pic",
+      replyToId: "original-msg",
+    });
+
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.SendMessage,
+      expect.objectContaining({
+        replyTo: expect.objectContaining({ id: "original-msg", text: "" }),
+      }),
+    );
+  });
+
   it("sends as a plain message when replyToId doesn't resolve (stale, deleted, or cross-topic)", async () => {
     vi.mocked(getMessageForReplyPreview).mockResolvedValue(undefined);
     vi.mocked(writeMessage).mockResolvedValue({

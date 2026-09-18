@@ -69,7 +69,15 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         highlights: [],
         replyTo: replyToMessage && {
           id: replyToMessage.id,
-          text: decrypt(replyToMessage.text, replyToMessage.id),
+          // Message.text is nullable (media-only rows), and decrypt() splits
+          // the envelope with no null check -- guard it the same way
+          // message-model's getReadableMessage and open-ai.ts do, rather
+          // than throwing out of this handler. Only the null case: a real
+          // DecryptionError should still surface instead of being swallowed
+          // into empty text.
+          text: replyToMessage.text
+            ? decrypt(replyToMessage.text, replyToMessage.id)
+            : "",
           sentBy: { id: replyToMessage.userId, name: replyToMessage.name },
         },
       };
