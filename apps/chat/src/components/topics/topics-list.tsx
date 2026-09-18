@@ -117,6 +117,11 @@ type TopicRowProps = {
   // pointerup doesn't also navigate into the topic. Undefined for rows that
   // can't be dragged (default topic, muted group).
   consumeSuppressedClick?: () => boolean;
+  // True for the row currently being dragged, and briefly after it's
+  // dropped -- see dragLockedTopicId below. Renders a non-navigating element
+  // in place of the Link so there's no anchor for a click or a native
+  // link-drag-drop to navigate through in the first place.
+  isDragLocked?: boolean;
 };
 
 // Shared row content for both the sortable "active topics" group and the
@@ -130,59 +135,83 @@ const TopicRow = ({
   onGoToTopic,
   onCopyLink,
   consumeSuppressedClick,
+  isDragLocked,
 }: TopicRowProps) => {
   const link = `/circles/${circle.id}/topics/${topic.id}`;
   // topic.isUnread is the raw flag used for sorting; the unread *treatment*
   // is suppressed on muted topics (the point of muting) and on the topic
   // you're already looking at.
   const showUnread = topic.isUnread && !topic.isMuted && !isCurrentTopic;
+  // At rest this row looks and behaves like a normal link (pointer cursor).
+  // Only while actually being dragged/just dropped (isDragLocked) does it
+  // need to look like it's being dragged -- Tailwind preflight's
+  // `button { cursor: pointer }` otherwise wins over the wrapping div's
+  // cursor regardless of what's set there, so it's overridden directly here
+  // rather than relying on inheritance.
+  const dragCursorStyle = isDragLocked
+    ? { cursor: "grabbing" as const }
+    : undefined;
+
+  const rowButton = (
+    <Button
+      variant={isCurrentTopic ? "secondary" : "ghost"}
+      className="w-full flex justify-start text-base font-normal p-3"
+      style={dragCursorStyle}
+    >
+      <span
+        className={cn(
+          "truncate min-w-0",
+          showUnread &&
+            "underline decoration-wavy decoration-mention underline-offset-4",
+          topic.isMuted && "text-muted-foreground",
+        )}
+      >
+        {topic.name}
+      </span>
+      <div className="flex gap-1 ml-auto shrink-0">
+        {activeUsers.map((user) => (
+          <UserAvatar
+            key={user.id}
+            id={user.id}
+            name={user.name}
+            imageUrl={user.imageUrl}
+            createdAt={user.createdAt}
+            size="xs"
+            showStatus={false}
+            status={user.status}
+            lastStatusUpdate={user.lastStatusUpdate}
+          />
+        ))}
+      </div>
+    </Button>
+  );
 
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <Link
-          href={link}
-          // An <a href> is natively draggable, so without this the browser
-          // runs its own link-drag alongside dnd-kit's -- and dropping a
-          // dragged link inside the page makes Chromium navigate to it, so
-          // reordering a topic would also open it (with no click event
-          // involved, which is why the click guard below can't catch it).
-          draggable={false}
-          onClick={(e) => {
-            if (consumeSuppressedClick?.()) e.preventDefault();
-          }}
-        >
-          <Button
-            variant={isCurrentTopic ? "secondary" : "ghost"}
-            className="w-full flex justify-start text-base font-normal p-3"
+        {isDragLocked ? (
+          // No anchor at all while this row is being dragged or was just
+          // dropped -- removes the ambiguity between a real click, a
+          // trailing click after pointerup, and a native link-drag-drop
+          // navigating on its own, rather than trying to suppress each of
+          // those after the fact.
+          rowButton
+        ) : (
+          <Link
+            href={link}
+            // An <a href> is natively draggable, so without this the browser
+            // runs its own link-drag alongside dnd-kit's -- and dropping a
+            // dragged link inside the page makes Chromium navigate to it, so
+            // reordering a topic would also open it (with no click event
+            // involved, which is why the click guard below can't catch it).
+            draggable={false}
+            onClick={(e) => {
+              if (consumeSuppressedClick?.()) e.preventDefault();
+            }}
           >
-            <span
-              className={cn(
-                "truncate min-w-0",
-                showUnread &&
-                  "underline decoration-wavy decoration-mention underline-offset-4",
-                topic.isMuted && "text-muted-foreground",
-              )}
-            >
-              {topic.name}
-            </span>
-            <div className="flex gap-1 ml-auto shrink-0">
-              {activeUsers.map((user) => (
-                <UserAvatar
-                  key={user.id}
-                  id={user.id}
-                  name={user.name}
-                  imageUrl={user.imageUrl}
-                  createdAt={user.createdAt}
-                  size="xs"
-                  showStatus={false}
-                  status={user.status}
-                  lastStatusUpdate={user.lastStatusUpdate}
-                />
-              ))}
-            </div>
-          </Button>
-        </Link>
+            {rowButton}
+          </Link>
+        )}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-30">
         <ContextMenuItem onClick={onGoToTopic}>
@@ -218,13 +247,19 @@ const TopicRow = ({
 // tabIndex=0 to this wrapper, so each row is two tab stops (wrapper + its
 // <Link>) and nests a button role around a link.
 const SortableTopicRow = (props: TopicRowProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: props.topic.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.topic.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    cursor: "grab",
+    cursor: isDragging ? "grabbing" : undefined,
   };
 
   return (
@@ -270,6 +305,14 @@ export const TopicsList = ({
     {},
   );
 
+  // The row currently being dragged, and briefly after it's dropped, renders
+  // without a Link (see isDragLocked on TopicRow) -- set on drag start and
+  // released on the same delayed timer as suppressNextClickRef below, so it
+  // outlives whatever click or native-drop navigation the drag produces.
+  const [dragLockedTopicId, setDragLockedTopicId] = useState<string | null>(
+    null,
+  );
+
   // Belt-and-braces for the drag/navigate split: the Link is draggable={false}
   // so the browser can't link-drag it, but some browsers still fire a click on
   // the row after a drag's pointerup. Set on drag start (activationConstraint
@@ -283,10 +326,12 @@ export const TopicsList = ({
   }
   // Cleared on a macrotask so it outlives the click that fires synchronously
   // after pointerup, but can't go stale and swallow an unrelated click later
-  // if no click follows the drag at all.
+  // if no click follows the drag at all. Also releases the drag-locked row
+  // back to a normal Link on the same delay.
   function releaseSuppressedClick() {
     setTimeout(() => {
       suppressNextClickRef.current = false;
+      setDragLockedTopicId(null);
     }, 0);
   }
 
@@ -562,6 +607,7 @@ export const TopicsList = ({
       toast({ duration: 3000, title: `Link copied` });
     },
     consumeSuppressedClick,
+    isDragLocked: topic.id === dragLockedTopicId,
   });
 
   return (
@@ -736,8 +782,9 @@ export const TopicsList = ({
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
-                onDragStart={() => {
+                onDragStart={({ active }) => {
                   suppressNextClickRef.current = true;
+                  setDragLockedTopicId(String(active.id));
                 }}
                 onDragEnd={handleDragEnd}
                 autoScroll={false}
