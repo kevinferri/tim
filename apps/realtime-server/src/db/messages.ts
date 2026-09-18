@@ -6,7 +6,7 @@ import { pgClient } from "./client";
 type WriteMessageArgs = Pick<
   Message,
   "userId" | "topicId" | "text" | "mediaUrl"
->;
+> & { replyToId?: string };
 
 type DeleteMessageArgs = Pick<Message, "userId"> & { messageId: string };
 
@@ -20,6 +20,7 @@ export async function writeMessage({
   topicId,
   text,
   mediaUrl,
+  replyToId,
 }: WriteMessageArgs) {
   const id = v4();
 
@@ -30,10 +31,29 @@ export async function writeMessage({
       mediaUrl,
       userId,
       topicId,
+      replyToId,
     })
-    .returning(["id", "text", "topicId", "mediaUrl"]);
+    .returning(["id", "text", "topicId", "mediaUrl", "replyToId"]);
 
   return message[0];
+}
+
+// Scoped to topicId so it doubles as validation: a replyToId for a message
+// in another topic (stale, tampered, or the two just don't match) comes
+// back undefined rather than leaking cross-topic content into the preview.
+export async function getMessageForReplyPreview({
+  messageId,
+  topicId,
+}: {
+  messageId: string;
+  topicId: string;
+}) {
+  return await pgClient<Message>("messages")
+    .select("messages.id", "messages.text", "messages.userId", "users.name")
+    .join("users", "messages.userId", "users.id")
+    .where("messages.id", messageId)
+    .where("messages.topicId", topicId)
+    .first();
 }
 
 export async function getMessageForUser({

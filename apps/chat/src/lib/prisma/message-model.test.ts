@@ -31,7 +31,11 @@ async function createTopic(ownerId: string) {
 async function createMessage(
   userId: string,
   topicId: string,
-  overrides: Partial<{ text: string; mediaUrl: string | null }> = {},
+  overrides: Partial<{
+    text: string;
+    mediaUrl: string | null;
+    replyToId: string;
+  }> = {},
 ) {
   // The AAD binds ciphertext to its row id, so it must be known before encrypting -- generate it up front instead of relying on Prisma's DB-side @default(uuid()).
   const id = crypto.randomUUID();
@@ -43,6 +47,7 @@ async function createMessage(
       topicId,
       text: encrypt(overrides.text ?? "hello", id),
       mediaUrl: overrides.mediaUrl,
+      replyToId: overrides.replyToId,
     },
   });
 }
@@ -96,6 +101,51 @@ describe("messageModel.getMessagesForTopic", () => {
         select: { text: true },
       }),
     ).resolves.toEqual([]);
+  });
+
+  it("decrypts a nested replyTo's text alongside the message's own", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    const original = await createMessage(user.id, topic.id, {
+      text: "original text",
+    });
+    await createMessage(user.id, topic.id, {
+      text: "a reply",
+      replyToId: original.id,
+    });
+
+    const messages = await prismaClient.message.getMessagesForTopic({
+      requestingUserId: user.id,
+      topicId: topic.id,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        replyTo: { select: { id: true, text: true } },
+      },
+    });
+
+    const reply = messages.find((m) => m.text === "a reply");
+    expect(reply?.replyTo?.text).toBe("original text");
+  });
+
+  it("leaves replyTo as null/undefined when the message isn't a reply", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    await createMessage(user.id, topic.id, { text: "plain" });
+
+    const messages = await prismaClient.message.getMessagesForTopic({
+      requestingUserId: user.id,
+      topicId: topic.id,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        replyTo: { select: { id: true, text: true } },
+      },
+    });
+
+    expect(messages[0].replyTo).toBeNull();
   });
 });
 

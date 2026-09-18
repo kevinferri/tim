@@ -182,6 +182,12 @@ export function useTopicGifContext() {
 
 // --- Scroll/composer UI state: scroll position, unread count, slash-command generation -- none of the above slices care about this. ---
 
+export type ReplyingToMessage = {
+  id: string;
+  text: string;
+  senderName: string | null;
+};
+
 type UiContextValue = {
   viewportRef: MutableRefObject<HTMLDivElement | null>;
   contentRef: MutableRefObject<HTMLDivElement | null>;
@@ -192,6 +198,8 @@ type UiContextValue = {
   blopSoundRef: MutableRefObject<HTMLAudioElement | null>;
   generatingCommand?: string;
   setGeneratingCommand: (command?: string) => void;
+  replyingTo?: ReplyingToMessage;
+  setReplyingTo: (message?: ReplyingToMessage) => void;
 };
 
 const TopicUiContext = createContext<UiContextValue | undefined>(undefined);
@@ -232,6 +240,7 @@ export function CurrentTopicProvider(props: Props) {
   const [generatingCommand, setGeneratingCommand] = useState<
     string | undefined
   >();
+  const [replyingTo, setReplyingTo] = useState<ReplyingToMessage | undefined>();
   const [unseenCount, setUnseenCount] = useState(0);
   const {
     viewportRef,
@@ -394,6 +403,8 @@ export function CurrentTopicProvider(props: Props) {
       blopSoundRef,
       generatingCommand,
       setGeneratingCommand,
+      replyingTo,
+      setReplyingTo,
     }),
     [
       viewportRef,
@@ -404,6 +415,7 @@ export function CurrentTopicProvider(props: Props) {
       scrollToBottom,
       blopSoundRef,
       generatingCommand,
+      replyingTo,
     ],
   );
 

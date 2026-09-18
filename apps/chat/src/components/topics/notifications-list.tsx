@@ -5,6 +5,7 @@ import { useQueryState } from "nuqs";
 import keyBy from "lodash.keyby";
 import {
   ChatBubbleIcon,
+  CornerTopLeftIcon,
   Link2Icon,
   MagnifyingGlassIcon,
   StarFilledIcon,
@@ -51,6 +52,10 @@ const copyMap = {
   [NotificationType.Mentioned]: {
     text: "mentioned you",
     icon: <ChatBubbleIcon />,
+  },
+  [NotificationType.Replied]: {
+    text: "replied to your message",
+    icon: <CornerTopLeftIcon />,
   },
 };
 

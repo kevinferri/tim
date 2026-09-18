@@ -43,6 +43,7 @@ import {
   TopicLinkCandidate,
 } from "@/components/topics/topic-link-autocomplete";
 import { MessageHighlightOverlay } from "@/components/topics/message-highlight-overlay";
+import { ReplyPreview } from "@/components/topics/reply-preview";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 import { useSelf } from "@/components/auth/self-provider";
 import { getDisplayName } from "@tim/user-display";
@@ -53,6 +54,7 @@ type MessagePayload = {
   circleId: string;
   mediaUrl?: string;
   mentionedUserIds?: string[];
+  replyToId?: string;
 };
 
 export function TopicMessageBar() {
@@ -80,6 +82,8 @@ export function TopicMessageBar() {
     isAtBottom,
     generatingCommand,
     setGeneratingCommand,
+    replyingTo,
+    setReplyingTo,
   } = useTopicUiContext();
   const isGenerating = isUploadingImage || Boolean(generatingCommand);
   const isTim = parseCommand(generatingCommand ?? "")?.name === CommandName.Tim;
@@ -237,6 +241,10 @@ export function TopicMessageBar() {
     if (!generatingCommand) textAreaRef.current?.focus();
   }, [generatingCommand]);
 
+  useEffect(() => {
+    if (replyingTo) textAreaRef.current?.focus();
+  }, [replyingTo]);
+
   const emitMessage = async (message: string) => {
     if (!image && !message.trim()) return;
     let _media = image ?? extractImageFromMessage(message);
@@ -285,10 +293,12 @@ export function TopicMessageBar() {
       circleId,
       mediaUrl,
       mentionedUserIds,
+      replyToId: replyingTo?.id,
     });
 
     setMessage("");
     setImage(undefined);
+    setReplyingTo(undefined);
   };
 
   useUserTypingEmitter({ topicId, message });
@@ -333,6 +343,16 @@ export function TopicMessageBar() {
             onHover={setTopicLinkMenuSelectedIndex}
             onSelect={selectTopicLink}
           />
+        )}
+        {replyingTo && (
+          <div className="flex items-center px-3 pt-2">
+            <ReplyPreview
+              senderName={replyingTo.senderName}
+              text={replyingTo.text}
+              onCancel={() => setReplyingTo(undefined)}
+              className="flex-1"
+            />
+          </div>
         )}
         <div
           className={cn(

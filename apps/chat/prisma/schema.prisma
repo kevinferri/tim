@@ -88,19 +88,27 @@ model Message {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  // Specific 
-  text     String?
-  mediaUrl String?
-  userId   String
-  topicId  String
+  // Specific
+  text      String?
+  mediaUrl  String?
+  userId    String
+  topicId   String
+  replyToId String?
 
   // Relations
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
   topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
   highlights Highlight[] @relation("highlightsForMessage")
+  // SetNull rather than Cascade: deleting the original message shouldn't
+  // delete replies to it. Note this clears replyToId itself, not just the
+  // relation -- once the original is gone there's no record the message
+  // was ever a reply, so it silently renders as a plain message.
+  replyTo    Message?    @relation("messageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[]   @relation("messageReplies")
 
   @@index([topicId, createdAt(sort: Desc)])
   @@index([userId, topicId])
+  @@index([replyToId])
 
   @@map(name: "messages")
 }

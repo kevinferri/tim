@@ -2,6 +2,7 @@ import { decrypt } from "../lib/encryption";
 import {
   deleteMessage,
   editMessage,
+  getMessageForReplyPreview,
   getMessageForUser,
   writeMessage,
 } from "../db/messages";
@@ -11,7 +12,11 @@ import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, registerRoomEvent } from "./rooms";
 import { executeCommand } from "../lib/command-handler";
 import { parseCommand } from "@tim/commands";
-import { emitMentionNotifications } from "../lib/notifications";
+import {
+  emitMentionNotifications,
+  emitNotification,
+  NotificationType,
+} from "../lib/notifications";
 
 export function handleSendMessage({ socket, server }: HandlerArgs) {
   registerRoomEvent({
@@ -36,11 +41,23 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
       });
       const _mediaUrl = commandMediaUrl ?? payload.mediaUrl;
 
+      // Re-fetched (not trusted from the payload) and scoped to this topic --
+      // doubles as validation that the reply target actually exists here.
+      // A stale/invalid/cross-topic id degrades to a plain (non-reply)
+      // message rather than failing the whole send.
+      const replyToMessage = payload.replyToId
+        ? await getMessageForReplyPreview({
+            messageId: payload.replyToId,
+            topicId: payload.topicId,
+          })
+        : undefined;
+
       const savedMessage = await writeMessage({
         userId: socket.data.user.id,
         text: payload.message,
         topicId: payload.topicId,
         mediaUrl: _mediaUrl,
+        replyToId: replyToMessage?.id,
       });
 
       const emittedMessage = {
@@ -50,6 +67,11 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         sentBy: socket.data.user,
         createdAt: new Date(),
         highlights: [],
+        replyTo: replyToMessage && {
+          id: replyToMessage.id,
+          text: decrypt(replyToMessage.text, replyToMessage.id),
+          sentBy: { id: replyToMessage.userId, name: replyToMessage.name },
+        },
       };
 
       server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
@@ -62,6 +84,17 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         actor: socket.data.user,
         mentionedUserIds: payload.mentionedUserIds ?? [],
       });
+
+      if (replyToMessage) {
+        await emitNotification({
+          server,
+          roomKey,
+          topicId: payload.topicId,
+          messageId: replyToMessage.id,
+          actor: socket.data.user,
+          notificationType: NotificationType.Replied,
+        });
+      }
     },
   });
 }

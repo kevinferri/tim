@@ -8,6 +8,7 @@ import {
   getMessageForUser,
   getMessageOwnerInTopic,
   getMessageHistoryForTopic,
+  getMessageForReplyPreview,
 } from "./messages";
 
 beforeEach(resetDb);
@@ -58,6 +59,58 @@ describe("writeMessage", () => {
 
     const stored = await pgClient("messages").where("id", message.id).first();
     expect(stored.text).not.toBe("hello world");
+  });
+});
+
+describe("writeMessage with replyToId", () => {
+  it("persists and returns the replyToId", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const original = await createMessage(userId, topicId, "original");
+
+    const reply = await writeMessage({
+      userId,
+      topicId,
+      text: "a reply",
+      mediaUrl: undefined as any,
+      replyToId: original.id,
+    });
+
+    expect(reply.replyToId).toBe(original.id);
+  });
+});
+
+describe("getMessageForReplyPreview", () => {
+  it("returns id/text/userId/name when the message belongs to the topic", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const message = await createMessage(userId, topicId, "original text");
+
+    const preview = await getMessageForReplyPreview({
+      messageId: message.id,
+      topicId,
+    });
+
+    expect(preview?.userId).toBe(userId);
+    expect(preview?.name).toBe("Test User");
+    expect(decrypt(preview!.text, preview!.id)).toBe("original text");
+  });
+
+  it("returns undefined when the message belongs to a different topic", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const otherTopicId = await createTopic(userId, circleId);
+    const message = await createMessage(userId, topicId);
+
+    await expect(
+      getMessageForReplyPreview({
+        messageId: message.id,
+        topicId: otherTopicId,
+      }),
+    ).resolves.toBeUndefined();
   });
 });
 
