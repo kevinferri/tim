@@ -476,11 +476,13 @@ export const TopicsList = ({
     topicOrder,
   ]);
 
-  // Applies the sticky drag override on top of the freshly-computed active
-  // list: reorders whatever it can, then appends anything the override
-  // doesn't know about yet (a topic created after the last drag) so it
-  // can't silently disappear from the sidebar.
-  const displayedActiveTopics = useMemo(() => {
+  // The user's custom order, with the sticky drag override applied
+  // optimistically on top: it reorders whatever it knows about, then appends
+  // anything it doesn't (a topic created after the last drag) so nothing
+  // silently disappears from the sidebar. This is the sequence a drag reads
+  // and writes -- kept free of the unread hoist below, so a drag means "this
+  // is my order" rather than baking in wherever the hoist put things.
+  const customOrderedActiveTopics = useMemo(() => {
     if (!dragOverrideIds) return grouped.activeTopics;
 
     const byId = new Map(
@@ -498,6 +500,26 @@ export const TopicsList = ({
     return [...overridden, ...appended];
   }, [grouped.activeTopics, dragOverrideIds]);
 
+  // Unread topics float to the top of the active group (the default topic
+  // stays pinned above all of them), keeping their custom order relative to
+  // each other -- as does everything below them. Purely a display transform
+  // over the custom order: folding it into that order instead would get
+  // frozen out by the drag override above after the first drag, and relies
+  // on sort() being stable to preserve custom order within each bucket.
+  //
+  // The topic you're currently in is excluded (it shows no unread treatment
+  // either), so the row you're reading doesn't yank itself to the top under
+  // you. Not applied to the muted group, where unread has no visible
+  // treatment at all, so moving those rows would be unexplained motion.
+  const displayedActiveTopics = useMemo(() => {
+    const isUnreadNow = (topic: TopicWithMeta) =>
+      Boolean(topic.isUnread) && topic.id !== params.topicId;
+
+    return [...customOrderedActiveTopics].sort(
+      (a, b) => Number(isUnreadNow(b)) - Number(isUnreadNow(a)),
+    );
+  }, [customOrderedActiveTopics, params.topicId]);
+
   async function handleDragEnd({ active, over }: DragEndEvent) {
     // First statement so every exit path below (including a drop on itself)
     // schedules the release.
@@ -505,17 +527,20 @@ export const TopicsList = ({
 
     if (!over || active.id === over.id) return;
 
-    const oldIndex = displayedActiveTopics.findIndex(
+    // Resolved against the custom order, not the displayed one: dropping A
+    // onto B means "put A at B's place in my order", which shouldn't depend
+    // on whether either of them happens to be hoisted for being unread.
+    const oldIndex = customOrderedActiveTopics.findIndex(
       (topic) => topic.id === active.id,
     );
-    const newIndex = displayedActiveTopics.findIndex(
+    const newIndex = customOrderedActiveTopics.findIndex(
       (topic) => topic.id === over.id,
     );
 
     if (oldIndex === -1 || newIndex === -1) return;
 
     const orderedTopicIds = arrayMove(
-      displayedActiveTopics,
+      customOrderedActiveTopics,
       oldIndex,
       newIndex,
     ).map((topic) => topic.id);
