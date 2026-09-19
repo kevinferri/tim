@@ -49,4 +49,12 @@ describe("markTopicRead", () => {
       first.lastReadAt.getTime(),
     );
   });
+
+  it("returns false instead of throwing when the topic no longer exists", async () => {
+    const userId = await createUser();
+
+    await expect(
+      markTopicRead({ userId, topicId: crypto.randomUUID() }),
+    ).resolves.toBe(false);
+  });
 });
