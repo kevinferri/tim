@@ -9,6 +9,7 @@ import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
 import { isGiphy, isValidCommand } from "@/components/topics/message-utils";
 import { CommandName, parseCommand } from "@tim/commands";
 import {
+  CornerTopLeftIcon,
   Pencil1Icon,
   SewingPinFilledIcon,
   UpdateIcon,
@@ -23,6 +24,7 @@ type Props = {
   mediaUrl: string;
   onEditMessage?: () => void;
   onShuffleGif?: () => void;
+  onReply?: () => void;
   isShufflingGif?: boolean;
   className?: string;
   sentBySelf: boolean;
@@ -47,6 +49,16 @@ export function MessageActions(props: Props) {
     >
       <div className="flex gap-1">
         <TooltipProvider>
+          {props.onReply && (
+            <Tooltip delayDuration={DELAY_DURATION}>
+              <TooltipTrigger asChild>
+                <Button size="iconSm" variant="outline" onClick={props.onReply}>
+                  <CornerTopLeftIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Reply</TooltipContent>
+            </Tooltip>
+          )}
           {props.sentBySelf && (
             <>
               <Tooltip delayDuration={DELAY_DURATION}>

@@ -37,16 +37,36 @@ export const DEFAULT_MESSAGE_SELECT = {
       lastStatusUpdate: true,
     },
   },
+  replyTo: {
+    select: {
+      id: true,
+      text: true,
+      sentBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
 };
 
+type ReplyToShape = { id: string; text?: string | null } | null | undefined;
+
 export const normalizeMessages = <
-  T extends { id: string; text?: string | null },
+  T extends { id: string; text?: string | null; replyTo?: ReplyToShape },
 >(
   messages: T[],
-): (Omit<T, "text"> & { text?: string })[] =>
+) =>
   messages.map((message) => ({
     ...message,
     text: getReadableMessage(message.text, message.id),
+    replyTo: message.replyTo
+      ? {
+          ...message.replyTo,
+          text: getReadableMessage(message.replyTo.text, message.replyTo.id),
+        }
+      : message.replyTo,
   }));
 
 // One undecryptable row shouldn't take down the whole list it's part of -- degrade that single message instead of throwing out of the .map().

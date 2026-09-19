@@ -14,6 +14,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { MessageActions } from "@/components/topics/message-actions";
 import { MessageText } from "@/components/topics/message-text";
 import { LinkPreview } from "@/components/topics/link-preview";
+import { ReplyPreview } from "@/components/topics/reply-preview";
 import {
   baseStyles,
   highlightStyles,
@@ -55,6 +56,14 @@ export type MessageData = {
     lastStatusUpdate: Date | null;
   };
   highlights?: Highlights;
+  // Present only when this message is a reply; absent (not just falsy) once
+  // the original is deleted -- see the SetNull comment on Message.replyTo
+  // in schema.prisma.
+  replyTo?: {
+    id: string;
+    text?: string;
+    sentBy?: { id: string; name: string | null };
+  } | null;
   [key: string]: any;
 };
 
@@ -72,7 +81,7 @@ export type MessageProps = MessageData & {
 
 const MessageComponent = (props: MessageProps) => {
   const { topicId } = useTopicMetaContext();
-  const { scrollToBottom } = useTopicUiContext();
+  const { scrollToBottom, setReplyingTo } = useTopicUiContext();
   const { addShufflingGif, shufflingGifs } = useTopicGifContext();
   const self = useSelf();
   const [showActions, setShowActions] = useState(false);
@@ -232,11 +241,26 @@ const MessageComponent = (props: MessageProps) => {
                   setShuffledGifLoading(true);
                   shuffleGif.emit({ messageId: props.id, topicId });
                 }}
+                onReply={() => {
+                  if (!props.id) return;
+                  setReplyingTo({
+                    id: props.id,
+                    text: props.text ?? "",
+                    senderName: props.sentBy?.name ?? null,
+                  });
+                }}
               />
             )}
           </div>
 
           <div className="flex flex-col gap-1.5">
+            {props.variant !== "minimal" && props.replyTo && (
+              <ReplyPreview
+                senderName={props.replyTo.sentBy?.name ?? null}
+                text={props.replyTo.text ?? ""}
+              />
+            )}
+
             {isEditing ? (
               <MessageEdit
                 onEditCancel={onEditCancel}

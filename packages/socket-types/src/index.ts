@@ -57,4 +57,5 @@ export enum NotificationType {
   ExpandedImage = "image:expanded",
   ClickedLink = "link:clicked",
   Mentioned = "mention:received",
+  Replied = "reply:received",
 }
