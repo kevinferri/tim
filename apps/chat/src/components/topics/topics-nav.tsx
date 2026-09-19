@@ -50,7 +50,6 @@ export async function TopicsNav({ circleId }: Props) {
   const [unreadTopicIds, topicPreferences] = await Promise.all([
     prismaClient.topicHistory.getUnreadTopicIds({
       userId,
-      circleId,
       topicIds,
     }),
     prismaClient.topicPreference.getAllForUserAndCircle({ userId, circleId }),

@@ -154,26 +154,3 @@ describe("messageModel.getMediaMessagesForTopic", () => {
     expect(messages[0].mediaUrl).toBe("https://example.com/img.png");
   });
 });
-
-describe("messageModel.getMostRecentTimestampsByTopic", () => {
-  it("returns the latest message timestamp per topic", async () => {
-    const user = await createUser();
-    const topicA = await createTopic(user.id);
-    const topicB = await createTopic(user.id);
-    await createMessage(user.id, topicA.id);
-    const latestInB = await createMessage(user.id, topicB.id);
-
-    const results = await prismaClient.message.getMostRecentTimestampsByTopic({
-      topicIds: [topicA.id, topicB.id],
-    });
-
-    const forTopicB = results.find((r) => r.topicId === topicB.id);
-    expect(forTopicB?.createdAt).toEqual(latestInB.createdAt);
-  });
-
-  it("returns an empty list for an empty topicIds array", async () => {
-    await expect(
-      prismaClient.message.getMostRecentTimestampsByTopic({ topicIds: [] }),
-    ).resolves.toEqual([]);
-  });
-});

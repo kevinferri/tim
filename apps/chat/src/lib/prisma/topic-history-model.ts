@@ -1,5 +1,5 @@
 import { prismaClient } from "@/lib/prisma/client";
-import keyBy from "lodash.keyby";
+import { Prisma } from "@prisma/client";
 
 export const topicHistoryModel = {
   async getMostRecentForUser({ userId }: { userId?: string }) {
@@ -26,62 +26,30 @@ export const topicHistoryModel = {
     });
   },
 
-  async getAllForUserAndCircle({
-    userId,
-    circleId,
-  }: {
-    userId?: string;
-    circleId: string;
-  }) {
-    if (!userId) return [];
-
-    return await prismaClient.topicHistory.findMany({
-      where: {
-        userId,
-        topic: {
-          circleId,
-        },
-      },
-      select: {
-        updatedAt: true,
-        topicId: true,
-      },
-    });
-  },
-
   async getUnreadTopicIds({
     userId,
-    circleId,
     topicIds,
   }: {
     userId?: string;
-    circleId: string;
     topicIds: string[];
   }): Promise<Record<string, boolean>> {
     if (!userId || !topicIds.length) return {};
 
-    const [histories, recentMessagesByTopic] = await Promise.all([
-      prismaClient.topicHistory.getAllForUserAndCircle({ userId, circleId }),
-      prismaClient.message.getMostRecentTimestampsByTopic({ topicIds }),
-    ]);
+    // One index probe per topic on (topicId, createdAt DESC) instead of scanning every message in the circle. A topic with no history row counts as read, and the user's own messages never make a topic unread for them.
+    const rows = await prismaClient.$queryRaw<{ topicId: string }[]>`
+      SELECT h."topicId"
+      FROM "topic_histories" h
+      WHERE h."userId" = ${userId}
+        AND h."topicId" IN (${Prisma.join(topicIds)})
+        AND EXISTS (
+          SELECT 1 FROM "messages" m
+          WHERE m."topicId" = h."topicId"
+            AND m."createdAt" > h."updatedAt"
+            AND m."userId" <> h."userId"
+        )
+    `;
 
-    const historyMap = keyBy(histories, "topicId");
-
-    return recentMessagesByTopic.reduce<Record<string, boolean>>(
-      (acc, { createdAt, topicId }) => {
-        const history = historyMap[topicId];
-
-        if (history && new Date(history.updatedAt) < new Date(createdAt)) {
-          return {
-            ...acc,
-            [topicId]: true,
-          };
-        }
-
-        return acc;
-      },
-      {},
-    );
+    return Object.fromEntries(rows.map(({ topicId }) => [topicId, true]));
   },
 
   async createManyForUsers({

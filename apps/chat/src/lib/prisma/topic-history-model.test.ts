@@ -109,41 +109,10 @@ describe("topicHistoryModel.getMostRecentForUser", () => {
   });
 });
 
-describe("topicHistoryModel.getAllForUserAndCircle", () => {
-  it("returns only history rows for topics in the given circle", async () => {
-    const owner = await createUser();
-    const topicInCircle = await createTopic(owner.id);
-    const topicInOtherCircle = await createTopic(owner.id);
-
-    await prismaClient.topicHistory.create({
-      data: { userId: owner.id, topicId: topicInCircle.id },
-    });
-    await prismaClient.topicHistory.create({
-      data: { userId: owner.id, topicId: topicInOtherCircle.id },
-    });
-
-    const rows = await prismaClient.topicHistory.getAllForUserAndCircle({
-      userId: owner.id,
-      circleId: topicInCircle.circleId,
-    });
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].topicId).toBe(topicInCircle.id);
-  });
-
-  it("returns an empty list when userId is missing", async () => {
-    await expect(
-      prismaClient.topicHistory.getAllForUserAndCircle({
-        userId: undefined,
-        circleId: "some-circle",
-      }),
-    ).resolves.toEqual([]);
-  });
-});
-
 describe("topicHistoryModel.getUnreadTopicIds", () => {
   it("flags a topic as unread when its most recent message postdates the user's history", async () => {
     const owner = await createUser();
+    const other = await createUser();
     const topic = await createTopic(owner.id);
 
     await prismaClient.topicHistory.create({
@@ -151,12 +120,11 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     });
     await new Promise((r) => setTimeout(r, 5));
     await prismaClient.message.create({
-      data: { userId: owner.id, topicId: topic.id, text: "hello" },
+      data: { userId: other.id, topicId: topic.id, text: "hello" },
     });
 
     const unread = await prismaClient.topicHistory.getUnreadTopicIds({
       userId: owner.id,
-      circleId: topic.circleId,
       topicIds: [topic.id],
     });
 
@@ -177,11 +145,75 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
 
     const unread = await prismaClient.topicHistory.getUnreadTopicIds({
       userId: owner.id,
-      circleId: topic.circleId,
       topicIds: [topic.id],
     });
 
     expect(unread).toEqual({});
+  });
+
+  it("ignores messages the user sent themselves", async () => {
+    const owner = await createUser();
+    const other = await createUser();
+    const topic = await createTopic(owner.id);
+
+    await prismaClient.topicHistory.create({
+      data: { userId: owner.id, topicId: topic.id },
+    });
+    await new Promise((r) => setTimeout(r, 5));
+    await prismaClient.message.create({
+      data: { userId: owner.id, topicId: topic.id, text: "mine" },
+    });
+
+    await expect(
+      prismaClient.topicHistory.getUnreadTopicIds({
+        userId: owner.id,
+        topicIds: [topic.id],
+      }),
+    ).resolves.toEqual({});
+
+    await prismaClient.message.create({
+      data: { userId: other.id, topicId: topic.id, text: "theirs" },
+    });
+
+    await expect(
+      prismaClient.topicHistory.getUnreadTopicIds({
+        userId: owner.id,
+        topicIds: [topic.id],
+      }),
+    ).resolves.toEqual({ [topic.id]: true });
+  });
+
+  it("only flags the requested topics, and only for the given user", async () => {
+    const owner = await createUser();
+    const other = await createUser();
+    const topicA = await createTopic(owner.id);
+    const topicB = await createTopic(owner.id);
+
+    for (const topic of [topicA, topicB]) {
+      await prismaClient.topicHistory.create({
+        data: { userId: owner.id, topicId: topic.id },
+      });
+    }
+    await new Promise((r) => setTimeout(r, 5));
+    for (const topic of [topicA, topicB]) {
+      await prismaClient.message.create({
+        data: { userId: other.id, topicId: topic.id, text: "hi" },
+      });
+    }
+
+    await expect(
+      prismaClient.topicHistory.getUnreadTopicIds({
+        userId: owner.id,
+        topicIds: [topicA.id],
+      }),
+    ).resolves.toEqual({ [topicA.id]: true });
+
+    await expect(
+      prismaClient.topicHistory.getUnreadTopicIds({
+        userId: other.id,
+        topicIds: [topicA.id, topicB.id],
+      }),
+    ).resolves.toEqual({});
   });
 
   it("returns an empty map when userId or topicIds is missing/empty", async () => {
@@ -191,16 +223,14 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     await expect(
       prismaClient.topicHistory.getUnreadTopicIds({
         userId: undefined,
-        circleId: topic.circleId,
-        topicIds: [topic.id],
+          topicIds: [topic.id],
       }),
     ).resolves.toEqual({});
 
     await expect(
       prismaClient.topicHistory.getUnreadTopicIds({
         userId: owner.id,
-        circleId: topic.circleId,
-        topicIds: [],
+          topicIds: [],
       }),
     ).resolves.toEqual({});
   });
