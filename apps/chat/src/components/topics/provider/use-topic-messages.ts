@@ -86,6 +86,7 @@ export function useTopicMessages({
       const newMsg = {
         ...newMessage,
         createdAt: new Date(newMessage.createdAt ?? new Date()),
+        replyCount: 0,
       };
 
       queryClient.setQueryData<MessagesData>(queryKey, (prev) => {
@@ -93,7 +94,25 @@ export function useTopicMessages({
 
         // De-dup safety net for the append-on-socket-event path, which
         // isn't a queryFn react-query dedupes on its own.
-        const withNew = uniqBy([...prev.pages[0], newMsg], "id");
+        let withNew = uniqBy([...prev.pages[0], newMsg], "id");
+
+        // Bump replyCount on every visible message in this flat thread.
+        if (newMsg.threadRootId) {
+          const sibling = withNew.find(
+            (m) =>
+              m.id !== newMsg.id &&
+              (m.id === newMsg.threadRootId ||
+                m.threadRootId === newMsg.threadRootId),
+          );
+          const newCount = (sibling?.replyCount ?? 0) + 1;
+          withNew = withNew.map((m) => {
+            const isRoot = m.id === newMsg.threadRootId;
+            const inSameThread = m.threadRootId === newMsg.threadRootId;
+            if (!isRoot && !inSameThread) return m;
+            return { ...m, replyCount: newCount };
+          });
+        }
+
         // Trims the live window only while the user is at the bottom --
         // trimming while scrolled up reading history would yank content
         // from under them.

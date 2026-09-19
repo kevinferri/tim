@@ -242,8 +242,24 @@ export function TopicMessageBar() {
   }, [generatingCommand]);
 
   useEffect(() => {
-    if (replyingTo) textAreaRef.current?.focus();
-  }, [replyingTo]);
+    if (!replyingTo) return;
+
+    textAreaRef.current?.focus();
+
+    // Auto-@ the author so they get a mention notification with the reply.
+    if (!replyingTo.senderId || replyingTo.senderId === self.id) return;
+
+    setMessage((prev) => {
+      if (extractMentionedUserIds(prev).includes(replyingTo.senderId)) {
+        return prev;
+      }
+      const mention = encodeMention(
+        getDisplayName(replyingTo.senderName),
+        replyingTo.senderId,
+      );
+      return prev.trim().length === 0 ? `${mention} ` : `${mention} ${prev}`;
+    });
+  }, [replyingTo, self.id]);
 
   const emitMessage = async (message: string) => {
     if (!image && !message.trim()) return;

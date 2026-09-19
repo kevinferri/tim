@@ -53,11 +53,14 @@ type Args = {
   roomKey: string;
   notificationType: NotificationType;
   actor: Actor;
+  // When set, skip the message-owner lookup (e.g. Replied: notify the
+  // quoted author while messageId points at the new reply for the preview).
+  receiverId?: string;
 };
 
 // For notifications about something that happened to a specific message
 // (highlighted, image expanded, link clicked) -- the receiver is that
-// message's original author.
+// message's original author, unless receiverId is provided explicitly.
 export async function emitNotification({
   server,
   topicId,
@@ -65,17 +68,21 @@ export async function emitNotification({
   roomKey,
   actor,
   notificationType,
+  receiverId,
 }: Args) {
   if (!roomKey || !messageId) return;
 
-  const message = await getMessageOwnerInTopic({ messageId, topicId });
-
-  if (!message) return;
+  let resolvedReceiverId = receiverId;
+  if (!resolvedReceiverId) {
+    const message = await getMessageOwnerInTopic({ messageId, topicId });
+    if (!message) return;
+    resolvedReceiverId = message.userId;
+  }
 
   await notifyUser({
     server,
     roomKey,
-    receiverId: message.userId,
+    receiverId: resolvedReceiverId,
     actor,
     topicId,
     messageId,

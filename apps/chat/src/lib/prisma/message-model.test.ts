@@ -35,6 +35,7 @@ async function createMessage(
     text: string;
     mediaUrl: string | null;
     replyToId: string;
+    threadRootId: string;
   }> = {},
 ) {
   // The AAD binds ciphertext to its row id, so it must be known before encrypting -- generate it up front instead of relying on Prisma's DB-side @default(uuid()).
@@ -48,6 +49,7 @@ async function createMessage(
       text: encrypt(overrides.text ?? "hello", id),
       mediaUrl: overrides.mediaUrl,
       replyToId: overrides.replyToId,
+      threadRootId: overrides.threadRootId,
     },
   });
 }
@@ -112,6 +114,7 @@ describe("messageModel.getMessagesForTopic", () => {
     await createMessage(user.id, topic.id, {
       text: "a reply",
       replyToId: original.id,
+      threadRootId: original.id,
     });
 
     const messages = await prismaClient.message.getMessagesForTopic({
@@ -121,12 +124,144 @@ describe("messageModel.getMessagesForTopic", () => {
         id: true,
         text: true,
         createdAt: true,
-        replyTo: { select: { id: true, text: true } },
+        threadRootId: true,
+        replyTo: { select: { id: true, text: true, createdAt: true } },
       },
     });
 
     const reply = messages.find((m) => m.text === "a reply");
     expect(reply?.replyTo?.text).toBe("original text");
+    expect(reply?.replyCount).toBe(1);
+    const root = messages.find((m) => m.id === original.id);
+    expect(root?.replyCount).toBe(1);
+  });
+
+  it("strips reply quotes that predate their parent (time-travel links)", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    const earlier = new Date("2026-01-01T10:00:00.000Z");
+    const later = new Date("2026-01-01T12:00:00.000Z");
+
+    const parentId = crypto.randomUUID();
+    const childId = crypto.randomUUID();
+
+    await prismaClient.message.create({
+      data: {
+        id: parentId,
+        userId: user.id,
+        topicId: topic.id,
+        text: encrypt("parent later", parentId),
+        createdAt: later,
+        updatedAt: later,
+      },
+    });
+    await prismaClient.message.create({
+      data: {
+        id: childId,
+        userId: user.id,
+        topicId: topic.id,
+        text: encrypt("child earlier", childId),
+        replyToId: parentId,
+        threadRootId: parentId,
+        createdAt: earlier,
+        updatedAt: earlier,
+      },
+    });
+
+    const messages = await prismaClient.message.getMessagesForTopic({
+      requestingUserId: user.id,
+      topicId: topic.id,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        replyToId: true,
+        threadRootId: true,
+        replyTo: { select: { id: true, text: true, createdAt: true } },
+      },
+    });
+
+    const child = messages.find((m) => m.id === childId);
+    expect(child?.replyTo).toBeNull();
+    expect(child?.replyToId).toBeNull();
+    expect(child?.threadRootId).toBeNull();
+  });
+
+  it("returns a flat thread via getThreadMessages", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    const original = await createMessage(user.id, topic.id, {
+      text: "original text",
+    });
+    const firstReply = await createMessage(user.id, topic.id, {
+      text: "first reply",
+      replyToId: original.id,
+      threadRootId: original.id,
+    });
+    await createMessage(user.id, topic.id, {
+      text: "nested reply",
+      replyToId: firstReply.id,
+      threadRootId: original.id,
+    });
+    await createMessage(user.id, topic.id, { text: "unrelated" });
+
+    const thread = await prismaClient.message.getThreadMessages({
+      topicId: topic.id,
+      threadRootId: original.id,
+      select: { id: true, text: true, threadRootId: true },
+    });
+
+    expect(thread[0]?.id).toBe(original.id);
+    expect(thread.map((m) => m.text)).toEqual([
+      "original text",
+      "first reply",
+      "nested reply",
+    ]);
+  });
+
+  it("keeps rapid-fire replies in insertion order, not UUID order", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    const original = await createMessage(user.id, topic.id, {
+      text: "root",
+    });
+
+    // Same-millisecond createdAt is common under load; UUID id order must
+    // not reshuffle send order.
+    const sameInstant = new Date();
+    const ids: string[] = [];
+    for (const text of ["r1", "r2", "r3", "r4", "r5"]) {
+      const id = crypto.randomUUID();
+      ids.push(id);
+      await prismaClient.message.create({
+        data: {
+          id,
+          userId: user.id,
+          topicId: topic.id,
+          text: encrypt(text, id),
+          replyToId: original.id,
+          threadRootId: original.id,
+          createdAt: sameInstant,
+          updatedAt: sameInstant,
+        },
+      });
+    }
+
+    const thread = await prismaClient.message.getThreadMessages({
+      topicId: topic.id,
+      threadRootId: original.id,
+      select: { id: true, text: true },
+    });
+
+    expect(thread.map((m) => m.id)).toEqual([original.id, ...ids]);
+    expect(thread.map((m) => m.text)).toEqual([
+      "root",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5",
+    ]);
   });
 
   it("leaves replyTo as null/undefined when the message isn't a reply", async () => {

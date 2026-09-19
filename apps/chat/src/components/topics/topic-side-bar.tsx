@@ -15,6 +15,8 @@ import { CircleMembersList } from "@/components/topics/circle-members-list";
 import { NotificationsList } from "@/components/topics/notifications-list";
 import { useTopicNotifications } from "@/components/topics/use-topic-notifications";
 import { Badge } from "@/components/ui/badge";
+import { useTopicUiContext } from "@/components/topics/current-topic-provider";
+import { ReplyThreadPanel } from "@/components/topics/reply-thread-panel";
 
 type Tab = "highlights" | "media" | "members" | "notifications";
 
@@ -24,6 +26,7 @@ type Props = {
 
 export function TopicSideBar(props: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("members");
+  const { openThreadRootId } = useTopicUiContext();
   const { notificationList, clearUnreadNotifications, unreadCount } =
     useTopicNotifications({
       topicId: props.topicId,
@@ -62,6 +65,17 @@ export function TopicSideBar(props: Props) {
       ),
     },
   } as const;
+
+  if (openThreadRootId) {
+    return (
+      <div className="flex flex-col shadow-md border-l hidden w-[340px] lg:w-[380px] md:flex shrink-0 overflow-hidden min-w-0">
+        <ReplyThreadPanel
+          topicId={props.topicId}
+          threadRootId={openThreadRootId}
+        />
+      </div>
+    );
+  }
 
   return (
     <Tabs

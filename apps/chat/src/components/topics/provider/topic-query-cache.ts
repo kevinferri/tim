@@ -12,6 +12,10 @@ export function mediaMessagesQueryKey(topicId: string) {
   return ["media-messages", topicId];
 }
 
+export function threadQueryKey(topicId: string, threadRootId: string) {
+  return ["thread", topicId, threadRootId];
+}
+
 function singleMessageQueryKey(messageId: string) {
   return ["message", messageId];
 }

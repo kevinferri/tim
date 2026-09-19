@@ -9,7 +9,6 @@ import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
 import { isGiphy, isValidCommand } from "@/components/topics/message-utils";
 import { CommandName, parseCommand } from "@tim/commands";
 import {
-  CornerTopLeftIcon,
   Pencil1Icon,
   SewingPinFilledIcon,
   UpdateIcon,
@@ -17,6 +16,7 @@ import {
 import { useTopicMetaContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
 import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
+import { ReplyIcon } from "@/components/icons/reply-icon";
 
 type Props = {
   messageId: string;
@@ -53,7 +53,7 @@ export function MessageActions(props: Props) {
             <Tooltip delayDuration={DELAY_DURATION}>
               <TooltipTrigger asChild>
                 <Button size="iconSm" variant="outline" onClick={props.onReply}>
-                  <CornerTopLeftIcon />
+                  <ReplyIcon />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Reply</TooltipContent>

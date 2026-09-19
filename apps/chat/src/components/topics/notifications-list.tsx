@@ -5,7 +5,6 @@ import { useQueryState } from "nuqs";
 import keyBy from "lodash.keyby";
 import {
   ChatBubbleIcon,
-  CornerTopLeftIcon,
   Link2Icon,
   MagnifyingGlassIcon,
   StarFilledIcon,
@@ -27,6 +26,7 @@ import {
   TopicNotification,
   NotificationType,
 } from "@/components/topics/use-topic-notifications";
+import { ReplyIcon } from "@/components/icons/reply-icon";
 
 type Props = {
   notifications: TopicNotification[];
@@ -55,7 +55,7 @@ const copyMap = {
   },
   [NotificationType.Replied]: {
     text: "replied to your message",
-    icon: <CornerTopLeftIcon />,
+    icon: <ReplyIcon />,
   },
 };
 

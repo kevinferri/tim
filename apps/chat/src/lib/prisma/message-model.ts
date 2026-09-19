@@ -16,6 +16,8 @@ export const DEFAULT_MESSAGE_SELECT = {
   createdAt: true,
   topicId: true,
   mediaUrl: true,
+  replyToId: true,
+  threadRootId: true,
   highlights: {
     select: {
       id: true,
@@ -41,6 +43,7 @@ export const DEFAULT_MESSAGE_SELECT = {
     select: {
       id: true,
       text: true,
+      createdAt: true,
       sentBy: {
         select: {
           id: true,
@@ -51,23 +54,58 @@ export const DEFAULT_MESSAGE_SELECT = {
   },
 };
 
-type ReplyToShape = { id: string; text?: string | null } | null | undefined;
+type ReplyToShape = {
+  id: string;
+  text?: string | null;
+  createdAt?: Date | string | null;
+} | null | undefined;
 
 export const normalizeMessages = <
-  T extends { id: string; text?: string | null; replyTo?: ReplyToShape },
+  T extends {
+    id: string;
+    text?: string | null;
+    createdAt?: Date | string | null;
+    replyTo?: ReplyToShape;
+    replyToId?: string | null;
+    threadRootId?: string | null;
+  },
 >(
   messages: T[],
 ) =>
-  messages.map((message) => ({
-    ...message,
-    text: getReadableMessage(message.text, message.id),
-    replyTo: message.replyTo
+  messages.map((message) => {
+    const replyTo = message.replyTo
       ? {
           ...message.replyTo,
           text: getReadableMessage(message.replyTo.text, message.replyTo.id),
         }
-      : message.replyTo,
-  }));
+      : message.replyTo;
+
+    // Drop "time-travel" quotes: a reply must not predate its parent. Bad
+    // local/seed data can end up with that shape and the UI looks absurd.
+    const parentCreatedAt = replyTo?.createdAt
+      ? new Date(replyTo.createdAt).getTime()
+      : NaN;
+    const childCreatedAt = message.createdAt
+      ? new Date(message.createdAt).getTime()
+      : NaN;
+    const replyIsValid =
+      !replyTo ||
+      Number.isNaN(parentCreatedAt) ||
+      Number.isNaN(childCreatedAt) ||
+      childCreatedAt >= parentCreatedAt;
+
+    return {
+      ...message,
+      text: getReadableMessage(message.text, message.id),
+      replyTo: replyIsValid ? replyTo : null,
+      replyToId: replyIsValid ? message.replyToId : null,
+      threadRootId: replyIsValid
+        ? message.threadRootId
+        : message.threadRootId === message.replyToId
+          ? null
+          : message.threadRootId,
+    };
+  });
 
 // One undecryptable row shouldn't take down the whole list it's part of -- degrade that single message instead of throwing out of the .map().
 function getReadableMessage(
@@ -85,6 +123,39 @@ function getReadableMessage(
     }
     throw err;
   }
+}
+
+async function attachReplyCounts<
+  T extends { id: string; threadRootId?: string | null },
+>(messages: T[]): Promise<(T & { replyCount: number })[]> {
+  if (messages.length === 0) {
+    return messages.map((m) => ({ ...m, replyCount: 0 }));
+  }
+
+  // Counts are keyed by thread root. A visible root uses its own id; a
+  // visible reply uses its threadRootId.
+  const rootIds = Array.from(
+    new Set(
+      messages.map((m) => m.threadRootId ?? m.id).filter(Boolean) as string[],
+    ),
+  );
+
+  const groups = await prismaClient.message.groupBy({
+    by: ["threadRootId"],
+    where: { threadRootId: { in: rootIds } },
+    _count: { _all: true },
+  });
+
+  const counts = new Map(
+    groups
+      .filter((g) => g.threadRootId)
+      .map((g) => [g.threadRootId!, g._count._all]),
+  );
+
+  return messages.map((m) => ({
+    ...m,
+    replyCount: counts.get(m.threadRootId ?? m.id) ?? 0,
+  }));
 }
 
 export const messageModel = {
@@ -129,7 +200,46 @@ export const messageModel = {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
 
-    return normalizeMessages([...messages].reverse());
+    const chronological = [...messages].reverse();
+    const withCounts = await attachReplyCounts(chronological);
+    return normalizeMessages(withCounts);
+  },
+
+  async getThreadMessages({
+    topicId,
+    threadRootId,
+    select,
+  }: {
+    topicId: string;
+    threadRootId: string;
+    select: Prisma.MessageSelect;
+  }) {
+    // Thread root first (the message being discussed), then replies oldest →
+    // newest. createdAt ties break on ctid so rapid-fire order matches insert
+    // order, not UUID lexicographic order.
+    const orderedIds = await prismaClient.$queryRaw<{ id: string }[]>`
+      SELECT id FROM messages
+      WHERE "topicId" = ${topicId}
+        AND (id = ${threadRootId} OR "threadRootId" = ${threadRootId})
+      ORDER BY
+        CASE WHEN id = ${threadRootId} THEN 0 ELSE 1 END,
+        "createdAt" ASC,
+        ctid ASC
+    `;
+
+    if (orderedIds.length === 0) return [];
+
+    const messages = await prismaClient.message.findMany({
+      select,
+      where: { id: { in: orderedIds.map((row) => row.id) } },
+    });
+
+    const byId = new Map(messages.map((m) => [m.id, m]));
+    const ordered = orderedIds
+      .map(({ id }) => byId.get(id))
+      .filter((m): m is NonNullable<typeof m> => Boolean(m));
+
+    return normalizeMessages(ordered);
   },
 
   async getTopHighlightedMessagesForTopic({

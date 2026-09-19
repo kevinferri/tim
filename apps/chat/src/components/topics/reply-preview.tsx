@@ -1,7 +1,7 @@
-import { CornerTopLeftIcon, Cross2Icon } from "@radix-ui/react-icons";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import { getDisplayName } from "@tim/user-display";
-import { truncateText } from "@/components/topics/message-utils";
 import { Button } from "@/components/ui/button";
+import { ReplyIcon } from "@/components/icons/reply-icon";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -10,6 +10,8 @@ type Props = {
   onCancel?: () => void;
   onClick?: () => void;
   className?: string;
+  /** Single-line quote for dense surfaces (thread sidebar). */
+  compact?: boolean;
 };
 
 // Compact quoted-reply reference, shared by the composer (while replying, with
@@ -20,19 +22,40 @@ export function ReplyPreview({
   onCancel,
   onClick,
   className,
+  compact = false,
 }: Props) {
+  const name = getDisplayName(senderName);
+
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 min-w-0 pl-2 border-l-2 border-muted-foreground/30 text-xs text-muted-foreground",
+        "flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground",
+        compact
+          ? "gap-1"
+          : "items-start border-l-2 border-muted-foreground/25 pl-2",
         onClick && "cursor-pointer hover:text-foreground",
         className,
       )}
       onClick={onClick}
+      title={text ? `${name}: ${text}` : name}
     >
-      <CornerTopLeftIcon className="shrink-0" />
-      <span className="font-medium shrink-0">{getDisplayName(senderName)}</span>
-      <span className="truncate">{truncateText(text, 12)}</span>
+      <ReplyIcon className={cn("shrink-0", !compact && "mt-0.5")} />
+      {compact ? (
+        <div className="flex min-w-0 flex-1 items-baseline gap-1">
+          <span className="shrink-0 font-medium text-foreground/70">{name}</span>
+          {text ? <span className="min-w-0 truncate">{text}</span> : null}
+        </div>
+      ) : (
+        <div className="min-w-0 flex-1">
+          <span className="font-medium text-foreground/70">{name}</span>
+          {text ? (
+            <span className="break-words line-clamp-1 text-muted-foreground">
+              {" "}
+              {text}
+            </span>
+          ) : null}
+        </div>
+      )}
       {onCancel && (
         <Button
           size="iconSm"

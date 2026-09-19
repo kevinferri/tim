@@ -89,11 +89,14 @@ model Message {
   updatedAt DateTime @default(now()) @updatedAt
 
   // Specific
-  text      String?
-  mediaUrl  String?
-  userId    String
-  topicId   String
-  replyToId String?
+  text         String?
+  mediaUrl     String?
+  userId       String
+  topicId      String
+  replyToId    String?
+  // Flat-thread root: null on roots; on replies = parent's threadRootId ?? parent.id.
+  // Distinct from replyToId (the message being quoted).
+  threadRootId String?
 
   // Relations
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
@@ -105,10 +108,13 @@ model Message {
   // was ever a reply, so it silently renders as a plain message.
   replyTo    Message?    @relation("messageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies    Message[]   @relation("messageReplies")
+  threadRoot Message?    @relation("messageThread", fields: [threadRootId], references: [id], onDelete: SetNull)
+  threadReplies Message[] @relation("messageThread")
 
   @@index([topicId, createdAt(sort: Desc)])
   @@index([userId, topicId])
   @@index([replyToId])
+  @@index([threadRootId, createdAt])
 
   @@map(name: "messages")
 }

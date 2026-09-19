@@ -239,6 +239,8 @@ async function seedCircle(
     });
 
     const now = Date.now();
+    // Anchor seed chat in the past so same-day local replies always sort after it.
+    const seedBase = now - 24 * 60 * 60 * 1000;
     await tx.message.createMany({
       data: topicSpec.messages.map((m, i) => {
         const id = randomUUID();
@@ -248,9 +250,7 @@ async function seedCircle(
           mediaUrl: m.mediaUrl,
           userId: getId(m.senderEmail),
           topicId: topic.id,
-          createdAt: new Date(
-            now - (topicSpec.messages.length - i) * 2 * 60 * 1000,
-          ),
+          createdAt: new Date(seedBase + i * 2 * 60 * 1000),
         };
       }),
     });

@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
+import { useQueryState } from "nuqs";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
@@ -31,6 +32,8 @@ import { RollResult } from "@/components/topics/roll-result";
 import { EightBallResult } from "@/components/topics/eight-ball-result";
 import { CommandName, parseCommand } from "@tim/commands";
 import { getDisplayName } from "@tim/user-display";
+import { Button } from "@/components/ui/button";
+import { ReplyIcon } from "@/components/icons/reply-icon";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -47,6 +50,9 @@ export type MessageData = {
   text?: string;
   mediaUrl?: string | null;
   createdAt?: Date;
+  replyToId?: string | null;
+  threadRootId?: string | null;
+  replyCount?: number;
   sentBy?: {
     id: string;
     name: string | null;
@@ -81,9 +87,11 @@ export type MessageProps = MessageData & {
 
 const MessageComponent = (props: MessageProps) => {
   const { topicId } = useTopicMetaContext();
-  const { scrollToBottom, setReplyingTo } = useTopicUiContext();
+  const { scrollToBottom, setReplyingTo, setOpenThreadRootId } =
+    useTopicUiContext();
   const { addShufflingGif, shufflingGifs } = useTopicGifContext();
   const self = useSelf();
+  const [, setMessageId] = useQueryState("messageId");
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingText, setEditingText] = useState(props.text);
@@ -96,6 +104,20 @@ const MessageComponent = (props: MessageProps) => {
   const isShufflingGif =
     (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
   const isActionEligable = props.variant !== "minimal";
+  const replyCount = props.replyCount ?? 0;
+
+  const jumpToMessage = (targetId: string) => {
+    const el = document.getElementById(`message-${targetId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-ring", "rounded-md");
+      window.setTimeout(() => {
+        el.classList.remove("ring-2", "ring-ring", "rounded-md");
+      }, 1500);
+      return;
+    }
+    setMessageId(targetId);
+  };
 
   const highlights = props.highlights || [];
 
@@ -155,10 +177,20 @@ const MessageComponent = (props: MessageProps) => {
     setEditingText(props.text);
   };
 
+  const isThreadSidebar = props.context === "sidebar";
+  // In the thread panel the root is already on screen — quoting it on every
+  // direct reply just burns vertical space. Keep quotes only for reply-to-reply.
+  const showReplyPreview =
+    props.variant !== "minimal" &&
+    !!props.replyTo &&
+    !(isThreadSidebar && props.replyToId === props.threadRootId);
+
   return (
     <div
+      id={props.id ? `message-${props.id}` : undefined}
       className={cn(
         baseStyles,
+        isThreadSidebar && "px-3 py-2.5",
         highlightedBySelf ? highlightStyles : "",
         props.variant === "minimal"
           ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
@@ -180,7 +212,12 @@ const MessageComponent = (props: MessageProps) => {
         if (isActionEligable) setShowActions(false);
       }}
     >
-      <div className="flex gap-3 items-start overflow-hidden leading-none">
+      <div
+        className={cn(
+          "flex items-start overflow-hidden leading-none",
+          isThreadSidebar ? "gap-2.5" : "gap-3",
+        )}
+      >
         {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
           <UserAvatar
             id={props.sentBy.id}
@@ -188,14 +225,20 @@ const MessageComponent = (props: MessageProps) => {
             imageUrl={props.sentBy.imageUrl}
             createdAt={props.sentBy.createdAt}
             topicId={topicId}
+            size={isThreadSidebar ? "sm" : "default"}
             disableSheet={props.context === "user-sheet"}
             status={props.sentBy.status}
             lastStatusUpdate={props.sentBy.lastStatusUpdate}
           />
         )}
 
-        <div className="flex flex-col flex-1">
-          <div className="flex gap-2 items-center">
+        <div
+          className={cn(
+            "flex flex-col flex-1 min-w-0 overflow-hidden gap-1",
+            isThreadSidebar ? "leading-snug" : "leading-none",
+          )}
+        >
+          <div className="flex gap-2 items-center min-w-0">
             {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
               <UserAvatar
                 id={props.sentBy.id}
@@ -209,9 +252,8 @@ const MessageComponent = (props: MessageProps) => {
               >
                 <span
                   className={cn(
-                    `font-semibold ${
-                      props.sentBy.id === self.id && "text-mention"
-                    }`,
+                    "font-semibold truncate",
+                    props.sentBy.id === self.id && "text-mention",
                   )}
                 >
                   {getDisplayName(props.sentBy.name)}
@@ -222,6 +264,17 @@ const MessageComponent = (props: MessageProps) => {
             {!props.hiddenElements?.includes("sentAt") && (
               <MessageSentAt sentAt={createdAt} />
             )}
+
+            {isThreadSidebar &&
+              !props.hiddenElements?.includes("highlights") && (
+                <HighlightTooltip
+                  inline
+                  highlightedBySelf={highlightedBySelf}
+                  highlights={highlights}
+                  messageId={props.id!}
+                  onHighlight={handleToggleHighlight}
+                />
+              )}
 
             {showActions && isActionEligable && (
               <MessageActions
@@ -242,22 +295,25 @@ const MessageComponent = (props: MessageProps) => {
                   shuffleGif.emit({ messageId: props.id, topicId });
                 }}
                 onReply={() => {
-                  if (!props.id) return;
+                  if (!props.id || !props.sentBy?.id) return;
                   setReplyingTo({
                     id: props.id,
                     text: props.text ?? "",
-                    senderName: props.sentBy?.name ?? null,
+                    senderName: props.sentBy.name ?? null,
+                    senderId: props.sentBy.id,
                   });
                 }}
               />
             )}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            {props.variant !== "minimal" && props.replyTo && (
+          <div className="flex flex-col gap-1 min-w-0">
+            {showReplyPreview && props.replyTo && (
               <ReplyPreview
+                compact={isThreadSidebar}
                 senderName={props.replyTo.sentBy?.name ?? null}
                 text={props.replyTo.text ?? ""}
+                onClick={() => jumpToMessage(props.replyTo!.id)}
               />
             )}
 
@@ -322,18 +378,34 @@ const MessageComponent = (props: MessageProps) => {
                   />
                 );
               })}
+
+            {props.variant !== "minimal" &&
+              props.context === "topic" &&
+              !props.threadRootId &&
+              replyCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="self-start h-7 px-2 text-xs text-muted-foreground gap-1.5"
+                  onClick={() => setOpenThreadRootId(props.id)}
+                >
+                  <ReplyIcon />
+                  {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                </Button>
+              )}
           </div>
         </div>
 
-        {!props.hiddenElements?.includes("highlights") && (
-          <HighlightTooltip
-            className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
-            highlightedBySelf={highlightedBySelf}
-            highlights={highlights}
-            messageId={props.id!}
-            onHighlight={handleToggleHighlight}
-          />
-        )}
+        {!isThreadSidebar &&
+          !props.hiddenElements?.includes("highlights") && (
+            <HighlightTooltip
+              className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
+              highlightedBySelf={highlightedBySelf}
+              highlights={highlights}
+              messageId={props.id!}
+              onHighlight={handleToggleHighlight}
+            />
+          )}
       </div>
     </div>
   );

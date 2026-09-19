@@ -18,6 +18,8 @@ type Props = {
   highlights: Highlights;
   highlightedBySelf: boolean;
   onHighlight: () => void;
+  /** Sit inline in the message header (thread panel) instead of the right column. */
+  inline?: boolean;
 };
 
 const DELAY = 100;
@@ -34,7 +36,8 @@ export const HighlightTooltip = (props: Props) => {
         >
           <div
             className={cn(
-              "flex gap-0.5 items-center w-9 mt-2",
+              "flex gap-0.5 items-center",
+              props.inline ? "mt-0 shrink-0" : "w-9 mt-2",
               props.className,
             )}
           >
@@ -52,7 +55,7 @@ export const HighlightTooltip = (props: Props) => {
           </div>
         </TooltipTrigger>
         <TooltipContent
-          side="left"
+          side={props.inline ? "bottom" : "left"}
           onPointerDownOutside={(e) => e.preventDefault()}
           className={`px-2 ${highlights.length === 0 ? "hidden" : ""}`}
         >

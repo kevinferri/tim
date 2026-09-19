@@ -6,7 +6,7 @@ import { pgClient } from "./client";
 type WriteMessageArgs = Pick<
   Message,
   "userId" | "topicId" | "text" | "mediaUrl"
-> & { replyToId?: string };
+> & { replyToId?: string; threadRootId?: string };
 
 type DeleteMessageArgs = Pick<Message, "userId"> & { messageId: string };
 
@@ -21,8 +21,25 @@ export async function writeMessage({
   text,
   mediaUrl,
   replyToId,
+  threadRootId,
 }: WriteMessageArgs) {
   const id = v4();
+  let createdAt = new Date();
+
+  // Clock skew / future-dated seed parents can otherwise produce replies that
+  // sort *above* their parent after refresh (live socket appends at the bottom).
+  if (replyToId) {
+    const parent = await pgClient<Message>("messages")
+      .select("createdAt")
+      .where("id", replyToId)
+      .first();
+    if (parent?.createdAt) {
+      const minCreatedAt = new Date(
+        new Date(parent.createdAt).getTime() + 1,
+      );
+      if (createdAt < minCreatedAt) createdAt = minCreatedAt;
+    }
+  }
 
   const message = await pgClient<Message>("messages")
     .insert({
@@ -32,8 +49,18 @@ export async function writeMessage({
       userId,
       topicId,
       replyToId,
+      threadRootId,
+      createdAt,
     })
-    .returning(["id", "text", "topicId", "mediaUrl", "replyToId"]);
+    .returning([
+      "id",
+      "text",
+      "topicId",
+      "mediaUrl",
+      "replyToId",
+      "threadRootId",
+      "createdAt",
+    ]);
 
   return message[0];
 }
@@ -49,7 +76,13 @@ export async function getMessageForReplyPreview({
   topicId: string;
 }) {
   return await pgClient<Message>("messages")
-    .select("messages.id", "messages.text", "messages.userId", "users.name")
+    .select(
+      "messages.id",
+      "messages.text",
+      "messages.userId",
+      "messages.threadRootId",
+      "users.name",
+    )
     .join("users", "messages.userId", "users.id")
     .where("messages.id", messageId)
     .where("messages.topicId", topicId)

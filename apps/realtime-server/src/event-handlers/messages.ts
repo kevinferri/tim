@@ -52,12 +52,19 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
           })
         : undefined;
 
+      // Flat threads: hang every reply off the root (parent.threadRootId ??
+      // parent.id). replyToId still points at the quoted message.
+      const threadRootId = replyToMessage
+        ? (replyToMessage.threadRootId ?? replyToMessage.id)
+        : undefined;
+
       const savedMessage = await writeMessage({
         userId: socket.data.user.id,
         text: payload.message,
         topicId: payload.topicId,
         mediaUrl: _mediaUrl,
         replyToId: replyToMessage?.id,
+        threadRootId,
       });
 
       const emittedMessage = {
@@ -65,7 +72,8 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         circleId: payload.circleId,
         text: decrypt(savedMessage.text, savedMessage.id),
         sentBy: socket.data.user,
-        createdAt: new Date(),
+        // Prefer the persisted timestamp so live order matches refresh.
+        createdAt: savedMessage.createdAt ?? new Date(),
         highlights: [],
         replyTo: replyToMessage && {
           id: replyToMessage.id,
@@ -98,7 +106,10 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
           server,
           roomKey,
           topicId: payload.topicId,
-          messageId: replyToMessage.id,
+          // Preview the reply itself; notify the quoted author directly so we
+          // don't look up ownership on the reply (which would be the sender).
+          messageId: savedMessage.id,
+          receiverId: replyToMessage.userId,
           actor: socket.data.user,
           notificationType: NotificationType.Replied,
         });

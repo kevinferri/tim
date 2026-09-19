@@ -1,13 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffectOnce } from "@/lib/hooks/use-effect-once";
-import { signOut } from "next-auth/react";
-import { Routes } from "@/routes";
-
+// Cookie deletion must happen in a Route Handler (not a Server Component).
 export default function ForceLogout() {
-  useEffectOnce(() => {
-    signOut({ callbackUrl: Routes.SignIn });
-  });
-
-  return <></>;
+  redirect("/api/force-signout");
 }

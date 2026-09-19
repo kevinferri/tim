@@ -186,6 +186,7 @@ export type ReplyingToMessage = {
   id: string;
   text: string;
   senderName: string | null;
+  senderId: string;
 };
 
 type UiContextValue = {
@@ -200,6 +201,8 @@ type UiContextValue = {
   setGeneratingCommand: (command?: string) => void;
   replyingTo?: ReplyingToMessage;
   setReplyingTo: (message?: ReplyingToMessage) => void;
+  openThreadRootId?: string;
+  setOpenThreadRootId: (threadRootId?: string) => void;
 };
 
 const TopicUiContext = createContext<UiContextValue | undefined>(undefined);
@@ -241,6 +244,7 @@ export function CurrentTopicProvider(props: Props) {
     string | undefined
   >();
   const [replyingTo, setReplyingTo] = useState<ReplyingToMessage | undefined>();
+  const [openThreadRootId, setOpenThreadRootId] = useState<string | undefined>();
   const [unseenCount, setUnseenCount] = useState(0);
   const {
     viewportRef,
@@ -250,6 +254,12 @@ export function CurrentTopicProvider(props: Props) {
     scrollToBottom,
     suppressAutoStickRef,
   } = useTopicScroll();
+
+  // Drop reply/thread UI state when navigating to another topic.
+  useEffect(() => {
+    setReplyingTo(undefined);
+    setOpenThreadRootId(undefined);
+  }, [props.topicId]);
 
   const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
     topicId: props.topicId,
@@ -405,6 +415,8 @@ export function CurrentTopicProvider(props: Props) {
       setGeneratingCommand,
       replyingTo,
       setReplyingTo,
+      openThreadRootId,
+      setOpenThreadRootId,
     }),
     [
       viewportRef,
@@ -416,6 +428,7 @@ export function CurrentTopicProvider(props: Props) {
       blopSoundRef,
       generatingCommand,
       replyingTo,
+      openThreadRootId,
     ],
   );
 
