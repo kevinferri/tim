@@ -51,16 +51,25 @@ export const topicReadStateModel = {
     return Object.fromEntries(rows.map(({ topicId }) => [topicId, true]));
   },
 
+  // Pass `client` to run inside a transaction; otherwise it would silently escape it.
   async createManyForUsers({
     topicId,
     userIds,
+    client,
   }: {
     topicId: string;
     userIds: string[];
+    client?: {
+      topicReadState: {
+        createMany: (
+          args: Prisma.TopicReadStateCreateManyArgs,
+        ) => PromiseLike<unknown>;
+      };
+    };
   }) {
     if (!userIds.length) return;
 
-    await prismaClient.topicReadState.createMany({
+    await (client ?? prismaClient).topicReadState.createMany({
       data: userIds.map((userId) => ({ topicId, userId })),
       skipDuplicates: true,
     });

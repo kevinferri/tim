@@ -60,6 +60,29 @@ describe("topicReadStateModel.createManyForUsers", () => {
   });
 });
 
+describe("topicReadStateModel.createManyForUsers (transaction)", () => {
+  it("runs inside the given transaction client", async () => {
+    const owner = await createUser();
+    const topic = await createTopic(owner.id);
+
+    await expect(
+      prismaClient.$transaction(async (tx) => {
+        await prismaClient.topicReadState.createManyForUsers({
+          topicId: topic.id,
+          userIds: [owner.id],
+          client: tx,
+        });
+        throw new Error("roll back");
+      }),
+    ).rejects.toThrow("roll back");
+
+    const rows = await prismaClient.topicReadState.findMany({
+      where: { topicId: topic.id },
+    });
+    expect(rows).toHaveLength(0);
+  });
+});
+
 describe("topicReadStateModel.getMostRecentlyReadForUser", () => {
   it("returns the most recently read topic for the user", async () => {
     const owner = await createUser();

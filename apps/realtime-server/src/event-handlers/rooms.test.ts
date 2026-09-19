@@ -215,11 +215,9 @@ describe("handleJoinRoom", () => {
         SocketEvent.UserJoinedOrLeftTopic,
         expect.objectContaining({ topicId: "topic-1" }),
       );
-      expect(markTopicRead).toHaveBeenCalledWith({
-        userId: "user-1",
-        topicId: "topic-1",
-      });
     });
+    // Re-joins fire on every reconnect, so joining must not advance the read cursor.
+    expect(markTopicRead).not.toHaveBeenCalled();
   });
 
   it("does not join the room when the user lacks access", async () => {
@@ -277,22 +275,6 @@ describe("handleLeaveRoom", () => {
         topicId: "topic-1",
       }),
     );
-  });
-
-  it("stays quiet when the topic can't be marked read because the topic was deleted", async () => {
-    vi.mocked(getParentCircleIdForTopic).mockResolvedValue(undefined as any);
-    vi.mocked(markTopicRead).mockRejectedValue({ code: "23503" });
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    await emitUserChangeInTopic({
-      server: createMockServer() as any,
-      socket: createMockSocket({ id: "user-1" }) as any,
-      topicId: "topic-1",
-      markRead: true,
-    });
-
-    expect(errorSpy).not.toHaveBeenCalled();
-    errorSpy.mockRestore();
   });
 
   it("logs unexpected mark-read failures instead of swallowing them", async () => {

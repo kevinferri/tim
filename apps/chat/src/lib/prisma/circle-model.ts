@@ -199,12 +199,10 @@ export const circleModel = {
           });
 
           // Same as a topic created later, so the default topic can show as unread before anyone has visited it.
-          await tx.topicReadState.createMany({
-            data: (newCircle.members ?? []).map(({ id }) => ({
-              userId: id,
-              topicId: defaultTopic.id!,
-            })),
-            skipDuplicates: true,
+          await prismaClient.topicReadState.createManyForUsers({
+            topicId: defaultTopic.id!,
+            userIds: (newCircle.members ?? []).map(({ id }) => id),
+            client: tx,
           });
         }
       });

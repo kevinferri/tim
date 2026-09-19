@@ -163,8 +163,8 @@ export function handleJoinRoom({ socket, server }: HandlerArgs) {
       socket.join(roomKey);
 
       if (roomType === RoomType.Topic) {
-        // Marked on join as well as leave so a hard kill (e.g. a deploy) between the two doesn't lose the read.
-        emitUserChangeInTopic({ server, socket, topicId: id, markRead: true });
+        // Not marked read here: useRoomResyncOnConnect re-joins on every reconnect (sleep/wake, deploys), which would clear unread the user never saw.
+        emitUserChangeInTopic({ server, socket, topicId: id });
       }
 
       if (roomType === RoomType.Circle) {
@@ -244,10 +244,7 @@ export async function emitUserChangeInTopic({
     try {
       await markTopicRead({ userId: socket.data.user.id, topicId });
     } catch (err) {
-      // 23503 (FK violation): the topic was deleted, so there's nothing left to record.
-      if ((err as { code?: string }).code !== "23503") {
-        console.error("Failed to mark topic read", err);
-      }
+      console.error("Failed to mark topic read", err);
     }
   }
 }
