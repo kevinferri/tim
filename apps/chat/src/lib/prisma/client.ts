@@ -4,7 +4,7 @@ import { circleModel } from "@/lib/prisma/circle-model";
 import { topicModel } from "@/lib/prisma/topic-model";
 import { messageModel } from "@/lib/prisma/message-model";
 import { highlightModel } from "@/lib/prisma/highlight-model";
-import { topicHistoryModel } from "@/lib/prisma/topic-history-model";
+import { topicReadStateModel } from "@/lib/prisma/topic-read-state-model";
 import { topicPreferenceModel } from "@/lib/prisma/topic-preference-model";
 
 declare global {
@@ -42,7 +42,7 @@ const createClient = () => {
       topic: topicModel,
       message: messageModel,
       highlight: highlightModel,
-      topicHistory: topicHistoryModel,
+      topicReadState: topicReadStateModel,
       topicPreference: topicPreferenceModel,
     },
   });

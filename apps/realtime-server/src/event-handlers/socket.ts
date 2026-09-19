@@ -21,7 +21,7 @@ export function handleClientDisconnecting({ socket, server }: HandlerArgs) {
           server,
           socket,
           topicId: roomId,
-          recordHistory: true,
+          markRead: true,
           disconnectingSocketId: socket.id,
         });
       }

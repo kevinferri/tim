@@ -256,13 +256,13 @@ async function seedCircle(
     });
 
     // Excludes Tim Sandbox so his first login still lands on "Welcome to Tim".
-    const historyUserIds = memberIds
+    const readStateUserIds = memberIds
       .map((m) => m.id)
       .filter((id) => id !== getId(TIM_SANDBOX_EMAIL));
 
-    if (historyUserIds.length) {
-      await tx.topicHistory.createMany({
-        data: historyUserIds.map((userId) => ({ topicId: topic.id, userId })),
+    if (readStateUserIds.length) {
+      await tx.topicReadState.createMany({
+        data: readStateUserIds.map((userId) => ({ topicId: topic.id, userId })),
         skipDuplicates: true,
       });
     }

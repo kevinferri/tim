@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, expect } from "vitest";
 import { pgClient, resetDb } from "../test/db";
-import { saveTopicHistory } from "./topic-history";
+import { markTopicRead } from "./topic-read-state";
 
 beforeEach(resetDb);
 
@@ -29,16 +29,24 @@ async function createTopic(userId: string, circleId: string) {
   return topic.id as string;
 }
 
-describe("saveTopicHistory", () => {
-  it("replaces any existing history row for the user/topic pair", async () => {
+describe("markTopicRead", () => {
+  it("keeps a single row per user/topic pair and advances lastReadAt", async () => {
     const userId = await createUser();
     const circleId = await createCircle(userId);
     const topicId = await createTopic(userId, circleId);
 
-    await saveTopicHistory({ userId, topicId });
-    await saveTopicHistory({ userId, topicId });
+    await markTopicRead({ userId, topicId });
+    const [first] = await pgClient("topic_read_states").where({
+      userId,
+      topicId,
+    });
+    await new Promise((r) => setTimeout(r, 5));
+    await markTopicRead({ userId, topicId });
 
-    const rows = await pgClient("topic_histories").where({ userId, topicId });
+    const rows = await pgClient("topic_read_states").where({ userId, topicId });
     expect(rows).toHaveLength(1);
+    expect(rows[0].lastReadAt.getTime()).toBeGreaterThan(
+      first.lastReadAt.getTime(),
+    );
   });
 });

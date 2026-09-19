@@ -132,7 +132,7 @@ describe("topicModel.upsertForUser", () => {
 
     expect(result.data.name).toBe("New Topic");
 
-    const histories = await prismaClient.topicHistory.findMany({
+    const histories = await prismaClient.topicReadState.findMany({
       where: { topicId: result.data.id },
     });
     expect(histories.map((h) => h.userId).sort()).toEqual(

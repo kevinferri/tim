@@ -2,7 +2,7 @@ import { RoomType } from "@tim/socket-types";
 import { getTopicIdsForCircle, isUserInCircle } from "../db/circles";
 import { getParentCircleIdForTopic, isUserInTopic } from "../db/topics";
 import { SocketEvent, HandlerArgs } from "./main";
-import { saveTopicHistory } from "../db/topic-history";
+import { markTopicRead } from "../db/topic-read-state";
 import { ActiveUserState, AppSocket } from "../lib/socket";
 
 export { RoomType };
@@ -163,7 +163,8 @@ export function handleJoinRoom({ socket, server }: HandlerArgs) {
       socket.join(roomKey);
 
       if (roomType === RoomType.Topic) {
-        emitUserChangeInTopic({ server, socket, topicId: id });
+        // Marked on join as well as leave so a hard kill (e.g. a deploy) between the two doesn't lose the read.
+        emitUserChangeInTopic({ server, socket, topicId: id, markRead: true });
       }
 
       if (roomType === RoomType.Circle) {
@@ -187,7 +188,7 @@ export function handleLeaveRoom({ socket, server }: HandlerArgs) {
         server,
         socket,
         topicId: id,
-        recordHistory: true,
+        markRead: true,
       });
     }
 
@@ -204,11 +205,11 @@ export async function emitUserChangeInTopic({
   socket,
   topicId,
   disconnectingSocketId,
-  recordHistory,
+  markRead,
 }: HandlerArgs & {
   topicId: string;
   disconnectingSocketId?: string;
-  recordHistory?: boolean;
+  markRead?: boolean;
 }) {
   const topicKey = toRoomKey({ id: topicId, roomType: RoomType.Topic });
   const roomSockets = await server.in(topicKey).fetchSockets();
@@ -239,11 +240,14 @@ export async function emitUserChangeInTopic({
     });
   }
 
-  if (recordHistory) {
+  if (markRead) {
     try {
-      await saveTopicHistory({ userId: socket.data.user.id, topicId });
-    } catch {
-      // On topic delete, topic doesn't exist anymore
+      await markTopicRead({ userId: socket.data.user.id, topicId });
+    } catch (err) {
+      // 23503 (FK violation): the topic was deleted, so there's nothing left to record.
+      if ((err as { code?: string }).code !== "23503") {
+        console.error("Failed to mark topic read", err);
+      }
     }
   }
 }

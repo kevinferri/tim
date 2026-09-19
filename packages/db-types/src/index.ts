@@ -5,5 +5,5 @@ export type {
   Topic,
   Message,
   Highlight,
-  TopicHistory,
+  TopicReadState,
 } from "@prisma/client";

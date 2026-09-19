@@ -29,7 +29,7 @@ model User {
   circleMemberships Circle[]          @relation("circleMembershipsForUser")
   messages          Message[]         @relation("messagesSentByUser")
   highlights        Highlight[]       @relation("highlightsByUser")
-  topicHistory      TopicHistory[]    @relation("topicHistoryForUser")
+  topicReadStates   TopicReadState[]  @relation("topicReadStatesForUser")
   topicPreferences  TopicPreference[] @relation("topicPreferencesForUser")
 
   @@map(name: "users")
@@ -76,7 +76,7 @@ model Topic {
   parentCircle     Circle            @relation("topicsInCircle", fields: [circleId], references: [id], onDelete: Cascade)
   defaultForCircle Circle?           @relation("defaultTopicForCircle")
   messages         Message[]         @relation("messagesInTopic")
-  history          TopicHistory[]    @relation("userHistoryForTopic")
+  readStates       TopicReadState[]  @relation("readStatesForTopic")
   preferences      TopicPreference[] @relation("userPreferencesForTopic")
 
   @@index([userId, circleId])
@@ -128,30 +128,26 @@ model Highlight {
   @@map(name: "highlights")
 }
 
-model TopicHistory {
-  // Base
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  // Specific
-  userId    String
-  topicId   String
+// Per-user read cursor: a topic is unread when someone else has a message newer than lastReadAt. No @updatedAt, so it only moves on an explicit mark-read.
+model TopicReadState {
+  userId     String
+  topicId    String
+  lastReadAt DateTime @default(now())
 
   // Relations
-  user     User    @relation("topicHistoryForUser", fields: [userId], references: [id], onDelete: Cascade)
-  topic    Topic   @relation("userHistoryForTopic", fields: [topicId], references: [id], onDelete: Cascade)
+  user     User    @relation("topicReadStatesForUser", fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic   @relation("readStatesForTopic", fields: [topicId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, topicId])
-  @@index([userId, updatedAt(sort: Desc)])
+  @@id([userId, topicId])
+  @@index([userId, lastReadAt(sort: Desc)])
 
-  @@map(name: "topic_histories")
+  @@map(name: "topic_read_states")
 }
 
 // A user's own sidebar preferences for a topic (manual order, mute) --
-// deliberately separate from TopicHistory, whose updatedAt means "last
-// visited" (read by getUnreadTopicIds()). Keeping preferences here means no
-// write path here needs to reason about accidentally clearing unread state.
+// deliberately separate from TopicReadState, whose lastReadAt drives
+// getUnreadTopicIds(). Keeping preferences here means no write path here
+// needs to reason about accidentally clearing unread state.
 model TopicPreference {
   // Base
   id        String   @id @default(uuid())

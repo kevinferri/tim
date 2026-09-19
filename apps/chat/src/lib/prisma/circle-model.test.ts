@@ -127,6 +127,64 @@ describe("circleModel.upsertForUser", () => {
     expect(topic?.circleId).toBe(result.data.id);
   });
 
+  it("seeds read state for the default topic's initial members", async () => {
+    const owner = await createUser();
+    const member = await createUser();
+
+    const result = await prismaClient.circle.upsertForUser({
+      userId: owner.id,
+      circleId: null,
+      name: "New Circle",
+      description: null,
+      imageUrl: null,
+      memberEmails: member.email,
+      defaultTopicName: null,
+    });
+
+    if (result === false) throw new Error("expected circle to be created");
+
+    const rows = await prismaClient.topicReadState.findMany({
+      where: { topicId: result.data.defaultTopicId! },
+    });
+    expect(rows.map((r) => r.userId).sort()).toEqual(
+      [owner.id, member.id].sort(),
+    );
+  });
+
+  it("deletes read state for members removed from the circle", async () => {
+    const owner = await createUser();
+    const removed = await createUser();
+    const circle = await prismaClient.circle.create({
+      data: {
+        name: "Original",
+        userId: owner.id,
+        members: { connect: [{ id: owner.id }, { id: removed.id }] },
+      },
+    });
+    const topic = await prismaClient.topic.create({
+      data: { name: "Topic", userId: owner.id, circleId: circle.id },
+    });
+    await prismaClient.topicReadState.createManyForUsers({
+      topicId: topic.id,
+      userIds: [owner.id, removed.id],
+    });
+
+    await prismaClient.circle.upsertForUser({
+      userId: owner.id,
+      circleId: circle.id,
+      name: "Original",
+      description: null,
+      imageUrl: null,
+      memberEmails: null,
+      defaultTopicName: null,
+    });
+
+    const rows = await prismaClient.topicReadState.findMany({
+      where: { topicId: topic.id },
+    });
+    expect(rows.map((r) => r.userId)).toEqual([owner.id]);
+  });
+
   it("refuses to update a circle the user doesn't own", async () => {
     const owner = await createUser();
     const attacker = await createUser();

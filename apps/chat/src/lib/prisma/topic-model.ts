@@ -165,7 +165,7 @@ export const topicModel = {
       });
 
       if (circleMembers?.members.length) {
-        await prismaClient.topicHistory.createManyForUsers({
+        await prismaClient.topicReadState.createManyForUsers({
           topicId: data.id,
           userIds: circleMembers.members.map((member) => member.id),
         });

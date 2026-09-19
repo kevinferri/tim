@@ -9,12 +9,12 @@ vi.mock("../db/topics", () => ({
   isUserInTopic: vi.fn(),
   getParentCircleIdForTopic: vi.fn(),
 }));
-vi.mock("../db/topic-history", () => ({
-  saveTopicHistory: vi.fn(),
+vi.mock("../db/topic-read-state", () => ({
+  markTopicRead: vi.fn(),
 }));
 
 import { isUserInTopic, getParentCircleIdForTopic } from "../db/topics";
-import { saveTopicHistory } from "../db/topic-history";
+import { markTopicRead } from "../db/topic-read-state";
 import {
   RoomType,
   toRoomKey,
@@ -215,6 +215,10 @@ describe("handleJoinRoom", () => {
         SocketEvent.UserJoinedOrLeftTopic,
         expect.objectContaining({ topicId: "topic-1" }),
       );
+      expect(markTopicRead).toHaveBeenCalledWith({
+        userId: "user-1",
+        topicId: "topic-1",
+      });
     });
   });
 
@@ -231,6 +235,7 @@ describe("handleJoinRoom", () => {
     });
 
     expect(socket.join).not.toHaveBeenCalled();
+    expect(markTopicRead).not.toHaveBeenCalled();
   });
 
   it("ignores a payload missing id or roomType", async () => {
@@ -249,7 +254,7 @@ describe("handleJoinRoom", () => {
 });
 
 describe("handleLeaveRoom", () => {
-  it("leaves a topic room and records topic history", async () => {
+  it("leaves a topic room and marks the topic read", async () => {
     vi.mocked(getParentCircleIdForTopic).mockResolvedValue({
       id: "circle-1",
     } as any);
@@ -267,11 +272,43 @@ describe("handleLeaveRoom", () => {
     // handleLeaveRoom fires emitUserChangeInTopic without awaiting it, so
     // its DB call lands on a later microtask than the handler's return.
     await vi.waitFor(() =>
-      expect(saveTopicHistory).toHaveBeenCalledWith({
+      expect(markTopicRead).toHaveBeenCalledWith({
         userId: "user-1",
         topicId: "topic-1",
       }),
     );
+  });
+
+  it("stays quiet when the topic can't be marked read because the topic was deleted", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue(undefined as any);
+    vi.mocked(markTopicRead).mockRejectedValue({ code: "23503" });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await emitUserChangeInTopic({
+      server: createMockServer() as any,
+      socket: createMockSocket({ id: "user-1" }) as any,
+      topicId: "topic-1",
+      markRead: true,
+    });
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("logs unexpected mark-read failures instead of swallowing them", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue(undefined as any);
+    vi.mocked(markTopicRead).mockRejectedValue(new Error("connection lost"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await emitUserChangeInTopic({
+      server: createMockServer() as any,
+      socket: createMockSocket({ id: "user-1" }) as any,
+      topicId: "topic-1",
+      markRead: true,
+    });
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it("leaving a circle room emits UserLeftCircle without a DB call", async () => {
@@ -289,6 +326,6 @@ describe("handleLeaveRoom", () => {
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserLeftCircle, {
       circleId: "circle-1",
     });
-    expect(saveTopicHistory).not.toHaveBeenCalled();
+    expect(markTopicRead).not.toHaveBeenCalled();
   });
 });
