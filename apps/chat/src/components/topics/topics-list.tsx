@@ -500,25 +500,33 @@ export const TopicsList = ({
     return [...overridden, ...appended];
   }, [grouped.activeTopics, dragOverrideIds]);
 
-  // Unread topics float to the top of the active group (the default topic
-  // stays pinned above all of them), keeping their custom order relative to
-  // each other -- as does everything below them. Purely a display transform
-  // over the custom order: folding it into that order instead would get
-  // frozen out by the drag override above after the first drag, and relies
-  // on sort() being stable to preserve custom order within each bucket.
-  //
-  // The topic you're currently in is excluded (it shows no unread treatment
-  // either), so the row you're reading doesn't yank itself to the top under
-  // you. Not applied to the muted group, where unread has no visible
-  // treatment at all, so moving those rows would be unexplained motion.
-  const displayedActiveTopics = useMemo(() => {
-    const isUnreadNow = (topic: TopicWithMeta) =>
-      Boolean(topic.isUnread) && topic.id !== params.topicId;
-
-    return [...customOrderedActiveTopics].sort(
-      (a, b) => Number(isUnreadNow(b)) - Number(isUnreadNow(a)),
+  // Current topic's hoist status is frozen on arrival (not live) so it holds
+  // its position for the whole visit and only reflows once you leave.
+  const lastCurrentTopicIdRef = useRef<typeof params.topicId>(undefined);
+  const frozenCurrentUnreadRef = useRef(false);
+  if (lastCurrentTopicIdRef.current !== params.topicId) {
+    lastCurrentTopicIdRef.current = params.topicId;
+    frozenCurrentUnreadRef.current = Boolean(
+      params.topicId && unreadTopics[params.topicId as string],
     );
-  }, [customOrderedActiveTopics, params.topicId]);
+  }
+
+  const isUnreadNow = (topic: TopicWithMeta) =>
+    topic.id === params.topicId
+      ? frozenCurrentUnreadRef.current
+      : Boolean(topic.isUnread);
+
+  const unreadActiveTopics = useMemo(
+    () => customOrderedActiveTopics.filter(isUnreadNow),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [customOrderedActiveTopics, params.topicId],
+  );
+
+  const draggableActiveTopics = useMemo(
+    () => customOrderedActiveTopics.filter((topic) => !isUnreadNow(topic)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [customOrderedActiveTopics, params.topicId],
+  );
 
   async function handleDragEnd({ active, over }: DragEndEvent) {
     // First statement so every exit path below (including a drop on itself)
@@ -527,9 +535,8 @@ export const TopicsList = ({
 
     if (!over || active.id === over.id) return;
 
-    // Resolved against the custom order, not the displayed one: dropping A
-    // onto B means "put A at B's place in my order", which shouldn't depend
-    // on whether either of them happens to be hoisted for being unread.
+    // Indices resolve against the full custom order, not draggableActiveTopics,
+    // so an unread topic sitting between the two dragged items shifts along.
     const oldIndex = customOrderedActiveTopics.findIndex(
       (topic) => topic.id === active.id,
     );
@@ -804,6 +811,14 @@ export const TopicsList = ({
                 <TopicRow {...rowPropsFor(grouped.defaultTopic)} />
               )}
 
+              {unreadActiveTopics.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {unreadActiveTopics.map((topic) => (
+                    <TopicRow key={topic.id} {...rowPropsFor(topic)} />
+                  ))}
+                </div>
+              )}
+
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -815,11 +830,11 @@ export const TopicsList = ({
                 autoScroll={false}
               >
                 <SortableContext
-                  items={displayedActiveTopics.map((topic) => topic.id)}
+                  items={draggableActiveTopics.map((topic) => topic.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="flex flex-col gap-3">
-                    {displayedActiveTopics.map((topic) => (
+                    {draggableActiveTopics.map((topic) => (
                       <SortableTopicRow
                         key={topic.id}
                         {...rowPropsFor(topic)}
