@@ -497,10 +497,12 @@ export const TopicsList = ({
   }, [grouped.activeTopics, dragOverrideIds]);
 
   // Current topic's hoist status is frozen on arrival (not live) so it holds
-  // its position for the whole visit and only reflows once you leave.
+  // its position for the whole visit and only reflows once you leave. Gated
+  // on showTopics so it captures post-hydration data, not the store's
+  // pre-hydration empty state on a fresh mount into an already-unread topic.
   const lastCurrentTopicIdRef = useRef<typeof params.topicId>(undefined);
   const frozenCurrentUnreadRef = useRef(false);
-  if (lastCurrentTopicIdRef.current !== params.topicId) {
+  if (showTopics && lastCurrentTopicIdRef.current !== params.topicId) {
     lastCurrentTopicIdRef.current = params.topicId;
     frozenCurrentUnreadRef.current = Boolean(
       params.topicId && unreadTopics[params.topicId as string],
