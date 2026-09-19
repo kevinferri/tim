@@ -15,27 +15,137 @@ type TopicMap = Record<string, TopicPresence>;
 
 type Store = {
   topicMap: TopicMap;
+  // Our own optimistically-added entry for a topic, kept until a server
+  // snapshot confirms it -- see mergeIncomingUsers below.
+  pendingSelf: Record<string, ActiveUser>;
   mergeCircleSnapshot: (topicMap: TopicMap) => void;
   setTopicPresence: (topicId: string, presence: TopicPresence) => void;
+  addSelfToTopic: (topicId: string, circleId: string, self: ActiveUser) => void;
+  removeSelfFromTopic: (topicId: string, selfId: string) => void;
   removeTopic: (topicId: string) => void;
 };
 
+// Keeps existing users in their existing positions (only appending ones the
+// client hasn't seen before) rather than snapping to the server's array
+// order on every update. `pending`, if given and absent from `incoming`, is
+// held over rather than dropped -- the server snapshot that raced ahead of
+// our own room:join hasn't seen us yet, not evidence we left.
+function mergeIncomingUsers(
+  existing: ActiveUser[],
+  incoming: ActiveUser[],
+  pending?: ActiveUser,
+): ActiveUser[] {
+  const incomingById = new Map(incoming.map((user) => [user.id, user]));
+  const keepIds = new Set(incomingById.keys());
+  if (pending) keepIds.add(pending.id);
+
+  const merged = existing
+    .filter((user) => keepIds.has(user.id))
+    .map((user) => incomingById.get(user.id) ?? user);
+
+  const seenIds = new Set(merged.map((user) => user.id));
+  for (const user of incoming) {
+    if (!seenIds.has(user.id)) {
+      merged.push(user);
+      seenIds.add(user.id);
+    }
+  }
+
+  return merged;
+}
+
 const useStore = create<Store>((set) => ({
   topicMap: {},
+  pendingSelf: {},
 
   mergeCircleSnapshot: (topicMap) =>
-    set((state) => ({ topicMap: { ...state.topicMap, ...topicMap } })),
+    set((state) => {
+      const merged = { ...state.topicMap };
+      const pendingSelf = { ...state.pendingSelf };
+
+      for (const [topicId, presence] of Object.entries(topicMap)) {
+        const pending = pendingSelf[topicId];
+        merged[topicId] = {
+          circleId: presence.circleId,
+          activeUsers: mergeIncomingUsers(
+            merged[topicId]?.activeUsers ?? [],
+            presence.activeUsers,
+            pending,
+          ),
+        };
+        if (pending && presence.activeUsers.some((u) => u.id === pending.id)) {
+          delete pendingSelf[topicId];
+        }
+      }
+
+      return { topicMap: merged, pendingSelf };
+    }),
 
   setTopicPresence: (topicId, presence) =>
-    set((state) => ({
-      topicMap: {
-        ...state.topicMap,
-        [topicId]: {
-          ...presence,
-          activeUsers: uniqBy(presence.activeUsers, "id"),
+    set((state) => {
+      const pending = state.pendingSelf[topicId];
+      const stillPending =
+        pending && !presence.activeUsers.some((u) => u.id === pending.id);
+
+      const pendingSelf = { ...state.pendingSelf };
+      if (!stillPending) delete pendingSelf[topicId];
+
+      return {
+        pendingSelf,
+        topicMap: {
+          ...state.topicMap,
+          [topicId]: {
+            circleId: presence.circleId,
+            activeUsers: mergeIncomingUsers(
+              state.topicMap[topicId]?.activeUsers ?? [],
+              presence.activeUsers,
+              pending,
+            ),
+          },
         },
-      },
-    })),
+      };
+    }),
+
+  addSelfToTopic: (topicId, circleId, self) =>
+    set((state) => {
+      const existing = state.topicMap[topicId];
+      const alreadyPresent = existing?.activeUsers.some(
+        (u) => u.id === self.id,
+      );
+
+      return {
+        pendingSelf: { ...state.pendingSelf, [topicId]: self },
+        topicMap: {
+          ...state.topicMap,
+          [topicId]: {
+            circleId: existing?.circleId ?? circleId,
+            activeUsers: alreadyPresent
+              ? existing.activeUsers
+              : [...(existing?.activeUsers ?? []), self],
+          },
+        },
+      };
+    }),
+
+  removeSelfFromTopic: (topicId, selfId) =>
+    set((state) => {
+      const pendingSelf = { ...state.pendingSelf };
+      delete pendingSelf[topicId];
+
+      const existing = state.topicMap[topicId];
+      if (!existing) return { pendingSelf };
+
+      return {
+        pendingSelf,
+        topicMap: {
+          ...state.topicMap,
+          [topicId]: {
+            ...existing,
+            activeUsers: existing.activeUsers.filter((u) => u.id !== selfId),
+          },
+        },
+      };
+    }),
 
   removeTopic: (topicId) =>
     set((state) => {
@@ -43,7 +153,11 @@ const useStore = create<Store>((set) => ({
 
       const topicMap = { ...state.topicMap };
       delete topicMap[topicId];
-      return { topicMap };
+
+      const pendingSelf = { ...state.pendingSelf };
+      delete pendingSelf[topicId];
+
+      return { topicMap, pendingSelf };
     }),
 }));
 
@@ -74,6 +188,18 @@ export function usePresenceSync() {
     removeTopic(payload.id),
   );
 }
+
+export function useAddSelfToTopic() {
+  return useStore((state) => state.addSelfToTopic);
+}
+
+export function useRemoveSelfFromTopic() {
+  return useStore((state) => state.removeSelfFromTopic);
+}
+
+// Exported for direct store-level testing (see active-circle-members-store.test.ts)
+// -- components should use the selector hooks above instead.
+export { useStore as __useActiveCircleMembersStore };
 
 export function useActiveCircleMembers() {
   const topicMap = useStore(useShallow((state) => state.topicMap));
