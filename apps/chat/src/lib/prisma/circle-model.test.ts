@@ -143,7 +143,7 @@ describe("circleModel.upsertForUser", () => {
 
     if (result === false) throw new Error("expected circle to be created");
 
-    const rows = await prismaClient.topicHistory.findMany({
+    const rows = await prismaClient.topicReadState.findMany({
       where: { topicId: result.data.defaultTopicId! },
     });
     expect(rows.map((r) => r.userId).sort()).toEqual(
@@ -164,7 +164,7 @@ describe("circleModel.upsertForUser", () => {
     const topic = await prismaClient.topic.create({
       data: { name: "Topic", userId: owner.id, circleId: circle.id },
     });
-    await prismaClient.topicHistory.createManyForUsers({
+    await prismaClient.topicReadState.createManyForUsers({
       topicId: topic.id,
       userIds: [owner.id, removed.id],
     });
@@ -179,7 +179,7 @@ describe("circleModel.upsertForUser", () => {
       defaultTopicName: null,
     });
 
-    const rows = await prismaClient.topicHistory.findMany({
+    const rows = await prismaClient.topicReadState.findMany({
       where: { topicId: topic.id },
     });
     expect(rows.map((r) => r.userId)).toEqual([owner.id]);

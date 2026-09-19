@@ -1,14 +1,13 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { Prisma } from "@prisma/client";
 
-export const topicHistoryModel = {
-  async getMostRecentForUser({ userId }: { userId?: string }) {
+export const topicReadStateModel = {
+  async getMostRecentlyReadForUser({ userId }: { userId?: string }) {
     if (!userId) return undefined;
 
-    return await prismaClient.topicHistory.findFirst({
-      // updatedAt, not createdAt: history rows are upserted in place on every visit, so createdAt only reflects the first-ever visit to a topic.
+    return await prismaClient.topicReadState.findFirst({
       orderBy: {
-        updatedAt: "desc",
+        lastReadAt: "desc",
       },
       where: {
         userId,
@@ -35,16 +34,16 @@ export const topicHistoryModel = {
   }): Promise<Record<string, boolean>> {
     if (!userId || !topicIds.length) return {};
 
-    // One index probe per topic on (topicId, createdAt DESC) instead of scanning every message in the circle. A topic with no history row counts as read, and the user's own messages never make a topic unread for them.
+    // One index probe per topic on (topicId, createdAt DESC) instead of scanning every message in the circle. A topic with no read-state row counts as read, and the user's own messages never make a topic unread for them.
     const rows = await prismaClient.$queryRaw<{ topicId: string }[]>`
       SELECT h."topicId"
-      FROM "topic_histories" h
+      FROM "topic_read_states" h
       WHERE h."userId" = ${userId}
         AND h."topicId" IN (${Prisma.join(topicIds)})
         AND EXISTS (
           SELECT 1 FROM "messages" m
           WHERE m."topicId" = h."topicId"
-            AND m."createdAt" > h."updatedAt"
+            AND m."createdAt" > h."lastReadAt"
             AND m."userId" <> h."userId"
         )
     `;
@@ -61,7 +60,7 @@ export const topicHistoryModel = {
   }) {
     if (!userIds.length) return;
 
-    await prismaClient.topicHistory.createMany({
+    await prismaClient.topicReadState.createMany({
       data: userIds.map((userId) => ({ topicId, userId })),
       skipDuplicates: true,
     });

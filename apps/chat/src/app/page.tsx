@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 export default async function HomePage() {
   const userId = await getLoggedInUserId();
-  const mostRecentTopic = await prismaClient.topicHistory.getMostRecentForUser({
+  const mostRecentTopic = await prismaClient.topicReadState.getMostRecentlyReadForUser({
     userId,
   });
 

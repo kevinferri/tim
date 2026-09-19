@@ -41,7 +41,7 @@ describe("handleClientDisconnecting", () => {
       server,
       socket,
       topicId: "topic-1",
-      recordHistory: true,
+      markRead: true,
       disconnectingSocketId: socket.id,
     });
   });

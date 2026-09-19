@@ -14,7 +14,7 @@ A Next.js 14 (App Router) chat/community app ("Tim") built on React Server Compo
 - **State**: Zustand (client), Server Components/Server Actions (server)
 - **Media**: Cloudinary
 
-Data model (see `prisma/schema.prisma`): `User` → `Circle` (has members, a creator, and a `defaultTopic`) → `Topic` → `Message` → `Highlight`, plus `TopicHistory` for per-user read state. Cascading deletes flow Circle → Topic → Message/Highlight.
+Data model (see `prisma/schema.prisma`): `User` → `Circle` (has members, a creator, and a `defaultTopic`) → `Topic` → `Message` → `Highlight`, plus `TopicReadState` for per-user read state. Cascading deletes flow Circle → Topic → Message/Highlight.
 
 ## Commands
 

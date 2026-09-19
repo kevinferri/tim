@@ -172,7 +172,7 @@ export const circleModel = {
           });
 
           // Removed members keep no read state for a circle they can no longer see.
-          await tx.topicHistory.deleteMany({
+          await tx.topicReadState.deleteMany({
             where: {
               topic: { circleId: existingCircle.id },
               userId: { notIn: [userId, ...members.map(({ id }) => id)] },
@@ -199,7 +199,7 @@ export const circleModel = {
           });
 
           // Same as a topic created later, so the default topic can show as unread before anyone has visited it.
-          await tx.topicHistory.createMany({
+          await tx.topicReadState.createMany({
             data: (newCircle.members ?? []).map(({ id }) => ({
               userId: id,
               topicId: defaultTopic.id!,

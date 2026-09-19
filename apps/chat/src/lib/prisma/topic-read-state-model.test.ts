@@ -26,18 +26,18 @@ async function createTopic(ownerId: string) {
   });
 }
 
-describe("topicHistoryModel.createManyForUsers", () => {
-  it("creates a history row per user id", async () => {
+describe("topicReadStateModel.createManyForUsers", () => {
+  it("creates a read-state row per user id", async () => {
     const owner = await createUser();
     const member = await createUser();
     const topic = await createTopic(owner.id);
 
-    await prismaClient.topicHistory.createManyForUsers({
+    await prismaClient.topicReadState.createManyForUsers({
       topicId: topic.id,
       userIds: [owner.id, member.id],
     });
 
-    const rows = await prismaClient.topicHistory.findMany({
+    const rows = await prismaClient.topicReadState.findMany({
       where: { topicId: topic.id },
     });
     expect(rows.map((r) => r.userId).sort()).toEqual(
@@ -49,32 +49,32 @@ describe("topicHistoryModel.createManyForUsers", () => {
     const owner = await createUser();
     const topic = await createTopic(owner.id);
 
-    await prismaClient.topicHistory.createManyForUsers({
+    await prismaClient.topicReadState.createManyForUsers({
       topicId: topic.id,
       userIds: [],
     });
 
     await expect(
-      prismaClient.topicHistory.findMany({ where: { topicId: topic.id } }),
+      prismaClient.topicReadState.findMany({ where: { topicId: topic.id } }),
     ).resolves.toEqual([]);
   });
 });
 
-describe("topicHistoryModel.getMostRecentForUser", () => {
-  it("returns the most recently created history row for the user", async () => {
+describe("topicReadStateModel.getMostRecentlyReadForUser", () => {
+  it("returns the most recently read topic for the user", async () => {
     const owner = await createUser();
     const topicA = await createTopic(owner.id);
     const topicB = await createTopic(owner.id);
 
-    await prismaClient.topicHistory.create({
+    await prismaClient.topicReadState.create({
       data: { userId: owner.id, topicId: topicA.id },
     });
     await new Promise((r) => setTimeout(r, 5));
-    await prismaClient.topicHistory.create({
+    await prismaClient.topicReadState.create({
       data: { userId: owner.id, topicId: topicB.id },
     });
 
-    const result = await prismaClient.topicHistory.getMostRecentForUser({
+    const result = await prismaClient.topicReadState.getMostRecentlyReadForUser({
       userId: owner.id,
     });
 
@@ -87,15 +87,15 @@ describe("topicHistoryModel.getMostRecentForUser", () => {
     const stale = await createTopic(other.id);
     const current = await createTopic(owner.id);
 
-    await prismaClient.topicHistory.create({
+    await prismaClient.topicReadState.create({
       data: { userId: owner.id, topicId: current.id },
     });
     await new Promise((r) => setTimeout(r, 5));
-    await prismaClient.topicHistory.create({
+    await prismaClient.topicReadState.create({
       data: { userId: owner.id, topicId: stale.id },
     });
 
-    const result = await prismaClient.topicHistory.getMostRecentForUser({
+    const result = await prismaClient.topicReadState.getMostRecentlyReadForUser({
       userId: owner.id,
     });
 
@@ -104,18 +104,18 @@ describe("topicHistoryModel.getMostRecentForUser", () => {
 
   it("returns undefined when userId is missing", async () => {
     await expect(
-      prismaClient.topicHistory.getMostRecentForUser({ userId: undefined }),
+      prismaClient.topicReadState.getMostRecentlyReadForUser({ userId: undefined }),
     ).resolves.toBeUndefined();
   });
 });
 
-describe("topicHistoryModel.getUnreadTopicIds", () => {
-  it("flags a topic as unread when its most recent message postdates the user's history", async () => {
+describe("topicReadStateModel.getUnreadTopicIds", () => {
+  it("flags a topic as unread when its most recent message postdates the user's lastReadAt", async () => {
     const owner = await createUser();
     const other = await createUser();
     const topic = await createTopic(owner.id);
 
-    await prismaClient.topicHistory.create({
+    await prismaClient.topicReadState.create({
       data: { userId: owner.id, topicId: topic.id },
     });
     await new Promise((r) => setTimeout(r, 5));
@@ -123,7 +123,7 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
       data: { userId: other.id, topicId: topic.id, text: "hello" },
     });
 
-    const unread = await prismaClient.topicHistory.getUnreadTopicIds({
+    const unread = await prismaClient.topicReadState.getUnreadTopicIds({
       userId: owner.id,
       topicIds: [topic.id],
     });
@@ -139,11 +139,11 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
       data: { userId: owner.id, topicId: topic.id, text: "hello" },
     });
     await new Promise((r) => setTimeout(r, 5));
-    await prismaClient.topicHistory.create({
+    await prismaClient.topicReadState.create({
       data: { userId: owner.id, topicId: topic.id },
     });
 
-    const unread = await prismaClient.topicHistory.getUnreadTopicIds({
+    const unread = await prismaClient.topicReadState.getUnreadTopicIds({
       userId: owner.id,
       topicIds: [topic.id],
     });
@@ -156,7 +156,7 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     const other = await createUser();
     const topic = await createTopic(owner.id);
 
-    await prismaClient.topicHistory.create({
+    await prismaClient.topicReadState.create({
       data: { userId: owner.id, topicId: topic.id },
     });
     await new Promise((r) => setTimeout(r, 5));
@@ -165,7 +165,7 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     });
 
     await expect(
-      prismaClient.topicHistory.getUnreadTopicIds({
+      prismaClient.topicReadState.getUnreadTopicIds({
         userId: owner.id,
         topicIds: [topic.id],
       }),
@@ -176,7 +176,7 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     });
 
     await expect(
-      prismaClient.topicHistory.getUnreadTopicIds({
+      prismaClient.topicReadState.getUnreadTopicIds({
         userId: owner.id,
         topicIds: [topic.id],
       }),
@@ -190,7 +190,7 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     const topicB = await createTopic(owner.id);
 
     for (const topic of [topicA, topicB]) {
-      await prismaClient.topicHistory.create({
+      await prismaClient.topicReadState.create({
         data: { userId: owner.id, topicId: topic.id },
       });
     }
@@ -202,14 +202,14 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     }
 
     await expect(
-      prismaClient.topicHistory.getUnreadTopicIds({
+      prismaClient.topicReadState.getUnreadTopicIds({
         userId: owner.id,
         topicIds: [topicA.id],
       }),
     ).resolves.toEqual({ [topicA.id]: true });
 
     await expect(
-      prismaClient.topicHistory.getUnreadTopicIds({
+      prismaClient.topicReadState.getUnreadTopicIds({
         userId: other.id,
         topicIds: [topicA.id, topicB.id],
       }),
@@ -221,14 +221,14 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
     const topic = await createTopic(owner.id);
 
     await expect(
-      prismaClient.topicHistory.getUnreadTopicIds({
+      prismaClient.topicReadState.getUnreadTopicIds({
         userId: undefined,
           topicIds: [topic.id],
       }),
     ).resolves.toEqual({});
 
     await expect(
-      prismaClient.topicHistory.getUnreadTopicIds({
+      prismaClient.topicReadState.getUnreadTopicIds({
         userId: owner.id,
           topicIds: [],
       }),

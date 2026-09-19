@@ -11,7 +11,7 @@ function makeTx(existingCircle: { id: string; userId: string } | null) {
     },
     topic: { create: vi.fn() },
     message: { createMany: vi.fn() },
-    topicHistory: { createMany: vi.fn() },
+    topicReadState: { createMany: vi.fn() },
   } as any;
 }
 
