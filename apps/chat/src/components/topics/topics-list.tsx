@@ -476,12 +476,8 @@ export const TopicsList = ({
     topicOrder,
   ]);
 
-  // The user's custom order, with the sticky drag override applied
-  // optimistically on top: it reorders whatever it knows about, then appends
-  // anything it doesn't (a topic created after the last drag) so nothing
-  // silently disappears from the sidebar. This is the sequence a drag reads
-  // and writes -- kept free of the unread hoist below, so a drag means "this
-  // is my order" rather than baking in wherever the hoist put things.
+  // Custom order with the optimistic drag override on top; topics the
+  // override doesn't know about (created since) are appended, not dropped.
   const customOrderedActiveTopics = useMemo(() => {
     if (!dragOverrideIds) return grouped.activeTopics;
 
