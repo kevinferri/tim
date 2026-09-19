@@ -197,6 +197,15 @@ export const circleModel = {
             },
             select: { id: true },
           });
+
+          // Same as a topic created later, so the default topic can show as unread before anyone has visited it.
+          await tx.topicHistory.createMany({
+            data: (newCircle.members ?? []).map(({ id }) => ({
+              userId: id,
+              topicId: defaultTopic.id!,
+            })),
+            skipDuplicates: true,
+          });
         }
       });
     } catch (err) {

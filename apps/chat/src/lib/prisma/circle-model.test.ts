@@ -127,6 +127,30 @@ describe("circleModel.upsertForUser", () => {
     expect(topic?.circleId).toBe(result.data.id);
   });
 
+  it("seeds read state for the default topic's initial members", async () => {
+    const owner = await createUser();
+    const member = await createUser();
+
+    const result = await prismaClient.circle.upsertForUser({
+      userId: owner.id,
+      circleId: null,
+      name: "New Circle",
+      description: null,
+      imageUrl: null,
+      memberEmails: member.email,
+      defaultTopicName: null,
+    });
+
+    if (result === false) throw new Error("expected circle to be created");
+
+    const rows = await prismaClient.topicHistory.findMany({
+      where: { topicId: result.data.defaultTopicId! },
+    });
+    expect(rows.map((r) => r.userId).sort()).toEqual(
+      [owner.id, member.id].sort(),
+    );
+  });
+
   it("deletes read state for members removed from the circle", async () => {
     const owner = await createUser();
     const removed = await createUser();
