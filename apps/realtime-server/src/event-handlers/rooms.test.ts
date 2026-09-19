@@ -274,6 +274,38 @@ describe("handleLeaveRoom", () => {
     );
   });
 
+  it("stays quiet when history can't be saved because the topic was deleted", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue(undefined as any);
+    vi.mocked(saveTopicHistory).mockRejectedValue({ code: "23503" });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await emitUserChangeInTopic({
+      server: createMockServer() as any,
+      socket: createMockSocket({ id: "user-1" }) as any,
+      topicId: "topic-1",
+      recordHistory: true,
+    });
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("logs unexpected history-save failures instead of swallowing them", async () => {
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue(undefined as any);
+    vi.mocked(saveTopicHistory).mockRejectedValue(new Error("connection lost"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await emitUserChangeInTopic({
+      server: createMockServer() as any,
+      socket: createMockSocket({ id: "user-1" }) as any,
+      topicId: "topic-1",
+      recordHistory: true,
+    });
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it("leaving a circle room emits UserLeftCircle without a DB call", async () => {
     const socket = createMockSocket({ id: "user-1" });
     const server = createMockServer();

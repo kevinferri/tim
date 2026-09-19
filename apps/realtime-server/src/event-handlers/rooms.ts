@@ -242,8 +242,11 @@ export async function emitUserChangeInTopic({
   if (recordHistory) {
     try {
       await saveTopicHistory({ userId: socket.data.user.id, topicId });
-    } catch {
-      // On topic delete, topic doesn't exist anymore
+    } catch (err) {
+      // 23503 (FK violation): the topic was deleted, so there's nothing left to record.
+      if ((err as { code?: string }).code !== "23503") {
+        console.error("Failed to record topic history", err);
+      }
     }
   }
 }

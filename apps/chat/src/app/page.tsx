@@ -8,17 +8,6 @@ export default async function HomePage() {
     userId,
   });
 
-  const isStillInCircle = mostRecentTopic?.topic.parentCircle.members.find(
-    ({ id }) => id === userId,
-  );
-
-  if (mostRecentTopic && !isStillInCircle) {
-    prismaClient.topicHistory.deleteForTopicAndUser({
-      topicId: mostRecentTopic.topicId,
-      userId,
-    });
-  }
-
   // Server redirect (not a client component redirecting on mount) so we go straight to the target route's real loading.tsx instead of showing a bespoke skeleton first and then a second, different-looking one.
   if (mostRecentTopic) {
     redirect(

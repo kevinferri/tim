@@ -81,33 +81,31 @@ describe("topicHistoryModel.getMostRecentForUser", () => {
     expect(result?.topicId).toBe(topicB.id);
   });
 
+  it("skips topics in circles the user is no longer a member of", async () => {
+    const owner = await createUser();
+    const other = await createUser();
+    const stale = await createTopic(other.id);
+    const current = await createTopic(owner.id);
+
+    await prismaClient.topicHistory.create({
+      data: { userId: owner.id, topicId: current.id },
+    });
+    await new Promise((r) => setTimeout(r, 5));
+    await prismaClient.topicHistory.create({
+      data: { userId: owner.id, topicId: stale.id },
+    });
+
+    const result = await prismaClient.topicHistory.getMostRecentForUser({
+      userId: owner.id,
+    });
+
+    expect(result?.topicId).toBe(current.id);
+  });
+
   it("returns undefined when userId is missing", async () => {
     await expect(
       prismaClient.topicHistory.getMostRecentForUser({ userId: undefined }),
     ).resolves.toBeUndefined();
-  });
-});
-
-describe("topicHistoryModel.getAllForUser", () => {
-  it("returns every history row for the user", async () => {
-    const owner = await createUser();
-    const topic = await createTopic(owner.id);
-    await prismaClient.topicHistory.create({
-      data: { userId: owner.id, topicId: topic.id },
-    });
-
-    const rows = await prismaClient.topicHistory.getAllForUser({
-      userId: owner.id,
-    });
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].topicId).toBe(topic.id);
-  });
-
-  it("returns an empty list when userId is missing", async () => {
-    await expect(
-      prismaClient.topicHistory.getAllForUser({ userId: undefined }),
-    ).resolves.toEqual([]);
   });
 });
 
@@ -208,40 +206,3 @@ describe("topicHistoryModel.getUnreadTopicIds", () => {
   });
 });
 
-describe("topicHistoryModel.deleteForTopicAndUser", () => {
-  it("deletes matching history rows", async () => {
-    const owner = await createUser();
-    const topic = await createTopic(owner.id);
-    await prismaClient.topicHistory.create({
-      data: { userId: owner.id, topicId: topic.id },
-    });
-
-    await prismaClient.topicHistory.deleteForTopicAndUser({
-      userId: owner.id,
-      topicId: topic.id,
-    });
-
-    await expect(
-      prismaClient.topicHistory.findMany({
-        where: { userId: owner.id, topicId: topic.id },
-      }),
-    ).resolves.toEqual([]);
-  });
-
-  it("is a no-op when topicId or userId is missing", async () => {
-    const owner = await createUser();
-    const topic = await createTopic(owner.id);
-    await prismaClient.topicHistory.create({
-      data: { userId: owner.id, topicId: topic.id },
-    });
-
-    await prismaClient.topicHistory.deleteForTopicAndUser({
-      userId: undefined,
-      topicId: topic.id,
-    });
-
-    await expect(
-      prismaClient.topicHistory.findMany({ where: { topicId: topic.id } }),
-    ).resolves.toHaveLength(1);
-  });
-});

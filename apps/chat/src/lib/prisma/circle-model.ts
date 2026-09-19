@@ -170,6 +170,14 @@ export const circleModel = {
             data,
             select: CIRCLE_SELECT,
           });
+
+          // Removed members keep no read state for a circle they can no longer see.
+          await tx.topicHistory.deleteMany({
+            where: {
+              topic: { circleId: existingCircle.id },
+              userId: { notIn: [userId, ...members.map(({ id }) => id)] },
+            },
+          });
         } else {
           newCircle = await tx.circle.create({
             data,

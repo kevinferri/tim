@@ -127,6 +127,40 @@ describe("circleModel.upsertForUser", () => {
     expect(topic?.circleId).toBe(result.data.id);
   });
 
+  it("deletes read state for members removed from the circle", async () => {
+    const owner = await createUser();
+    const removed = await createUser();
+    const circle = await prismaClient.circle.create({
+      data: {
+        name: "Original",
+        userId: owner.id,
+        members: { connect: [{ id: owner.id }, { id: removed.id }] },
+      },
+    });
+    const topic = await prismaClient.topic.create({
+      data: { name: "Topic", userId: owner.id, circleId: circle.id },
+    });
+    await prismaClient.topicHistory.createManyForUsers({
+      topicId: topic.id,
+      userIds: [owner.id, removed.id],
+    });
+
+    await prismaClient.circle.upsertForUser({
+      userId: owner.id,
+      circleId: circle.id,
+      name: "Original",
+      description: null,
+      imageUrl: null,
+      memberEmails: null,
+      defaultTopicName: null,
+    });
+
+    const rows = await prismaClient.topicHistory.findMany({
+      where: { topicId: topic.id },
+    });
+    expect(rows.map((r) => r.userId)).toEqual([owner.id]);
+  });
+
   it("refuses to update a circle the user doesn't own", async () => {
     const owner = await createUser();
     const attacker = await createUser();
