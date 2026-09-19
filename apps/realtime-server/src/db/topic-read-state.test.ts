@@ -36,7 +36,10 @@ describe("markTopicRead", () => {
     const topicId = await createTopic(userId, circleId);
 
     await markTopicRead({ userId, topicId });
-    const [first] = await pgClient("topic_read_states").where({ userId, topicId });
+    const [first] = await pgClient("topic_read_states").where({
+      userId,
+      topicId,
+    });
     await new Promise((r) => setTimeout(r, 5));
     await markTopicRead({ userId, topicId });
 

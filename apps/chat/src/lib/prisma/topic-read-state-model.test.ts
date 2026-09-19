@@ -74,9 +74,11 @@ describe("topicReadStateModel.getMostRecentlyReadForUser", () => {
       data: { userId: owner.id, topicId: topicB.id },
     });
 
-    const result = await prismaClient.topicReadState.getMostRecentlyReadForUser({
-      userId: owner.id,
-    });
+    const result = await prismaClient.topicReadState.getMostRecentlyReadForUser(
+      {
+        userId: owner.id,
+      },
+    );
 
     expect(result?.topicId).toBe(topicB.id);
   });
@@ -95,16 +97,20 @@ describe("topicReadStateModel.getMostRecentlyReadForUser", () => {
       data: { userId: owner.id, topicId: stale.id },
     });
 
-    const result = await prismaClient.topicReadState.getMostRecentlyReadForUser({
-      userId: owner.id,
-    });
+    const result = await prismaClient.topicReadState.getMostRecentlyReadForUser(
+      {
+        userId: owner.id,
+      },
+    );
 
     expect(result?.topicId).toBe(current.id);
   });
 
   it("returns undefined when userId is missing", async () => {
     await expect(
-      prismaClient.topicReadState.getMostRecentlyReadForUser({ userId: undefined }),
+      prismaClient.topicReadState.getMostRecentlyReadForUser({
+        userId: undefined,
+      }),
     ).resolves.toBeUndefined();
   });
 });
@@ -223,16 +229,15 @@ describe("topicReadStateModel.getUnreadTopicIds", () => {
     await expect(
       prismaClient.topicReadState.getUnreadTopicIds({
         userId: undefined,
-          topicIds: [topic.id],
+        topicIds: [topic.id],
       }),
     ).resolves.toEqual({});
 
     await expect(
       prismaClient.topicReadState.getUnreadTopicIds({
         userId: owner.id,
-          topicIds: [],
+        topicIds: [],
       }),
     ).resolves.toEqual({});
   });
 });
-
