@@ -92,13 +92,19 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
 
       server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
 
+      // Composer auto-@s the quoted author for message-body context; don't also
+      // send them a Mentioned notification — Replied covers that alert.
+      const mentionedUserIds = (payload.mentionedUserIds ?? []).filter(
+        (id: string) => id !== replyToMessage?.userId,
+      );
+
       await emitMentionNotifications({
         server,
         roomKey,
         topicId: payload.topicId,
         messageId: savedMessage.id,
         actor: socket.data.user,
-        mentionedUserIds: payload.mentionedUserIds ?? [],
+        mentionedUserIds,
       });
 
       if (replyToMessage) {

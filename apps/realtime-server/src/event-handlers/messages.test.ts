@@ -175,6 +175,8 @@ describe("handleSendMessage", () => {
       topicId: "topic-1",
       message: "a reply",
       replyToId: "original-msg",
+      // Simulates composer auto-@ of the quoted author.
+      mentionedUserIds: ["author-1"],
     });
 
     expect(getMessageForReplyPreview).toHaveBeenCalledWith({
@@ -197,6 +199,7 @@ describe("handleSendMessage", () => {
         },
       }),
     );
+    expect(authorSocket.emit).toHaveBeenCalledTimes(1);
     expect(authorSocket.emit).toHaveBeenCalledWith(
       "notification:create",
       expect.objectContaining({
@@ -206,6 +209,54 @@ describe("handleSendMessage", () => {
     );
     // Receiver comes from the quoted author, not an ownership lookup on the reply.
     expect(getMessageOwnerInTopic).not.toHaveBeenCalled();
+  });
+
+  it("still mentions other users on a reply, but not the quoted author twice", async () => {
+    vi.mocked(getMessageForReplyPreview).mockResolvedValue({
+      id: "original-msg",
+      text: encrypt("original text", "original-msg"),
+      userId: "author-1",
+      name: "Author One",
+      threadRootId: null,
+    } as any);
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-6",
+      text: encrypt("a reply", "msg-6"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+      replyToId: "original-msg",
+      threadRootId: "original-msg",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const authorSocket = createMockSocket({ id: "author-1" });
+    const bobSocket = createMockSocket({ id: "bob" });
+    const server = createMockServer({
+      socketsInRoom: [authorSocket as any, bobSocket as any],
+    });
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "a reply",
+      replyToId: "original-msg",
+      mentionedUserIds: ["author-1", "bob"],
+    });
+
+    expect(authorSocket.emit).toHaveBeenCalledTimes(1);
+    expect(authorSocket.emit).toHaveBeenCalledWith(
+      "notification:create",
+      expect.objectContaining({ notificationType: "reply:received" }),
+    );
+    expect(bobSocket.emit).toHaveBeenCalledWith(
+      "notification:create",
+      expect.objectContaining({
+        messageId: "msg-6",
+        notificationType: "mention:received",
+      }),
+    );
   });
 
   it("replies to a media-only message without throwing on its null text", async () => {

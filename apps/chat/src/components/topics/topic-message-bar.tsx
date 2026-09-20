@@ -246,7 +246,9 @@ export function TopicMessageBar() {
 
     textAreaRef.current?.focus();
 
-    // Auto-@ the author so they get a mention notification with the reply.
+    // Auto-@ the author in the message body for conversational context.
+    // Mention notifications for that author are deduped server-side in favor
+    // of the dedicated Replied notification.
     if (!replyingTo.senderId || replyingTo.senderId === self.id) return;
 
     setMessage((prev) => {
