@@ -55,7 +55,10 @@ function threadRecency(messages: MessageProps[]): MessageRecency {
     oldestMessageId: messages[0]?.id,
     newestMessageId: messages[messages.length - 1]?.id,
     recentMessageIds: new Set(
-      messages.slice(-5).map((m) => m.id!).filter(Boolean),
+      messages
+        .slice(-5)
+        .map((m) => m.id!)
+        .filter(Boolean),
     ),
   };
 }

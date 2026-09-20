@@ -20,9 +20,7 @@ beforeEach(() => {
 });
 
 function makeRequest() {
-  return new NextRequest(
-    "http://localhost/api/topics/topic-1/threads/root-1",
-  );
+  return new NextRequest("http://localhost/api/topics/topic-1/threads/root-1");
 }
 
 describe("GET /api/topics/[topicId]/threads/[threadRootId]", () => {

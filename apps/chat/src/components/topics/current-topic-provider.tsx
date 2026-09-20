@@ -244,7 +244,9 @@ export function CurrentTopicProvider(props: Props) {
     string | undefined
   >();
   const [replyingTo, setReplyingTo] = useState<ReplyingToMessage | undefined>();
-  const [openThreadRootId, setOpenThreadRootId] = useState<string | undefined>();
+  const [openThreadRootId, setOpenThreadRootId] = useState<
+    string | undefined
+  >();
   const [unseenCount, setUnseenCount] = useState(0);
   const {
     viewportRef,

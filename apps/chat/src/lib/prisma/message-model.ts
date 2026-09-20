@@ -54,11 +54,14 @@ export const DEFAULT_MESSAGE_SELECT = {
   },
 };
 
-type ReplyToShape = {
-  id: string;
-  text?: string | null;
-  createdAt?: Date | string | null;
-} | null | undefined;
+type ReplyToShape =
+  | {
+      id: string;
+      text?: string | null;
+      createdAt?: Date | string | null;
+    }
+  | null
+  | undefined;
 
 export const normalizeMessages = <
   T extends {

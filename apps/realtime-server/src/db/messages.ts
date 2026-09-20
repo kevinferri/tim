@@ -34,9 +34,7 @@ export async function writeMessage({
       .where("id", replyToId)
       .first();
     if (parent?.createdAt) {
-      const minCreatedAt = new Date(
-        new Date(parent.createdAt).getTime() + 1,
-      );
+      const minCreatedAt = new Date(new Date(parent.createdAt).getTime() + 1);
       if (createdAt < minCreatedAt) createdAt = minCreatedAt;
     }
   }

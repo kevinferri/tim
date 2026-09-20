@@ -94,45 +94,56 @@ export function useTopicMessages({
 
         // De-dup safety net for the append-on-socket-event path, which
         // isn't a queryFn react-query dedupes on its own.
-        let withNew = uniqBy([...prev.pages[0], newMsg], "id");
+        const alreadyLoaded = prev.pages.some((page) =>
+          page.some((m) => m.id === newMsg.id),
+        );
+        let pages = alreadyLoaded
+          ? prev.pages
+          : [[...prev.pages[0], newMsg], ...prev.pages.slice(1)];
 
-        // Bump replyCount on every visible message in this flat thread.
+        // Bump replyCount on every loaded message in this flat thread —
+        // the root (or a sibling) may live on an older paginated page.
         if (newMsg.threadRootId) {
-          const sibling = withNew.find(
-            (m) =>
-              m.id !== newMsg.id &&
-              (m.id === newMsg.threadRootId ||
-                m.threadRootId === newMsg.threadRootId),
-          );
+          const sibling = pages
+            .flat()
+            .find(
+              (m) =>
+                m.id !== newMsg.id &&
+                (m.id === newMsg.threadRootId ||
+                  m.threadRootId === newMsg.threadRootId),
+            );
           const newCount = (sibling?.replyCount ?? 0) + 1;
-          withNew = withNew.map((m) => {
-            const isRoot = m.id === newMsg.threadRootId;
-            const inSameThread = m.threadRootId === newMsg.threadRootId;
-            if (!isRoot && !inSameThread) return m;
-            return { ...m, replyCount: newCount };
-          });
+          pages = pages.map((page) =>
+            page.map((m) => {
+              const isRoot = m.id === newMsg.threadRootId;
+              const inSameThread = m.threadRootId === newMsg.threadRootId;
+              if (!isRoot && !inSameThread) return m;
+              return { ...m, replyCount: newCount };
+            }),
+          );
         }
 
         // Trims the live window only while the user is at the bottom --
         // trimming while scrolled up reading history would yank content
         // from under them.
-        const needsSlice = withNew.length > messagesLimit && isAtBottom;
+        const livePage = pages[0] ?? [];
+        const needsSlice = livePage.length > messagesLimit && isAtBottom;
 
         if (needsSlice) {
-          const slicer = Math.max(withNew.length - messagesLimit, 0);
+          const slicer = Math.max(livePage.length - messagesLimit, 0);
           // Drops already-loaded older pages too, since they'd be stale
           // relative to the trimmed live window and leave a gap; trimming to
           // exactly messagesLimit also keeps hasNextPage accurate.
           return {
             ...prev,
-            pages: [withNew.slice(slicer)],
+            pages: [livePage.slice(slicer)],
             pageParams: [prev.pageParams[0]],
           };
         }
 
         return {
           ...prev,
-          pages: [withNew, ...prev.pages.slice(1)],
+          pages,
         };
       });
 

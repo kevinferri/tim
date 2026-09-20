@@ -42,7 +42,9 @@ export function ReplyPreview({
       <ReplyIcon className={cn("shrink-0", !compact && "mt-0.5")} />
       {compact ? (
         <div className="flex min-w-0 flex-1 items-baseline gap-1">
-          <span className="shrink-0 font-medium text-foreground/70">{name}</span>
+          <span className="shrink-0 font-medium text-foreground/70">
+            {name}
+          </span>
           {text ? <span className="min-w-0 truncate">{text}</span> : null}
         </div>
       ) : (

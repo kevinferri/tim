@@ -396,16 +396,15 @@ const MessageComponent = (props: MessageProps) => {
           </div>
         </div>
 
-        {!isThreadSidebar &&
-          !props.hiddenElements?.includes("highlights") && (
-            <HighlightTooltip
-              className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
-              highlightedBySelf={highlightedBySelf}
-              highlights={highlights}
-              messageId={props.id!}
-              onHighlight={handleToggleHighlight}
-            />
-          )}
+        {!isThreadSidebar && !props.hiddenElements?.includes("highlights") && (
+          <HighlightTooltip
+            className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
+            highlightedBySelf={highlightedBySelf}
+            highlights={highlights}
+            messageId={props.id!}
+            onHighlight={handleToggleHighlight}
+          />
+        )}
       </div>
     </div>
   );
