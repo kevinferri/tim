@@ -49,7 +49,10 @@ export function withReferencesCleared(deletedId: string) {
     return {
       ...m,
       ...(quotedIt ? { replyTo: null, replyToId: null } : {}),
-      ...(rootedOnIt ? { threadRootId: null } : {}),
+      // replyCount goes with it: the count belonged to the thread, and the
+      // "N replies" button renders on `!threadRootId && replyCount > 0`, so an
+      // orphan would otherwise advertise replies it doesn't have.
+      ...(rootedOnIt ? { threadRootId: null, replyCount: 0 } : {}),
     };
   };
 }

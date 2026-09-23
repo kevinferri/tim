@@ -107,9 +107,13 @@ export function useTopicMessages({
           ? prev.pages
           : [[...prev.pages[0], newMsg], ...prev.pages.slice(1)];
 
-        const pages = newMsg.threadRootId
-          ? adjustReplyCounts(withNew, newMsg.threadRootId, 1, newMsg.id)
-          : withNew;
+        // Gated on alreadyLoaded too: a replayed SendMessage (reconnect racing
+        // reconcileRecentMessages) skips the append but would otherwise still
+        // bump the thread, double-counting the same reply.
+        const pages =
+          newMsg.threadRootId && !alreadyLoaded
+            ? adjustReplyCounts(withNew, newMsg.threadRootId, 1, newMsg.id)
+            : withNew;
 
         const livePage = pages[0] ?? [];
 

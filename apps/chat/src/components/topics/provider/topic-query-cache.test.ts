@@ -123,10 +123,16 @@ describe("withReferencesCleared", () => {
     expect(next.replyToId).toBeNull();
   });
 
-  it("clears threadRootId when the deleted message was the root", () => {
-    const reply = msg("m2", { threadRootId: "m1" });
+  it("clears threadRootId and the inherited count when the root is deleted", () => {
+    // The count belonged to the thread; an orphan renders "N replies" on
+    // !threadRootId && replyCount > 0, so a stale count advertises a thread
+    // that no longer exists.
+    const reply = msg("m2", { threadRootId: "m1", replyCount: 3 });
 
-    expect(withReferencesCleared("m1")(reply).threadRootId).toBeNull();
+    const next = withReferencesCleared("m1")(reply);
+
+    expect(next.threadRootId).toBeNull();
+    expect(next.replyCount).toBe(0);
   });
 
   it("clears both when a message quotes the root it hangs off", () => {
