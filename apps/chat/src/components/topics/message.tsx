@@ -313,7 +313,20 @@ const MessageComponent = (props: MessageProps) => {
                 senderName={props.replyTo.sentBy?.name ?? null}
                 text={props.replyTo.text ?? ""}
                 mediaUrl={props.replyTo.mediaUrl}
-                onClick={() => jumpToMessage(props.replyTo!.id, props.context)}
+                onClick={() => {
+                  // From the transcript, the thread is the better destination:
+                  // it renders the quoted message's root at the top, so it
+                  // answers "what were they replying to" and gives the rest of
+                  // the conversation. Elsewhere -- inside the thread itself, or
+                  // in a modal/sheet where stacking another would be odd --
+                  // jump to the quoted message instead.
+                  if (props.context === "topic" && props.threadRootId) {
+                    setOpenThreadRootId(props.threadRootId);
+                    return;
+                  }
+
+                  jumpToMessage(props.replyTo!.id, props.context);
+                }}
               />
             )}
 
