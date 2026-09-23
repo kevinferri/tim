@@ -103,8 +103,6 @@ export function ReplyThreadPanel({ topicId, threadRootId }: Props) {
               return (
                 <div key={message.id} className="min-w-0 max-w-full">
                   {isFirstReply && (
-                    // Mirrors MessageDateSeparator so the two dividers in a
-                    // transcript read as the same thing.
                     <div className="flex items-center py-3">
                       <span className="h-px flex-1 bg-border" aria-hidden />
                       <Badge
