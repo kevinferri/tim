@@ -64,6 +64,16 @@ export function ReplyThreadPanel({ topicId, threadRootId }: Props) {
     topRef.current?.scrollIntoView({ block: "start" });
   }, [threadRootId]);
 
+  // Someone else deleting the root dissolves the thread -- the schema SetNulls
+  // the replies' threadRootId, so a refetch would 404. The panel also assumes
+  // messages[0] is the root (recency, replyCount, the divider index), so
+  // there's nothing coherent left to render.
+  const rootIsGone = !isLoading && messages[0]?.id !== threadRootId;
+
+  useEffect(() => {
+    if (rootIsGone) setOpenThreadRootId(undefined);
+  }, [rootIsGone, setOpenThreadRootId]);
+
   return (
     <div className="flex flex-col h-full min-w-0 overflow-hidden bg-background">
       <div className="flex items-center justify-between gap-2 p-3 border-b shrink-0">
