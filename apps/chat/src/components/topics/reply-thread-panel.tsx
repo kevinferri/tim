@@ -66,8 +66,8 @@ export function ReplyThreadPanel({ topicId, threadRootId }: Props) {
 
   return (
     <div className="flex flex-col h-full min-w-0 overflow-hidden bg-background">
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b shrink-0">
-        <span className="truncate text-sm leading-none">Thread</span>
+      <div className="flex items-center justify-between gap-2 p-3 border-b shrink-0">
+        <span className="truncate font-medium">Thread</span>
         <Button
           size="iconSm"
           variant="ghost"
