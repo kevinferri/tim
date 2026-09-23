@@ -265,10 +265,6 @@ const MessageComponent = (props: MessageProps) => {
             {showActions && isActionEligable && (
               <MessageActions
                 sentBySelf={sentBySelf}
-                // The oldest message has nothing above it to straddle into, so
-                // pin its toolbar inside the box rather than clipping it out of
-                // the scroll area. The thread panel reserves headroom instead,
-                // so its root lifts like every other row.
                 // The oldest message has nothing above it to straddle into --
                 // and in the thread panel a negative offset would clip out of
                 // the scroll viewport -- so pin it flush to the top edge.
@@ -279,7 +275,14 @@ const MessageComponent = (props: MessageProps) => {
                 isShufflingGif={isShufflingGif}
                 onEditMessage={() => {
                   setIsEditing(true);
-                  if (isNewestMessage) scrollToBottom({ behavior: "instant" });
+                  // scrollToBottom is the main transcript's and sets
+                  // isAtBottom, which gates its live-window trim. In the thread
+                  // panel isNewestMessage is thread-local, so acting on it here
+                  // would pin (and trim) a transcript the user isn't even
+                  // looking at.
+                  if (isNewestMessage && !isThreadSidebar) {
+                    scrollToBottom({ behavior: "instant" });
+                  }
                 }}
                 onShuffleGif={() => {
                   if (!props.id) return;
