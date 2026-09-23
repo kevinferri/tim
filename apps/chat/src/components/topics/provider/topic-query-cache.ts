@@ -27,6 +27,33 @@ export function adjustReplyCounts(
   );
 }
 
+// A quote renders from the quoting message's own cached `replyTo`, so editing
+// or deleting the quoted message has to reach those copies too -- otherwise the
+// ReplyPreview keeps showing pre-edit text, or a quote of a message that no
+// longer exists, until a refetch.
+export function withEditApplied(id: string, text: string) {
+  return (m: MessageProps): MessageProps => {
+    if (m.id === id) return { ...m, text };
+    if (m.replyTo?.id === id) return { ...m, replyTo: { ...m.replyTo, text } };
+    return m;
+  };
+}
+
+// Mirrors the schema's onDelete: SetNull on replyToId and threadRootId.
+export function withReferencesCleared(deletedId: string) {
+  return (m: MessageProps): MessageProps => {
+    const quotedIt = m.replyTo?.id === deletedId || m.replyToId === deletedId;
+    const rootedOnIt = m.threadRootId === deletedId;
+    if (!quotedIt && !rootedOnIt) return m;
+
+    return {
+      ...m,
+      ...(quotedIt ? { replyTo: null, replyToId: null } : {}),
+      ...(rootedOnIt ? { threadRootId: null } : {}),
+    };
+  };
+}
+
 export function messagesQueryKey(topicId: string) {
   return ["messages", topicId];
 }

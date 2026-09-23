@@ -14,6 +14,8 @@ import {
   messagesQueryKey,
   updateThreadCache,
   adjustReplyCounts,
+  withEditApplied,
+  withReferencesCleared,
 } from "@/components/topics/provider/topic-query-cache";
 
 type UseTopicMessagesProps = {
@@ -160,8 +162,9 @@ export function useTopicMessages({
           .flat()
           .find(({ id }) => id === payload.deletedMessageId)?.threadRootId;
 
+        const clear = withReferencesCleared(payload.deletedMessageId);
         const pages = prev.pages.map((page) =>
-          page.filter(({ id }) => id !== payload.deletedMessageId),
+          page.filter(({ id }) => id !== payload.deletedMessageId).map(clear),
         );
 
         return {
@@ -173,7 +176,9 @@ export function useTopicMessages({
       });
 
       updateThreadCache(queryClient, topicId, (prev) =>
-        prev.filter(({ id }) => id !== payload.deletedMessageId),
+        prev
+          .filter(({ id }) => id !== payload.deletedMessageId)
+          .map(withReferencesCleared(payload.deletedMessageId)),
       );
     },
   );
@@ -184,20 +189,13 @@ export function useTopicMessages({
       queryClient.setQueryData<MessagesData>(queryKey, (prev) => {
         if (!prev) return prev;
 
-        return {
-          ...prev,
-          pages: prev.pages.map((page) =>
-            page.map((m) =>
-              m.id === payload.id ? { ...m, text: payload.text } : m,
-            ),
-          ),
-        };
+        const edit = withEditApplied(payload.id, payload.text);
+
+        return { ...prev, pages: prev.pages.map((page) => page.map(edit)) };
       });
 
       updateThreadCache(queryClient, topicId, (prev) =>
-        prev.map((m) =>
-          m.id === payload.id ? { ...m, text: payload.text } : m,
-        ),
+        prev.map(withEditApplied(payload.id, payload.text)),
       );
     },
   );

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { adjustReplyCounts } from "./topic-query-cache";
+import {
+  adjustReplyCounts,
+  withEditApplied,
+  withReferencesCleared,
+} from "./topic-query-cache";
 import { MessageProps } from "@/components/topics/message";
 
 function msg(id: string, extra: Partial<MessageProps> = {}): MessageProps {
@@ -76,5 +80,72 @@ describe("adjustReplyCounts", () => {
     const [page] = adjustReplyCounts(pages, "root", -1);
 
     expect(page.map((m) => m.replyCount)).toEqual([0, 5, 5]);
+  });
+});
+
+describe("withEditApplied", () => {
+  it("updates the edited message's own text", () => {
+    const edit = withEditApplied("m1", "after");
+
+    expect(edit(msg("m1", { text: "before" })).text).toBe("after");
+  });
+
+  it("updates the quote on other messages that reference it", () => {
+    const quoter = msg("m2", {
+      replyTo: { id: "m1", text: "before", sentBy: { id: "u1", name: "A" } },
+    });
+
+    const next = withEditApplied("m1", "after")(quoter);
+
+    expect(next.replyTo?.text).toBe("after");
+    // Everything else about the quote is preserved.
+    expect(next.replyTo?.sentBy?.name).toBe("A");
+    expect(next.text).toBe(quoter.text);
+  });
+
+  it("leaves unrelated messages untouched by identity", () => {
+    const other = msg("m3", { text: "unrelated" });
+
+    expect(withEditApplied("m1", "after")(other)).toBe(other);
+  });
+});
+
+describe("withReferencesCleared", () => {
+  it("clears a quote of the deleted message, mirroring onDelete: SetNull", () => {
+    const quoter = msg("m2", {
+      replyToId: "m1",
+      replyTo: { id: "m1", text: "gone" },
+    });
+
+    const next = withReferencesCleared("m1")(quoter);
+
+    expect(next.replyTo).toBeNull();
+    expect(next.replyToId).toBeNull();
+  });
+
+  it("clears threadRootId when the deleted message was the root", () => {
+    const reply = msg("m2", { threadRootId: "m1" });
+
+    expect(withReferencesCleared("m1")(reply).threadRootId).toBeNull();
+  });
+
+  it("clears both when a message quotes the root it hangs off", () => {
+    const reply = msg("m2", {
+      replyToId: "m1",
+      threadRootId: "m1",
+      replyTo: { id: "m1", text: "gone" },
+    });
+
+    const next = withReferencesCleared("m1")(reply);
+
+    expect(next.replyTo).toBeNull();
+    expect(next.replyToId).toBeNull();
+    expect(next.threadRootId).toBeNull();
+  });
+
+  it("leaves messages in other threads untouched by identity", () => {
+    const other = msg("m3", { threadRootId: "other-root" });
+
+    expect(withReferencesCleared("m1")(other)).toBe(other);
   });
 });
