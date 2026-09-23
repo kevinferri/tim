@@ -6,7 +6,14 @@ import { pgClient } from "./client";
 type WriteMessageArgs = Pick<
   Message,
   "userId" | "topicId" | "text" | "mediaUrl"
->;
+> &
+  // Partial, not a bare Pick: the schema has these nullable, but callers omit
+  // them entirely for a non-reply.
+  Partial<Pick<Message, "replyToId" | "threadRootId">> & {
+    // The parent's createdAt, supplied by the caller (which has already fetched
+    // the row via getMessageForReplyPreview) so we don't re-read it here.
+    replyToCreatedAt?: Date | string | null;
+  };
 
 type DeleteMessageArgs = Pick<Message, "userId"> & { messageId: string };
 
@@ -20,8 +27,18 @@ export async function writeMessage({
   topicId,
   text,
   mediaUrl,
+  replyToId,
+  threadRootId,
+  replyToCreatedAt,
 }: WriteMessageArgs) {
   const id = v4();
+  let createdAt = new Date();
+
+  // Clock skew can otherwise produce a reply that sorts above its own parent.
+  if (replyToCreatedAt) {
+    const minCreatedAt = new Date(new Date(replyToCreatedAt).getTime() + 1);
+    if (createdAt < minCreatedAt) createdAt = minCreatedAt;
+  }
 
   const message = await pgClient<Message>("messages")
     .insert({
@@ -30,10 +47,52 @@ export async function writeMessage({
       mediaUrl,
       userId,
       topicId,
+      replyToId,
+      threadRootId,
+      createdAt,
     })
-    .returning(["id", "text", "topicId", "mediaUrl"]);
+    .returning([
+      "id",
+      "text",
+      "topicId",
+      "mediaUrl",
+      "replyToId",
+      "threadRootId",
+      "createdAt",
+    ]);
 
   return message[0];
+}
+
+type ReplyPreviewRow = Pick<
+  Message,
+  "id" | "text" | "mediaUrl" | "userId" | "threadRootId" | "createdAt"
+> & { name: string | null };
+
+// Scoped to topicId so it doubles as validation: a replyToId for a message
+// in another topic (stale, tampered, or the two just don't match) comes
+// back undefined rather than leaking cross-topic content into the preview.
+export async function getMessageForReplyPreview({
+  messageId,
+  topicId,
+}: {
+  messageId: string;
+  topicId: string;
+}): Promise<ReplyPreviewRow | undefined> {
+  return await pgClient("messages")
+    .select(
+      "messages.id",
+      "messages.text",
+      "messages.mediaUrl",
+      "messages.userId",
+      "messages.threadRootId",
+      "messages.createdAt",
+      "users.name",
+    )
+    .join("users", "messages.userId", "users.id")
+    .where("messages.id", messageId)
+    .where("messages.topicId", topicId)
+    .first();
 }
 
 export async function getMessageForUser({

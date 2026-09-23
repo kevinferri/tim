@@ -7,6 +7,8 @@ vi.mock("../db/messages", () => ({
   deleteMessage: vi.fn(),
   editMessage: vi.fn(),
   getMessageForUser: vi.fn(),
+  getMessageForReplyPreview: vi.fn(),
+  getMessageOwnerInTopic: vi.fn(),
 }));
 vi.mock("../lib/media-fetchers", () => ({
   getRandomGif: vi.fn(),
@@ -24,6 +26,8 @@ import {
   deleteMessage,
   editMessage,
   getMessageForUser,
+  getMessageForReplyPreview,
+  getMessageOwnerInTopic,
 } from "../db/messages";
 import { getRandomGif } from "../lib/media-fetchers";
 import {
@@ -136,6 +140,234 @@ describe("handleSendMessage", () => {
     expect(bobSocket.emit).toHaveBeenCalledWith(
       "notification:create",
       expect.objectContaining({ messageId: "msg-1", topicId: "topic-1" }),
+    );
+  });
+
+  it("attaches a decrypted quote preview and notifies the original author when replying", async () => {
+    vi.mocked(getMessageForReplyPreview).mockResolvedValue({
+      id: "original-msg",
+      text: encrypt("original text", "original-msg"),
+      userId: "author-1",
+      name: "Author One",
+      threadRootId: null,
+    } as any);
+    vi.mocked(getMessageOwnerInTopic).mockResolvedValue({
+      id: "original-msg",
+      userId: "author-1",
+    } as any);
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-2",
+      text: encrypt("a reply", "msg-2"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+      replyToId: "original-msg",
+      threadRootId: "original-msg",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const authorSocket = createMockSocket({ id: "author-1" });
+    const server = createMockServer({ socketsInRoom: [authorSocket as any] });
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "a reply",
+      replyToId: "original-msg",
+      // The sender manually @'d the person they're replying to.
+      mentionedUserIds: ["author-1"],
+    });
+
+    expect(getMessageForReplyPreview).toHaveBeenCalledWith({
+      messageId: "original-msg",
+      topicId: "topic-1",
+    });
+    expect(writeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replyToId: "original-msg",
+        threadRootId: "original-msg",
+      }),
+    );
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.SendMessage,
+      expect.objectContaining({
+        replyTo: {
+          id: "original-msg",
+          text: "original text",
+          sentBy: { id: "author-1", name: "Author One" },
+        },
+      }),
+    );
+    expect(authorSocket.emit).toHaveBeenCalledTimes(1);
+    expect(authorSocket.emit).toHaveBeenCalledWith(
+      "notification:create",
+      expect.objectContaining({
+        messageId: "msg-2",
+        notificationType: "reply:received",
+      }),
+    );
+    // Receiver comes from the quoted author, not an ownership lookup on the reply.
+    expect(getMessageOwnerInTopic).not.toHaveBeenCalled();
+  });
+
+  it("still mentions other users on a reply, but not the quoted author twice", async () => {
+    vi.mocked(getMessageForReplyPreview).mockResolvedValue({
+      id: "original-msg",
+      text: encrypt("original text", "original-msg"),
+      userId: "author-1",
+      name: "Author One",
+      threadRootId: null,
+    } as any);
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-6",
+      text: encrypt("a reply", "msg-6"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+      replyToId: "original-msg",
+      threadRootId: "original-msg",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const authorSocket = createMockSocket({ id: "author-1" });
+    const bobSocket = createMockSocket({ id: "bob" });
+    const server = createMockServer({
+      socketsInRoom: [authorSocket as any, bobSocket as any],
+    });
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "a reply",
+      replyToId: "original-msg",
+      mentionedUserIds: ["author-1", "bob"],
+    });
+
+    expect(authorSocket.emit).toHaveBeenCalledTimes(1);
+    expect(authorSocket.emit).toHaveBeenCalledWith(
+      "notification:create",
+      expect.objectContaining({ notificationType: "reply:received" }),
+    );
+    expect(bobSocket.emit).toHaveBeenCalledWith(
+      "notification:create",
+      expect.objectContaining({
+        messageId: "msg-6",
+        notificationType: "mention:received",
+      }),
+    );
+  });
+
+  it("replies to a media-only message without throwing on its null text", async () => {
+    vi.mocked(getMessageForReplyPreview).mockResolvedValue({
+      id: "original-msg",
+      text: null,
+      userId: "author-1",
+      name: "Author One",
+      threadRootId: null,
+    } as any);
+    vi.mocked(getMessageOwnerInTopic).mockResolvedValue({
+      id: "original-msg",
+      userId: "author-1",
+    } as any);
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-4",
+      text: encrypt("nice pic", "msg-4"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+      replyToId: "original-msg",
+      threadRootId: "original-msg",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const server = createMockServer();
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "nice pic",
+      replyToId: "original-msg",
+    });
+
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.SendMessage,
+      expect.objectContaining({
+        replyTo: expect.objectContaining({ id: "original-msg", text: "" }),
+      }),
+    );
+  });
+
+  it("sends as a plain message when replyToId doesn't resolve (stale, deleted, or cross-topic)", async () => {
+    vi.mocked(getMessageForReplyPreview).mockResolvedValue(undefined);
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-3",
+      text: encrypt("hello anyway", "msg-3"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const server = createMockServer();
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "hello anyway",
+      replyToId: "does-not-exist",
+    });
+
+    expect(writeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ replyToId: undefined }),
+    );
+    expect(server.emit).toHaveBeenCalledWith(
+      SocketEvent.SendMessage,
+      expect.objectContaining({ replyTo: undefined }),
+    );
+  });
+
+  it("hangs a reply-to-reply off the flat thread root", async () => {
+    vi.mocked(getMessageForReplyPreview).mockResolvedValue({
+      id: "first-reply",
+      text: encrypt("first reply", "first-reply"),
+      userId: "author-1",
+      name: "Author One",
+      threadRootId: "original-msg",
+    } as any);
+    vi.mocked(getMessageOwnerInTopic).mockResolvedValue({
+      id: "first-reply",
+      userId: "author-1",
+    } as any);
+    vi.mocked(writeMessage).mockResolvedValue({
+      id: "msg-5",
+      text: encrypt("nested", "msg-5"),
+      topicId: "topic-1",
+      mediaUrl: undefined,
+      replyToId: "first-reply",
+      threadRootId: "original-msg",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("circle::circle-1");
+    const server = createMockServer();
+    handleSendMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.SendMessage, {
+      circleId: "circle-1",
+      topicId: "topic-1",
+      message: "nested",
+      replyToId: "first-reply",
+    });
+
+    expect(writeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replyToId: "first-reply",
+        threadRootId: "original-msg",
+      }),
     );
   });
 });

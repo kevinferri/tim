@@ -31,7 +31,12 @@ async function createTopic(ownerId: string) {
 async function createMessage(
   userId: string,
   topicId: string,
-  overrides: Partial<{ text: string; mediaUrl: string | null }> = {},
+  overrides: Partial<{
+    text: string;
+    mediaUrl: string | null;
+    replyToId: string;
+    threadRootId: string;
+  }> = {},
 ) {
   // The AAD binds ciphertext to its row id, so it must be known before encrypting -- generate it up front instead of relying on Prisma's DB-side @default(uuid()).
   const id = crypto.randomUUID();
@@ -43,6 +48,8 @@ async function createMessage(
       topicId,
       text: encrypt(overrides.text ?? "hello", id),
       mediaUrl: overrides.mediaUrl,
+      replyToId: overrides.replyToId,
+      threadRootId: overrides.threadRootId,
     },
   });
 }
@@ -96,6 +103,97 @@ describe("messageModel.getMessagesForTopic", () => {
         select: { text: true },
       }),
     ).resolves.toEqual([]);
+  });
+
+  it("decrypts a nested replyTo's text alongside the message's own", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    const original = await createMessage(user.id, topic.id, {
+      text: "original text",
+    });
+    await createMessage(user.id, topic.id, {
+      text: "a reply",
+      replyToId: original.id,
+      threadRootId: original.id,
+    });
+
+    const messages = await prismaClient.message.getMessagesForTopic({
+      requestingUserId: user.id,
+      topicId: topic.id,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        threadRootId: true,
+        replyTo: { select: { id: true, text: true, createdAt: true } },
+      },
+    });
+
+    const reply = messages.find((m) => m.text === "a reply");
+    expect(reply?.replyTo?.text).toBe("original text");
+    expect(reply?.replyCount).toBe(1);
+    const root = messages.find((m) => m.id === original.id);
+    expect(root?.replyCount).toBe(1);
+  });
+
+  it("orders replies by createdAt, breaking ties on id so order is stable", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    const original = await createMessage(user.id, topic.id, { text: "root" });
+
+    // Same-instant sends are vanishingly rare, but the read side still has to
+    // be deterministic rather than reshuffling between requests.
+    const sameInstant = new Date();
+    const ids: string[] = [];
+    for (const text of ["r1", "r2", "r3", "r4", "r5"]) {
+      const id = crypto.randomUUID();
+      ids.push(id);
+      await prismaClient.message.create({
+        data: {
+          id,
+          userId: user.id,
+          topicId: topic.id,
+          text: encrypt(text, id),
+          replyToId: original.id,
+          threadRootId: original.id,
+          createdAt: sameInstant,
+          updatedAt: sameInstant,
+        },
+      });
+    }
+
+    const read = () =>
+      prismaClient.message.getThreadMessages({
+        topicId: topic.id,
+        threadRootId: original.id,
+        select: { id: true, text: true },
+      });
+
+    const thread = await read();
+
+    expect(thread[0]?.id).toBe(original.id);
+    expect(thread.slice(1).map((m) => m.id)).toEqual([...ids].sort());
+    // Same rows, same order -- no reshuffling between reads.
+    expect((await read()).map((m) => m.id)).toEqual(thread.map((m) => m.id));
+  });
+
+  it("leaves replyTo as null/undefined when the message isn't a reply", async () => {
+    const user = await createUser();
+    const topic = await createTopic(user.id);
+    await createMessage(user.id, topic.id, { text: "plain" });
+
+    const messages = await prismaClient.message.getMessagesForTopic({
+      requestingUserId: user.id,
+      topicId: topic.id,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        replyTo: { select: { id: true, text: true } },
+      },
+    });
+
+    expect(messages[0].replyTo).toBeNull();
   });
 });
 

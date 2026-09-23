@@ -14,9 +14,11 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { MessageActions } from "@/components/topics/message-actions";
 import { MessageText } from "@/components/topics/message-text";
 import { LinkPreview } from "@/components/topics/link-preview";
+import { ReplyPreview } from "@/components/topics/reply-preview";
 import {
   baseStyles,
   highlightStyles,
+  markerRingStyles,
 } from "@/components/topics/message-styles";
 import { MessageEdit } from "@/components/topics/message-edit";
 import {
@@ -30,6 +32,12 @@ import { RollResult } from "@/components/topics/roll-result";
 import { EightBallResult } from "@/components/topics/eight-ball-result";
 import { CommandName, parseCommand } from "@tim/commands";
 import { getDisplayName } from "@tim/user-display";
+import {
+  MessageSurface,
+  messageAnchorId,
+} from "@/components/topics/message-anchor";
+import { Button } from "@/components/ui/button";
+import { ReplyIcon } from "@/components/icons/reply-icon";
 
 export type Highlights = {
   id: Highlight["id"];
@@ -46,6 +54,9 @@ export type MessageData = {
   text?: string;
   mediaUrl?: string | null;
   createdAt?: Date;
+  replyToId?: string | null;
+  threadRootId?: string | null;
+  replyCount?: number;
   sentBy?: {
     id: string;
     name: string | null;
@@ -55,6 +66,15 @@ export type MessageData = {
     lastStatusUpdate: Date | null;
   };
   highlights?: Highlights;
+  // Present only when this message is a reply; absent (not just falsy) once
+  // the original is deleted -- see the SetNull comment on Message.replyTo
+  // in schema.prisma.
+  replyTo?: {
+    id: string;
+    text?: string;
+    mediaUrl?: string | null;
+    sentBy?: { id: string; name: string | null };
+  } | null;
   [key: string]: any;
 };
 
@@ -62,7 +82,7 @@ export type MessageProps = MessageData & {
   variant: "default" | "minimal";
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
-  context?: "topic" | "sidebar" | "user-sheet" | "modal";
+  context?: MessageSurface;
   // Computed once by whoever renders the list, not by this component, so
   // unrelated messages don't re-render when a new one arrives.
   isNewestMessage?: boolean;
@@ -72,7 +92,14 @@ export type MessageProps = MessageData & {
 
 const MessageComponent = (props: MessageProps) => {
   const { topicId } = useTopicMetaContext();
-  const { scrollToBottom } = useTopicUiContext();
+  const {
+    scrollToBottom,
+    setReplyingTo,
+    openThreadRootId,
+    setOpenThreadRootId,
+    highlightedMessageId,
+    jumpToMessage,
+  } = useTopicUiContext();
   const { addShufflingGif, shufflingGifs } = useTopicGifContext();
   const self = useSelf();
   const [showActions, setShowActions] = useState(false);
@@ -87,6 +114,12 @@ const MessageComponent = (props: MessageProps) => {
   const isShufflingGif =
     (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
   const isActionEligable = props.variant !== "minimal";
+  const replyCount = props.replyCount ?? 0;
+  const isJumpTarget = !!props.id && highlightedMessageId === props.id;
+  // Keeps the transcript's copy of the root lit while its thread sheet is open,
+  // so it's clear which message the replies belong to.
+  const isOpenThreadRoot =
+    props.context === "topic" && !!props.id && openThreadRootId === props.id;
 
   const highlights = props.highlights || [];
 
@@ -146,10 +179,20 @@ const MessageComponent = (props: MessageProps) => {
     setEditingText(props.text);
   };
 
+  const isThreadSidebar = props.context === "sidebar";
+  // In the thread panel the root is already on screen — quoting it on every
+  // direct reply just burns vertical space. Keep quotes only for reply-to-reply.
+  const showReplyPreview =
+    props.variant !== "minimal" &&
+    !!props.replyTo &&
+    !(isThreadSidebar && props.replyToId === props.threadRootId);
+
   return (
     <div
+      id={props.id ? messageAnchorId(props.context, props.id) : undefined}
       className={cn(
         baseStyles,
+        isOpenThreadRoot || isJumpTarget ? markerRingStyles : "",
         highlightedBySelf ? highlightStyles : "",
         props.variant === "minimal"
           ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
@@ -171,7 +214,9 @@ const MessageComponent = (props: MessageProps) => {
         if (isActionEligable) setShowActions(false);
       }}
     >
-      <div className="flex gap-3 items-start overflow-hidden leading-none">
+      <div
+        className={cn("flex items-start gap-3 overflow-hidden leading-none")}
+      >
         {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
           <UserAvatar
             id={props.sentBy.id}
@@ -185,8 +230,12 @@ const MessageComponent = (props: MessageProps) => {
           />
         )}
 
-        <div className="flex flex-col flex-1">
-          <div className="flex gap-2 items-center">
+        <div
+          className={cn(
+            "flex flex-1 flex-col gap-1 overflow-hidden leading-none min-w-0",
+          )}
+        >
+          <div className="flex gap-2 items-center min-w-0">
             {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
               <UserAvatar
                 id={props.sentBy.id}
@@ -200,9 +249,8 @@ const MessageComponent = (props: MessageProps) => {
               >
                 <span
                   className={cn(
-                    `font-semibold ${
-                      props.sentBy.id === self.id && "text-mention"
-                    }`,
+                    "font-semibold truncate",
+                    props.sentBy.id === self.id && "text-mention",
                   )}
                 >
                   {getDisplayName(props.sentBy.name)}
@@ -217,6 +265,9 @@ const MessageComponent = (props: MessageProps) => {
             {showActions && isActionEligable && (
               <MessageActions
                 sentBySelf={sentBySelf}
+                // The oldest message has nothing above it to straddle into --
+                // and in the thread panel a negative offset would clip out of
+                // the scroll viewport -- so pin it flush to the top edge.
                 className={isFirstMessage ? "top-0" : ""}
                 messageId={props.id!}
                 text={props.text ?? ""}
@@ -224,7 +275,14 @@ const MessageComponent = (props: MessageProps) => {
                 isShufflingGif={isShufflingGif}
                 onEditMessage={() => {
                   setIsEditing(true);
-                  if (isNewestMessage) scrollToBottom({ behavior: "instant" });
+                  // scrollToBottom is the main transcript's and sets
+                  // isAtBottom, which gates its live-window trim. In the thread
+                  // panel isNewestMessage is thread-local, so acting on it here
+                  // would pin (and trim) a transcript the user isn't even
+                  // looking at.
+                  if (isNewestMessage && !isThreadSidebar) {
+                    scrollToBottom({ behavior: "instant" });
+                  }
                 }}
                 onShuffleGif={() => {
                   if (!props.id) return;
@@ -232,11 +290,46 @@ const MessageComponent = (props: MessageProps) => {
                   setShuffledGifLoading(true);
                   shuffleGif.emit({ messageId: props.id, topicId });
                 }}
+                onReply={() => {
+                  if (!props.id || !props.sentBy?.id) return;
+                  // The thread sheet is modal, so the composer is unreachable
+                  // until it closes -- dismiss it and stage the reply there.
+                  if (isThreadSidebar) setOpenThreadRootId(undefined);
+                  setReplyingTo({
+                    id: props.id,
+                    text: props.text ?? "",
+                    mediaUrl: props.mediaUrl,
+                    senderName: props.sentBy.name ?? null,
+                    senderId: props.sentBy.id,
+                  });
+                }}
               />
             )}
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1 min-w-0">
+            {showReplyPreview && props.replyTo && (
+              <ReplyPreview
+                senderName={props.replyTo.sentBy?.name ?? null}
+                text={props.replyTo.text ?? ""}
+                mediaUrl={props.replyTo.mediaUrl}
+                onClick={() => {
+                  // From the transcript, the thread is the better destination:
+                  // it renders the quoted message's root at the top, so it
+                  // answers "what were they replying to" and gives the rest of
+                  // the conversation. Elsewhere -- inside the thread itself, or
+                  // in a modal/sheet where stacking another would be odd --
+                  // jump to the quoted message instead.
+                  if (props.context === "topic" && props.threadRootId) {
+                    setOpenThreadRootId(props.threadRootId);
+                    return;
+                  }
+
+                  jumpToMessage(props.replyTo!.id, props.context);
+                }}
+              />
+            )}
+
             {isEditing ? (
               <MessageEdit
                 onEditCancel={onEditCancel}
@@ -298,6 +391,23 @@ const MessageComponent = (props: MessageProps) => {
                   />
                 );
               })}
+
+            {props.variant !== "minimal" &&
+              props.context === "topic" &&
+              !props.threadRootId &&
+              replyCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="inline"
+                  // No hover fill: it would read as a box under the message.
+                  // Hover shifts colour, matching ReplyPreview.
+                  className="self-start gap-1.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                  onClick={() => setOpenThreadRootId(props.id)}
+                >
+                  <ReplyIcon />
+                  {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                </Button>
+              )}
           </div>
         </div>
 

@@ -90,19 +90,39 @@ model Message {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  // Specific 
-  text     String?
-  mediaUrl String?
-  userId   String
-  topicId  String
+  // Specific
+  text         String?
+  mediaUrl     String?
+  userId       String
+  topicId      String
+  replyToId    String?
+  // Flat-thread root: null on roots; on replies = parent's threadRootId ?? parent.id.
+  // Distinct from replyToId (the message being quoted).
+  threadRootId String?
 
   // Relations
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
   topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
   highlights Highlight[] @relation("highlightsForMessage")
+  // SetNull rather than Cascade: deleting the original message shouldn't
+  // delete replies to it. Note this clears replyToId itself, not just the
+  // relation -- once the original is gone there's no record the message
+  // was ever a reply, so it silently renders as a plain message.
+  replyTo    Message?    @relation("messageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[]   @relation("messageReplies")
+  // Also SetNull, with a wider blast radius: deleting a root nulls threadRootId
+  // on every message in the thread, including reply-to-replies whose own
+  // replyToId chain is still intact. Those keep their quote preview but leave
+  // the thread, and replying to one starts a fresh thread rooted there.
+  // Accepted -- re-deriving threadRootId from the surviving chain would need a
+  // cascade the schema can't express.
+  threadRoot Message?    @relation("messageThread", fields: [threadRootId], references: [id], onDelete: SetNull)
+  threadReplies Message[] @relation("messageThread")
 
   @@index([topicId, createdAt(sort: Desc)])
   @@index([userId, topicId])
+  @@index([replyToId])
+  @@index([threadRootId, createdAt])
 
   @@map(name: "messages")
 }

@@ -42,7 +42,10 @@ export const HighlightTooltip = (props: Props) => {
               variant="ghost"
               size="iconSm"
               asChild
-              className="cursor-pointer h-6 w-6 p-1 text-highlight-icon hover:bg-muted"
+              // hover:text-highlight-icon pins the colour: the ghost variant's
+              // hover:text-accent-foreground would otherwise flip the star to
+              // near-white in dark mode (near-black in light).
+              className="cursor-pointer h-6 w-6 p-1 text-highlight-icon hover:bg-muted hover:text-highlight-icon"
               onClick={props.onHighlight}
               type="button"
             >

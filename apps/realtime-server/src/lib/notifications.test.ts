@@ -88,6 +88,30 @@ describe("emitNotification", () => {
       }),
     ).resolves.toBeUndefined();
   });
+
+  it("uses an explicit receiverId and skips the owner lookup", async () => {
+    const receiverSocket = createMockSocket({ id: "author-1" });
+    const server = createMockServer({ socketsInRoom: [receiverSocket as any] });
+
+    await emitNotification({
+      server: server as any,
+      roomKey: "topic::topic-1",
+      topicId: "topic-1",
+      messageId: "reply-1",
+      receiverId: "author-1",
+      actor,
+      notificationType: NotificationType.Replied,
+    });
+
+    expect(getMessageOwnerInTopic).not.toHaveBeenCalled();
+    expect(receiverSocket.emit).toHaveBeenCalledWith(
+      "notification:create",
+      expect.objectContaining({
+        notificationType: NotificationType.Replied,
+        messageId: "reply-1",
+      }),
+    );
+  });
 });
 
 describe("emitMentionNotifications", () => {

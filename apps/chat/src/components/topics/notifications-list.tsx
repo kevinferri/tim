@@ -26,6 +26,7 @@ import {
   TopicNotification,
   NotificationType,
 } from "@/components/topics/use-topic-notifications";
+import { ReplyIcon } from "@/components/icons/reply-icon";
 
 type Props = {
   notifications: TopicNotification[];
@@ -51,6 +52,10 @@ const copyMap = {
   [NotificationType.Mentioned]: {
     text: "mentioned you",
     icon: <ChatBubbleIcon />,
+  },
+  [NotificationType.Replied]: {
+    text: "replied to your message",
+    icon: <ReplyIcon />,
   },
 };
 

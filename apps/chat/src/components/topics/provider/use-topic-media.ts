@@ -5,6 +5,7 @@ import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import {
   mediaMessagesQueryKey,
   updateMessagesCache,
+  updateThreadCache,
 } from "@/components/topics/provider/topic-query-cache";
 
 type UseTopicMediaProps = {
@@ -61,6 +62,7 @@ export function useTopicMedia({
       // directly -- no callback threading needed since both live in
       // react-query's cache.
       updateMessagesCache(queryClient, topicId, updateHandler);
+      updateThreadCache(queryClient, topicId, updateHandler);
       setMediaMessages(updateHandler);
       setShufflingGifs((prev) => prev.filter((id) => id !== payload.messageId));
     },

@@ -10,6 +10,11 @@ import {
   MutableRefObject,
 } from "react";
 import { MessageProps, MessageData } from "@/components/topics/message";
+import {
+  MessageSurface,
+  messageAnchorId,
+} from "@/components/topics/message-anchor";
+import { useQueryState } from "nuqs";
 import { useState } from "react";
 import { useSelf } from "@/components/auth/self-provider";
 import { useSocketContext } from "@/components/socket/socket-provider";
@@ -182,6 +187,14 @@ export function useTopicGifContext() {
 
 // --- Scroll/composer UI state: scroll position, unread count, slash-command generation -- none of the above slices care about this. ---
 
+export type ReplyingToMessage = {
+  id: string;
+  text: string;
+  mediaUrl?: string | null;
+  senderName: string | null;
+  senderId: string;
+};
+
 type UiContextValue = {
   viewportRef: MutableRefObject<HTMLDivElement | null>;
   contentRef: MutableRefObject<HTMLDivElement | null>;
@@ -192,7 +205,15 @@ type UiContextValue = {
   blopSoundRef: MutableRefObject<HTMLAudioElement | null>;
   generatingCommand?: string;
   setGeneratingCommand: (command?: string) => void;
+  replyingTo?: ReplyingToMessage;
+  setReplyingTo: (message?: ReplyingToMessage) => void;
+  openThreadRootId?: string;
+  setOpenThreadRootId: (threadRootId?: string) => void;
+  highlightedMessageId?: string;
+  jumpToMessage: (targetId: string, surface?: MessageSurface) => void;
 };
+
+const JUMP_HIGHLIGHT_MS = 2000;
 
 const TopicUiContext = createContext<UiContextValue | undefined>(undefined);
 
@@ -232,6 +253,39 @@ export function CurrentTopicProvider(props: Props) {
   const [generatingCommand, setGeneratingCommand] = useState<
     string | undefined
   >();
+  const [replyingTo, setReplyingTo] = useState<ReplyingToMessage | undefined>();
+  const [openThreadRootId, setOpenThreadRootId] = useState<
+    string | undefined
+  >();
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string>();
+  // One subscription for the whole list -- reading this per-message would
+  // re-render every rendered message whenever the query string changes.
+  const [, setMessageId] = useQueryState("messageId");
+  const highlightTimerRef = useRef<number | undefined>(undefined);
+
+  const jumpToMessage = useCallback(
+    (targetId: string, surface?: MessageSurface) => {
+      const el = document.getElementById(messageAnchorId(surface, targetId));
+
+      // Not rendered on this surface (scrolled out of the loaded window, or
+      // an older message) -- fall back to opening it on its own.
+      if (!el) {
+        setMessageId(targetId);
+        return;
+      }
+
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(targetId);
+      window.clearTimeout(highlightTimerRef.current);
+      highlightTimerRef.current = window.setTimeout(
+        () => setHighlightedMessageId(undefined),
+        JUMP_HIGHLIGHT_MS,
+      );
+    },
+    [setMessageId],
+  );
+
+  useEffect(() => () => window.clearTimeout(highlightTimerRef.current), []);
   const [unseenCount, setUnseenCount] = useState(0);
   const {
     viewportRef,
@@ -241,6 +295,13 @@ export function CurrentTopicProvider(props: Props) {
     scrollToBottom,
     suppressAutoStickRef,
   } = useTopicScroll();
+
+  // Drop reply/thread UI state when navigating to another topic.
+  useEffect(() => {
+    setReplyingTo(undefined);
+    setOpenThreadRootId(undefined);
+    setHighlightedMessageId(undefined);
+  }, [props.topicId]);
 
   const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
     topicId: props.topicId,
@@ -394,6 +455,12 @@ export function CurrentTopicProvider(props: Props) {
       blopSoundRef,
       generatingCommand,
       setGeneratingCommand,
+      replyingTo,
+      setReplyingTo,
+      openThreadRootId,
+      setOpenThreadRootId,
+      highlightedMessageId,
+      jumpToMessage,
     }),
     [
       viewportRef,
@@ -404,6 +471,10 @@ export function CurrentTopicProvider(props: Props) {
       scrollToBottom,
       blopSoundRef,
       generatingCommand,
+      replyingTo,
+      openThreadRootId,
+      highlightedMessageId,
+      jumpToMessage,
     ],
   );
 

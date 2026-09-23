@@ -28,6 +28,9 @@ const buttonVariants = cva(
         iconLg: "h-10 w-10",
         iconSm: "h-6 w-6",
         iconXs: "h-5 w-5",
+        // Sizes to its own text -- for buttons that sit inline in copy and
+        // shouldn't reserve a button-shaped box.
+        inline: "h-auto p-0",
       },
     },
     defaultVariants: {

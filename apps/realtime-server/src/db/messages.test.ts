@@ -8,6 +8,7 @@ import {
   getMessageForUser,
   getMessageOwnerInTopic,
   getMessageHistoryForTopic,
+  getMessageForReplyPreview,
 } from "./messages";
 
 beforeEach(resetDb);
@@ -58,6 +59,119 @@ describe("writeMessage", () => {
 
     const stored = await pgClient("messages").where("id", message.id).first();
     expect(stored.text).not.toBe("hello world");
+  });
+});
+
+describe("writeMessage with replyToId", () => {
+  it("persists and returns the replyToId", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const original = await createMessage(userId, topicId, "original");
+
+    const reply = await writeMessage({
+      userId,
+      topicId,
+      text: "a reply",
+      mediaUrl: undefined as any,
+      replyToId: original.id,
+      threadRootId: original.id,
+    });
+
+    expect(reply.replyToId).toBe(original.id);
+    expect(reply.threadRootId).toBe(original.id);
+  });
+
+  it("persists a nested reply under the flat thread root", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const original = await createMessage(userId, topicId, "original");
+    const firstReply = await writeMessage({
+      userId,
+      topicId,
+      text: "first reply",
+      mediaUrl: undefined as any,
+      replyToId: original.id,
+      threadRootId: original.id,
+    });
+
+    const nested = await writeMessage({
+      userId,
+      topicId,
+      text: "reply to reply",
+      mediaUrl: undefined as any,
+      replyToId: firstReply.id,
+      threadRootId: original.id,
+    });
+
+    expect(nested.replyToId).toBe(firstReply.id);
+    expect(nested.threadRootId).toBe(original.id);
+  });
+
+  it("clamps reply createdAt to after a future-dated parent", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const future = new Date(Date.now() + 60 * 60 * 1000);
+    const parentId = crypto.randomUUID();
+
+    await pgClient("messages").insert({
+      id: parentId,
+      text: "encrypted-parent",
+      userId,
+      topicId,
+      createdAt: future,
+      updatedAt: future,
+    });
+
+    const reply = await writeMessage({
+      userId,
+      topicId,
+      text: "a reply",
+      mediaUrl: undefined as any,
+      replyToId: parentId,
+      threadRootId: parentId,
+      replyToCreatedAt: future,
+    });
+
+    expect(new Date(reply.createdAt!).getTime()).toBeGreaterThan(
+      future.getTime(),
+    );
+  });
+});
+
+describe("getMessageForReplyPreview", () => {
+  it("returns id/text/userId/name/threadRootId when the message belongs to the topic", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const message = await createMessage(userId, topicId, "original text");
+
+    const preview = await getMessageForReplyPreview({
+      messageId: message.id,
+      topicId,
+    });
+
+    expect(preview?.userId).toBe(userId);
+    expect(preview?.name).toBe("Test User");
+    expect(preview?.threadRootId).toBeNull();
+    expect(decrypt(preview!.text, preview!.id)).toBe("original text");
+  });
+
+  it("returns undefined when the message belongs to a different topic", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+    const otherTopicId = await createTopic(userId, circleId);
+    const message = await createMessage(userId, topicId);
+
+    await expect(
+      getMessageForReplyPreview({
+        messageId: message.id,
+        topicId: otherTopicId,
+      }),
+    ).resolves.toBeUndefined();
   });
 });
 

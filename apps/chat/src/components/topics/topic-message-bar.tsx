@@ -43,6 +43,7 @@ import {
   TopicLinkCandidate,
 } from "@/components/topics/topic-link-autocomplete";
 import { MessageHighlightOverlay } from "@/components/topics/message-highlight-overlay";
+import { ReplyPreview } from "@/components/topics/reply-preview";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 import { useSelf } from "@/components/auth/self-provider";
 import { getDisplayName } from "@tim/user-display";
@@ -53,6 +54,7 @@ type MessagePayload = {
   circleId: string;
   mediaUrl?: string;
   mentionedUserIds?: string[];
+  replyToId?: string;
 };
 
 export function TopicMessageBar() {
@@ -80,6 +82,8 @@ export function TopicMessageBar() {
     isAtBottom,
     generatingCommand,
     setGeneratingCommand,
+    replyingTo,
+    setReplyingTo,
   } = useTopicUiContext();
   const isGenerating = isUploadingImage || Boolean(generatingCommand);
   const isTim = parseCommand(generatingCommand ?? "")?.name === CommandName.Tim;
@@ -237,6 +241,11 @@ export function TopicMessageBar() {
     if (!generatingCommand) textAreaRef.current?.focus();
   }, [generatingCommand]);
 
+  useEffect(() => {
+    if (!replyingTo) return;
+    textAreaRef.current?.focus();
+  }, [replyingTo]);
+
   const emitMessage = async (message: string) => {
     if (!image && !message.trim()) return;
     let _media = image ?? extractImageFromMessage(message);
@@ -285,10 +294,12 @@ export function TopicMessageBar() {
       circleId,
       mediaUrl,
       mentionedUserIds,
+      replyToId: replyingTo?.id,
     });
 
     setMessage("");
     setImage(undefined);
+    setReplyingTo(undefined);
   };
 
   useUserTypingEmitter({ topicId, message });
@@ -333,6 +344,19 @@ export function TopicMessageBar() {
             onHover={setTopicLinkMenuSelectedIndex}
             onSelect={selectTopicLink}
           />
+        )}
+        {replyingTo && (
+          // pr-1 matches the composer's own controls below, so the cancel
+          // button lines up with them instead of sitting 8px inboard.
+          <div className="flex items-center pl-3 pr-1 pt-2">
+            <ReplyPreview
+              senderName={replyingTo.senderName}
+              text={replyingTo.text}
+              mediaUrl={replyingTo.mediaUrl}
+              onCancel={() => setReplyingTo(undefined)}
+              className="flex-1"
+            />
+          </div>
         )}
         <div
           className={cn(
@@ -458,6 +482,30 @@ export function TopicMessageBar() {
                   if (e.key === "Escape") {
                     e.preventDefault();
                     setTopicLinkMenuDismissed(true);
+                    return;
+                  }
+                }
+
+                // Reached only when no autocomplete menu is open -- each one
+                // above claims Escape for itself and returns.
+                if (replyingTo) {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setReplyingTo(undefined);
+                    return;
+                  }
+
+                  // Clears the reply like a chip once there's nothing left to
+                  // delete. Skipped on auto-repeat: holding backspace to clear
+                  // a draft shouldn't silently drop the reply too.
+                  if (
+                    e.key === "Backspace" &&
+                    !e.repeat &&
+                    !message &&
+                    !image
+                  ) {
+                    e.preventDefault();
+                    setReplyingTo(undefined);
                     return;
                   }
                 }

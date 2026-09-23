@@ -2,6 +2,7 @@ import { decrypt } from "../lib/encryption";
 import {
   deleteMessage,
   editMessage,
+  getMessageForReplyPreview,
   getMessageForUser,
   writeMessage,
 } from "../db/messages";
@@ -11,7 +12,11 @@ import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, registerRoomEvent } from "./rooms";
 import { executeCommand } from "../lib/command-handler";
 import { parseCommand } from "@tim/commands";
-import { emitMentionNotifications } from "../lib/notifications";
+import {
+  emitMentionNotifications,
+  emitNotification,
+  NotificationType,
+} from "../lib/notifications";
 
 export function handleSendMessage({ socket, server }: HandlerArgs) {
   registerRoomEvent({
@@ -36,11 +41,31 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
       });
       const _mediaUrl = commandMediaUrl ?? payload.mediaUrl;
 
+      // Re-fetched (not trusted from the payload) and scoped to this topic --
+      // doubles as validation that the reply target actually exists here.
+      // A stale/invalid/cross-topic id degrades to a plain (non-reply)
+      // message rather than failing the whole send.
+      const replyToMessage = payload.replyToId
+        ? await getMessageForReplyPreview({
+            messageId: payload.replyToId,
+            topicId: payload.topicId,
+          })
+        : undefined;
+
+      // Flat threads: hang every reply off the root (parent.threadRootId ??
+      // parent.id). replyToId still points at the quoted message.
+      const threadRootId = replyToMessage
+        ? (replyToMessage.threadRootId ?? replyToMessage.id)
+        : undefined;
+
       const savedMessage = await writeMessage({
         userId: socket.data.user.id,
         text: payload.message,
         topicId: payload.topicId,
         mediaUrl: _mediaUrl,
+        replyToId: replyToMessage?.id,
+        threadRootId,
+        replyToCreatedAt: replyToMessage?.createdAt,
       });
 
       const emittedMessage = {
@@ -48,20 +73,53 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         circleId: payload.circleId,
         text: decrypt(savedMessage.text, savedMessage.id),
         sentBy: socket.data.user,
-        createdAt: new Date(),
+        // Prefer the persisted timestamp so live order matches refresh.
+        createdAt: savedMessage.createdAt ?? new Date(),
         highlights: [],
+        replyTo: replyToMessage && {
+          id: replyToMessage.id,
+          // Message.text is nullable (media-only rows); decrypt() has no null check.
+          text: replyToMessage.text
+            ? decrypt(replyToMessage.text, replyToMessage.id)
+            : "",
+          mediaUrl: replyToMessage.mediaUrl,
+          sentBy: { id: replyToMessage.userId, name: replyToMessage.name },
+        },
       };
 
       server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
 
-      await emitMentionNotifications({
-        server,
-        roomKey,
-        topicId: payload.topicId,
-        messageId: savedMessage.id,
-        actor: socket.data.user,
-        mentionedUserIds: payload.mentionedUserIds ?? [],
-      });
+      // One message, one notification: if a reply also @s the quoted author,
+      // Replied covers them and Mentioned would just double up. Any other @ in
+      // the same reply still gets Mentioned.
+      const mentionedUserIds = (payload.mentionedUserIds ?? []).filter(
+        (id: string) => id !== replyToMessage?.userId,
+      );
+
+      // Independent fan-outs, and each does its own fetchSockets() round trip.
+      await Promise.all([
+        emitMentionNotifications({
+          server,
+          roomKey,
+          topicId: payload.topicId,
+          messageId: savedMessage.id,
+          actor: socket.data.user,
+          mentionedUserIds,
+        }),
+        replyToMessage
+          ? emitNotification({
+              server,
+              roomKey,
+              topicId: payload.topicId,
+              // Preview the reply itself; notify the quoted author directly so we
+              // don't look up ownership on the reply (which would be the sender).
+              messageId: savedMessage.id,
+              receiverId: replyToMessage.userId,
+              actor: socket.data.user,
+              notificationType: NotificationType.Replied,
+            })
+          : undefined,
+      ]);
     },
   });
 }

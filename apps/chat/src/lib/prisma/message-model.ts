@@ -16,6 +16,8 @@ export const DEFAULT_MESSAGE_SELECT = {
   createdAt: true,
   topicId: true,
   mediaUrl: true,
+  replyToId: true,
+  threadRootId: true,
   highlights: {
     select: {
       id: true,
@@ -37,16 +39,48 @@ export const DEFAULT_MESSAGE_SELECT = {
       lastStatusUpdate: true,
     },
   },
+  replyTo: {
+    select: {
+      id: true,
+      text: true,
+      mediaUrl: true,
+      createdAt: true,
+      sentBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
 };
 
+type ReplyToShape =
+  | {
+      id: string;
+      text?: string | null;
+    }
+  | null
+  | undefined;
+
 export const normalizeMessages = <
-  T extends { id: string; text?: string | null },
+  T extends {
+    id: string;
+    text?: string | null;
+    replyTo?: ReplyToShape;
+  },
 >(
   messages: T[],
-): (Omit<T, "text"> & { text?: string })[] =>
+) =>
   messages.map((message) => ({
     ...message,
     text: getReadableMessage(message.text, message.id),
+    replyTo: message.replyTo
+      ? {
+          ...message.replyTo,
+          text: getReadableMessage(message.replyTo.text, message.replyTo.id),
+        }
+      : message.replyTo,
   }));
 
 // One undecryptable row shouldn't take down the whole list it's part of -- degrade that single message instead of throwing out of the .map().
@@ -65,6 +99,41 @@ function getReadableMessage(
     }
     throw err;
   }
+}
+
+// `threadRootId` is required (not optional) so a caller whose `select` omits
+// it fails to typecheck rather than silently reporting every count as 0.
+async function attachReplyCounts<
+  T extends { id: string; threadRootId: string | null },
+>(messages: T[]): Promise<(T & { replyCount: number })[]> {
+  if (messages.length === 0) {
+    return messages.map((m) => ({ ...m, replyCount: 0 }));
+  }
+
+  // Counts are keyed by thread root. A visible root uses its own id; a
+  // visible reply uses its threadRootId.
+  const rootIds = Array.from(
+    new Set(
+      messages.map((m) => m.threadRootId ?? m.id).filter(Boolean) as string[],
+    ),
+  );
+
+  const groups = await prismaClient.message.groupBy({
+    by: ["threadRootId"],
+    where: { threadRootId: { in: rootIds } },
+    _count: { _all: true },
+  });
+
+  const counts = new Map(
+    groups
+      .filter((g) => g.threadRootId)
+      .map((g) => [g.threadRootId!, g._count._all]),
+  );
+
+  return messages.map((m) => ({
+    ...m,
+    replyCount: counts.get(m.threadRootId ?? m.id) ?? 0,
+  }));
 }
 
 export const messageModel = {
@@ -109,7 +178,36 @@ export const messageModel = {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
 
-    return normalizeMessages([...messages].reverse());
+    const chronological = [...messages].reverse();
+    const withCounts = await attachReplyCounts(chronological);
+    return normalizeMessages(withCounts);
+  },
+
+  async getThreadMessages({
+    topicId,
+    threadRootId,
+    select,
+  }: {
+    topicId: string;
+    threadRootId: string;
+    select: Prisma.MessageSelect;
+  }) {
+    // Root first (the message being discussed), then replies oldest -> newest.
+    // `id` breaks createdAt ties so the order is stable across requests.
+    const messages = await prismaClient.message.findMany({
+      select,
+      where: {
+        topicId,
+        OR: [{ id: threadRootId }, { threadRootId }],
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+
+    const root = messages.find((m) => m.id === threadRootId);
+    const replies = messages.filter((m) => m.id !== threadRootId);
+    const ordered = root ? [root, ...replies] : replies;
+
+    return normalizeMessages(ordered);
   },
 
   async getTopHighlightedMessagesForTopic({

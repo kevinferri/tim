@@ -12,6 +12,10 @@ import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import {
   MessagesData,
   messagesQueryKey,
+  updateThreadCache,
+  adjustReplyCounts,
+  withEditApplied,
+  withReferencesCleared,
 } from "@/components/topics/provider/topic-query-cache";
 
 type UseTopicMessagesProps = {
@@ -86,6 +90,7 @@ export function useTopicMessages({
       const newMsg = {
         ...newMessage,
         createdAt: new Date(newMessage.createdAt ?? new Date()),
+        replyCount: 0,
       };
 
       queryClient.setQueryData<MessagesData>(queryKey, (prev) => {
@@ -93,29 +98,53 @@ export function useTopicMessages({
 
         // De-dup safety net for the append-on-socket-event path, which
         // isn't a queryFn react-query dedupes on its own.
-        const withNew = uniqBy([...prev.pages[0], newMsg], "id");
+        // Checked across every page, not just the live window: a message
+        // already on an older page would otherwise be appended again.
+        const alreadyLoaded = prev.pages.some((page) =>
+          page.some((m) => m.id === newMsg.id),
+        );
+        const withNew = alreadyLoaded
+          ? prev.pages
+          : [[...prev.pages[0], newMsg], ...prev.pages.slice(1)];
+
+        // Gated on alreadyLoaded too: a replayed SendMessage (reconnect racing
+        // reconcileRecentMessages) skips the append but would otherwise still
+        // bump the thread, double-counting the same reply.
+        const pages =
+          newMsg.threadRootId && !alreadyLoaded
+            ? adjustReplyCounts(withNew, newMsg.threadRootId, 1, newMsg.id)
+            : withNew;
+
+        const livePage = pages[0] ?? [];
+
         // Trims the live window only while the user is at the bottom --
         // trimming while scrolled up reading history would yank content
         // from under them.
-        const needsSlice = withNew.length > messagesLimit && isAtBottom;
+        const needsSlice = livePage.length > messagesLimit && isAtBottom;
 
         if (needsSlice) {
-          const slicer = Math.max(withNew.length - messagesLimit, 0);
+          const slicer = Math.max(livePage.length - messagesLimit, 0);
           // Drops already-loaded older pages too, since they'd be stale
           // relative to the trimmed live window and leave a gap; trimming to
           // exactly messagesLimit also keeps hasNextPage accurate.
           return {
             ...prev,
-            pages: [withNew.slice(slicer)],
+            pages: [livePage.slice(slicer)],
             pageParams: [prev.pageParams[0]],
           };
         }
 
-        return {
-          ...prev,
-          pages: [withNew, ...prev.pages.slice(1)],
-        };
+        return { ...prev, pages };
       });
+
+      // Keep an open thread panel in sync -- it renders from its own cache.
+      if (newMsg.threadRootId) {
+        updateThreadCache(queryClient, topicId, (prevThread) => {
+          if (prevThread[0]?.id !== newMsg.threadRootId) return prevThread;
+          if (prevThread.some((m) => m.id === newMsg.id)) return prevThread;
+          return [...prevThread, newMsg];
+        });
+      }
 
       if (newMsg.mediaUrl) {
         onMediaMessage?.(newMsg);
@@ -131,13 +160,30 @@ export function useTopicMessages({
       queryClient.setQueryData<MessagesData>(queryKey, (prev) => {
         if (!prev) return prev;
 
+        // Read the thread it belonged to before it's gone, so the remaining
+        // members' "N replies" count can come down with it.
+        const deletedThreadRootId = prev.pages
+          .flat()
+          .find(({ id }) => id === payload.deletedMessageId)?.threadRootId;
+
+        const clear = withReferencesCleared(payload.deletedMessageId);
+        const pages = prev.pages.map((page) =>
+          page.filter(({ id }) => id !== payload.deletedMessageId).map(clear),
+        );
+
         return {
           ...prev,
-          pages: prev.pages.map((page) =>
-            page.filter(({ id }) => id !== payload.deletedMessageId),
-          ),
+          pages: deletedThreadRootId
+            ? adjustReplyCounts(pages, deletedThreadRootId, -1)
+            : pages,
         };
       });
+
+      updateThreadCache(queryClient, topicId, (prev) =>
+        prev
+          .filter(({ id }) => id !== payload.deletedMessageId)
+          .map(withReferencesCleared(payload.deletedMessageId)),
+      );
     },
   );
 
@@ -147,15 +193,14 @@ export function useTopicMessages({
       queryClient.setQueryData<MessagesData>(queryKey, (prev) => {
         if (!prev) return prev;
 
-        return {
-          ...prev,
-          pages: prev.pages.map((page) =>
-            page.map((m) =>
-              m.id === payload.id ? { ...m, text: payload.text } : m,
-            ),
-          ),
-        };
+        const edit = withEditApplied(payload.id, payload.text);
+
+        return { ...prev, pages: prev.pages.map((page) => page.map(edit)) };
       });
+
+      updateThreadCache(queryClient, topicId, (prev) =>
+        prev.map(withEditApplied(payload.id, payload.text)),
+      );
     },
   );
 

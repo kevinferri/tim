@@ -6,6 +6,7 @@ import { Highlight, User } from "@prisma/client";
 import {
   updateMessagesCache,
   updateMediaMessagesCache,
+  updateThreadCache,
 } from "@/components/topics/provider/topic-query-cache";
 
 type UseTopicHighlightsProps = {
@@ -113,6 +114,7 @@ export function useTopicHighlights({
       // in react-query's cache.
       updateMessagesCache(queryClient, topicId, updateMessages);
       updateMediaMessagesCache(queryClient, topicId, updateMessages);
+      updateThreadCache(queryClient, topicId, updateMessages);
 
       setTopHighlights((prev) => {
         const updated = updateMessages(prev);
@@ -161,6 +163,7 @@ export function useTopicHighlights({
 
       updateMessagesCache(queryClient, topicId, updateHandler);
       updateMediaMessagesCache(queryClient, topicId, updateHandler);
+      updateThreadCache(queryClient, topicId, updateHandler);
 
       if (toBeRemovedFromTopHighlights) {
         setTopHighlights((prev) => {
