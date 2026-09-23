@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { getDisplayName } from "@tim/user-display";
+import { CommandName, parseCommand } from "@tim/commands";
 import { Button } from "@/components/ui/button";
 import { ReplyIcon } from "@/components/icons/reply-icon";
 import { cn } from "@/lib/utils";
@@ -7,62 +9,86 @@ import { cn } from "@/lib/utils";
 type Props = {
   senderName: string | null;
   text: string;
+  mediaUrl?: string | null;
   onCancel?: () => void;
   onClick?: () => void;
   className?: string;
-  /** Single-line quote for dense surfaces (thread sidebar). */
-  compact?: boolean;
 };
+
+// `mediaUrl` is overloaded: for /tim, /roll and /8ball it carries the generated
+// result rather than a URL (see the branching in message.tsx), so there's
+// nothing to show a thumbnail for.
+function getThumbnail(text: string, mediaUrl?: string | null) {
+  const command = parseCommand(text ?? "")?.name;
+
+  if (
+    command === CommandName.Tim ||
+    command === CommandName.Roll ||
+    command === CommandName.EightBall
+  ) {
+    return undefined;
+  }
+
+  return mediaUrl || undefined;
+}
 
 // Compact quoted-reply reference, shared by the composer (while replying, with
 // a cancel button) and a message bubble that's itself a reply (read-only).
 export function ReplyPreview({
   senderName,
   text,
+  mediaUrl,
   onCancel,
   onClick,
   className,
-  compact = false,
 }: Props) {
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const name = getDisplayName(senderName);
+  const thumbnail = getThumbnail(text, mediaUrl);
+  const showThumbnail = !!thumbnail && !thumbnailFailed;
 
   return (
     <div
       className={cn(
-        "flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground",
-        compact
-          ? "gap-1"
-          : "items-start border-l-2 border-muted-foreground/25 pl-2",
-        onClick && "cursor-pointer hover:text-foreground",
+        "flex min-w-0 items-start gap-1.5 border-l-2 border-muted-foreground/25 pl-2 text-xs text-muted-foreground",
+        onClick && "group cursor-pointer hover:text-foreground",
         className,
       )}
       onClick={onClick}
-      title={text ? `${name}: ${text}` : name}
     >
-      <ReplyIcon className={cn("shrink-0", !compact && "mt-0.5")} />
-      {compact ? (
-        <div className="flex min-w-0 flex-1 items-baseline gap-1">
-          <span className="shrink-0 font-medium text-foreground/70">
-            {name}
-          </span>
-          {text ? <span className="min-w-0 truncate">{text}</span> : null}
-        </div>
-      ) : (
-        <div className="min-w-0 flex-1">
-          <span className="font-medium text-foreground/70">{name}</span>
-          {text ? (
-            <span className="break-words line-clamp-1 text-muted-foreground">
-              {" "}
-              {text}
-            </span>
-          ) : null}
-        </div>
+      <ReplyIcon className="mt-0.5 shrink-0" />
+
+      {showThumbnail && (
+        <img
+          src={thumbnail}
+          alt=""
+          aria-hidden
+          // Falls back to just the arrow for anything that isn't an image.
+          onError={() => setThumbnailFailed(true)}
+          className="mt-0.5 h-5 w-5 shrink-0 rounded-sm object-cover"
+        />
       )}
+
+      <div className="min-w-0 flex-1">
+        <span className="font-medium text-foreground/70 group-hover:text-foreground">
+          {name}
+        </span>
+        {text ? (
+          <span className="line-clamp-1 break-words text-muted-foreground group-hover:text-foreground">
+            {" "}
+            {text}
+          </span>
+        ) : null}
+      </div>
+
       {onCancel && (
         <Button
           size="iconSm"
           variant="ghost"
-          className="ml-auto shrink-0"
+          // Pin the colour: ghost's hover:text-accent-foreground would jump it
+          // to near-white. It dismisses this preview, so it stays muted with
+          // the rest of it rather than matching the composer's own controls.
+          className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
           onClick={(e) => {
             e.stopPropagation();
             onCancel();

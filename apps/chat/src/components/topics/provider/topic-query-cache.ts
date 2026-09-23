@@ -4,6 +4,29 @@ import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats
 
 export type MessagesData = InfiniteData<MessageProps[], string | undefined>;
 
+// replyCount is shared by every message in a flat thread, so adding or removing
+// a reply has to move all of them -- including a root already paginated onto an
+// older page. `excludeId` skips the message being added, which starts at 0.
+export function adjustReplyCounts(
+  pages: MessageProps[][],
+  threadRootId: string,
+  delta: number,
+  excludeId?: string,
+) {
+  const inThread = (m: MessageProps) =>
+    m.id === threadRootId || m.threadRootId === threadRootId;
+
+  const existing = pages
+    .flat()
+    .find((m) => m.id !== excludeId && inThread(m) && m.replyCount != null);
+
+  const next = Math.max(0, (existing?.replyCount ?? 0) + delta);
+
+  return pages.map((page) =>
+    page.map((m) => (inThread(m) ? { ...m, replyCount: next } : m)),
+  );
+}
+
 export function messagesQueryKey(topicId: string) {
   return ["messages", topicId];
 }
@@ -14,6 +37,19 @@ export function mediaMessagesQueryKey(topicId: string) {
 
 export function threadQueryKey(topicId: string, threadRootId: string) {
   return ["thread", topicId, threadRootId];
+}
+
+// Partial key match: a topic can have any thread open, and the socket
+// handlers that fan out here don't know which root that is.
+export function updateThreadCache(
+  queryClient: QueryClient,
+  topicId: string,
+  updater: (prev: MessageProps[]) => MessageProps[],
+) {
+  queryClient.setQueriesData<MessageProps[]>(
+    { queryKey: ["thread", topicId] },
+    (prev) => (prev ? updater(prev) : prev),
+  );
 }
 
 function singleMessageQueryKey(messageId: string) {

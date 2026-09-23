@@ -12,6 +12,8 @@ import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import {
   MessagesData,
   messagesQueryKey,
+  updateThreadCache,
+  adjustReplyCounts,
 } from "@/components/topics/provider/topic-query-cache";
 
 type UseTopicMessagesProps = {
@@ -94,39 +96,24 @@ export function useTopicMessages({
 
         // De-dup safety net for the append-on-socket-event path, which
         // isn't a queryFn react-query dedupes on its own.
+        // Checked across every page, not just the live window: a message
+        // already on an older page would otherwise be appended again.
         const alreadyLoaded = prev.pages.some((page) =>
           page.some((m) => m.id === newMsg.id),
         );
-        let pages = alreadyLoaded
+        const withNew = alreadyLoaded
           ? prev.pages
           : [[...prev.pages[0], newMsg], ...prev.pages.slice(1)];
 
-        // Bump replyCount on every loaded message in this flat thread —
-        // the root (or a sibling) may live on an older paginated page.
-        if (newMsg.threadRootId) {
-          const sibling = pages
-            .flat()
-            .find(
-              (m) =>
-                m.id !== newMsg.id &&
-                (m.id === newMsg.threadRootId ||
-                  m.threadRootId === newMsg.threadRootId),
-            );
-          const newCount = (sibling?.replyCount ?? 0) + 1;
-          pages = pages.map((page) =>
-            page.map((m) => {
-              const isRoot = m.id === newMsg.threadRootId;
-              const inSameThread = m.threadRootId === newMsg.threadRootId;
-              if (!isRoot && !inSameThread) return m;
-              return { ...m, replyCount: newCount };
-            }),
-          );
-        }
+        const pages = newMsg.threadRootId
+          ? adjustReplyCounts(withNew, newMsg.threadRootId, 1, newMsg.id)
+          : withNew;
+
+        const livePage = pages[0] ?? [];
 
         // Trims the live window only while the user is at the bottom --
         // trimming while scrolled up reading history would yank content
         // from under them.
-        const livePage = pages[0] ?? [];
         const needsSlice = livePage.length > messagesLimit && isAtBottom;
 
         if (needsSlice) {
@@ -141,11 +128,17 @@ export function useTopicMessages({
           };
         }
 
-        return {
-          ...prev,
-          pages,
-        };
+        return { ...prev, pages };
       });
+
+      // Keep an open thread panel in sync -- it renders from its own cache.
+      if (newMsg.threadRootId) {
+        updateThreadCache(queryClient, topicId, (prevThread) => {
+          if (prevThread[0]?.id !== newMsg.threadRootId) return prevThread;
+          if (prevThread.some((m) => m.id === newMsg.id)) return prevThread;
+          return [...prevThread, newMsg];
+        });
+      }
 
       if (newMsg.mediaUrl) {
         onMediaMessage?.(newMsg);
@@ -161,13 +154,27 @@ export function useTopicMessages({
       queryClient.setQueryData<MessagesData>(queryKey, (prev) => {
         if (!prev) return prev;
 
+        // Read the thread it belonged to before it's gone, so the remaining
+        // members' "N replies" count can come down with it.
+        const deletedThreadRootId = prev.pages
+          .flat()
+          .find(({ id }) => id === payload.deletedMessageId)?.threadRootId;
+
+        const pages = prev.pages.map((page) =>
+          page.filter(({ id }) => id !== payload.deletedMessageId),
+        );
+
         return {
           ...prev,
-          pages: prev.pages.map((page) =>
-            page.filter(({ id }) => id !== payload.deletedMessageId),
-          ),
+          pages: deletedThreadRootId
+            ? adjustReplyCounts(pages, deletedThreadRootId, -1)
+            : pages,
         };
       });
+
+      updateThreadCache(queryClient, topicId, (prev) =>
+        prev.filter(({ id }) => id !== payload.deletedMessageId),
+      );
     },
   );
 
@@ -186,6 +193,12 @@ export function useTopicMessages({
           ),
         };
       });
+
+      updateThreadCache(queryClient, topicId, (prev) =>
+        prev.map((m) =>
+          m.id === payload.id ? { ...m, text: payload.text } : m,
+        ),
+      );
     },
   );
 

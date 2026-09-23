@@ -29,8 +29,10 @@ export async function GET(_req: NextRequest, { params }: Route) {
       select: DEFAULT_MESSAGE_SELECT,
     });
 
-    // Root must exist in this topic; an empty list means a bad/cross-topic id.
-    if (!messages.some((m) => m.id === threadRootId)) {
+    // Must be a real root in this topic -- a bad/cross-topic id returns nothing,
+    // and a *reply* id would otherwise return a degenerate one-message thread.
+    const root = messages.find((m) => m.id === threadRootId);
+    if (!root || root.threadRootId) {
       return notFound;
     }
 

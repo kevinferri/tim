@@ -15,8 +15,6 @@ import { CircleMembersList } from "@/components/topics/circle-members-list";
 import { NotificationsList } from "@/components/topics/notifications-list";
 import { useTopicNotifications } from "@/components/topics/use-topic-notifications";
 import { Badge } from "@/components/ui/badge";
-import { useTopicUiContext } from "@/components/topics/current-topic-provider";
-import { ReplyThreadPanel } from "@/components/topics/reply-thread-panel";
 
 type Tab = "highlights" | "media" | "members" | "notifications";
 
@@ -26,7 +24,6 @@ type Props = {
 
 export function TopicSideBar(props: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("members");
-  const { openThreadRootId } = useTopicUiContext();
   const { notificationList, clearUnreadNotifications, unreadCount } =
     useTopicNotifications({
       topicId: props.topicId,
@@ -66,45 +63,36 @@ export function TopicSideBar(props: Props) {
     },
   } as const;
 
-  if (openThreadRootId) {
-    return (
-      <div className="flex flex-col shadow-md border-l hidden w-[340px] lg:w-[380px] md:flex shrink-0 overflow-hidden min-w-0">
-        <ReplyThreadPanel
-          topicId={props.topicId}
-          threadRootId={openThreadRootId}
-        />
-      </div>
-    );
-  }
-
   return (
-    <Tabs
-      defaultValue="members"
-      className="flex flex-col shadow-md border-l hidden w-sidebar-detail lg:w-sidebar-detail-lg md:flex shrink-0"
-      onValueChange={(tab) => {
-        setActiveTab(tab as Tab);
+    <div className="relative hidden w-sidebar-detail shrink-0 flex-col border-l shadow-md md:flex lg:w-sidebar-detail-lg">
+      <Tabs
+        defaultValue="members"
+        className="flex min-h-0 flex-1 flex-col"
+        onValueChange={(tab) => {
+          setActiveTab(tab as Tab);
 
-        if (tab === "notifications") {
-          clearUnreadNotifications();
-        }
-      }}
-    >
-      <div className="p-3">
-        <TabsList className="grid w-full grid-cols-4 h-[38px]">
-          {Object.keys(tabMap).map((tabKey) => {
-            return (
-              <TabsTrigger key={tabKey} value={tabKey}>
-                {tabMap[tabKey as Tab].icon}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-      </div>
+          if (tab === "notifications") {
+            clearUnreadNotifications();
+          }
+        }}
+      >
+        <div className="p-3">
+          <TabsList className="grid w-full grid-cols-4 h-[38px]">
+            {Object.keys(tabMap).map((tabKey) => {
+              return (
+                <TabsTrigger key={tabKey} value={tabKey}>
+                  {tabMap[tabKey as Tab].icon}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </div>
 
-      <div className="flex flex-1 flex-col overflow-y-hidden basis-full">
-        <div className="text-center py-1">{tabMap[activeTab].header}</div>
-        <ScrollArea>{tabMap[activeTab].node}</ScrollArea>
-      </div>
-    </Tabs>
+        <div className="flex flex-1 flex-col overflow-y-hidden basis-full">
+          <div className="text-center py-1">{tabMap[activeTab].header}</div>
+          <ScrollArea>{tabMap[activeTab].node}</ScrollArea>
+        </div>
+      </Tabs>
+    </div>
   );
 }

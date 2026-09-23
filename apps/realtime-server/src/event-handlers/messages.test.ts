@@ -175,7 +175,7 @@ describe("handleSendMessage", () => {
       topicId: "topic-1",
       message: "a reply",
       replyToId: "original-msg",
-      // Simulates composer auto-@ of the quoted author.
+      // The sender manually @'d the person they're replying to.
       mentionedUserIds: ["author-1"],
     });
 

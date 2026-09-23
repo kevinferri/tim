@@ -243,25 +243,8 @@ export function TopicMessageBar() {
 
   useEffect(() => {
     if (!replyingTo) return;
-
     textAreaRef.current?.focus();
-
-    // Auto-@ the author in the message body for conversational context.
-    // Mention notifications for that author are deduped server-side in favor
-    // of the dedicated Replied notification.
-    if (!replyingTo.senderId || replyingTo.senderId === self.id) return;
-
-    setMessage((prev) => {
-      if (extractMentionedUserIds(prev).includes(replyingTo.senderId)) {
-        return prev;
-      }
-      const mention = encodeMention(
-        getDisplayName(replyingTo.senderName),
-        replyingTo.senderId,
-      );
-      return prev.trim().length === 0 ? `${mention} ` : `${mention} ${prev}`;
-    });
-  }, [replyingTo, self.id]);
+  }, [replyingTo]);
 
   const emitMessage = async (message: string) => {
     if (!image && !message.trim()) return;
@@ -363,10 +346,13 @@ export function TopicMessageBar() {
           />
         )}
         {replyingTo && (
-          <div className="flex items-center px-3 pt-2">
+          // pr-1 matches the composer's own controls below, so the cancel
+          // button lines up with them instead of sitting 8px inboard.
+          <div className="flex items-center pl-3 pr-1 pt-2">
             <ReplyPreview
               senderName={replyingTo.senderName}
               text={replyingTo.text}
+              mediaUrl={replyingTo.mediaUrl}
               onCancel={() => setReplyingTo(undefined)}
               className="flex-1"
             />
@@ -496,6 +482,30 @@ export function TopicMessageBar() {
                   if (e.key === "Escape") {
                     e.preventDefault();
                     setTopicLinkMenuDismissed(true);
+                    return;
+                  }
+                }
+
+                // Reached only when no autocomplete menu is open -- each one
+                // above claims Escape for itself and returns.
+                if (replyingTo) {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setReplyingTo(undefined);
+                    return;
+                  }
+
+                  // Clears the reply like a chip once there's nothing left to
+                  // delete. Skipped on auto-repeat: holding backspace to clear
+                  // a draft shouldn't silently drop the reply too.
+                  if (
+                    e.key === "Backspace" &&
+                    !e.repeat &&
+                    !message &&
+                    !image
+                  ) {
+                    e.preventDefault();
+                    setReplyingTo(undefined);
                     return;
                   }
                 }

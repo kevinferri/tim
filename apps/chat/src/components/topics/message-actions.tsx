@@ -43,7 +43,9 @@ export function MessageActions(props: Props) {
   return (
     <div
       className={cn(
-        "absolute top-[-8px] right-[10px] text-primary",
+        // -12px centres the 24px toolbar on the message's top edge; z-10 lifts
+        // it clear of message content, which baseStyles pins at z-0.
+        "absolute top-[-12px] right-[10px] z-10 text-primary",
         props.className,
       )}
     >

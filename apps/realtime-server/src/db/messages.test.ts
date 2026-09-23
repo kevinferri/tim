@@ -132,6 +132,7 @@ describe("writeMessage with replyToId", () => {
       mediaUrl: undefined as any,
       replyToId: parentId,
       threadRootId: parentId,
+      replyToCreatedAt: future,
     });
 
     expect(new Date(reply.createdAt!).getTime()).toBeGreaterThan(

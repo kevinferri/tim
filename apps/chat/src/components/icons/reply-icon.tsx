@@ -2,8 +2,11 @@ import type { SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
-// Curved left-pointing reply arrow (matches product glyph; stroke uses
-// currentColor so light/dark themes inherit from the surrounding control).
+// Radix has no reply glyph (its ResetIcon is the undo loop), so this fills the
+// gap in Radix's idiom rather than introducing a second one: 15x15 viewBox,
+// single filled path, ~1u stroke. Open 45-degree chevron with flat caps, a bar
+// into a 135-degree curl (r=4.37, centre 9.13/9.53) ending on a diagonal cut,
+// scaled to fill the box so it matches ChatBubbleIcon et al in optical size.
 export function ReplyIcon({ className, ...props }: IconProps) {
   return (
     <svg
@@ -16,11 +19,10 @@ export function ReplyIcon({ className, ...props }: IconProps) {
       {...props}
     >
       <path
-        d="M6.5 3.5L3 7L6.5 10.5M3.5 7H10C11.933 7 13.5 8.567 13.5 10.5V12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M4.788 2.345L1.5 5.633L4.788 8.921L5.436 8.273L3.242 6.079H9.132C11.039 6.079 12.584 7.624 12.584 9.531C12.584 10.447 12.22 11.325 11.573 11.972L12.22 12.619C13.039 11.8 13.5 10.689 13.5 9.531C13.5 7.119 11.544 5.163 9.132 5.163H3.266L5.436 2.993Z"
+        fill="currentColor"
+        fillRule="evenodd"
+        clipRule="evenodd"
       />
     </svg>
   );

@@ -1,6 +1,5 @@
 import { memo, useMemo, useState } from "react";
 import type { Message as DbMessage, Highlight, User } from "@prisma/client";
-import { useQueryState } from "nuqs";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
@@ -19,6 +18,7 @@ import { ReplyPreview } from "@/components/topics/reply-preview";
 import {
   baseStyles,
   highlightStyles,
+  markerRingStyles,
 } from "@/components/topics/message-styles";
 import { MessageEdit } from "@/components/topics/message-edit";
 import {
@@ -32,6 +32,10 @@ import { RollResult } from "@/components/topics/roll-result";
 import { EightBallResult } from "@/components/topics/eight-ball-result";
 import { CommandName, parseCommand } from "@tim/commands";
 import { getDisplayName } from "@tim/user-display";
+import {
+  MessageSurface,
+  messageAnchorId,
+} from "@/components/topics/message-anchor";
 import { Button } from "@/components/ui/button";
 import { ReplyIcon } from "@/components/icons/reply-icon";
 
@@ -68,6 +72,7 @@ export type MessageData = {
   replyTo?: {
     id: string;
     text?: string;
+    mediaUrl?: string | null;
     sentBy?: { id: string; name: string | null };
   } | null;
   [key: string]: any;
@@ -77,7 +82,7 @@ export type MessageProps = MessageData & {
   variant: "default" | "minimal";
   className?: string;
   hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
-  context?: "topic" | "sidebar" | "user-sheet" | "modal";
+  context?: MessageSurface;
   // Computed once by whoever renders the list, not by this component, so
   // unrelated messages don't re-render when a new one arrives.
   isNewestMessage?: boolean;
@@ -87,11 +92,16 @@ export type MessageProps = MessageData & {
 
 const MessageComponent = (props: MessageProps) => {
   const { topicId } = useTopicMetaContext();
-  const { scrollToBottom, setReplyingTo, setOpenThreadRootId } =
-    useTopicUiContext();
+  const {
+    scrollToBottom,
+    setReplyingTo,
+    openThreadRootId,
+    setOpenThreadRootId,
+    highlightedMessageId,
+    jumpToMessage,
+  } = useTopicUiContext();
   const { addShufflingGif, shufflingGifs } = useTopicGifContext();
   const self = useSelf();
-  const [, setMessageId] = useQueryState("messageId");
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingText, setEditingText] = useState(props.text);
@@ -105,19 +115,11 @@ const MessageComponent = (props: MessageProps) => {
     (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
   const isActionEligable = props.variant !== "minimal";
   const replyCount = props.replyCount ?? 0;
-
-  const jumpToMessage = (targetId: string) => {
-    const el = document.getElementById(`message-${targetId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-ring", "rounded-md");
-      window.setTimeout(() => {
-        el.classList.remove("ring-2", "ring-ring", "rounded-md");
-      }, 1500);
-      return;
-    }
-    setMessageId(targetId);
-  };
+  const isJumpTarget = !!props.id && highlightedMessageId === props.id;
+  // Keeps the transcript's copy of the root lit while its thread sheet is open,
+  // so it's clear which message the replies belong to.
+  const isOpenThreadRoot =
+    props.context === "topic" && !!props.id && openThreadRootId === props.id;
 
   const highlights = props.highlights || [];
 
@@ -187,10 +189,10 @@ const MessageComponent = (props: MessageProps) => {
 
   return (
     <div
-      id={props.id ? `message-${props.id}` : undefined}
+      id={props.id ? messageAnchorId(props.context, props.id) : undefined}
       className={cn(
         baseStyles,
-        isThreadSidebar && "px-3 py-2.5",
+        isOpenThreadRoot || isJumpTarget ? markerRingStyles : "",
         highlightedBySelf ? highlightStyles : "",
         props.variant === "minimal"
           ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
@@ -213,10 +215,7 @@ const MessageComponent = (props: MessageProps) => {
       }}
     >
       <div
-        className={cn(
-          "flex items-start overflow-hidden leading-none",
-          isThreadSidebar ? "gap-2.5" : "gap-3",
-        )}
+        className={cn("flex items-start gap-3 overflow-hidden leading-none")}
       >
         {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
           <UserAvatar
@@ -225,7 +224,6 @@ const MessageComponent = (props: MessageProps) => {
             imageUrl={props.sentBy.imageUrl}
             createdAt={props.sentBy.createdAt}
             topicId={topicId}
-            size={isThreadSidebar ? "sm" : "default"}
             disableSheet={props.context === "user-sheet"}
             status={props.sentBy.status}
             lastStatusUpdate={props.sentBy.lastStatusUpdate}
@@ -234,8 +232,7 @@ const MessageComponent = (props: MessageProps) => {
 
         <div
           className={cn(
-            "flex flex-col flex-1 min-w-0 overflow-hidden gap-1",
-            isThreadSidebar ? "leading-snug" : "leading-none",
+            "flex flex-1 flex-col gap-1 overflow-hidden leading-none min-w-0",
           )}
         >
           <div className="flex gap-2 items-center min-w-0">
@@ -265,20 +262,16 @@ const MessageComponent = (props: MessageProps) => {
               <MessageSentAt sentAt={createdAt} />
             )}
 
-            {isThreadSidebar &&
-              !props.hiddenElements?.includes("highlights") && (
-                <HighlightTooltip
-                  inline
-                  highlightedBySelf={highlightedBySelf}
-                  highlights={highlights}
-                  messageId={props.id!}
-                  onHighlight={handleToggleHighlight}
-                />
-              )}
-
             {showActions && isActionEligable && (
               <MessageActions
                 sentBySelf={sentBySelf}
+                // The oldest message has nothing above it to straddle into, so
+                // pin its toolbar inside the box rather than clipping it out of
+                // the scroll area. The thread panel reserves headroom instead,
+                // so its root lifts like every other row.
+                // The oldest message has nothing above it to straddle into --
+                // and in the thread panel a negative offset would clip out of
+                // the scroll viewport -- so pin it flush to the top edge.
                 className={isFirstMessage ? "top-0" : ""}
                 messageId={props.id!}
                 text={props.text ?? ""}
@@ -296,9 +289,13 @@ const MessageComponent = (props: MessageProps) => {
                 }}
                 onReply={() => {
                   if (!props.id || !props.sentBy?.id) return;
+                  // The thread sheet is modal, so the composer is unreachable
+                  // until it closes -- dismiss it and stage the reply there.
+                  if (isThreadSidebar) setOpenThreadRootId(undefined);
                   setReplyingTo({
                     id: props.id,
                     text: props.text ?? "",
+                    mediaUrl: props.mediaUrl,
                     senderName: props.sentBy.name ?? null,
                     senderId: props.sentBy.id,
                   });
@@ -310,10 +307,10 @@ const MessageComponent = (props: MessageProps) => {
           <div className="flex flex-col gap-1 min-w-0">
             {showReplyPreview && props.replyTo && (
               <ReplyPreview
-                compact={isThreadSidebar}
                 senderName={props.replyTo.sentBy?.name ?? null}
                 text={props.replyTo.text ?? ""}
-                onClick={() => jumpToMessage(props.replyTo!.id)}
+                mediaUrl={props.replyTo.mediaUrl}
+                onClick={() => jumpToMessage(props.replyTo!.id, props.context)}
               />
             )}
 
@@ -385,8 +382,10 @@ const MessageComponent = (props: MessageProps) => {
               replyCount > 0 && (
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="self-start h-7 px-2 text-xs text-muted-foreground gap-1.5"
+                  size="inline"
+                  // No hover fill: it would read as a box under the message.
+                  // Hover shifts colour, matching ReplyPreview.
+                  className="self-start gap-1.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
                   onClick={() => setOpenThreadRootId(props.id)}
                 >
                   <ReplyIcon />
@@ -396,7 +395,7 @@ const MessageComponent = (props: MessageProps) => {
           </div>
         </div>
 
-        {!isThreadSidebar && !props.hiddenElements?.includes("highlights") && (
+        {!props.hiddenElements?.includes("highlights") && (
           <HighlightTooltip
             className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
             highlightedBySelf={highlightedBySelf}

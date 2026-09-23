@@ -6,6 +6,7 @@ import { TopicChat } from "@/components/topics/topic-chat";
 import { TopicMessageBar } from "@/components/topics/topic-message-bar";
 import { NotFound } from "@/components/dashboard/not-found";
 import { TopicSideBar } from "@/components/topics/topic-side-bar";
+import { ReplyThreadSheet } from "@/components/topics/reply-thread-sheet";
 import {
   DEFAULT_MESSAGE_SELECT,
   MESSAGE_LIMIT,
@@ -130,6 +131,7 @@ export default async function TopicPage({ params }: Props) {
           <div className="flex flex-1 flex-row overflow-y-hidden">
             <div className="flex flex-1 flex-col overflow-x-hidden">
               <MessageModal />
+              <ReplyThreadSheet topicId={topic.id} />
               <TopicChat />
               <TopicMessageBar />
             </div>

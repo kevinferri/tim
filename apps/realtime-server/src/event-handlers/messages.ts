@@ -65,6 +65,7 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         mediaUrl: _mediaUrl,
         replyToId: replyToMessage?.id,
         threadRootId,
+        replyToCreatedAt: replyToMessage?.createdAt,
       });
 
       const emittedMessage = {
@@ -77,49 +78,48 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         highlights: [],
         replyTo: replyToMessage && {
           id: replyToMessage.id,
-          // Message.text is nullable (media-only rows), and decrypt() splits
-          // the envelope with no null check -- guard it the same way
-          // message-model's getReadableMessage and open-ai.ts do, rather
-          // than throwing out of this handler. Only the null case: a real
-          // DecryptionError should still surface instead of being swallowed
-          // into empty text.
+          // Message.text is nullable (media-only rows); decrypt() has no null check.
           text: replyToMessage.text
             ? decrypt(replyToMessage.text, replyToMessage.id)
             : "",
+          mediaUrl: replyToMessage.mediaUrl,
           sentBy: { id: replyToMessage.userId, name: replyToMessage.name },
         },
       };
 
       server.to(roomKey).emit(SocketEvent.SendMessage, emittedMessage);
 
-      // Composer auto-@s the quoted author for message-body context; don't also
-      // send them a Mentioned notification — Replied covers that alert.
+      // One message, one notification: if a reply also @s the quoted author,
+      // Replied covers them and Mentioned would just double up. Any other @ in
+      // the same reply still gets Mentioned.
       const mentionedUserIds = (payload.mentionedUserIds ?? []).filter(
         (id: string) => id !== replyToMessage?.userId,
       );
 
-      await emitMentionNotifications({
-        server,
-        roomKey,
-        topicId: payload.topicId,
-        messageId: savedMessage.id,
-        actor: socket.data.user,
-        mentionedUserIds,
-      });
-
-      if (replyToMessage) {
-        await emitNotification({
+      // Independent fan-outs, and each does its own fetchSockets() round trip.
+      await Promise.all([
+        emitMentionNotifications({
           server,
           roomKey,
           topicId: payload.topicId,
-          // Preview the reply itself; notify the quoted author directly so we
-          // don't look up ownership on the reply (which would be the sender).
           messageId: savedMessage.id,
-          receiverId: replyToMessage.userId,
           actor: socket.data.user,
-          notificationType: NotificationType.Replied,
-        });
-      }
+          mentionedUserIds,
+        }),
+        replyToMessage
+          ? emitNotification({
+              server,
+              roomKey,
+              topicId: payload.topicId,
+              // Preview the reply itself; notify the quoted author directly so we
+              // don't look up ownership on the reply (which would be the sender).
+              messageId: savedMessage.id,
+              receiverId: replyToMessage.userId,
+              actor: socket.data.user,
+              notificationType: NotificationType.Replied,
+            })
+          : undefined,
+      ]);
     },
   });
 }

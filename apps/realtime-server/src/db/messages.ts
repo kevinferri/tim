@@ -6,7 +6,13 @@ import { pgClient } from "./client";
 type WriteMessageArgs = Pick<
   Message,
   "userId" | "topicId" | "text" | "mediaUrl"
-> & { replyToId?: string; threadRootId?: string };
+> & {
+  replyToId?: string;
+  threadRootId?: string;
+  // The parent's createdAt, supplied by the caller (which has already fetched
+  // the row via getMessageForReplyPreview) so we don't re-read it here.
+  replyToCreatedAt?: Date | string | null;
+};
 
 type DeleteMessageArgs = Pick<Message, "userId"> & { messageId: string };
 
@@ -22,21 +28,15 @@ export async function writeMessage({
   mediaUrl,
   replyToId,
   threadRootId,
+  replyToCreatedAt,
 }: WriteMessageArgs) {
   const id = v4();
   let createdAt = new Date();
 
-  // Clock skew / future-dated seed parents can otherwise produce replies that
-  // sort *above* their parent after refresh (live socket appends at the bottom).
-  if (replyToId) {
-    const parent = await pgClient<Message>("messages")
-      .select("createdAt")
-      .where("id", replyToId)
-      .first();
-    if (parent?.createdAt) {
-      const minCreatedAt = new Date(new Date(parent.createdAt).getTime() + 1);
-      if (createdAt < minCreatedAt) createdAt = minCreatedAt;
-    }
+  // Clock skew can otherwise produce a reply that sorts above its own parent.
+  if (replyToCreatedAt) {
+    const minCreatedAt = new Date(new Date(replyToCreatedAt).getTime() + 1);
+    if (createdAt < minCreatedAt) createdAt = minCreatedAt;
   }
 
   const message = await pgClient<Message>("messages")
@@ -63,6 +63,11 @@ export async function writeMessage({
   return message[0];
 }
 
+type ReplyPreviewRow = Pick<
+  Message,
+  "id" | "text" | "mediaUrl" | "userId" | "threadRootId" | "createdAt"
+> & { name: string | null };
+
 // Scoped to topicId so it doubles as validation: a replyToId for a message
 // in another topic (stale, tampered, or the two just don't match) comes
 // back undefined rather than leaking cross-topic content into the preview.
@@ -72,13 +77,15 @@ export async function getMessageForReplyPreview({
 }: {
   messageId: string;
   topicId: string;
-}) {
-  return await pgClient<Message>("messages")
+}): Promise<ReplyPreviewRow | undefined> {
+  return await pgClient("messages")
     .select(
       "messages.id",
       "messages.text",
+      "messages.mediaUrl",
       "messages.userId",
       "messages.threadRootId",
+      "messages.createdAt",
       "users.name",
     )
     .join("users", "messages.userId", "users.id")

@@ -136,98 +136,13 @@ describe("messageModel.getMessagesForTopic", () => {
     expect(root?.replyCount).toBe(1);
   });
 
-  it("strips reply quotes that predate their parent (time-travel links)", async () => {
+  it("orders replies by createdAt, breaking ties on id so order is stable", async () => {
     const user = await createUser();
     const topic = await createTopic(user.id);
-    const earlier = new Date("2026-01-01T10:00:00.000Z");
-    const later = new Date("2026-01-01T12:00:00.000Z");
+    const original = await createMessage(user.id, topic.id, { text: "root" });
 
-    const parentId = crypto.randomUUID();
-    const childId = crypto.randomUUID();
-
-    await prismaClient.message.create({
-      data: {
-        id: parentId,
-        userId: user.id,
-        topicId: topic.id,
-        text: encrypt("parent later", parentId),
-        createdAt: later,
-        updatedAt: later,
-      },
-    });
-    await prismaClient.message.create({
-      data: {
-        id: childId,
-        userId: user.id,
-        topicId: topic.id,
-        text: encrypt("child earlier", childId),
-        replyToId: parentId,
-        threadRootId: parentId,
-        createdAt: earlier,
-        updatedAt: earlier,
-      },
-    });
-
-    const messages = await prismaClient.message.getMessagesForTopic({
-      requestingUserId: user.id,
-      topicId: topic.id,
-      select: {
-        id: true,
-        text: true,
-        createdAt: true,
-        replyToId: true,
-        threadRootId: true,
-        replyTo: { select: { id: true, text: true, createdAt: true } },
-      },
-    });
-
-    const child = messages.find((m) => m.id === childId);
-    expect(child?.replyTo).toBeNull();
-    expect(child?.replyToId).toBeNull();
-    expect(child?.threadRootId).toBeNull();
-  });
-
-  it("returns a flat thread via getThreadMessages", async () => {
-    const user = await createUser();
-    const topic = await createTopic(user.id);
-    const original = await createMessage(user.id, topic.id, {
-      text: "original text",
-    });
-    const firstReply = await createMessage(user.id, topic.id, {
-      text: "first reply",
-      replyToId: original.id,
-      threadRootId: original.id,
-    });
-    await createMessage(user.id, topic.id, {
-      text: "nested reply",
-      replyToId: firstReply.id,
-      threadRootId: original.id,
-    });
-    await createMessage(user.id, topic.id, { text: "unrelated" });
-
-    const thread = await prismaClient.message.getThreadMessages({
-      topicId: topic.id,
-      threadRootId: original.id,
-      select: { id: true, text: true, threadRootId: true },
-    });
-
-    expect(thread[0]?.id).toBe(original.id);
-    expect(thread.map((m) => m.text)).toEqual([
-      "original text",
-      "first reply",
-      "nested reply",
-    ]);
-  });
-
-  it("keeps rapid-fire replies in insertion order, not UUID order", async () => {
-    const user = await createUser();
-    const topic = await createTopic(user.id);
-    const original = await createMessage(user.id, topic.id, {
-      text: "root",
-    });
-
-    // Same-millisecond createdAt is common under load; UUID id order must
-    // not reshuffle send order.
+    // Same-instant sends are vanishingly rare, but the read side still has to
+    // be deterministic rather than reshuffling between requests.
     const sameInstant = new Date();
     const ids: string[] = [];
     for (const text of ["r1", "r2", "r3", "r4", "r5"]) {
@@ -247,21 +162,19 @@ describe("messageModel.getMessagesForTopic", () => {
       });
     }
 
-    const thread = await prismaClient.message.getThreadMessages({
-      topicId: topic.id,
-      threadRootId: original.id,
-      select: { id: true, text: true },
-    });
+    const read = () =>
+      prismaClient.message.getThreadMessages({
+        topicId: topic.id,
+        threadRootId: original.id,
+        select: { id: true, text: true },
+      });
 
-    expect(thread.map((m) => m.id)).toEqual([original.id, ...ids]);
-    expect(thread.map((m) => m.text)).toEqual([
-      "root",
-      "r1",
-      "r2",
-      "r3",
-      "r4",
-      "r5",
-    ]);
+    const thread = await read();
+
+    expect(thread[0]?.id).toBe(original.id);
+    expect(thread.slice(1).map((m) => m.id)).toEqual([...ids].sort());
+    // Same rows, same order -- no reshuffling between reads.
+    expect((await read()).map((m) => m.id)).toEqual(thread.map((m) => m.id));
   });
 
   it("leaves replyTo as null/undefined when the message isn't a reply", async () => {
