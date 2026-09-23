@@ -60,9 +60,11 @@ export function ReplyThreadPanel({ topicId, threadRootId }: Props) {
   const replyCount = Math.max(0, messages.length - 1);
 
   useEffect(() => {
-    // Start at the oldest message so top-down reading feels natural.
+    // Start at the oldest message so top-down reading feels natural. isLoading
+    // is a dependency because topRef only mounts on the loaded branch -- keyed
+    // on threadRootId alone this ran while the spinner was up and never again.
     topRef.current?.scrollIntoView({ block: "start" });
-  }, [threadRootId]);
+  }, [threadRootId, isLoading]);
 
   // Someone else deleting the root dissolves the thread -- the schema SetNulls
   // the replies' threadRootId, so a refetch would 404. The panel also assumes

@@ -108,6 +108,12 @@ model Message {
   // was ever a reply, so it silently renders as a plain message.
   replyTo    Message?    @relation("messageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies    Message[]   @relation("messageReplies")
+  // Also SetNull, with a wider blast radius: deleting a root nulls threadRootId
+  // on every message in the thread, including reply-to-replies whose own
+  // replyToId chain is still intact. Those keep their quote preview but leave
+  // the thread, and replying to one starts a fresh thread rooted there.
+  // Accepted -- re-deriving threadRootId from the surviving chain would need a
+  // cascade the schema can't express.
   threadRoot Message?    @relation("messageThread", fields: [threadRootId], references: [id], onDelete: SetNull)
   threadReplies Message[] @relation("messageThread")
 

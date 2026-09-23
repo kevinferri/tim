@@ -6,13 +6,14 @@ import { pgClient } from "./client";
 type WriteMessageArgs = Pick<
   Message,
   "userId" | "topicId" | "text" | "mediaUrl"
-> & {
-  replyToId?: string;
-  threadRootId?: string;
-  // The parent's createdAt, supplied by the caller (which has already fetched
-  // the row via getMessageForReplyPreview) so we don't re-read it here.
-  replyToCreatedAt?: Date | string | null;
-};
+> &
+  // Partial, not a bare Pick: the schema has these nullable, but callers omit
+  // them entirely for a non-reply.
+  Partial<Pick<Message, "replyToId" | "threadRootId">> & {
+    // The parent's createdAt, supplied by the caller (which has already fetched
+    // the row via getMessageForReplyPreview) so we don't re-read it here.
+    replyToCreatedAt?: Date | string | null;
+  };
 
 type DeleteMessageArgs = Pick<Message, "userId"> & { messageId: string };
 
