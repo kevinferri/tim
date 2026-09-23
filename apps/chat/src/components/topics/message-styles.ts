@@ -1,5 +1,8 @@
 export const baseStyles = [
   "z-0",
+  // Always present so markerRingStyles can fade *out*: dropping the transition
+  // together with the ring leaves nothing to animate.
+  "transition-shadow",
   "p-3",
   "relative",
   "hover:bg-slate-50",
@@ -26,12 +29,11 @@ export const highlightStyles = [
 // than a fill: the sheet's scrim muddies a background wash but leaves a
 // saturated edge legible. Inset, because these rows span the full width and an
 // outset ring is clipped by the transcript's overflow-x-hidden; ring rather
-// than border so it doesn't shift layout. transition-shadow fades it in and
-// out, which is what makes it work for the transient case.
+// than border so it doesn't shift layout. The fade comes from baseStyles'
+// transition-shadow, which has to stay applied when this is removed.
 export const markerRingStyles = [
   "ring-2",
   "ring-inset",
   "ring-mention",
   "rounded-md",
-  "transition-shadow",
 ];
