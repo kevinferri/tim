@@ -85,10 +85,9 @@ export function handleUserExpandedImage({ socket, server }: HandlerArgs) {
     event: SocketEvent.UserExpandedImage,
     roomType: RoomType.Topic,
     getId: (payload) => payload.topicId,
-    handler: async ({ socket, server, payload, roomKey }) => {
+    handler: async ({ socket, server, payload }) => {
       await emitNotification({
         server,
-        roomKey,
         messageId: payload.messageId,
         topicId: payload.topicId,
         actor: socket.data.user,
@@ -105,10 +104,9 @@ export function handleUserClickedLink({ socket, server }: HandlerArgs) {
     event: SocketEvent.UserClickedLink,
     roomType: RoomType.Topic,
     getId: (payload) => payload.topicId,
-    handler: async ({ socket, server, payload, roomKey }) => {
+    handler: async ({ socket, server, payload }) => {
       await emitNotification({
         server,
-        roomKey,
         messageId: payload.messageId,
         topicId: payload.topicId,
         actor: socket.data.user,

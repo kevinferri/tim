@@ -19,7 +19,6 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
 
       const notificationPayload = {
         server,
-        roomKey,
         messageId: payload.messageId,
         topicId: payload.topicId,
         actor: socket.data.user,

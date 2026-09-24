@@ -20,6 +20,9 @@ vi.mock("../lib/open-ai", () => ({
 vi.mock("../db/topics", () => ({
   isUserInTopic: vi.fn().mockResolvedValue(true),
 }));
+vi.mock("../db/notifications", () => ({
+  createNotification: vi.fn().mockResolvedValue(undefined),
+}));
 
 import {
   writeMessage,
@@ -36,7 +39,10 @@ import {
   handleEditMessage,
   handleShuffleGif,
 } from "./messages";
-import { SocketEvent } from "@tim/socket-types";
+import { SocketEvent, RoomType } from "@tim/socket-types";
+import { toRoomKey } from "./rooms";
+
+const userRoomKey = (id: string) => toRoomKey({ id, roomType: RoomType.User });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -116,7 +122,7 @@ describe("handleSendMessage", () => {
     );
   });
 
-  it("notifies a mentioned user who's connected in the circle room", async () => {
+  it("notifies a mentioned user via their own user room", async () => {
     vi.mocked(writeMessage).mockResolvedValue({
       id: "msg-1",
       text: encrypt("hey @Bob", "msg-1"),
@@ -126,8 +132,7 @@ describe("handleSendMessage", () => {
 
     const socket = createMockSocket({ id: "user-1" });
     socket.rooms.add("circle::circle-1");
-    const bobSocket = createMockSocket({ id: "bob" });
-    const server = createMockServer({ socketsInRoom: [bobSocket as any] });
+    const server = createMockServer();
     handleSendMessage({ socket: socket as any, server: server as any });
 
     await socket.trigger(SocketEvent.SendMessage, {
@@ -137,7 +142,8 @@ describe("handleSendMessage", () => {
       mentionedUserIds: ["bob"],
     });
 
-    expect(bobSocket.emit).toHaveBeenCalledWith(
+    expect(server.to).toHaveBeenCalledWith(userRoomKey("bob"));
+    expect(server.emit).toHaveBeenCalledWith(
       "notification:create",
       expect.objectContaining({ messageId: "msg-1", topicId: "topic-1" }),
     );
@@ -166,8 +172,7 @@ describe("handleSendMessage", () => {
 
     const socket = createMockSocket({ id: "user-1" });
     socket.rooms.add("circle::circle-1");
-    const authorSocket = createMockSocket({ id: "author-1" });
-    const server = createMockServer({ socketsInRoom: [authorSocket as any] });
+    const server = createMockServer();
     handleSendMessage({ socket: socket as any, server: server as any });
 
     await socket.trigger(SocketEvent.SendMessage, {
@@ -199,8 +204,14 @@ describe("handleSendMessage", () => {
         },
       }),
     );
-    expect(authorSocket.emit).toHaveBeenCalledTimes(1);
-    expect(authorSocket.emit).toHaveBeenCalledWith(
+    // Exactly one notification for the author -- Replied only, Mentioned
+    // would just double up since they're also the quoted author.
+    expect(
+      server.to.mock.calls.filter(
+        ([key]) => key === userRoomKey("author-1"),
+      ),
+    ).toHaveLength(1);
+    expect(server.emit).toHaveBeenCalledWith(
       "notification:create",
       expect.objectContaining({
         messageId: "msg-2",
@@ -230,11 +241,7 @@ describe("handleSendMessage", () => {
 
     const socket = createMockSocket({ id: "user-1" });
     socket.rooms.add("circle::circle-1");
-    const authorSocket = createMockSocket({ id: "author-1" });
-    const bobSocket = createMockSocket({ id: "bob" });
-    const server = createMockServer({
-      socketsInRoom: [authorSocket as any, bobSocket as any],
-    });
+    const server = createMockServer();
     handleSendMessage({ socket: socket as any, server: server as any });
 
     await socket.trigger(SocketEvent.SendMessage, {
@@ -245,12 +252,17 @@ describe("handleSendMessage", () => {
       mentionedUserIds: ["author-1", "bob"],
     });
 
-    expect(authorSocket.emit).toHaveBeenCalledTimes(1);
-    expect(authorSocket.emit).toHaveBeenCalledWith(
+    expect(
+      server.to.mock.calls.filter(
+        ([key]) => key === userRoomKey("author-1"),
+      ),
+    ).toHaveLength(1);
+    expect(server.emit).toHaveBeenCalledWith(
       "notification:create",
       expect.objectContaining({ notificationType: "reply:received" }),
     );
-    expect(bobSocket.emit).toHaveBeenCalledWith(
+    expect(server.to).toHaveBeenCalledWith(userRoomKey("bob"));
+    expect(server.emit).toHaveBeenCalledWith(
       "notification:create",
       expect.objectContaining({
         messageId: "msg-6",
