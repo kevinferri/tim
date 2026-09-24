@@ -31,6 +31,8 @@ model User {
   highlights        Highlight[]       @relation("highlightsByUser")
   topicReadStates   TopicReadState[]  @relation("topicReadStatesForUser")
   topicPreferences  TopicPreference[] @relation("topicPreferencesForUser")
+  notificationsReceived Notification[] @relation("notificationsForUser")
+  notificationsSent     Notification[] @relation("notificationsByActor")
 
   @@map(name: "users")
 }
@@ -118,6 +120,7 @@ model Message {
   // cascade the schema can't express.
   threadRoot Message?    @relation("messageThread", fields: [threadRootId], references: [id], onDelete: SetNull)
   threadReplies Message[] @relation("messageThread")
+  notifications Notification[] @relation("notificationsForMessage")
 
   @@index([topicId, createdAt(sort: Desc)])
   @@index([userId, topicId])
@@ -192,4 +195,31 @@ model TopicPreference {
   @@unique([userId, topicId])
 
   @@map(name: "topic_preferences")
+}
+
+model Notification {
+  // Base
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Specific
+  // Mirrors packages/socket-types' NotificationType values (e.g. "mention:received") --
+  // kept as a plain string, not a Prisma enum, so socket-types stays the one canonical
+  // source and adding a type never needs a migration.
+  type        String
+  recipientId String
+  actorId     String
+  messageId   String
+  readAt      DateTime?
+
+  // Relations
+  recipient User    @relation("notificationsForUser", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User    @relation("notificationsByActor", fields: [actorId], references: [id])
+  message   Message @relation("notificationsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt, createdAt(sort: Desc)])
+  @@index([messageId])
+  @@index([actorId])
+
+  @@map(name: "notifications")
 }

@@ -6,4 +6,5 @@ export type {
   Message,
   Highlight,
   TopicReadState,
+  Notification,
 } from "@prisma/client";
