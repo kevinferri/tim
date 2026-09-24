@@ -1,6 +1,7 @@
 import { NotificationType } from "@tim/socket-types";
 import { SocketEvent } from "../event-handlers/main";
 import { getMessageOwnerInTopic } from "../db/messages";
+import { createNotification } from "../db/notifications";
 import { AppServer } from "./socket";
 
 export { NotificationType };
@@ -11,8 +12,10 @@ type Actor = {
   imageUrl: string;
 };
 
-// Looks up the receiver's socket in the room and emits, skipping self-
-// notifications and receivers who aren't currently connected there.
+// Persists the notification and, if the receiver happens to be connected to
+// this room right now, also pushes it live -- the two are independent: a
+// receiver who isn't currently looking at this topic still gets the
+// persisted row, they just won't see it until they load their notifications.
 async function notifyUser({
   server,
   roomKey,
@@ -32,18 +35,29 @@ async function notifyUser({
 }) {
   if (receiverId === actor.id) return;
 
+  const persisted = createNotification({
+    type: notificationType,
+    recipientId: receiverId,
+    actorId: actor.id,
+    messageId,
+  }).catch((err) => {
+    console.error("Failed to persist notification", err);
+  });
+
   const receiverSocket = (await server.in(roomKey).fetchSockets()).find(
     ({ data }) => data.user.id === receiverId,
   );
 
-  if (!receiverSocket) return;
+  if (receiverSocket) {
+    receiverSocket.emit(SocketEvent.CreateNotification, {
+      notificationType,
+      topicId,
+      messageId,
+      actor,
+    });
+  }
 
-  receiverSocket.emit(SocketEvent.CreateNotification, {
-    notificationType,
-    topicId,
-    messageId,
-    actor,
-  });
+  await persisted;
 }
 
 type Args = {

@@ -5,7 +5,12 @@ vi.mock("../db/messages", () => ({
   getMessageOwnerInTopic: vi.fn(),
 }));
 
+vi.mock("../db/notifications", () => ({
+  createNotification: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { getMessageOwnerInTopic } from "../db/messages";
+import { createNotification } from "../db/notifications";
 import {
   NotificationType,
   emitNotification,
@@ -46,6 +51,12 @@ describe("emitNotification", () => {
         actor,
       }),
     );
+    expect(createNotification).toHaveBeenCalledWith({
+      type: NotificationType.HighlightRecieved,
+      recipientId: "author-1",
+      actorId: actor.id,
+      messageId: "msg-1",
+    });
   });
 
   it("does not notify the author about their own action", async () => {
@@ -67,9 +78,10 @@ describe("emitNotification", () => {
     });
 
     expect(receiverSocket.emit).not.toHaveBeenCalled();
+    expect(createNotification).not.toHaveBeenCalled();
   });
 
-  it("does nothing when the receiver isn't connected in the room", async () => {
+  it("still persists the notification when the receiver isn't connected in the room", async () => {
     vi.mocked(getMessageOwnerInTopic).mockResolvedValue({
       id: "msg-1",
       userId: "author-1",
@@ -77,16 +89,21 @@ describe("emitNotification", () => {
 
     const server = createMockServer({ socketsInRoom: [] });
 
-    await expect(
-      emitNotification({
-        server: server as any,
-        roomKey: "topic::topic-1",
-        topicId: "topic-1",
-        messageId: "msg-1",
-        actor,
-        notificationType: NotificationType.HighlightRecieved,
-      }),
-    ).resolves.toBeUndefined();
+    await emitNotification({
+      server: server as any,
+      roomKey: "topic::topic-1",
+      topicId: "topic-1",
+      messageId: "msg-1",
+      actor,
+      notificationType: NotificationType.HighlightRecieved,
+    });
+
+    expect(createNotification).toHaveBeenCalledWith({
+      type: NotificationType.HighlightRecieved,
+      recipientId: "author-1",
+      actorId: actor.id,
+      messageId: "msg-1",
+    });
   });
 
   it("uses an explicit receiverId and skips the owner lookup", async () => {
@@ -111,6 +128,27 @@ describe("emitNotification", () => {
         messageId: "reply-1",
       }),
     );
+  });
+
+  it("still pushes the live notification when persisting fails", async () => {
+    vi.mocked(createNotification).mockRejectedValueOnce(new Error("db down"));
+
+    const receiverSocket = createMockSocket({ id: "author-1" });
+    const server = createMockServer({ socketsInRoom: [receiverSocket as any] });
+
+    await expect(
+      emitNotification({
+        server: server as any,
+        roomKey: "topic::topic-1",
+        topicId: "topic-1",
+        messageId: "reply-1",
+        receiverId: "author-1",
+        actor,
+        notificationType: NotificationType.Replied,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(receiverSocket.emit).toHaveBeenCalled();
   });
 });
 
@@ -142,6 +180,18 @@ describe("emitMentionNotifications", () => {
       "notification:create",
       expect.objectContaining({ notificationType: NotificationType.Mentioned }),
     );
+    expect(createNotification).toHaveBeenCalledWith({
+      type: NotificationType.Mentioned,
+      recipientId: "alice",
+      actorId: actor.id,
+      messageId: "msg-1",
+    });
+    expect(createNotification).toHaveBeenCalledWith({
+      type: NotificationType.Mentioned,
+      recipientId: "bob",
+      actorId: actor.id,
+      messageId: "msg-1",
+    });
   });
 
   it("skips a mentioned user who mentioned themselves", async () => {
