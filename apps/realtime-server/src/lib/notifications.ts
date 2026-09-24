@@ -126,12 +126,6 @@ export async function emitMentionNotifications({
 
   const uniqueReceiverIds = Array.from(new Set(mentionedUserIds));
 
-  // mentionedUserIds is client-supplied (messages.ts) and only filtered
-  // against circle membership client-side (topic-message-bar.tsx) -- a
-  // raw socket emit bypasses that. Re-check membership here, since we now
-  // persist a notification regardless of whether the receiver is connected,
-  // and a bogus id must not turn into a durable row about a topic/circle
-  // the recipient doesn't actually belong to.
   const membership = await Promise.all(
     uniqueReceiverIds.map((receiverId) =>
       isUserInTopic({ userId: receiverId, topicId }),
