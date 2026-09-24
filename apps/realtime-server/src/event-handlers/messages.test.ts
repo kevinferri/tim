@@ -207,9 +207,7 @@ describe("handleSendMessage", () => {
     // Exactly one notification for the author -- Replied only, Mentioned
     // would just double up since they're also the quoted author.
     expect(
-      server.to.mock.calls.filter(
-        ([key]) => key === userRoomKey("author-1"),
-      ),
+      server.to.mock.calls.filter(([key]) => key === userRoomKey("author-1")),
     ).toHaveLength(1);
     expect(server.emit).toHaveBeenCalledWith(
       "notification:create",
@@ -253,9 +251,7 @@ describe("handleSendMessage", () => {
     });
 
     expect(
-      server.to.mock.calls.filter(
-        ([key]) => key === userRoomKey("author-1"),
-      ),
+      server.to.mock.calls.filter(([key]) => key === userRoomKey("author-1")),
     ).toHaveLength(1);
     expect(server.emit).toHaveBeenCalledWith(
       "notification:create",
