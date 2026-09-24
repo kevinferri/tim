@@ -1,6 +1,7 @@
 import { NotificationType } from "@tim/socket-types";
 import { SocketEvent } from "../event-handlers/main";
 import { getMessageOwnerInTopic } from "../db/messages";
+import { isUserInTopic } from "../db/topics";
 import { createNotification } from "../db/notifications";
 import { AppServer } from "./socket";
 
@@ -125,8 +126,23 @@ export async function emitMentionNotifications({
 
   const uniqueReceiverIds = Array.from(new Set(mentionedUserIds));
 
-  await Promise.all(
+  // mentionedUserIds is client-supplied (messages.ts) and only filtered
+  // against circle membership client-side (topic-message-bar.tsx) -- a
+  // raw socket emit bypasses that. Re-check membership here, since we now
+  // persist a notification regardless of whether the receiver is connected,
+  // and a bogus id must not turn into a durable row about a topic/circle
+  // the recipient doesn't actually belong to.
+  const membership = await Promise.all(
     uniqueReceiverIds.map((receiverId) =>
+      isUserInTopic({ userId: receiverId, topicId }),
+    ),
+  );
+  const authorizedReceiverIds = uniqueReceiverIds.filter(
+    (_, index) => membership[index],
+  );
+
+  await Promise.all(
+    authorizedReceiverIds.map((receiverId) =>
       notifyUser({
         server,
         roomKey,

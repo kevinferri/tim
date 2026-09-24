@@ -9,8 +9,13 @@ vi.mock("../db/notifications", () => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../db/topics", () => ({
+  isUserInTopic: vi.fn().mockResolvedValue(true),
+}));
+
 import { getMessageOwnerInTopic } from "../db/messages";
 import { createNotification } from "../db/notifications";
+import { isUserInTopic } from "../db/topics";
 import {
   NotificationType,
   emitNotification,
@@ -21,6 +26,7 @@ const actor = { id: "actor-1", name: "Actor", imageUrl: "actor.png" };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(isUserInTopic).mockResolvedValue(true);
 });
 
 describe("emitNotification", () => {
@@ -192,6 +198,37 @@ describe("emitMentionNotifications", () => {
       actorId: actor.id,
       messageId: "msg-1",
     });
+  });
+
+  it("drops a mentioned id that isn't actually a member of the topic (spoofed client payload)", async () => {
+    const alice = createMockSocket({ id: "alice" });
+    const intruder = createMockSocket({ id: "intruder" });
+    const server = createMockServer({
+      socketsInRoom: [alice as any, intruder as any],
+    });
+
+    vi.mocked(isUserInTopic).mockImplementation(
+      async ({ userId }) => userId !== "intruder",
+    );
+
+    await emitMentionNotifications({
+      server: server as any,
+      roomKey: "circle::circle-1",
+      topicId: "topic-1",
+      messageId: "msg-1",
+      actor,
+      mentionedUserIds: ["alice", "intruder"],
+    });
+
+    expect(alice.emit).toHaveBeenCalled();
+    expect(intruder.emit).not.toHaveBeenCalled();
+    expect(createNotification).toHaveBeenCalledTimes(1);
+    expect(createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: "alice" }),
+    );
+    expect(createNotification).not.toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: "intruder" }),
+    );
   });
 
   it("skips a mentioned user who mentioned themselves", async () => {
