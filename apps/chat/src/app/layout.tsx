@@ -15,6 +15,7 @@ import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
 import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
+import { NotificationSync } from "@/components/notifications/notification-sync";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
@@ -123,6 +124,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
           <UserStatsHighlightSync />
           <UserRoomConnect />
           <CircleRoomConnect circleIds={circleIds ?? []} />
+          <NotificationSync />
           <div className="flex flex-col h-screen">
             <div className="flex overflow-hidden basis-full">
               <CirclesNav circles={circles} />

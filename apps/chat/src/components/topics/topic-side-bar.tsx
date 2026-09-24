@@ -12,23 +12,17 @@ import { TopHighlights } from "@/components/topics/top-highlights";
 import { MediaList } from "@/components/topics/media-list";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CircleMembersList } from "@/components/topics/circle-members-list";
-import { NotificationsList } from "@/components/topics/notifications-list";
-import { useTopicNotifications } from "@/components/topics/use-topic-notifications";
 import { Badge } from "@/components/ui/badge";
+import { NotificationPanel } from "@/components/notifications/notification-panel";
+import { useUnreadNotificationCount } from "@/components/notifications/use-unread-notification-count";
+import { useMarkAllNotificationsRead } from "@/components/notifications/use-mark-all-notifications-read";
 
 type Tab = "highlights" | "media" | "members" | "notifications";
 
-type Props = {
-  topicId: string;
-};
-
-export function TopicSideBar(props: Props) {
+export function TopicSideBar() {
   const [activeTab, setActiveTab] = useState<Tab>("members");
-  const { notificationList, clearUnreadNotifications, unreadCount } =
-    useTopicNotifications({
-      topicId: props.topicId,
-      skipIncrementUnread: activeTab === "notifications",
-    });
+  const unreadCount = useUnreadNotificationCount();
+  const { mutate: markAllRead } = useMarkAllNotificationsRead();
 
   const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
     members: {
@@ -49,7 +43,7 @@ export function TopicSideBar(props: Props) {
     media: { header: "Media", node: <MediaList />, icon: <ImageIcon /> },
     notifications: {
       header: "Notifications",
-      node: <NotificationsList notifications={notificationList} />,
+      node: <NotificationPanel />,
       icon: (
         <div className="flex items-center gap-1.5 w-fu">
           <BellIcon />
@@ -71,8 +65,8 @@ export function TopicSideBar(props: Props) {
         onValueChange={(tab) => {
           setActiveTab(tab as Tab);
 
-          if (tab === "notifications") {
-            clearUnreadNotifications();
+          if (tab === "notifications" && unreadCount > 0) {
+            markAllRead();
           }
         }}
       >
