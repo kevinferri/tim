@@ -15,6 +15,10 @@ import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
 import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
+import { NotificationSync } from "@/components/notifications/notification-sync";
+import { NotificationsProvider } from "@/components/notifications/notifications-provider";
+import { NotificationItem } from "@/components/notifications/notification-query-cache";
+import { NotificationType } from "@tim/socket-types";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
@@ -99,38 +103,60 @@ function LoggedOutLayout({ children }: { children: React.ReactNode }) {
 async function LoggedInLayout({ children }: { children: React.ReactNode }) {
   const user = await getLoggedInUser();
   const socketConfig = await getSocketConfig(user);
-  const circles = await prismaClient.circle.getForUser({
-    userId: user?.id,
-    select: {
-      id: true,
-      name: true,
-      defaultTopicId: true,
-      imageUrl: true,
-    },
-    orderBy: {
-      createdAt: "asc",
-    },
-  });
+
+  // Fetched here (not per-topic-page) since none of this is topic data --
+  // the root layout persists across topic navigation, so this only runs
+  // once per session rather than on every switch.
+  const [circles, rawNotifications, initialUnreadCount] = await Promise.all([
+    prismaClient.circle.getForUser({
+      userId: user?.id,
+      select: {
+        id: true,
+        name: true,
+        defaultTopicId: true,
+        imageUrl: true,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    }),
+    prismaClient.notification.getForUser({ userId: user?.id }),
+    prismaClient.notification.getUnreadCount({ userId: user?.id }),
+  ]);
 
   const circleIds = circles?.map(({ id }) => id);
+  const initialNotifications: NotificationItem[] = rawNotifications.map(
+    (n) => ({
+      ...n,
+      type: n.type as NotificationType,
+      createdAt: n.createdAt.toISOString(),
+      readAt: n.readAt ? n.readAt.toISOString() : null,
+    }),
+  );
 
   return (
     <BaseLayout>
       <Toaster />
       <SelfProvider user={user}>
-        <SocketProvider {...socketConfig}>
-          <PresenceSync />
-          <UserStatsHighlightSync />
-          <UserRoomConnect />
-          <CircleRoomConnect circleIds={circleIds ?? []} />
-          <div className="flex flex-col h-screen">
-            <div className="flex overflow-hidden basis-full">
-              <CirclesNav circles={circles} />
-              {children}
+        <NotificationsProvider
+          notifications={initialNotifications}
+          unreadCount={initialUnreadCount}
+        >
+          <SocketProvider {...socketConfig}>
+            <PresenceSync />
+            <UserStatsHighlightSync />
+            <UserRoomConnect />
+            <CircleRoomConnect circleIds={circleIds ?? []} />
+            <NotificationSync />
+            <div className="flex flex-col h-screen">
+              <div className="flex overflow-hidden basis-full">
+                <CirclesNav circles={circles} />
+                {children}
+              </div>
             </div>
-          </div>
-          <GlobalVideoPlayer />
-        </SocketProvider>
+            <GlobalVideoPlayer />
+          </SocketProvider>
+        </NotificationsProvider>
       </SelfProvider>
     </BaseLayout>
   );

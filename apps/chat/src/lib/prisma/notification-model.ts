@@ -22,7 +22,10 @@ export const notificationModel = {
           select: { id: true, name: true, imageUrl: true },
         },
         message: {
-          select: { topicId: true },
+          select: {
+            topicId: true,
+            topic: { select: { id: true, name: true, circleId: true } },
+          },
         },
       },
     });

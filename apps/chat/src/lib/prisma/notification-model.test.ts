@@ -81,7 +81,10 @@ describe("notificationModel.getForUser", () => {
       messageId: messageB.id,
       readAt: null,
       actor: { id: actor.id, name: "Actor" },
-      message: { topicId: topic.id },
+      message: {
+        topicId: topic.id,
+        topic: { id: topic.id, name: "Test Topic", circleId: topic.circleId },
+      },
     });
     expect(notifications[1].messageId).toBe(messageA.id);
   });
