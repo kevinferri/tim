@@ -3,6 +3,7 @@ import {
   notificationsQueryKey,
   NotificationItem,
 } from "@/components/notifications/notification-query-cache";
+import { useInitialNotificationsData } from "@/components/notifications/notifications-provider";
 
 const NOTIFICATION_LIMIT = 30;
 
@@ -19,6 +20,8 @@ async function fetchNotificationsPage(before?: string) {
 }
 
 export function useNotifications() {
+  const { notifications: initialNotifications } = useInitialNotificationsData();
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
       queryKey: notificationsQueryKey,
@@ -28,6 +31,13 @@ export function useNotifications() {
         lastPage.length >= NOTIFICATION_LIMIT
           ? lastPage[lastPage.length - 1].createdAt
           : undefined,
+      // Seeded from LoggedInLayout's SSR fetch (not per-topic-page, since
+      // notifications aren't topic data) -- avoids a loading flash on mount,
+      // same pattern useTopicMessages uses for existingMessages.
+      initialData: {
+        pages: [initialNotifications],
+        pageParams: [undefined],
+      },
     });
 
   const notifications = data?.pages.flat() ?? [];
