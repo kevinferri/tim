@@ -1,5 +1,6 @@
-import { NotificationType } from "@tim/socket-types";
+import { NotificationType, RoomType } from "@tim/socket-types";
 import { SocketEvent } from "../event-handlers/main";
+import { toRoomKey } from "../event-handlers/rooms";
 import { getMessageOwnerInTopic } from "../db/messages";
 import { isUserInTopic } from "../db/topics";
 import { createNotification } from "../db/notifications";
@@ -13,13 +14,15 @@ type Actor = {
   imageUrl: string;
 };
 
-// Persists the notification and, if the receiver happens to be connected to
-// this room right now, also pushes it live -- the two are independent: a
-// receiver who isn't currently looking at this topic still gets the
+// Persists the notification, and separately pushes it live to the
+// receiver's own user room -- every one of their sockets joins it for the
+// life of the session (see UserRoomConnect), regardless of which topic or
+// circle they're currently viewing, so this reaches them anywhere in the
+// app rather than only while they're looking at the room the event happened
+// in. The two are independent: an offline receiver still gets the
 // persisted row, they just won't see it until they load their notifications.
 async function notifyUser({
   server,
-  roomKey,
   receiverId,
   actor,
   topicId,
@@ -27,7 +30,6 @@ async function notifyUser({
   notificationType,
 }: {
   server: AppServer;
-  roomKey: string;
   receiverId: string;
   actor: Actor;
   topicId: string;
@@ -45,18 +47,14 @@ async function notifyUser({
     console.error("Failed to persist notification", err);
   });
 
-  const receiverSocket = (await server.in(roomKey).fetchSockets()).find(
-    ({ data }) => data.user.id === receiverId,
-  );
-
-  if (receiverSocket) {
-    receiverSocket.emit(SocketEvent.CreateNotification, {
+  server
+    .to(toRoomKey({ id: receiverId, roomType: RoomType.User }))
+    .emit(SocketEvent.CreateNotification, {
       notificationType,
       topicId,
       messageId,
       actor,
     });
-  }
 
   await persisted;
 }
@@ -65,7 +63,6 @@ type Args = {
   server: AppServer;
   topicId: string;
   messageId: string;
-  roomKey: string;
   notificationType: NotificationType;
   actor: Actor;
   // When set, skip the message-owner lookup (e.g. Replied: notify the
@@ -80,12 +77,11 @@ export async function emitNotification({
   server,
   topicId,
   messageId,
-  roomKey,
   actor,
   notificationType,
   receiverId,
 }: Args) {
-  if (!roomKey || !messageId) return;
+  if (!messageId) return;
 
   let resolvedReceiverId = receiverId;
   if (!resolvedReceiverId) {
@@ -96,7 +92,6 @@ export async function emitNotification({
 
   await notifyUser({
     server,
-    roomKey,
     receiverId: resolvedReceiverId,
     actor,
     topicId,
@@ -111,18 +106,16 @@ export async function emitMentionNotifications({
   server,
   topicId,
   messageId,
-  roomKey,
   actor,
   mentionedUserIds,
 }: {
   server: AppServer;
   topicId: string;
   messageId: string;
-  roomKey: string;
   actor: Actor;
   mentionedUserIds: string[];
 }) {
-  if (!roomKey || !messageId || mentionedUserIds.length === 0) return;
+  if (!messageId || mentionedUserIds.length === 0) return;
 
   const uniqueReceiverIds = Array.from(new Set(mentionedUserIds));
 
@@ -139,7 +132,6 @@ export async function emitMentionNotifications({
     authorizedReceiverIds.map((receiverId) =>
       notifyUser({
         server,
-        roomKey,
         receiverId,
         actor,
         topicId,

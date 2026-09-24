@@ -96,11 +96,10 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         (id: string) => id !== replyToMessage?.userId,
       );
 
-      // Independent fan-outs, and each does its own fetchSockets() round trip.
+      // Independent fan-outs.
       await Promise.all([
         emitMentionNotifications({
           server,
-          roomKey,
           topicId: payload.topicId,
           messageId: savedMessage.id,
           actor: socket.data.user,
@@ -109,7 +108,6 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
         replyToMessage
           ? emitNotification({
               server,
-              roomKey,
               topicId: payload.topicId,
               // Preview the reply itself; notify the quoted author directly so we
               // don't look up ownership on the reply (which would be the sender).
