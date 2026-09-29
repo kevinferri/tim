@@ -10,13 +10,6 @@ import { notificationCopyMap } from "@/components/notifications/notification-cop
 import { NotificationItem } from "@/components/notifications/notification-query-cache";
 import { Message } from "@/components/topics/message";
 
-// Same rendering the old localStorage-based notification list used --
-// the real Message component, in a Card, variant="minimal" with
-// sentBy/sentAt hidden since the row's own header line already says who.
-// Unlike that old version, the message is never missing: it doesn't depend
-// on the current topic's already-loaded cache, it comes decrypted straight
-// off the notification itself (global, not topic-scoped), so there's no
-// "See message" fallback case left to handle.
 function NotificationRow({ notification }: { notification: NotificationItem }) {
   const createdAt = useDateFormatter(new Date(notification.createdAt));
   const copy = notificationCopyMap[notification.type];
