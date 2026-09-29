@@ -2,9 +2,9 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   notificationsQueryKey,
   NotificationItem,
-  NOTIFICATION_LIMIT,
 } from "@/components/notifications/notification-query-cache";
 import { useInitialNotificationsData } from "@/components/notifications/notifications-provider";
+import { NOTIFICATION_LIMIT } from "@/lib/notification-constants";
 
 async function fetchNotificationsPage(before?: string) {
   const resp = await fetch(

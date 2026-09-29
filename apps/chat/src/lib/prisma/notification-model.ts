@@ -1,5 +1,5 @@
 import { prismaClient } from "@/lib/prisma/client";
-import { NOTIFICATION_LIMIT } from "@/components/notifications/notification-query-cache";
+import { NOTIFICATION_LIMIT } from "@/lib/notification-constants";
 
 // Skips notifications about a circle the user has since left, rather than
 // surfacing (or counting toward the badge) a dead link -- same pattern as
