@@ -114,13 +114,13 @@ describe("notificationModel.getForUser", () => {
     const messageA = await createMessage(actor.id, topic.id);
     const messageB = await createMessage(actor.id, topic.id);
 
-    const first = await createNotification({
+    const older = await createNotification({
       recipientId: recipient.id,
       actorId: actor.id,
       messageId: messageA.id,
     });
     await new Promise((r) => setTimeout(r, 5));
-    await createNotification({
+    const newer = await createNotification({
       recipientId: recipient.id,
       actorId: actor.id,
       messageId: messageB.id,
@@ -128,10 +128,60 @@ describe("notificationModel.getForUser", () => {
 
     const page = await prismaClient.notification.getForUser({
       userId: recipient.id,
-      before: first.createdAt.toISOString(),
+      before: newer.id,
     });
 
-    expect(page).toHaveLength(0);
+    expect(page).toHaveLength(1);
+    expect(page[0].id).toBe(older.id);
+  });
+
+  it("doesn't skip a sibling notification that ties on createdAt", async () => {
+    const recipient = await createUser("Recipient");
+    const actor = await createUser("Actor");
+    const topic = await createTopic(actor.id);
+    const message = await createMessage(actor.id, topic.id);
+
+    const older = await createNotification({
+      recipientId: recipient.id,
+      actorId: actor.id,
+      messageId: message.id,
+    });
+
+    // Same createdAt on purpose -- simulates e.g. one message mentioning
+    // several people, which creates several notifications within the same
+    // millisecond via Promise.all. A createdAt-only cursor would jump past
+    // the whole tied group and drop whichever one wasn't the pivot.
+    const tiedAt = new Date(older.createdAt.getTime() + 1000);
+    const tiedData = {
+      recipientId: recipient.id,
+      actorId: actor.id,
+      messageId: message.id,
+      type: "mention:received",
+      createdAt: tiedAt,
+    };
+    const tiedFirst = await prismaClient.notification.create({
+      data: tiedData,
+    });
+    const tiedSecond = await prismaClient.notification.create({
+      data: tiedData,
+    });
+
+    // orderBy is [createdAt desc, id desc], so whichever tied row has the
+    // larger id sorts first -- that's the one we'll page past.
+    const [ahead, behind] =
+      tiedFirst.id > tiedSecond.id
+        ? [tiedFirst, tiedSecond]
+        : [tiedSecond, tiedFirst];
+
+    const page = await prismaClient.notification.getForUser({
+      userId: recipient.id,
+      before: ahead.id,
+    });
+
+    const ids = page.map((n) => n.id);
+    expect(ids).toHaveLength(2);
+    expect(ids).toContain(behind.id);
+    expect(ids).toContain(older.id);
   });
 
   it("returns an empty array when userId is missing", async () => {

@@ -26,9 +26,11 @@ export function useNotifications() {
       queryKey: notificationsQueryKey,
       queryFn: ({ pageParam }) => fetchNotificationsPage(pageParam),
       initialPageParam: undefined as string | undefined,
+      // The id of the last notification, not its createdAt -- see
+      // notification-model.ts's getForUser for why.
       getNextPageParam: (lastPage) =>
         lastPage.length >= NOTIFICATION_LIMIT
-          ? lastPage[lastPage.length - 1].createdAt
+          ? lastPage[lastPage.length - 1].id
           : undefined,
       // Seeded from LoggedInLayout's SSR fetch (not per-topic-page, since
       // notifications aren't topic data) -- avoids a loading flash on mount,

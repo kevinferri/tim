@@ -5,12 +5,18 @@ export const notificationModel = {
   async getForUser({ userId, before }: { userId?: string; before?: string }) {
     if (!userId) return [];
 
-    const cursor = before ? { createdAt: { lt: before } } : undefined;
-
+    // Cursor is the previous page's last notification id, not its createdAt --
+    // createdAt alone can tie (e.g. one message mentioning several people
+    // creates several notifications within the same millisecond via
+    // Promise.all), and a value-based `createdAt < before` cursor would
+    // silently skip any tied rows that didn't make it into the prior page.
+    // Prisma's id-based cursor is positional, not value-based, so it's exact
+    // regardless of ties.
     return await prismaClient.notification.findMany({
-      where: { recipientId: userId, ...cursor },
+      where: { recipientId: userId },
       take: NOTIFICATION_LIMIT,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...(before ? { cursor: { id: before }, skip: 1 } : {}),
       select: {
         id: true,
         type: true,

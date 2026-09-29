@@ -14,6 +14,15 @@ export function useMarkAllNotificationsRead() {
     mutationFn: markAllNotificationsRead,
     onSuccess: () => {
       queryClient.setQueryData(unreadNotificationCountQueryKey, 0);
+      // Reconciles the optimistic 0 against the server. Without this, a
+      // notification that arrives (via the live socket push) concurrently
+      // with this mutation can have already written the true count here --
+      // the synchronous setQueryData above would then clobber it back to 0,
+      // hiding a genuinely unread notification until something else
+      // invalidates this query.
+      queryClient.invalidateQueries({
+        queryKey: unreadNotificationCountQueryKey,
+      });
 
       // setQueryData (exact key), not setQueriesData -- notificationsQueryKey
       // is a prefix of unreadNotificationCountQueryKey, so a partial-match
