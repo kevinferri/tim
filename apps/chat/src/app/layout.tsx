@@ -104,9 +104,6 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
   const user = await getLoggedInUser();
   const socketConfig = await getSocketConfig(user);
 
-  // Fetched here (not per-topic-page) since none of this is topic data --
-  // the root layout persists across topic navigation, so this only runs
-  // once per session rather than on every switch.
   const [circles, rawNotifications, initialUnreadCount] = await Promise.all([
     prismaClient.circle.getForUser({
       userId: user?.id,
