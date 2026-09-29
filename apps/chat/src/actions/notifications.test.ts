@@ -33,4 +33,21 @@ describe("markAllNotificationsRead", () => {
     });
     expect(result).toEqual({ count: 3 });
   });
+
+  it("is a safe no-op for an unauthenticated caller", async () => {
+    vi.mocked(getLoggedInUserId).mockResolvedValue(undefined);
+    vi.mocked(prismaClient.notification.markAllReadForUser).mockResolvedValue({
+      count: 0,
+    } as any);
+
+    const result = await markAllNotificationsRead();
+
+    // No rows to scope to without a userId -- the model itself guards this
+    // (see notification-model.test.ts), this just confirms the action
+    // doesn't invent a fallback id or throw before reaching that guard.
+    expect(prismaClient.notification.markAllReadForUser).toHaveBeenCalledWith({
+      userId: undefined,
+    });
+    expect(result).toEqual({ count: 0 });
+  });
 });
