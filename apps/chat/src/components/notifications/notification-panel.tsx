@@ -78,7 +78,7 @@ function NotificationRow({ notification }: { notification: NotificationItem }) {
           {copy.icon}
           {getDisplayName(notification.actor.name)} {copy.text}
         </div>
-        <div className="flex items-center gap-1 text-xs text-primary">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <span className="truncate">#{topic.name}</span>
           {createdAt && <span>· {createdAt}</span>}
         </div>
