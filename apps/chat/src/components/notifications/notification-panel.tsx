@@ -1,112 +1,65 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { getDisplayName } from "@tim/user-display";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getInitials } from "@/components/ui/user-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
 import { useNotifications } from "@/components/notifications/use-notifications";
 import { notificationCopyMap } from "@/components/notifications/notification-copy";
 import { NotificationItem } from "@/components/notifications/notification-query-cache";
-import { getThumbnail } from "@/components/topics/reply-preview";
+import { Message } from "@/components/topics/message";
 
-type Props = {
-  onNavigate?: () => void;
-};
-
-// Same compact quoted-message treatment as ReplyPreview, minus the
-// attribution/cancel-button parts it also carries -- the row's own header
-// line ("Actor mentioned you") already says who and what, so naming the
-// message's own sender here would be redundant at best, and for a highlight/
-// image/link notification that sender is just the recipient themselves.
-function MessagePreview({
-  text,
-  mediaUrl,
-}: {
-  text: string | null;
-  mediaUrl: string | null;
-}) {
-  const [thumbnailFailed, setThumbnailFailed] = useState(false);
-  const thumbnail = getThumbnail(text ?? "", mediaUrl);
-  const showThumbnail = !!thumbnail && !thumbnailFailed;
-
-  if (!text && !showThumbnail) return null;
-
-  return (
-    <div className="mt-0.5 flex min-w-0 items-start gap-1.5 border-l-2 border-muted-foreground/25 pl-2 text-xs text-muted-foreground">
-      {showThumbnail && (
-        <img
-          src={thumbnail}
-          alt=""
-          aria-hidden
-          onError={() => setThumbnailFailed(true)}
-          className="mt-0.5 h-5 w-5 shrink-0 rounded-sm object-cover"
-        />
-      )}
-      {text && <span className="line-clamp-2 break-words">{text}</span>}
-    </div>
-  );
-}
-
-function NotificationRow({
-  notification,
-  onNavigate,
-}: {
-  notification: NotificationItem;
-  onNavigate?: () => void;
-}) {
-  const router = useRouter();
+// Same rendering the old localStorage-based notification list used --
+// the real Message component, in a Card, variant="minimal" with
+// sentBy/sentAt hidden since the row's own header line already says who.
+// Unlike that old version, the message is never missing: it doesn't depend
+// on the current topic's already-loaded cache, it comes decrypted straight
+// off the notification itself (global, not topic-scoped), so there's no
+// "See message" fallback case left to handle.
+function NotificationRow({ notification }: { notification: NotificationItem }) {
   const createdAt = useDateFormatter(new Date(notification.createdAt));
   const copy = notificationCopyMap[notification.type];
 
   return (
-    <button
-      type="button"
-      onClick={() => {
-        const { circleId } = notification.message.topic;
-        // No ?messageId= -- that opens MessageModal to show this same
-        // message in an isolated popup, which is redundant now that the
-        // row already renders it inline. Just take them into the topic.
-        router.push(
-          `/circles/${circleId}/topics/${notification.message.topicId}`,
-        );
-        onNavigate?.();
-      }}
-      className={cn(
-        "flex w-full items-start gap-3 rounded-md p-3 text-left hover:bg-accent",
-        !notification.readAt && "bg-accent/50",
-      )}
-    >
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={notification.actor.imageUrl ?? undefined} />
-        <AvatarFallback>
-          {getInitials(notification.actor.name ?? undefined)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <div className="flex items-start gap-1.5 text-sm">
-          <span className="mt-0.5 shrink-0">{copy.icon}</span>
-          <span className="break-words">
-            {getDisplayName(notification.actor.name)} {copy.text}
-          </span>
+    <div className="flex gap-3 p-3 items-start">
+      <div className="flex">
+        <UserAvatar
+          {...notification.actor}
+          topicId={notification.message.topicId}
+          showStatus={false}
+          status={null}
+          lastStatusUpdate={null}
+        />
+      </div>
+      <div className="flex flex-col gap-1 w-full">
+        <div className="text-sm text-muted-foreground mt-[-2px] flex items-center gap-1">
+          {copy.icon}
+          {getDisplayName(notification.actor.name)} {copy.text}
         </div>
-        <div className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <span className="truncate">#{notification.message.topic.name}</span>
           {createdAt && <span>· {createdAt}</span>}
         </div>
-        <MessagePreview
-          text={notification.message.text}
-          mediaUrl={notification.message.mediaUrl}
-        />
+        <Card>
+          <CardContent className="p-0 m-0">
+            <Message
+              id={notification.messageId}
+              topicId={notification.message.topicId}
+              text={notification.message.text ?? undefined}
+              mediaUrl={notification.message.mediaUrl}
+              variant="minimal"
+              className="hover:bg-inherit"
+              hiddenElements={["sentBy", "sentAt"]}
+            />
+          </CardContent>
+        </Card>
       </div>
-    </button>
+    </div>
   );
 }
 
-export function NotificationPanel(props: Props) {
+export function NotificationPanel() {
   const {
     notifications,
     hasNextPage,
@@ -132,19 +85,15 @@ export function NotificationPanel(props: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col">
       {notifications.map((notification) => (
-        <NotificationRow
-          key={notification.id}
-          notification={notification}
-          onNavigate={props.onNavigate}
-        />
+        <NotificationRow key={notification.id} notification={notification} />
       ))}
       {hasNextPage && (
         <Button
           variant="ghost"
           size="sm"
-          className="mt-1"
+          className="mx-3 mb-2"
           disabled={isFetchingNextPage}
           onClick={() => fetchNextPage()}
         >
