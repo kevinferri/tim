@@ -87,9 +87,9 @@ function NotificationRow({
         </AvatarFallback>
       </Avatar>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <div className="flex items-center gap-1.5 text-sm">
-          {copy.icon}
-          <span className="truncate">
+        <div className="flex items-start gap-1.5 text-sm">
+          <span className="mt-0.5 shrink-0">{copy.icon}</span>
+          <span className="break-words">
             {getDisplayName(notification.actor.name)} {copy.text}
           </span>
         </div>
