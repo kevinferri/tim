@@ -30,6 +30,21 @@ jobs:
             is the wire contract between the two apps -- new socket events
             belong there first, not hand-added in either app's own hub file.
 
+            Before reviewing, run `gh pr view ${{ github.event.pull_request.number }} --json comments` to read every
+            existing comment on this PR (your own prior review rounds and the
+            author's replies to them). This may be a re-review after earlier
+            rounds of feedback -- do not re-raise a finding that a prior
+            comment already made and the author either fixed or explicitly
+            declined with reasoning, even if the line the finding was about
+            still exists unchanged. Only raise it again if the code relevant
+            to that specific finding has materially changed since, in a way
+            that reopens the concern. This applies to whole categories of
+            finding too, not just line-identical repeats -- e.g. if a prior
+            round already established this repo has no DOM test environment
+            and the author isn't going to add component/hook-render tests,
+            don't ask for one again in a later round just because it's a
+            different component.
+
             Please review this pull request with a focus on:
             - Correctness bugs and edge cases
             - Auth/authorization gaps (every mutation/read should verify
