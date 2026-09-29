@@ -7,6 +7,9 @@ vi.mock("../db/highlights", () => ({
 vi.mock("../db/users", () => ({
   getUserSummary: vi.fn(),
 }));
+vi.mock("../db/messages", () => ({
+  getMessageOwnerInTopic: vi.fn(),
+}));
 vi.mock("../lib/notifications", () => ({
   NotificationType: {
     HighlightRecieved: "highlight:recieved",
@@ -17,12 +20,17 @@ vi.mock("../lib/notifications", () => ({
 
 import { toggleHighlight } from "../db/highlights";
 import { getUserSummary } from "../db/users";
+import { getMessageOwnerInTopic } from "../db/messages";
 import { emitNotification, NotificationType } from "../lib/notifications";
 import { handleToggleHighlight } from "./highlights";
 import { SocketEvent } from "@tim/socket-types";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(getMessageOwnerInTopic).mockResolvedValue({
+    id: "msg-1",
+    userId: "owner-1",
+  } as any);
 });
 
 describe("handleToggleHighlight", () => {
@@ -93,6 +101,22 @@ describe("handleToggleHighlight", () => {
     await socket.trigger(SocketEvent.ToggleHighlight, {
       topicId: "topic-1",
       messageId: "msg-1",
+    });
+
+    expect(toggleHighlight).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when the message isn't in the given topic", async () => {
+    vi.mocked(getMessageOwnerInTopic).mockResolvedValue(undefined);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("topic::topic-1");
+    const server = createMockServer();
+    handleToggleHighlight({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.ToggleHighlight, {
+      topicId: "topic-1",
+      messageId: "msg-other",
     });
 
     expect(toggleHighlight).not.toHaveBeenCalled();

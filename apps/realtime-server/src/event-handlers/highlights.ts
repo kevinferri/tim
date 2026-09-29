@@ -1,6 +1,7 @@
 import { HandlerArgs, SocketEvent } from "./main";
 import { toggleHighlight } from "../db/highlights";
 import { getUserSummary } from "../db/users";
+import { getMessageOwnerInTopic } from "../db/messages";
 import { RoomType, registerRoomEvent } from "./rooms";
 import { NotificationType, emitNotification } from "../lib/notifications";
 
@@ -12,6 +13,9 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
     roomType: RoomType.Topic,
     getId: (payload) => payload.topicId,
     handler: async ({ socket, server, payload, roomKey }) => {
+      // Room membership alone doesn't prove the message is in this topic.
+      if (!(await getMessageOwnerInTopic(payload))) return;
+
       const highlight = await toggleHighlight({
         userId: socket.data.user.id,
         messageId: payload.messageId,
