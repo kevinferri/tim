@@ -14,6 +14,8 @@ function notif(
     actor: { id: "u1", name: "Actor", imageUrl: null },
     message: {
       topicId: "t1",
+      text: "hello",
+      mediaUrl: null,
       topic: { id: "t1", name: "Topic", circleId: "c1" },
     },
     ...extra,

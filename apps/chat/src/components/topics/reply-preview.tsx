@@ -18,7 +18,7 @@ type Props = {
 // `mediaUrl` is overloaded: for /tim, /roll and /8ball it carries the generated
 // result rather than a URL (see the branching in message.tsx), so there's
 // nothing to show a thumbnail for.
-function getThumbnail(text: string, mediaUrl?: string | null) {
+export function getThumbnail(text: string, mediaUrl?: string | null) {
   const command = parseCommand(text ?? "")?.name;
 
   if (

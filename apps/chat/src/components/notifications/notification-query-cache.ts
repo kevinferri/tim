@@ -15,6 +15,8 @@ export type NotificationItem = {
   actor: NotificationActor;
   message: {
     topicId: string;
+    text: string | null;
+    mediaUrl: string | null;
     topic: { id: string; name: string; circleId: string };
   };
 };
