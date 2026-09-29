@@ -1,6 +1,5 @@
 import { prismaClient } from "@/lib/prisma/client";
-
-export const NOTIFICATION_LIMIT = 30;
+import { NOTIFICATION_LIMIT } from "@/components/notifications/notification-query-cache";
 
 export const notificationModel = {
   async getForUser({ userId, before }: { userId?: string; before?: string }) {

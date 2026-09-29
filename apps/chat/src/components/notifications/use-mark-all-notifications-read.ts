@@ -4,6 +4,7 @@ import {
   notificationsQueryKey,
   unreadNotificationCountQueryKey,
   NotificationItem,
+  withAllRead,
 } from "@/components/notifications/notification-query-cache";
 
 export function useMarkAllNotificationsRead() {
@@ -14,17 +15,18 @@ export function useMarkAllNotificationsRead() {
     onSuccess: () => {
       queryClient.setQueryData(unreadNotificationCountQueryKey, 0);
 
-      queryClient.setQueriesData<{ pages: NotificationItem[][] }>(
-        { queryKey: notificationsQueryKey },
+      // setQueryData (exact key), not setQueriesData -- notificationsQueryKey
+      // is a prefix of unreadNotificationCountQueryKey, so a partial-match
+      // update here would also hit the count query above.
+      queryClient.setQueryData<{ pages: NotificationItem[][] }>(
+        notificationsQueryKey,
         (prev) => {
           if (!prev) return prev;
 
-          const readAt = new Date().toISOString();
+          const mark = withAllRead(new Date().toISOString());
           return {
             ...prev,
-            pages: prev.pages.map((page) =>
-              page.map((n) => (n.readAt ? n : { ...n, readAt })),
-            ),
+            pages: prev.pages.map((page) => page.map(mark)),
           };
         },
       );
