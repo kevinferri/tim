@@ -81,8 +81,16 @@ export const notificationModel = {
   async markAllReadForUser({ userId }: { userId?: string }) {
     if (!userId) return { count: 0 };
 
+    // Same forCurrentMember scoping as the reads -- without it, a
+    // left-circle notification (already excluded from getForUser/
+    // getUnreadCount, so the user never actually saw it) would get marked
+    // read anyway, and come back silently pre-read if they rejoin later.
     return await prismaClient.notification.updateMany({
-      where: { recipientId: userId, readAt: null },
+      where: {
+        recipientId: userId,
+        readAt: null,
+        ...forCurrentMember(userId),
+      },
       data: { readAt: new Date() },
     });
   },

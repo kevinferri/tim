@@ -342,4 +342,36 @@ describe("notificationModel.markAllReadForUser", () => {
       prismaClient.notification.markAllReadForUser({ userId: undefined }),
     ).resolves.toEqual({ count: 0 });
   });
+
+  it("doesn't mark a left-circle notification read, so it's still unread if the user rejoins", async () => {
+    const actor = await createUser("Actor");
+    const recipient = await createUser("Recipient");
+    const topic = await createTopic(actor.id, [recipient.id]);
+    const message = await createMessage(actor.id, topic.id);
+
+    await createNotification({
+      recipientId: recipient.id,
+      actorId: actor.id,
+      messageId: message.id,
+    });
+
+    await prismaClient.circle.update({
+      where: { id: topic.circleId },
+      data: { members: { disconnect: [{ id: recipient.id }] } },
+    });
+
+    const result = await prismaClient.notification.markAllReadForUser({
+      userId: recipient.id,
+    });
+    expect(result.count).toBe(0);
+
+    await prismaClient.circle.update({
+      where: { id: topic.circleId },
+      data: { members: { connect: [{ id: recipient.id }] } },
+    });
+
+    await expect(
+      prismaClient.notification.getUnreadCount({ userId: recipient.id }),
+    ).resolves.toBe(1);
+  });
 });
