@@ -39,6 +39,13 @@ export function useMarkAllNotificationsRead() {
           };
         },
       );
+      // Same reconciliation as the count above: a concurrent
+      // NotificationSync-triggered refetch of this same query, in flight
+      // since before this mutation's server-side update ran, can resolve
+      // and land stale (pre-mark-all-read) data after the optimistic write
+      // above. Invalidating reconciles it against the server shortly after,
+      // same as the count.
+      queryClient.invalidateQueries({ queryKey: notificationsQueryKey });
     },
   });
 }

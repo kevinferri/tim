@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BellIcon,
   ImageIcon,
@@ -26,18 +26,36 @@ export function TopicSideBar() {
   const { mutate: markAllRead, isPending: isMarkingAllRead } =
     useMarkAllNotificationsRead();
 
+  // An event that arrives while a mark-read is already in flight can't just
+  // be skipped -- if the in-flight mutation's server-side UPDATE already ran
+  // by the time this new notification's row is inserted, nothing else would
+  // ever catch it, leaving the badge stuck at 1 while the tab is open.
+  // Queue it instead, and fire one more call once the current one settles.
+  const hasQueuedMarkReadRef = useRef(false);
+
   // Mirrors the old localStorage hook's skipIncrementUnread: while this tab
   // is already open, a live notification shouldn't sit there bumping the
   // badge back up -- immediately mark it read too, the same as opening the
   // tab does, instead of letting it accumulate until the tab is switched
-  // away and back. isMarkingAllRead skips piling up a redundant mutation
-  // per event when several arrive close together -- harmless either way
-  // (the mutation is idempotent), just wasted round trips.
+  // away and back. Coalesced via the queue above so a burst of several
+  // close-together notifications doesn't pile up one mutation per event.
   useSocketHandler(SocketEvent.CreateNotification, () => {
-    if (activeTab === "notifications" && !isMarkingAllRead) {
+    if (activeTab !== "notifications") return;
+
+    if (isMarkingAllRead) {
+      hasQueuedMarkReadRef.current = true;
+      return;
+    }
+
+    markAllRead();
+  });
+
+  useEffect(() => {
+    if (!isMarkingAllRead && hasQueuedMarkReadRef.current) {
+      hasQueuedMarkReadRef.current = false;
       markAllRead();
     }
-  });
+  }, [isMarkingAllRead, markAllRead]);
 
   const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
     members: {
