@@ -74,7 +74,7 @@ function NotificationRow({ notification }: { notification: NotificationItem }) {
         />
       </div>
       <div className="flex min-w-0 flex-col gap-1 w-full">
-        <div className="text-sm text-muted-foreground mt-[-2px] flex items-center gap-1">
+        <div className="text-sm text-primary mt-[-2px] flex items-center gap-1">
           {copy.icon}
           {getDisplayName(notification.actor.name)} {copy.text}
         </div>
