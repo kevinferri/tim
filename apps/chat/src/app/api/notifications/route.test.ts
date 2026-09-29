@@ -37,13 +37,13 @@ describe("GET /api/notifications", () => {
       { id: "notif-1" },
     ] as any);
 
-    const res = await GET(makeRequest("?before=2026-01-01T00:00:00.000Z"));
+    const res = await GET(makeRequest("?before=notif-0"));
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual([{ id: "notif-1" }]);
     expect(prismaClient.notification.getForUser).toHaveBeenCalledWith({
       userId: "user-1",
-      before: "2026-01-01T00:00:00.000Z",
+      before: "notif-0",
     });
   });
 

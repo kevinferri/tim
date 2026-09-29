@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { NotificationPanel } from "@/components/notifications/notification-panel";
 import { useUnreadNotificationCount } from "@/components/notifications/use-unread-notification-count";
 import { useMarkAllNotificationsRead } from "@/components/notifications/use-mark-all-notifications-read";
+import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 
 type Tab = "highlights" | "media" | "members" | "notifications";
 
@@ -23,6 +24,17 @@ export function TopicSideBar() {
   const [activeTab, setActiveTab] = useState<Tab>("members");
   const unreadCount = useUnreadNotificationCount();
   const { mutate: markAllRead } = useMarkAllNotificationsRead();
+
+  // Mirrors the old localStorage hook's skipIncrementUnread: while this tab
+  // is already open, a live notification shouldn't sit there bumping the
+  // badge back up -- immediately mark it read too, the same as opening the
+  // tab does, instead of letting it accumulate until the tab is switched
+  // away and back.
+  useSocketHandler(SocketEvent.CreateNotification, () => {
+    if (activeTab === "notifications") {
+      markAllRead();
+    }
+  });
 
   const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
     members: {

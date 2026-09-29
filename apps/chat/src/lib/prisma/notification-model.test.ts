@@ -189,6 +189,46 @@ describe("notificationModel.getForUser", () => {
       prismaClient.notification.getForUser({ userId: undefined }),
     ).resolves.toEqual([]);
   });
+
+  it("returns an empty array for a cursor id that doesn't exist", async () => {
+    const recipient = await createUser("Recipient");
+
+    await expect(
+      prismaClient.notification.getForUser({
+        userId: recipient.id,
+        before: crypto.randomUUID(),
+      }),
+    ).resolves.toEqual([]);
+  });
+
+  it("returns an empty array for a cursor id belonging to another user's notification", async () => {
+    const recipient = await createUser("Recipient");
+    const other = await createUser("Other");
+    const actor = await createUser("Actor");
+    const topic = await createTopic(actor.id);
+    const message = await createMessage(actor.id, topic.id);
+
+    // A notification that exists, but isn't the requesting user's -- the
+    // naive fix (Prisma's own `cursor` option) would still anchor off it,
+    // since that option ignores `where` when locating the cursor row.
+    const foreign = await createNotification({
+      recipientId: other.id,
+      actorId: actor.id,
+      messageId: message.id,
+    });
+    await createNotification({
+      recipientId: recipient.id,
+      actorId: actor.id,
+      messageId: message.id,
+    });
+
+    await expect(
+      prismaClient.notification.getForUser({
+        userId: recipient.id,
+        before: foreign.id,
+      }),
+    ).resolves.toEqual([]);
+  });
 });
 
 describe("notificationModel.getUnreadCount", () => {

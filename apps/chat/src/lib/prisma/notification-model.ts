@@ -10,13 +10,32 @@ export const notificationModel = {
     // creates several notifications within the same millisecond via
     // Promise.all), and a value-based `createdAt < before` cursor would
     // silently skip any tied rows that didn't make it into the prior page.
-    // Prisma's id-based cursor is positional, not value-based, so it's exact
-    // regardless of ties.
+    let cursorWhere;
+    if (before) {
+      // Resolved scoped to recipientId, not just by id -- Prisma's own
+      // `cursor` option anchors on the unique field alone, ignoring `where`,
+      // which would let a client pass someone else's (or a stale/deleted)
+      // notification id and still get a page back positioned off it.
+      const cursorRow = await prismaClient.notification.findFirst({
+        where: { id: before, recipientId: userId },
+        select: { createdAt: true, id: true },
+      });
+
+      // Unknown, deleted, or foreign cursor: nothing to page from.
+      if (!cursorRow) return [];
+
+      cursorWhere = {
+        OR: [
+          { createdAt: { lt: cursorRow.createdAt } },
+          { createdAt: cursorRow.createdAt, id: { lt: cursorRow.id } },
+        ],
+      };
+    }
+
     return await prismaClient.notification.findMany({
-      where: { recipientId: userId },
+      where: { recipientId: userId, ...cursorWhere },
       take: NOTIFICATION_LIMIT,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      ...(before ? { cursor: { id: before }, skip: 1 } : {}),
       select: {
         id: true,
         type: true,
