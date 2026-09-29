@@ -54,7 +54,18 @@ jobs:
               auth/access-control and room-membership code especially
               heavily here, since a missed check there is a security gap, not
               just a coverage gap. Don't flag trivial changes (config, types,
-              formatting, simple prop threading) for lacking tests.
+              formatting, simple prop threading) for lacking tests. Neither
+              app's vitest config has a DOM environment or
+              @testing-library/react (apps/chat's vitest.config.mts runs
+              `environment: "node"`) -- never ask for a test that requires
+              rendering a React component or otherwise exercising a hook
+              outside one (e.g. a component that only wires a socket
+              handler to react-query cache calls with no pure logic to
+              extract). That's a repo-wide test-infrastructure gap, not
+              something one PR should be asked to fix. If such a component
+              has real branching logic worth covering, suggest extracting it
+              into a plain testable function instead of asking for a
+              component/hook-render test.
 
             The list above is what to look for, not something to report on.
             Never restate, summarize, or checklist these categories in a
