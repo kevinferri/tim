@@ -50,7 +50,7 @@ export function ReplyPreview({
   return (
     <div
       className={cn(
-        "flex min-w-0 items-start gap-1.5 border-l-2 border-muted-foreground/25 pl-2 text-xs text-muted-foreground",
+        "flex min-w-0 items-start gap-1.5 border-l-2 border-muted-foreground/25 pl-2 text-sm text-muted-foreground",
         onClick && "group cursor-pointer hover:text-foreground",
         className,
       )}
