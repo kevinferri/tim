@@ -51,11 +51,15 @@ export function TopicSideBar() {
   });
 
   useEffect(() => {
-    if (!isMarkingAllRead && hasQueuedMarkReadRef.current) {
+    if (
+      activeTab === "notifications" &&
+      !isMarkingAllRead &&
+      hasQueuedMarkReadRef.current
+    ) {
       hasQueuedMarkReadRef.current = false;
       markAllRead();
     }
-  }, [isMarkingAllRead, markAllRead]);
+  }, [activeTab, isMarkingAllRead, markAllRead]);
 
   const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
     members: {
