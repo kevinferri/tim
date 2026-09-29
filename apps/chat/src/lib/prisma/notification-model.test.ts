@@ -13,12 +13,14 @@ async function createUser(name = "Test User") {
   });
 }
 
-async function createTopic(ownerId: string) {
+async function createTopic(ownerId: string, extraMemberIds: string[] = []) {
   const circle = await prismaClient.circle.create({
     data: {
       name: "Test Circle",
       userId: ownerId,
-      members: { connect: [{ id: ownerId }] },
+      members: {
+        connect: [ownerId, ...extraMemberIds].map((id) => ({ id })),
+      },
     },
   });
   return prismaClient.topic.create({
@@ -54,7 +56,7 @@ describe("notificationModel.getForUser", () => {
   it("returns the recipient's notifications, newest first, with actor and message shape", async () => {
     const recipient = await createUser("Recipient");
     const actor = await createUser("Actor");
-    const topic = await createTopic(actor.id);
+    const topic = await createTopic(actor.id, [recipient.id]);
     const messageA = await createMessage(actor.id, topic.id);
     const messageB = await createMessage(actor.id, topic.id);
 
@@ -110,7 +112,7 @@ describe("notificationModel.getForUser", () => {
   it("paginates via the before cursor", async () => {
     const recipient = await createUser("Recipient");
     const actor = await createUser("Actor");
-    const topic = await createTopic(actor.id);
+    const topic = await createTopic(actor.id, [recipient.id]);
     const messageA = await createMessage(actor.id, topic.id);
     const messageB = await createMessage(actor.id, topic.id);
 
@@ -138,7 +140,7 @@ describe("notificationModel.getForUser", () => {
   it("doesn't skip a sibling notification that ties on createdAt", async () => {
     const recipient = await createUser("Recipient");
     const actor = await createUser("Actor");
-    const topic = await createTopic(actor.id);
+    const topic = await createTopic(actor.id, [recipient.id]);
     const message = await createMessage(actor.id, topic.id);
 
     const older = await createNotification({
@@ -229,13 +231,49 @@ describe("notificationModel.getForUser", () => {
       }),
     ).resolves.toEqual([]);
   });
+
+  it("excludes notifications for a circle the recipient has since left", async () => {
+    const actor = await createUser("Actor");
+    const recipient = await createUser("Recipient");
+    const topic = await createTopic(actor.id);
+    const message = await createMessage(actor.id, topic.id);
+
+    await prismaClient.circle.update({
+      where: { id: topic.circleId },
+      data: { members: { connect: [{ id: recipient.id }] } },
+    });
+
+    const notification = await createNotification({
+      recipientId: recipient.id,
+      actorId: actor.id,
+      messageId: message.id,
+    });
+
+    await prismaClient.circle.update({
+      where: { id: topic.circleId },
+      data: { members: { disconnect: [{ id: recipient.id }] } },
+    });
+
+    await expect(
+      prismaClient.notification.getForUser({ userId: recipient.id }),
+    ).resolves.toEqual([]);
+
+    // Also can't be used as a pagination cursor once it's excluded --
+    // consistent with the unknown/foreign cursor cases above.
+    await expect(
+      prismaClient.notification.getForUser({
+        userId: recipient.id,
+        before: notification.id,
+      }),
+    ).resolves.toEqual([]);
+  });
 });
 
 describe("notificationModel.getUnreadCount", () => {
   it("counts only unread notifications for the given user", async () => {
     const recipient = await createUser("Recipient");
     const actor = await createUser("Actor");
-    const topic = await createTopic(actor.id);
+    const topic = await createTopic(actor.id, [recipient.id]);
     const message = await createMessage(actor.id, topic.id);
 
     await createNotification({
@@ -267,7 +305,7 @@ describe("notificationModel.markAllReadForUser", () => {
     const recipient = await createUser("Recipient");
     const other = await createUser("Other");
     const actor = await createUser("Actor");
-    const topic = await createTopic(actor.id);
+    const topic = await createTopic(actor.id, [recipient.id, other.id]);
     const message = await createMessage(actor.id, topic.id);
 
     await createNotification({

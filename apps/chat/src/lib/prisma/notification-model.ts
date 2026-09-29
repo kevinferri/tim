@@ -1,6 +1,17 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { NOTIFICATION_LIMIT } from "@/components/notifications/notification-query-cache";
 
+// Skips notifications about a circle the user has since left, rather than
+// surfacing (or counting toward the badge) a dead link -- same pattern as
+// topicReadStateModel.getMostRecentlyReadForUser.
+function forCurrentMember(userId: string) {
+  return {
+    message: {
+      topic: { parentCircle: { members: { some: { id: userId } } } },
+    },
+  };
+}
+
 export const notificationModel = {
   async getForUser({ userId, before }: { userId?: string; before?: string }) {
     if (!userId) return [];
@@ -17,7 +28,7 @@ export const notificationModel = {
       // which would let a client pass someone else's (or a stale/deleted)
       // notification id and still get a page back positioned off it.
       const cursorRow = await prismaClient.notification.findFirst({
-        where: { id: before, recipientId: userId },
+        where: { id: before, recipientId: userId, ...forCurrentMember(userId) },
         select: { createdAt: true, id: true },
       });
 
@@ -33,7 +44,11 @@ export const notificationModel = {
     }
 
     return await prismaClient.notification.findMany({
-      where: { recipientId: userId, ...cursorWhere },
+      where: {
+        recipientId: userId,
+        ...forCurrentMember(userId),
+        ...cursorWhere,
+      },
       take: NOTIFICATION_LIMIT,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: {
@@ -59,7 +74,7 @@ export const notificationModel = {
     if (!userId) return 0;
 
     return await prismaClient.notification.count({
-      where: { recipientId: userId, readAt: null },
+      where: { recipientId: userId, readAt: null, ...forCurrentMember(userId) },
     });
   },
 

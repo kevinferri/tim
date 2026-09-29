@@ -23,15 +23,18 @@ type Tab = "highlights" | "media" | "members" | "notifications";
 export function TopicSideBar() {
   const [activeTab, setActiveTab] = useState<Tab>("members");
   const unreadCount = useUnreadNotificationCount();
-  const { mutate: markAllRead } = useMarkAllNotificationsRead();
+  const { mutate: markAllRead, isPending: isMarkingAllRead } =
+    useMarkAllNotificationsRead();
 
   // Mirrors the old localStorage hook's skipIncrementUnread: while this tab
   // is already open, a live notification shouldn't sit there bumping the
   // badge back up -- immediately mark it read too, the same as opening the
   // tab does, instead of letting it accumulate until the tab is switched
-  // away and back.
+  // away and back. isMarkingAllRead skips piling up a redundant mutation
+  // per event when several arrive close together -- harmless either way
+  // (the mutation is idempotent), just wasted round trips.
   useSocketHandler(SocketEvent.CreateNotification, () => {
-    if (activeTab === "notifications") {
+    if (activeTab === "notifications" && !isMarkingAllRead) {
       markAllRead();
     }
   });
