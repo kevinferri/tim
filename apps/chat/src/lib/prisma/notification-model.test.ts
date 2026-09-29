@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect } from "vitest";
+import { encrypt } from "@tim/crypto";
 import { prismaClient, resetDb } from "@/test/db";
 
 beforeEach(resetDb);
@@ -28,9 +29,14 @@ async function createTopic(ownerId: string, extraMemberIds: string[] = []) {
   });
 }
 
-async function createMessage(userId: string, topicId: string) {
+async function createMessage(
+  userId: string,
+  topicId: string,
+  text: string | null = "hello",
+) {
+  const id = crypto.randomUUID();
   return prismaClient.message.create({
-    data: { userId, topicId, text: "hello" },
+    data: { id, userId, topicId, text: text ? encrypt(text, id) : null },
   });
 }
 
@@ -85,10 +91,36 @@ describe("notificationModel.getForUser", () => {
       actor: { id: actor.id, name: "Actor" },
       message: {
         topicId: topic.id,
+        text: "hello",
+        mediaUrl: null,
         topic: { id: topic.id, name: "Test Topic", circleId: topic.circleId },
       },
     });
     expect(notifications[1].messageId).toBe(messageA.id);
+  });
+
+  it("returns null message text for a media-only message, without erroring", async () => {
+    const recipient = await createUser("Recipient");
+    const actor = await createUser("Actor");
+    const topic = await createTopic(actor.id, [recipient.id]);
+    const message = await createMessage(actor.id, topic.id, null);
+    await prismaClient.message.update({
+      where: { id: message.id },
+      data: { mediaUrl: "https://example.com/cat.gif" },
+    });
+
+    await createNotification({
+      recipientId: recipient.id,
+      actorId: actor.id,
+      messageId: message.id,
+    });
+
+    const [notification] = await prismaClient.notification.getForUser({
+      userId: recipient.id,
+    });
+
+    expect(notification.message.text).toBeNull();
+    expect(notification.message.mediaUrl).toBe("https://example.com/cat.gif");
   });
 
   it("only returns notifications for the requesting recipient", async () => {

@@ -1,69 +1,58 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { getDisplayName } from "@tim/user-display";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getInitials } from "@/components/ui/user-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
 import { useNotifications } from "@/components/notifications/use-notifications";
 import { notificationCopyMap } from "@/components/notifications/notification-copy";
 import { NotificationItem } from "@/components/notifications/notification-query-cache";
+import { Message } from "@/components/topics/message";
 
-type Props = {
-  onNavigate?: () => void;
-};
-
-function NotificationRow({
-  notification,
-  onNavigate,
-}: {
-  notification: NotificationItem;
-  onNavigate?: () => void;
-}) {
-  const router = useRouter();
+function NotificationRow({ notification }: { notification: NotificationItem }) {
   const createdAt = useDateFormatter(new Date(notification.createdAt));
   const copy = notificationCopyMap[notification.type];
 
   return (
-    <button
-      type="button"
-      onClick={() => {
-        const { circleId } = notification.message.topic;
-        router.push(
-          `/circles/${circleId}/topics/${notification.message.topicId}?messageId=${notification.messageId}`,
-        );
-        onNavigate?.();
-      }}
-      className={cn(
-        "flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-accent",
-        !notification.readAt && "bg-accent/50",
-      )}
-    >
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={notification.actor.imageUrl ?? undefined} />
-        <AvatarFallback>
-          {getInitials(notification.actor.name ?? undefined)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <div className="flex items-center gap-1.5 text-sm">
+    <div className="flex gap-3 p-3 items-start">
+      <div className="flex">
+        <UserAvatar
+          {...notification.actor}
+          topicId={notification.message.topicId}
+          showStatus={false}
+          status={null}
+          lastStatusUpdate={null}
+        />
+      </div>
+      <div className="flex flex-col gap-1 w-full">
+        <div className="text-sm text-muted-foreground mt-[-2px] flex items-center gap-1">
           {copy.icon}
-          <span className="truncate">
-            {getDisplayName(notification.actor.name)} {copy.text}
-          </span>
+          {getDisplayName(notification.actor.name)} {copy.text}
         </div>
-        <div className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <span className="truncate">#{notification.message.topic.name}</span>
           {createdAt && <span>· {createdAt}</span>}
         </div>
+        <Card>
+          <CardContent className="p-0 m-0">
+            <Message
+              id={notification.messageId}
+              topicId={notification.message.topicId}
+              text={notification.message.text ?? undefined}
+              mediaUrl={notification.message.mediaUrl}
+              variant="minimal"
+              className="hover:bg-inherit"
+              hiddenElements={["sentBy", "sentAt"]}
+            />
+          </CardContent>
+        </Card>
       </div>
-    </button>
+    </div>
   );
 }
 
-export function NotificationPanel(props: Props) {
+export function NotificationPanel() {
   const {
     notifications,
     hasNextPage,
@@ -89,19 +78,15 @@ export function NotificationPanel(props: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col">
       {notifications.map((notification) => (
-        <NotificationRow
-          key={notification.id}
-          notification={notification}
-          onNavigate={props.onNavigate}
-        />
+        <NotificationRow key={notification.id} notification={notification} />
       ))}
       {hasNextPage && (
         <Button
           variant="ghost"
           size="sm"
-          className="mt-1"
+          className="mx-3 mb-2"
           disabled={isFetchingNextPage}
           onClick={() => fetchNextPage()}
         >

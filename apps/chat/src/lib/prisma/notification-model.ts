@@ -1,5 +1,6 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { NOTIFICATION_LIMIT } from "@/lib/notification-constants";
+import { getReadableMessage } from "@/lib/prisma/message-model";
 
 // Skips notifications about a circle the user has since left, rather than
 // surfacing (or counting toward the badge) a dead link -- same pattern as
@@ -43,7 +44,7 @@ export const notificationModel = {
       };
     }
 
-    return await prismaClient.notification.findMany({
+    const notifications = await prismaClient.notification.findMany({
       where: {
         recipientId: userId,
         ...forCurrentMember(userId),
@@ -63,11 +64,24 @@ export const notificationModel = {
         message: {
           select: {
             topicId: true,
+            text: true,
+            mediaUrl: true,
             topic: { select: { id: true, name: true, circleId: true } },
           },
         },
       },
     });
+
+    // Message.text is encrypted at rest (realtime-server writes it); decrypt
+    // it here the same way message-model.ts's normalizeMessages does for the
+    // transcript, so the notification list can preview it inline.
+    return notifications.map((n) => ({
+      ...n,
+      message: {
+        ...n.message,
+        text: getReadableMessage(n.message.text, n.messageId) ?? null,
+      },
+    }));
   },
 
   async getUnreadCount({ userId }: { userId?: string }) {

@@ -84,7 +84,7 @@ export const normalizeMessages = <
   }));
 
 // One undecryptable row shouldn't take down the whole list it's part of -- degrade that single message instead of throwing out of the .map().
-function getReadableMessage(
+export function getReadableMessage(
   text: string | null | undefined,
   messageId: string,
 ) {
