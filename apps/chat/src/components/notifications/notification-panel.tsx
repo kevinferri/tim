@@ -76,7 +76,7 @@ function NotificationRow({
         onNavigate?.();
       }}
       className={cn(
-        "flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-accent",
+        "flex w-full items-start gap-3 rounded-md p-3 text-left hover:bg-accent",
         !notification.readAt && "bg-accent/50",
       )}
     >
