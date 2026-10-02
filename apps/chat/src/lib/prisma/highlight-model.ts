@@ -41,22 +41,4 @@ export const highlightModel = {
       LEFT JOIN given ON given."userId" = members."userId"
     `;
   },
-
-  async countGivenByUser({ userId }: { userId?: string }) {
-    if (!userId) return 0;
-
-    // Highlights on your own messages aren't "given".
-    return await prismaClient.highlight.count({
-      where: { userId, message: { userId: { not: userId } } },
-    });
-  },
-
-  async countReceivedByUser({ userId }: { userId?: string }) {
-    if (!userId) return 0;
-
-    // Self-highlights don't count as received.
-    return await prismaClient.highlight.count({
-      where: { message: { userId }, userId: { not: userId } },
-    });
-  },
 };

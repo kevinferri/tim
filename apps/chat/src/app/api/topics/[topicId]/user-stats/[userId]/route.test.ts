@@ -9,18 +9,10 @@ vi.mock("@/lib/prisma/client", () => ({
     topic: { getNameWithMemberIds: vi.fn() },
     message: {
       getTopHighlightedMessagesForTopic: vi.fn(),
-      count: vi.fn(),
-      countRepliesReceivedByUser: vi.fn(),
-      countRepliesGivenByUser: vi.fn(),
-      countActiveDaysByUser: vi.fn(),
     },
     notification: {
       countMentionsReceivedByUser: vi.fn(),
       countMentionsSentByUser: vi.fn(),
-    },
-    highlight: {
-      countGivenByUser: vi.fn(),
-      countReceivedByUser: vi.fn(),
     },
   },
 }));
@@ -81,7 +73,22 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns aggregated stats for a member, scoring them within the circle", async () => {
+  const memberActivity = {
+    messages: 20,
+    highlightsReceived: 18,
+    repliesSent: 5,
+    repliesGiven: 4,
+    recentSelfHighlights: 0,
+    lastMessageAt: new Date(),
+    activeDaysLast30: 2,
+    activeDaysTotal: 2,
+    joinedAt: new Date("2026-01-01T00:00:00Z"),
+    biggestFan: null,
+    recentActiveDays: [],
+    topicsCreated: 0,
+  };
+
+  function mockTopic() {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.topic.getNameWithMemberIds).mockResolvedValue({
       name: "General",
@@ -90,56 +97,38 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       circleCreatorId: "user-1",
       memberIds: ["user-1", "user-2"],
     } as any);
+  }
+
+  it("returns stats scoped to the circle, scoring the member within it", async () => {
+    mockTopic();
     vi.mocked(
       prismaClient.message.getTopHighlightedMessagesForTopic,
     ).mockResolvedValue([{ id: "message-1" }] as any);
-    vi.mocked(prismaClient.message.count).mockResolvedValue(4 as any);
-    vi.mocked(prismaClient.highlight.countGivenByUser).mockResolvedValue(
-      1 as any,
-    );
-    vi.mocked(prismaClient.highlight.countReceivedByUser).mockResolvedValue(
-      2 as any,
-    );
-    vi.mocked(
-      prismaClient.message.countRepliesReceivedByUser,
-    ).mockResolvedValue(5);
-    vi.mocked(prismaClient.message.countRepliesGivenByUser).mockResolvedValue(
-      4,
-    );
-    vi.mocked(prismaClient.message.countActiveDaysByUser).mockResolvedValue(2);
+    vi.mocked(getCircleStats).mockResolvedValue({
+      members: [
+        { userId: "user-1", messages: 20, highlights: 2, given: 18 },
+        { userId: "user-2", messages: 20, highlights: 18, given: 1 },
+      ],
+      commandCounts: {},
+      // Under the 5-reply minimum for Conversation Starter.
+      repliesReceived: { "user-2": 4 },
+      topMessageHighlights: {},
+      highlightsGiven: { "user-1": 18, "user-2": 1 },
+    });
+    vi.mocked(getMemberActivity).mockResolvedValue(memberActivity);
     vi.mocked(
       prismaClient.notification.countMentionsReceivedByUser,
     ).mockResolvedValue(7);
     vi.mocked(
       prismaClient.notification.countMentionsSentByUser,
     ).mockResolvedValue(3);
-    vi.mocked(getCircleStats).mockResolvedValue({
-      members: [
-        { userId: "user-1", messages: 20, highlights: 2, given: 0 },
-        { userId: "user-2", messages: 20, highlights: 18, given: 0 },
-      ],
-      commandCounts: {},
-      repliesReceived: {},
-      topMessageHighlights: {},
-      highlightsGiven: {},
-    });
-    vi.mocked(getMemberActivity).mockResolvedValue({
-      messages: 20,
-      highlightsReceived: 18,
-      repliesSent: 0,
-      recentSelfHighlights: 0,
-      lastMessageAt: new Date(),
-      activeDaysLast30: 2,
-      activeDaysTotal: 2,
-      joinedAt: new Date("2026-01-01T00:00:00Z"),
-      biggestFan: null,
-      recentActiveDays: [],
-      topicsCreated: 0,
-    });
 
     const res = await GET(makeRequest(), makeParams());
 
     expect(res.status).toBe(200);
+    expect(
+      prismaClient.notification.countMentionsReceivedByUser,
+    ).toHaveBeenCalledWith({ userId: "user-2", circleId: "circle-1" });
     await expect(res.json()).resolves.toEqual({
       topicName: "General",
       circleName: "Sandbox",
@@ -156,15 +145,15 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
           key: "giving",
           emoji: "🐉",
           label: "Greedy",
-          tooltip: "Gave 0, got 18 highlights in Sandbox",
+          tooltip: "Gave 1, got 18 highlights in Sandbox",
           rarity: "common",
         },
       ],
-      messagesSent: 4,
+      messagesSent: 20,
       highlightsGiven: 1,
-      highlightsReceived: 2,
+      highlightsReceived: 18,
       topHighlights: [{ id: "message-1" }],
-      repliesReceived: 5,
+      repliesReceived: 4,
       repliesGiven: 4,
       activeDays: 2,
       mentionsReceived: 7,
@@ -172,38 +161,11 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     });
   });
 
-  it("returns a null highlightScore when the user hasn't posted in the circle", async () => {
-    vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.topic.getNameWithMemberIds).mockResolvedValue({
-      name: "General",
-      circleId: "circle-1",
-      circleName: "Sandbox",
-      circleCreatorId: "user-1",
-      memberIds: ["user-1", "user-2"],
-    } as any);
+  it("returns a null highlightScore and zero counts when the user hasn't posted in the circle", async () => {
+    mockTopic();
     vi.mocked(
       prismaClient.message.getTopHighlightedMessagesForTopic,
     ).mockResolvedValue([] as any);
-    vi.mocked(prismaClient.message.count).mockResolvedValue(0 as any);
-    vi.mocked(prismaClient.highlight.countGivenByUser).mockResolvedValue(
-      0 as any,
-    );
-    vi.mocked(prismaClient.highlight.countReceivedByUser).mockResolvedValue(
-      0 as any,
-    );
-    vi.mocked(
-      prismaClient.message.countRepliesReceivedByUser,
-    ).mockResolvedValue(0);
-    vi.mocked(prismaClient.message.countRepliesGivenByUser).mockResolvedValue(
-      0,
-    );
-    vi.mocked(prismaClient.message.countActiveDaysByUser).mockResolvedValue(0);
-    vi.mocked(
-      prismaClient.notification.countMentionsReceivedByUser,
-    ).mockResolvedValue(0);
-    vi.mocked(
-      prismaClient.notification.countMentionsSentByUser,
-    ).mockResolvedValue(0);
     vi.mocked(getCircleStats).mockResolvedValue({
       members: [{ userId: "user-1", messages: 5, highlights: 3, given: 0 }],
       commandCounts: {},
@@ -212,23 +174,30 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       highlightsGiven: {},
     });
     vi.mocked(getMemberActivity).mockResolvedValue({
-      messages: 20,
-      highlightsReceived: 18,
+      ...memberActivity,
+      messages: 0,
+      highlightsReceived: 0,
       repliesSent: 0,
-      recentSelfHighlights: 0,
-      lastMessageAt: new Date(),
-      activeDaysLast30: 2,
-      activeDaysTotal: 2,
-      joinedAt: new Date("2026-01-01T00:00:00Z"),
-      biggestFan: null,
-      recentActiveDays: [],
-      topicsCreated: 0,
+      repliesGiven: 0,
+      activeDaysTotal: 0,
     });
+    vi.mocked(
+      prismaClient.notification.countMentionsReceivedByUser,
+    ).mockResolvedValue(0);
+    vi.mocked(
+      prismaClient.notification.countMentionsSentByUser,
+    ).mockResolvedValue(0);
 
     const res = await GET(makeRequest(), makeParams());
 
     const body = await res.json();
     expect(body.highlightScore).toBeNull();
+    expect(body).toMatchObject({
+      messagesSent: 0,
+      highlightsGiven: 0,
+      highlightsReceived: 0,
+      repliesReceived: 0,
+    });
   });
 
   it("returns 400 when the model layer throws", async () => {

@@ -18,21 +18,33 @@ export const notificationModel = {
   // Mentions are only recorded as notifications (message text is encrypted), so counts start when those did.
   async countMentionsReceivedByUser({
     userId,
+    circleId,
   }: {
     userId: string;
+    circleId: string;
   }): Promise<number> {
     return await prismaClient.notification.count({
-      where: { recipientId: userId, type: NotificationType.Mentioned },
+      where: {
+        recipientId: userId,
+        type: NotificationType.Mentioned,
+        message: { topic: { circleId } },
+      },
     });
   },
 
   async countMentionsSentByUser({
     userId,
+    circleId,
   }: {
     userId: string;
+    circleId: string;
   }): Promise<number> {
     return await prismaClient.notification.count({
-      where: { actorId: userId, type: NotificationType.Mentioned },
+      where: {
+        actorId: userId,
+        type: NotificationType.Mentioned,
+        message: { topic: { circleId } },
+      },
     });
   },
 

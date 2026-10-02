@@ -50,41 +50,24 @@ export async function GET(req: NextRequest, { params }: Route) {
     if (!topic.memberIds.includes(loggedInUserId)) return notFound;
     if (!topic.memberIds.includes(userId)) return notFound;
 
-    const where = { userId };
-
-    const queries = [
-      prismaClient.message.getTopHighlightedMessagesForTopic({
-        requestingUserId: loggedInUserId,
-        topicId: topicId,
-        select: DEFAULT_MESSAGE_SELECT,
-        ...where,
-      }),
-      prismaClient.message.count({ where }),
-      prismaClient.highlight.countGivenByUser({ userId }),
-      prismaClient.highlight.countReceivedByUser({ userId }),
-      prismaClient.message.countRepliesReceivedByUser({ userId }),
-      prismaClient.message.countRepliesGivenByUser({ userId }),
-      prismaClient.message.countActiveDaysByUser({ userId }),
-      prismaClient.notification.countMentionsReceivedByUser({ userId }),
-      prismaClient.notification.countMentionsSentByUser({ userId }),
-      getCircleStats(topic.circleId),
-    ];
-
-    const [
-      topHighlights,
-      messagesSent,
-      highlightsGiven,
-      highlightsReceived,
-      repliesReceived,
-      repliesGiven,
-      activeDays,
-      mentionsReceived,
-      mentionsSent,
-      circleStatsResult,
-    ] = await Promise.all(queries);
-    const circleStats = circleStatsResult as Awaited<
-      ReturnType<typeof getCircleStats>
-    >;
+    const [topHighlights, circleStats, mentionsReceived, mentionsSent] =
+      await Promise.all([
+        prismaClient.message.getTopHighlightedMessagesForTopic({
+          requestingUserId: loggedInUserId,
+          topicId,
+          userId,
+          select: DEFAULT_MESSAGE_SELECT,
+        }),
+        getCircleStats(topic.circleId),
+        prismaClient.notification.countMentionsReceivedByUser({
+          userId,
+          circleId: topic.circleId,
+        }),
+        prismaClient.notification.countMentionsSentByUser({
+          userId,
+          circleId: topic.circleId,
+        }),
+      ]);
     const member = circleStats.members.find((m) => m.userId === userId);
     const highlightScore = computeHighlightScore(circleStats.members, userId);
     const activity = await getMemberActivity({
@@ -108,13 +91,14 @@ export async function GET(req: NextRequest, { params }: Route) {
           activity,
           now: new Date(),
         }),
-        messagesSent,
-        highlightsGiven,
-        highlightsReceived,
+        // Everything is scoped to this circle: the viewer only shares this circle with them.
+        messagesSent: activity.messages,
+        highlightsGiven: member?.given ?? 0,
+        highlightsReceived: member?.highlights ?? 0,
         topHighlights,
-        repliesReceived,
-        repliesGiven,
-        activeDays,
+        repliesReceived: circleStats.repliesReceived[userId] ?? 0,
+        repliesGiven: activity.repliesGiven,
+        activeDays: activity.activeDaysTotal,
         mentionsReceived,
         mentionsSent,
       } as unknown as UserStatsForTopicResponse,

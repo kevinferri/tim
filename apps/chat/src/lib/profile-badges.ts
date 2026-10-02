@@ -77,6 +77,8 @@ export type MemberActivity = {
   messages: number;
   highlightsReceived: number;
   repliesSent: number;
+  // Replies to other people's messages.
+  repliesGiven: number;
   // Highlights on their own messages in the last 30 days.
   recentSelfHighlights: number;
   lastMessageAt: Date | null;

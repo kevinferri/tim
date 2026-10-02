@@ -113,6 +113,14 @@ describe("getMemberActivity", () => {
       data: { userId: fan.id, messageId: older.id },
     });
 
+    // A reply to someone else counts as given; the earlier self-reply doesn't.
+    const fansMessage = await message(fan.id, topic.id);
+    await message(me.id, topic.id, {
+      replyToId: fansMessage.id,
+      // Same instant as `recent`, so it can't add an active day near midnight.
+      createdAt: recent.createdAt,
+    });
+
     // Self-highlights: one recent, one outside the 30-day window.
     await prismaClient.highlight.create({
       data: { userId: me.id, messageId: recent.id },
@@ -137,8 +145,9 @@ describe("getMemberActivity", () => {
       [...activity.recentActiveDays].sort().reverse(),
     );
     expect(activity).toMatchObject({
-      messages: 4,
-      repliesSent: 1,
+      messages: 5,
+      repliesSent: 2,
+      repliesGiven: 1,
       activeDaysLast30: 3,
       activeDaysTotal: 4,
       highlightsReceived: 3,

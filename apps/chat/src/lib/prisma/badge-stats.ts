@@ -105,6 +105,7 @@ export async function getMemberActivity({
       {
         messages: number;
         repliesSent: number;
+        repliesGiven: number;
         lastMessageAt: Date | null;
         activeDaysLast30: number;
         activeDaysTotal: number;
@@ -113,6 +114,7 @@ export async function getMemberActivity({
       SELECT
         COUNT(*)::int AS messages,
         (COUNT(*) FILTER (WHERE m."replyToId" IS NOT NULL))::int AS "repliesSent",
+        (COUNT(*) FILTER (WHERE parent."userId" <> m."userId"))::int AS "repliesGiven",
         MAX(m."createdAt") AS "lastMessageAt",
         (COUNT(DISTINCT m."createdAt"::date) FILTER (
           WHERE m."createdAt" > (now() AT TIME ZONE 'UTC') - interval '30 days'
@@ -120,6 +122,7 @@ export async function getMemberActivity({
         COUNT(DISTINCT m."createdAt"::date)::int AS "activeDaysTotal"
       FROM messages m
       JOIN topics t ON t.id = m."topicId"
+      LEFT JOIN messages parent ON parent.id = m."replyToId"
       WHERE t."circleId" = ${circleId} AND m."userId" = ${userId}
     `,
     prismaClient.$queryRaw<{ name: string | null; highlights: number }[]>`

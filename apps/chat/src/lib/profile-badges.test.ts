@@ -21,6 +21,7 @@ const quietActivity: MemberActivity = {
   messages: 12,
   highlightsReceived: 0,
   repliesSent: 0,
+  repliesGiven: 0,
   recentSelfHighlights: 0,
   lastMessageAt: new Date(NOW.getTime() - 2 * DAY),
   activeDaysLast30: 3,
