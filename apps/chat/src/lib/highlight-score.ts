@@ -56,20 +56,17 @@ export type GivingTag = {
   received: number;
 };
 
-// Blended into both sides so a couple of early highlights can't swing the tag.
-const GIVING_SMOOTHING = 3;
-const GIVING_MIN_ACTIVITY = 5;
+// Blended into both sides so a few early highlights can't swing the tag; low activity reads as "even".
+const GIVING_SMOOTHING = 5;
 const GIVING_RATIO = 2;
 
 export function computeGivingTag(
   members: MemberHighlightCounts[],
   userId: string,
-): GivingTag | null {
+): GivingTag {
   const me = members.find((m) => m.userId === userId);
-  if (!me) return null;
-
-  const { given, highlights: received } = me;
-  if (given + received < GIVING_MIN_ACTIVITY) return null;
+  const given = me?.given ?? 0;
+  const received = me?.highlights ?? 0;
 
   const ratio = (given + GIVING_SMOOTHING) / (received + GIVING_SMOOTHING);
   const kind =

@@ -283,13 +283,13 @@ describe("computeProfileBadges", () => {
     ]);
   });
 
-  it("always keeps the score rank, even when the cap would drop it", () => {
+  it("always keeps the score rank and giving tag, even when the cap would drop them", () => {
     const badges = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "me",
       score: { multiplier: 0.2, topPercent: 100, bottomPercent: 10 },
-      givingTag: null,
+      givingTag: { kind: "even", given: 1, received: 1 },
       circle: {
         commandCounts: { me: { roll: 9, giphy: 9 } },
         repliesReceived: { me: 10 },
@@ -301,8 +301,13 @@ describe("computeProfileBadges", () => {
     });
 
     expect(badges).toHaveLength(5);
-    expect(badges.map((b) => b.key)).toContain("score");
-    expect(badges.at(-1)).toMatchObject({ key: "score", label: "Wallflower" });
+    expect(badges.map((b) => b.key)).toEqual(
+      expect.arrayContaining(["score", "giving"]),
+    );
+    expect(badges.slice(-2).map((b) => b.label)).toEqual([
+      "Wallflower",
+      "Even",
+    ]);
   });
 
   it("caps the row at five badges", () => {

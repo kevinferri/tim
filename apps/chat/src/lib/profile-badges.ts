@@ -93,6 +93,7 @@ export type MemberActivity = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_BADGES = 5;
+const PINNED_BADGES = ["score", "giving"];
 
 const COMMAND_BADGES: Partial<
   Record<CommandName, { emoji: string; label: string; noun: string }>
@@ -429,13 +430,11 @@ export function computeProfileBadges(args: {
   const byRarity = (a: ProfileBadge, b: ProfileBadge) =>
     RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity];
   const sorted = badges.sort(byRarity);
-  const scoreBadge = sorted.find((b) => b.key === "score");
-  const top = sorted.slice(0, MAX_BADGES);
-  if (!scoreBadge || top.includes(scoreBadge)) return top;
 
-  // The score rank always shows, even when common, so the score number has its rank.
-  return [
-    ...sorted.filter((b) => b !== scoreBadge).slice(0, MAX_BADGES - 1),
-    scoreBadge,
-  ].sort(byRarity);
+  // The score rank and giving tag always show, even when common; the rest fill the remaining slots.
+  const pinned = sorted.filter((b) => PINNED_BADGES.includes(b.key));
+  const rest = sorted.filter((b) => !PINNED_BADGES.includes(b.key));
+  return [...pinned, ...rest.slice(0, MAX_BADGES - pinned.length)].sort(
+    byRarity,
+  );
 }
