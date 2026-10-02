@@ -101,6 +101,7 @@ export async function GET(req: NextRequest, { params }: Route) {
         badges: computeProfileBadges({
           userId,
           circleName: topic.circleName,
+          circleCreatorId: topic.circleCreatorId,
           score: highlightScore,
           givingTag: computeGivingTag(circleStats.members, userId),
           circle: circleStats,

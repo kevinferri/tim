@@ -77,6 +77,9 @@ async function loadCircleStats(circleId: string): Promise<CircleStats> {
     topMessageHighlights: Object.fromEntries(
       topMessageRows.map((r) => [r.userId, r.n]),
     ),
+    highlightsGiven: Object.fromEntries(
+      members.map((m) => [m.userId, m.given]),
+    ),
   };
 }
 
@@ -89,7 +92,14 @@ export async function getMemberActivity({
   userId: string;
   highlightsReceived: number;
 }): Promise<MemberActivity> {
-  const [[activity], [fan], recentSelfHighlights, user] = await Promise.all([
+  const [
+    [activity],
+    [fan],
+    recentSelfHighlights,
+    user,
+    dayRows,
+    topicsCreated,
+  ] = await Promise.all([
     // createdAt is tz-less UTC, so compare against now() in UTC.
     prismaClient.$queryRaw<
       {
@@ -136,12 +146,25 @@ export async function getMemberActivity({
       where: { id: userId },
       select: { createdAt: true },
     }),
+    // Enough history for the longest streak tier; createdAt is tz-less UTC.
+    prismaClient.$queryRaw<{ day: string }[]>`
+      SELECT DISTINCT to_char(m."createdAt"::date, 'YYYY-MM-DD') AS day
+      FROM messages m
+      JOIN topics t ON t.id = m."topicId"
+      WHERE t."circleId" = ${circleId}
+        AND m."userId" = ${userId}
+        AND m."createdAt" > (now() AT TIME ZONE 'UTC') - interval '60 days'
+      ORDER BY day DESC
+    `,
+    prismaClient.topic.count({ where: { circleId, userId } }),
   ]);
 
   return {
     ...activity,
     highlightsReceived,
     recentSelfHighlights,
+    recentActiveDays: dayRows.map((r) => r.day),
+    topicsCreated,
     joinedAt: user?.createdAt ?? new Date(0),
     biggestFan: fan?.name
       ? { name: fan.name, highlights: fan.highlights }

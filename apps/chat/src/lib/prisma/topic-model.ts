@@ -186,6 +186,7 @@ export const topicModel = {
         parentCircle: {
           select: {
             name: true,
+            userId: true,
             members: {
               select: { id: true },
             },
@@ -200,6 +201,7 @@ export const topicModel = {
       name: topic.name,
       circleId: topic.circleId,
       circleName: topic.parentCircle.name,
+      circleCreatorId: topic.parentCircle.userId,
       memberIds: topic.parentCircle.members.map(({ id }) => id),
     };
   },

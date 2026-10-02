@@ -33,7 +33,32 @@ const BADGE_RARITY: Record<string, BadgeRarity> = {
   "reply-guy": "common",
   "new-kid": "common",
   "biggest-fan": "rare",
+  founder: "legendary",
+  "hype-man": "epic",
+  "topic-starter": "rare",
 };
+
+// Rarity by current streak length in days, highest first.
+const STREAK_TIERS: { min: number; rarity: BadgeRarity }[] = [
+  { min: 30, rarity: "epic" },
+  { min: 14, rarity: "rare" },
+  { min: 5, rarity: "common" },
+];
+
+// Consecutive UTC days posted, ending today or (if not yet today) yesterday.
+export function currentStreak(recentActiveDays: string[], now: Date) {
+  const days = new Set(recentActiveDays);
+  const dayKey = (offset: number) =>
+    new Date(now.getTime() - offset * DAY_MS).toISOString().slice(0, 10);
+
+  let offset = days.has(dayKey(0)) ? 0 : 1;
+  let streak = 0;
+  while (days.has(dayKey(offset))) {
+    streak++;
+    offset++;
+  }
+  return streak;
+}
 
 // Circle-wide numbers, so "top in the circle" badges can compare members.
 export type CircleBadgeAggregates = {
@@ -43,6 +68,8 @@ export type CircleBadgeAggregates = {
   repliesReceived: Record<string, number>;
   // userId -> highlights (from others) on their single most-highlighted message
   topMessageHighlights: Record<string, number>;
+  // userId -> highlights given to others' messages
+  highlightsGiven: Record<string, number>;
 };
 
 // The profile owner's own activity in the circle.
@@ -57,6 +84,9 @@ export type MemberActivity = {
   activeDaysTotal: number;
   joinedAt: Date;
   biggestFan: { name: string; highlights: number } | null;
+  // Distinct UTC days they posted, newest first ("2026-10-02"); recent ones only, for streaks.
+  recentActiveDays: string[];
+  topicsCreated: number;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -143,13 +173,23 @@ function isTop(byUser: Record<string, number>, userId: string, min: number) {
 export function computeProfileBadges(args: {
   userId: string;
   circleName: string;
+  circleCreatorId: string;
   score: HighlightScore | null;
   givingTag: GivingTag | null;
   circle: CircleBadgeAggregates;
   activity: MemberActivity;
   now: Date;
 }): ProfileBadge[] {
-  const { userId, circleName, score, givingTag, circle, activity, now } = args;
+  const {
+    userId,
+    circleName,
+    circleCreatorId,
+    score,
+    givingTag,
+    circle,
+    activity,
+    now,
+  } = args;
   const badges: ProfileBadge[] = [];
   const add = (
     badge: Omit<ProfileBadge, "rarity"> & { rarity?: BadgeRarity },
@@ -179,6 +219,24 @@ export function computeProfileBadges(args: {
       key: "giving",
       ...GIVING_TAGS[givingTag.kind],
       tooltip: `Gave ${givingTag.given}, got ${givingTag.received} highlights in ${circleName}`,
+    });
+  }
+
+  if (userId === circleCreatorId) {
+    add({
+      key: "founder",
+      emoji: "🏗️",
+      label: "Founder",
+      tooltip: `Created ${circleName}`,
+    });
+  }
+
+  if (isTop(circle.highlightsGiven, userId, 10)) {
+    add({
+      key: "hype-man",
+      emoji: "📣",
+      label: "Hype Man",
+      tooltip: `Gives the most highlights in ${circleName} (${circle.highlightsGiven[userId]})`,
     });
   }
 
@@ -321,6 +379,27 @@ export function computeProfileBadges(args: {
       emoji: "🗣️",
       label: "Reply Guy",
       tooltip: `${activity.repliesSent} of their ${activity.messages} messages are replies`,
+    });
+  }
+
+  const streak = currentStreak(activity.recentActiveDays, now);
+  const streakTier = STREAK_TIERS.find((t) => streak >= t.min);
+  if (streakTier) {
+    add({
+      key: "streak",
+      emoji: "🔥",
+      label: "On a Streak",
+      rarity: streakTier.rarity,
+      tooltip: `Posted ${streak} days in a row`,
+    });
+  }
+
+  if (activity.topicsCreated >= 3) {
+    add({
+      key: "topic-starter",
+      emoji: "🗂️",
+      label: "Topic Starter",
+      tooltip: `Created ${activity.topicsCreated} topics in ${circleName}`,
     });
   }
 

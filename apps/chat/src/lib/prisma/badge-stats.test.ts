@@ -76,6 +76,8 @@ describe("getCircleStats", () => {
     });
     expect(stats.repliesReceived).toEqual({ [a.id]: 2 });
     expect(stats.topMessageHighlights).toEqual({ [a.id]: 2 });
+    // a only self-highlighted, which doesn't count as given.
+    expect(stats.highlightsGiven).toEqual({ [a.id]: 0, [b.id]: 2, [c.id]: 1 });
   });
 });
 
@@ -129,6 +131,11 @@ describe("getMemberActivity", () => {
       highlightsReceived: 3,
     });
 
+    // Three of the four messages fall inside the 60-day window (the 60-day-old one may straddle it).
+    expect(activity.recentActiveDays.length).toBeGreaterThanOrEqual(3);
+    expect(activity.recentActiveDays).toEqual(
+      [...activity.recentActiveDays].sort().reverse(),
+    );
     expect(activity).toMatchObject({
       messages: 4,
       repliesSent: 1,
@@ -136,6 +143,7 @@ describe("getMemberActivity", () => {
       activeDaysTotal: 4,
       highlightsReceived: 3,
       recentSelfHighlights: 1,
+      topicsCreated: 1,
       biggestFan: { name: "Simone de Beauvoir", highlights: 2 },
     });
   });

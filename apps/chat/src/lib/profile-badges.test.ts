@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeProfileBadges,
+  currentStreak,
   CircleBadgeAggregates,
   getScoreRank,
   MemberActivity,
@@ -13,6 +14,7 @@ const emptyCircle: CircleBadgeAggregates = {
   commandCounts: {},
   repliesReceived: {},
   topMessageHighlights: {},
+  highlightsGiven: {},
 };
 
 const quietActivity: MemberActivity = {
@@ -25,6 +27,8 @@ const quietActivity: MemberActivity = {
   activeDaysTotal: 6,
   joinedAt: new Date("2026-01-01T00:00:00Z"),
   biggestFan: null,
+  recentActiveDays: [],
+  topicsCreated: 0,
 };
 
 function badgeKeys(
@@ -36,6 +40,7 @@ function badgeKeys(
   return computeProfileBadges({
     userId: "me",
     circleName: "Sandbox",
+    circleCreatorId: "someone-else",
     score: null,
     givingTag: null,
     circle: { ...emptyCircle, ...overrides.circle },
@@ -53,6 +58,7 @@ describe("computeProfileBadges", () => {
     const badges = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
+      circleCreatorId: "someone-else",
       score: { multiplier: 1.6, topPercent: 20, bottomPercent: 100 },
       givingTag: { kind: "generous", given: 20, received: 4 },
       circle: emptyCircle,
@@ -128,6 +134,7 @@ describe("computeProfileBadges", () => {
     const badges = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
+      circleCreatorId: "someone-else",
       score: null,
       givingTag: null,
       circle: emptyCircle,
@@ -150,6 +157,7 @@ describe("computeProfileBadges", () => {
     const badges = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
+      circleCreatorId: "someone-else",
       score: null,
       givingTag: null,
       circle: emptyCircle,
@@ -174,6 +182,7 @@ describe("computeProfileBadges", () => {
       computeProfileBadges({
         userId: "me",
         circleName: "Sandbox",
+        circleCreatorId: "someone-else",
         score: null,
         givingTag: null,
         circle: emptyCircle,
@@ -191,6 +200,7 @@ describe("computeProfileBadges", () => {
     const [commander] = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
+      circleCreatorId: "someone-else",
       score: null,
       givingTag: null,
       circle: {
@@ -228,6 +238,7 @@ describe("computeProfileBadges", () => {
     const [fan] = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
+      circleCreatorId: "someone-else",
       score: null,
       givingTag: null,
       circle: emptyCircle,
@@ -245,12 +256,14 @@ describe("computeProfileBadges", () => {
     const badges = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
+      circleCreatorId: "someone-else",
       score: { multiplier: 0.2, topPercent: 100, bottomPercent: 10 },
       givingTag: { kind: "even", given: 10, received: 10 },
       circle: {
         commandCounts: { me: { roll: 9 } },
         repliesReceived: { me: 10 },
         topMessageHighlights: { me: 10 },
+        highlightsGiven: {},
       },
       activity: {
         ...quietActivity,
@@ -273,18 +286,92 @@ describe("computeProfileBadges", () => {
     const badges = computeProfileBadges({
       userId: "me",
       circleName: "Sandbox",
+      circleCreatorId: "someone-else",
       score: { multiplier: 2, topPercent: 10, bottomPercent: 100 },
       givingTag: { kind: "even", given: 10, received: 10 },
       circle: {
         commandCounts: { me: { roll: 9, "8ball": 9, giphy: 9, tim: 9 } },
         repliesReceived: { me: 10 },
         topMessageHighlights: { me: 10 },
+        highlightsGiven: {},
       },
       activity: { ...quietActivity, activeDaysLast30: 25, joinedAt: NOW },
       now: NOW,
     });
 
     expect(badges).toHaveLength(5);
+  });
+});
+
+describe("Founder, Hype Man, streak and Topic Starter", () => {
+  it("awards Founder to the circle's creator", () => {
+    const badges = computeProfileBadges({
+      userId: "me",
+      circleName: "Sandbox",
+      circleCreatorId: "me",
+      score: null,
+      givingTag: null,
+      circle: emptyCircle,
+      activity: quietActivity,
+      now: NOW,
+    });
+    expect(badges[0]).toMatchObject({ key: "founder", rarity: "legendary" });
+  });
+
+  it("awards Hype Man to the top highlight giver", () => {
+    expect(
+      badgeKeys({ circle: { highlightsGiven: { me: 12, other: 9 } } }),
+    ).toEqual(["hype-man"]);
+    expect(
+      badgeKeys({ circle: { highlightsGiven: { me: 8, other: 2 } } }),
+    ).toEqual([]);
+  });
+
+  it("awards On a Streak with rarity by length", () => {
+    const days = (n: number) =>
+      Array.from({ length: n }, (_, i) =>
+        new Date(NOW.getTime() - i * DAY).toISOString().slice(0, 10),
+      );
+    const streakBadge = (n: number) =>
+      computeProfileBadges({
+        userId: "me",
+        circleName: "Sandbox",
+        circleCreatorId: "someone-else",
+        score: null,
+        givingTag: null,
+        circle: emptyCircle,
+        activity: { ...quietActivity, recentActiveDays: days(n) },
+        now: NOW,
+      }).find((b) => b.key === "streak");
+
+    expect(streakBadge(4)).toBeUndefined();
+    expect(streakBadge(6)).toMatchObject({
+      rarity: "common",
+      tooltip: "Posted 6 days in a row",
+    });
+    expect(streakBadge(20)?.rarity).toBe("rare");
+  });
+
+  it("awards Topic Starter for 3+ topics", () => {
+    expect(badgeKeys({ activity: { topicsCreated: 3 } })).toEqual([
+      "topic-starter",
+    ]);
+  });
+});
+
+describe("currentStreak", () => {
+  it("counts back from today, or from yesterday if they haven't posted today", () => {
+    expect(currentStreak(["2026-10-02", "2026-10-01", "2026-09-30"], NOW)).toBe(
+      3,
+    );
+    expect(currentStreak(["2026-10-01", "2026-09-30"], NOW)).toBe(2);
+  });
+
+  it("stops at the first missed day", () => {
+    expect(currentStreak(["2026-10-02", "2026-10-01", "2026-09-29"], NOW)).toBe(
+      2,
+    );
+    expect(currentStreak(["2026-09-29"], NOW)).toBe(0);
   });
 });
 

@@ -87,6 +87,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       name: "General",
       circleId: "circle-1",
       circleName: "Sandbox",
+      circleCreatorId: "user-1",
       memberIds: ["user-1", "user-2"],
     } as any);
     vi.mocked(
@@ -120,6 +121,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       commandCounts: {},
       repliesReceived: {},
       topMessageHighlights: {},
+      highlightsGiven: {},
     });
     vi.mocked(getMemberActivity).mockResolvedValue({
       messages: 20,
@@ -131,6 +133,8 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       activeDaysTotal: 2,
       joinedAt: new Date("2026-01-01T00:00:00Z"),
       biggestFan: null,
+      recentActiveDays: [],
+      topicsCreated: 0,
     });
 
     const res = await GET(makeRequest(), makeParams());
@@ -174,6 +178,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       name: "General",
       circleId: "circle-1",
       circleName: "Sandbox",
+      circleCreatorId: "user-1",
       memberIds: ["user-1", "user-2"],
     } as any);
     vi.mocked(
@@ -204,6 +209,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       commandCounts: {},
       repliesReceived: {},
       topMessageHighlights: {},
+      highlightsGiven: {},
     });
     vi.mocked(getMemberActivity).mockResolvedValue({
       messages: 20,
@@ -215,6 +221,8 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       activeDaysTotal: 2,
       joinedAt: new Date("2026-01-01T00:00:00Z"),
       biggestFan: null,
+      recentActiveDays: [],
+      topicsCreated: 0,
     });
 
     const res = await GET(makeRequest(), makeParams());
