@@ -96,21 +96,22 @@ export function MediaViewer({
   return (
     <Dialog>
       <DialogTrigger asChild onClick={onImageExpanded}>
-        <div className="relative w-fit max-w-sm max-h-sm cursor-zoom-in">
+        <div className="relative w-fit max-w-full cursor-zoom-in">
           <MediaViewerImage
             src={url}
             priority={priority}
             onLoad={onPreviewLoad}
-            className="w-full rounded-md shadow-lg hover:opacity-80"
+            className="w-auto h-auto max-w-[min(100%,24rem)] max-h-96 rounded-md shadow-lg hover:opacity-80"
           />
         </div>
       </DialogTrigger>
 
-      <DialogContent className="w-max max-w-full max-h-full min-w-[450px] min-h-[450px] p-0">
+      {/* w-max: auto width on a left-50% fixed box would cap at 50vw */}
+      <DialogContent className="w-max max-w-none p-0">
         <MediaViewerImage
           src={url}
           priority={priority}
-          className="w-full h-full rounded-md"
+          className="w-auto h-auto max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] rounded-md"
         />
       </DialogContent>
     </Dialog>
