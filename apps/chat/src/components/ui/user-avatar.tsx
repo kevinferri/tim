@@ -116,11 +116,11 @@ const RARITY_STYLES: Record<BadgeRarity, { plate: string; label: string }> = {
 
 function StatRow(props: { label: string; icon: ReactNode; value?: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
+    <div className="flex items-center justify-between gap-3">
       <span className="flex items-center gap-1.5 text-muted-foreground">
         {props.icon} {props.label}
       </span>
-      <span className="font-medium tabular-nums">
+      <span className="flex items-center font-medium tabular-nums">
         {typeof props.value === "number"
           ? formatNumber(props.value)
           : (props.value ?? <Skeleton className="h-4 w-5" />)}
@@ -152,7 +152,7 @@ function GotGave(props: { got: number; gave: number; gaveWord: string }) {
     <span className="text-xs font-normal text-muted-foreground">{text}</span>
   );
   return (
-    <span className="flex items-baseline gap-1">
+    <span className="flex items-center gap-1">
       {formatNumber(props.got)} {word("got")}
       <span className="text-muted-foreground">·</span>
       {formatNumber(props.gave)} {word(props.gaveWord)}
