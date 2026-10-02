@@ -60,7 +60,7 @@ describe("computeProfileBadges", () => {
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
-      score: { multiplier: 1.6, topPercent: 20, bottomPercent: 100 },
+      score: { multiplier: 1.6, topPercent: 20, bottomPercent: 100, place: 2 },
       givingTag: { kind: "generous", given: 20, received: 4 },
       circle: emptyCircle,
       activity: { ...quietActivity, joinedAt: NOW },
@@ -69,7 +69,8 @@ describe("computeProfileBadges", () => {
 
     expect(badges.map((b) => b.key)).toEqual(["score", "giving", "new-kid"]);
     expect(badges[0]).toMatchObject({
-      label: "Crowd Favorite",
+      label: "Icon",
+      rarity: "epic",
       tooltip: "Highlight score 160 · Top 20% in Sandbox",
     });
   });
@@ -267,7 +268,7 @@ describe("computeProfileBadges", () => {
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "me",
-      score: { multiplier: 0.2, topPercent: 100, bottomPercent: 10 },
+      score: { multiplier: 0.2, topPercent: 100, bottomPercent: 10, place: 10 },
       givingTag: { kind: "even", given: 10, received: 10 },
       circle: {
         commandCounts: { me: { roll: 9, giphy: 9, "8ball": 9, tim: 9 } },
@@ -371,9 +372,21 @@ describe("currentStreak", () => {
 });
 
 describe("getScoreRank", () => {
-  it("maps multipliers to ranks", () => {
-    expect(getScoreRank(5.2).label).toBe("Mythic");
-    expect(getScoreRank(1).label).toBe("Regular");
-    expect(getScoreRank(0.2).label).toBe("Wallflower");
+  it("ranks by standing in the circle", () => {
+    expect(getScoreRank({ topPercent: 4, place: 1 }).label).toBe("Mythic");
+    expect(getScoreRank({ topPercent: 45, place: 5 }).label).toBe(
+      "Crowd Favorite",
+    );
+    expect(getScoreRank({ topPercent: 100, place: 9 }).label).toBe(
+      "Wallflower",
+    );
+  });
+
+  it("never ranks first place below Icon, even in a small circle", () => {
+    // Tied for first of 3: "top 33%" would otherwise be Main Character or lower.
+    expect(getScoreRank({ topPercent: 33, place: 1 })).toMatchObject({
+      label: "Icon",
+      rarity: "epic",
+    });
   });
 });

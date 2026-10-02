@@ -14,6 +14,8 @@ export type HighlightScore = {
   topPercent: number;
   // The same rank from the other end, for phrasing the lower half as "bottom N%".
   bottomPercent: number;
+  // 1 = best in the circle; ties share a place.
+  place: number;
 };
 
 // Pseudo-messages at the circle average blended into everyone's rate, so a few lucky messages can't top the circle.
@@ -47,6 +49,7 @@ export function computeHighlightScore(
     multiplier: mine / average,
     topPercent: percent(ahead + 1),
     bottomPercent: percent(behind + 1),
+    place: ahead + 1,
   };
 }
 

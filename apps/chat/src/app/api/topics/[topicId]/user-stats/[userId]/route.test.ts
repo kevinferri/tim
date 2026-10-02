@@ -134,14 +134,20 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     await expect(res.json()).resolves.toEqual({
       topicName: "General",
       circleName: "Sandbox",
-      highlightScore: { multiplier: 1.4, topPercent: 50, bottomPercent: 100 },
+      highlightScore: {
+        multiplier: 1.4,
+        topPercent: 50,
+        bottomPercent: 100,
+        place: 1,
+      },
       badges: [
         {
           key: "score",
-          emoji: "✨",
-          label: "Quotable",
+          // First of two: first place never ranks below Icon.
+          emoji: "💎",
+          label: "Icon",
           tooltip: "Highlight score 140 · Top 50% in Sandbox",
-          rarity: "common",
+          rarity: "epic",
         },
         {
           key: "giving",

@@ -138,28 +138,28 @@ const GIVING_TAGS = {
   greedy: { emoji: "🐉", label: "Greedy" },
 } as const;
 
-// Highlight score rank, by highlights-per-message relative to the circle average (1 = average).
-export function getScoreRank(multiplier: number): {
+// Highlight score rank, by standing in the circle: smoothing compresses multipliers toward the
+// average, so even the circle's best can sit near 1x. First place never ranks below Icon.
+export function getScoreRank(
+  score: Pick<HighlightScore, "topPercent" | "place">,
+): {
   emoji: string;
   label: string;
   rarity: BadgeRarity;
 } {
-  if (multiplier >= 5)
-    return { emoji: "🦄", label: "Mythic", rarity: "legendary" };
-  if (multiplier >= 4)
-    return { emoji: "👑", label: "Legend", rarity: "legendary" };
-  if (multiplier >= 3) return { emoji: "💎", label: "Icon", rarity: "epic" };
-  if (multiplier >= 2.5)
+  const top = score.topPercent;
+  if (top <= 5) return { emoji: "🦄", label: "Mythic", rarity: "legendary" };
+  if (top <= 10) return { emoji: "👑", label: "Legend", rarity: "legendary" };
+  if (top <= 20 || score.place === 1)
+    return { emoji: "💎", label: "Icon", rarity: "epic" };
+  if (top <= 30)
     return { emoji: "🎬", label: "Main Character", rarity: "epic" };
-  if (multiplier >= 2)
-    return { emoji: "🌟", label: "Headliner", rarity: "rare" };
-  if (multiplier >= 1.5)
+  if (top <= 40) return { emoji: "🌟", label: "Headliner", rarity: "rare" };
+  if (top <= 50)
     return { emoji: "🔥", label: "Crowd Favorite", rarity: "rare" };
-  if (multiplier >= 1.1)
-    return { emoji: "✨", label: "Quotable", rarity: "common" };
-  if (multiplier >= 0.75)
-    return { emoji: "💬", label: "Regular", rarity: "common" };
-  if (multiplier >= 0.5)
+  if (top <= 60) return { emoji: "✨", label: "Quotable", rarity: "common" };
+  if (top <= 75) return { emoji: "💬", label: "Regular", rarity: "common" };
+  if (top <= 90)
     return { emoji: "🫥", label: "Under the Radar", rarity: "common" };
   return { emoji: "🪴", label: "Wallflower", rarity: "common" };
 }
@@ -210,7 +210,7 @@ export function computeProfileBadges(args: {
         : `Bottom ${score.bottomPercent}%`;
     add({
       key: "score",
-      ...getScoreRank(score.multiplier),
+      ...getScoreRank(score),
       tooltip: `Highlight score ${Math.round(score.multiplier * 100)} · ${rank} in ${circleName}`,
     });
   }

@@ -36,6 +36,8 @@ describe("computeHighlightScore", () => {
     expect(computeHighlightScore(members, "a")!.topPercent).toBe(25);
     expect(computeHighlightScore(members, "d")!.topPercent).toBe(100);
     expect(computeHighlightScore(members, "d")!.bottomPercent).toBe(25);
+    expect(computeHighlightScore(members, "a")!.place).toBe(1);
+    expect(computeHighlightScore(members, "d")!.place).toBe(4);
   });
 
   it("gives tied members the same rank", () => {
