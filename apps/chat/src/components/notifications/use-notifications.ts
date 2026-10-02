@@ -35,6 +35,9 @@ export function useNotifications() {
       // Seeded from LoggedInLayout's SSR fetch (not per-topic-page, since
       // notifications aren't topic data) -- avoids a loading flash on mount,
       // same pattern useTopicMessages uses for existingMessages.
+      // NotificationSync invalidates on every new notification, so there's no
+      // need to refetch each time the panel remounts (i.e. on every tab open).
+      staleTime: Infinity,
       initialData: {
         pages: [initialNotifications],
         pageParams: [undefined],

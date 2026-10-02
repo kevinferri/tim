@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import {
@@ -19,12 +20,24 @@ import {
 export function NotificationSync() {
   const queryClient = useQueryClient();
 
-  useSocketHandler(SocketEvent.CreateNotification, () => {
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: notificationsQueryKey });
     queryClient.invalidateQueries({
       queryKey: unreadNotificationCountQueryKey,
     });
-  });
+  };
+
+  const socket = useSocketHandler(SocketEvent.CreateNotification, invalidate);
+
+  // Both queries use staleTime: Infinity, so notifications pushed while
+  // disconnected would otherwise never show up.
+  useEffect(() => {
+    socket.io.on("reconnect", invalidate);
+    return () => {
+      socket.io.off("reconnect", invalidate);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket]);
 
   return null;
 }

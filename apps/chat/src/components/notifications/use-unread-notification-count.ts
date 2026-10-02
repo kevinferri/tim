@@ -19,6 +19,9 @@ export function useUnreadNotificationCount() {
   const { data } = useQuery({
     queryKey: unreadNotificationCountQueryKey,
     queryFn: fetchUnreadCount,
+    // NotificationSync invalidates on every new notification, so there's no
+    // need to refetch each time the panel remounts (i.e. on every tab open).
+    staleTime: Infinity,
     initialData: initialUnreadCount,
   });
 

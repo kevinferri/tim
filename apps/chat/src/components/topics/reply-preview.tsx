@@ -5,6 +5,10 @@ import { CommandName, parseCommand } from "@tim/commands";
 import { Button } from "@/components/ui/button";
 import { ReplyIcon } from "@/components/icons/reply-icon";
 import { cn } from "@/lib/utils";
+import {
+  getTwitchStreamFromUrl,
+  getYoutubeVideoFromUrl,
+} from "@/components/topics/message-utils";
 
 type Props = {
   senderName: string | null;
@@ -17,7 +21,8 @@ type Props = {
 
 // `mediaUrl` is overloaded: for /tim, /roll and /8ball it carries the generated
 // result rather than a URL (see the branching in message.tsx), so there's
-// nothing to show a thumbnail for.
+// nothing to show a thumbnail for. Video links (e.g. /yt) point at a page, not
+// an image, so they're mapped to the provider's thumbnail instead.
 export function getThumbnail(text: string, mediaUrl?: string | null) {
   const command = parseCommand(text ?? "")?.name;
 
@@ -29,7 +34,13 @@ export function getThumbnail(text: string, mediaUrl?: string | null) {
     return undefined;
   }
 
-  return mediaUrl || undefined;
+  if (!mediaUrl) return undefined;
+
+  const youtube = getYoutubeVideoFromUrl(mediaUrl);
+  if (youtube) return `https://i.ytimg.com/vi/${youtube.id}/default.jpg`;
+  if (getTwitchStreamFromUrl(mediaUrl)) return undefined;
+
+  return mediaUrl;
 }
 
 // Compact quoted-reply reference, shared by the composer (while replying, with
