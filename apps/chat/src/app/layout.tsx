@@ -13,6 +13,7 @@ import { PresenceSync } from "@/components/dashboard/presence-sync";
 import { UserStatsHighlightSync } from "@/components/dashboard/user-stats-highlight-sync";
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
+import { TopicRoomConnect } from "@/components/dashboard/topic-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
 import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
 import { NotificationSync } from "@/components/notifications/notification-sync";
@@ -144,6 +145,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
             <UserStatsHighlightSync />
             <UserRoomConnect />
             <CircleRoomConnect circleIds={circleIds ?? []} />
+            <TopicRoomConnect />
             <NotificationSync />
             <div className="flex flex-col h-screen">
               <div className="flex overflow-hidden basis-full">

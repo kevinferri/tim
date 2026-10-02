@@ -144,60 +144,74 @@ async function canJoinRoom({
   return false;
 }
 
+const roomOpQueues = new WeakMap<AppSocket, Promise<void>>();
+
+// Join awaits an auth check, so without this a leave sent right after it would be handled first and briefly drop the user from presence.
+function enqueueRoomOp(socket: AppSocket, op: () => Promise<void>) {
+  const next = (roomOpQueues.get(socket) ?? Promise.resolve())
+    .then(op)
+    .catch((err) => console.error("Room op failed", err));
+  roomOpQueues.set(socket, next);
+  return next;
+}
+
 export function handleJoinRoom({ socket, server }: HandlerArgs) {
   socket.on(
     SocketEvent.JoinRoom,
-    async (payload: { id: string; roomType: RoomType }) => {
-      if (!payload.id || !payload.roomType) return;
+    (payload: { id: string; roomType: RoomType }) =>
+      enqueueRoomOp(socket, async () => {
+        if (!payload.id || !payload.roomType) return;
 
-      const { id, roomType } = payload;
-      const canJoin = await canJoinRoom({
-        id,
-        roomType,
-        socket,
-      });
+        const { id, roomType } = payload;
+        const canJoin = await canJoinRoom({
+          id,
+          roomType,
+          socket,
+        });
 
-      if (!canJoin) return;
+        if (!canJoin) return;
 
-      const roomKey = toRoomKey({ id, roomType });
-      socket.join(roomKey);
+        const roomKey = toRoomKey({ id, roomType });
+        socket.join(roomKey);
 
-      if (roomType === RoomType.Topic) {
-        // Not marked read here: useRoomResyncOnConnect re-joins on every reconnect (sleep/wake, deploys), which would clear unread the user never saw.
-        emitUserChangeInTopic({ server, socket, topicId: id });
-      }
+        if (roomType === RoomType.Topic) {
+          // Not marked read here: useRoomResyncOnConnect re-joins on every reconnect (sleep/wake, deploys), which would clear unread the user never saw.
+          await emitUserChangeInTopic({ server, socket, topicId: id });
+        }
 
-      if (roomType === RoomType.Circle) {
-        emitUserJoinedCircle({ server, socket, circleId: id });
-      }
-    },
+        if (roomType === RoomType.Circle) {
+          await emitUserJoinedCircle({ server, socket, circleId: id });
+        }
+      }),
   );
 }
 
 export function handleLeaveRoom({ socket, server }: HandlerArgs) {
-  socket.on(SocketEvent.LeaveRoom, (payload) => {
-    if (!payload.id || !payload.roomType) return;
+  socket.on(SocketEvent.LeaveRoom, (payload) =>
+    enqueueRoomOp(socket, async () => {
+      if (!payload.id || !payload.roomType) return;
 
-    const { id, roomType } = payload;
-    const roomKey = toRoomKey({ id, roomType });
+      const { id, roomType } = payload;
+      const roomKey = toRoomKey({ id, roomType });
 
-    socket.leave(roomKey);
+      socket.leave(roomKey);
 
-    if (roomType === RoomType.Topic) {
-      emitUserChangeInTopic({
-        server,
-        socket,
-        topicId: id,
-        markRead: true,
-      });
-    }
+      if (roomType === RoomType.Topic) {
+        await emitUserChangeInTopic({
+          server,
+          socket,
+          topicId: id,
+          markRead: true,
+        });
+      }
 
-    if (roomType === RoomType.Circle) {
-      server.to(roomKey).emit(SocketEvent.UserLeftCircle, {
-        circleId: id,
-      });
-    }
-  });
+      if (roomType === RoomType.Circle) {
+        server.to(roomKey).emit(SocketEvent.UserLeftCircle, {
+          circleId: id,
+        });
+      }
+    }),
+  );
 }
 
 export async function emitUserChangeInTopic({

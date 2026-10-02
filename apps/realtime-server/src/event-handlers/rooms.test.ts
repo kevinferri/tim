@@ -251,6 +251,35 @@ describe("handleJoinRoom", () => {
   });
 });
 
+describe("join/leave ordering", () => {
+  it("processes a leave sent right after a join only once the join finishes", async () => {
+    vi.mocked(isUserInTopic).mockResolvedValue(true);
+    vi.mocked(getParentCircleIdForTopic).mockResolvedValue({
+      id: "circle-1",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    const server = createMockServer();
+    handleJoinRoom({ socket: socket as any, server: server as any });
+    handleLeaveRoom({ socket: socket as any, server: server as any });
+
+    await Promise.all([
+      socket.trigger(SocketEvent.JoinRoom, {
+        id: "topic-b",
+        roomType: RoomType.Topic,
+      }),
+      socket.trigger(SocketEvent.LeaveRoom, {
+        id: "topic-a",
+        roomType: RoomType.Topic,
+      }),
+    ]);
+
+    expect(socket.join.mock.invocationCallOrder[0]).toBeLessThan(
+      socket.leave.mock.invocationCallOrder[0],
+    );
+  });
+});
+
 describe("handleLeaveRoom", () => {
   it("leaves a topic room and marks the topic read", async () => {
     vi.mocked(getParentCircleIdForTopic).mockResolvedValue({
@@ -267,14 +296,10 @@ describe("handleLeaveRoom", () => {
     });
 
     expect(socket.leave).toHaveBeenCalledWith("topic::topic-1");
-    // handleLeaveRoom fires emitUserChangeInTopic without awaiting it, so
-    // its DB call lands on a later microtask than the handler's return.
-    await vi.waitFor(() =>
-      expect(markTopicRead).toHaveBeenCalledWith({
-        userId: "user-1",
-        topicId: "topic-1",
-      }),
-    );
+    expect(markTopicRead).toHaveBeenCalledWith({
+      userId: "user-1",
+      topicId: "topic-1",
+    });
   });
 
   it("logs unexpected mark-read failures instead of swallowing them", async () => {

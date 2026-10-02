@@ -9,10 +9,6 @@ import {
   useTopicUiContext,
 } from "./current-topic-provider";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
-import {
-  RoomType,
-  useRoomManagement,
-} from "@/components/socket/use-current-user-rooms";
 import { ChevronDownIcon, EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { Message, MessageProps } from "./message";
 import { isToday, MessageDateSeparator } from "./message-date-separator";
@@ -23,7 +19,6 @@ import { MoreMessagesSkeleton } from "@/components/topics/more-messages-skeleton
 
 export function TopicChat() {
   const { markTopicAsRead } = useUnreadTopics();
-  const { joinRoom, leaveRoom } = useRoomManagement();
 
   const { topicId } = useTopicMetaContext();
   const {
@@ -51,11 +46,8 @@ export function TopicChat() {
   }, []);
 
   useEffect(() => {
-    joinRoom(topicId, RoomType.Topic);
-
     return () => {
       markTopicAsRead(topicId);
-      leaveRoom(topicId, RoomType.Topic);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId]);
