@@ -137,6 +137,38 @@ async function attachReplyCounts<
 }
 
 export const messageModel = {
+  // Self-replies excluded: this measures how much *others* engage with the user.
+  async countRepliesReceivedByUser({
+    userId,
+  }: {
+    userId: string;
+  }): Promise<number> {
+    return await prismaClient.message.count({
+      where: { replyTo: { userId }, userId: { not: userId } },
+    });
+  },
+
+  // Replies to others' messages; self-replies excluded to mirror countRepliesReceivedByUser.
+  async countRepliesGivenByUser({
+    userId,
+  }: {
+    userId: string;
+  }): Promise<number> {
+    return await prismaClient.message.count({
+      where: { userId, replyTo: { userId: { not: userId } } },
+    });
+  },
+
+  // createdAt is tz-less UTC, so ::date is the UTC day; AT TIME ZONE would shift it to the session zone.
+  async countActiveDaysByUser({ userId }: { userId: string }): Promise<number> {
+    const [row] = await prismaClient.$queryRaw<[{ days: bigint }]>`
+      SELECT COUNT(DISTINCT "createdAt"::date) AS days
+      FROM messages
+      WHERE "userId" = ${userId}
+    `;
+    return Number(row.days);
+  },
+
   async getById({
     messageId,
     select,

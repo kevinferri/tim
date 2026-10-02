@@ -36,6 +36,8 @@ async function createMessage(
     mediaUrl: string | null;
     replyToId: string;
     threadRootId: string;
+    command: string;
+    createdAt: Date;
   }> = {},
 ) {
   // The AAD binds ciphertext to its row id, so it must be known before encrypting -- generate it up front instead of relying on Prisma's DB-side @default(uuid()).
@@ -50,6 +52,8 @@ async function createMessage(
       mediaUrl: overrides.mediaUrl,
       replyToId: overrides.replyToId,
       threadRootId: overrides.threadRootId,
+      command: overrides.command,
+      createdAt: overrides.createdAt,
     },
   });
 }
@@ -250,5 +254,76 @@ describe("messageModel.getMediaMessagesForTopic", () => {
 
     expect(messages).toHaveLength(1);
     expect(messages[0].mediaUrl).toBe("https://example.com/img.png");
+  });
+});
+
+describe("messageModel.countRepliesReceivedByUser", () => {
+  it("counts replies from others, not self-replies or replies to others", async () => {
+    const user = await createUser();
+    const other = await createUser();
+    const topic = await createTopic(user.id);
+    const mine = await createMessage(user.id, topic.id);
+    const theirs = await createMessage(other.id, topic.id);
+
+    await createMessage(other.id, topic.id, { replyToId: mine.id });
+    await createMessage(other.id, topic.id, { replyToId: mine.id });
+    await createMessage(user.id, topic.id, { replyToId: mine.id });
+    await createMessage(user.id, topic.id, { replyToId: theirs.id });
+
+    await expect(
+      prismaClient.message.countRepliesReceivedByUser({ userId: user.id }),
+    ).resolves.toBe(2);
+  });
+});
+
+describe("messageModel.countActiveDaysByUser", () => {
+  it("counts distinct UTC days with at least one message", async () => {
+    const user = await createUser();
+    const other = await createUser();
+    const topic = await createTopic(user.id);
+
+    await createMessage(user.id, topic.id, {
+      createdAt: new Date("2026-09-01T01:00:00Z"),
+    });
+    await createMessage(user.id, topic.id, {
+      createdAt: new Date("2026-09-01T23:00:00Z"),
+    });
+    await createMessage(user.id, topic.id, {
+      createdAt: new Date("2026-09-03T12:00:00Z"),
+    });
+    await createMessage(other.id, topic.id, {
+      createdAt: new Date("2026-09-05T12:00:00Z"),
+    });
+
+    await expect(
+      prismaClient.message.countActiveDaysByUser({ userId: user.id }),
+    ).resolves.toBe(2);
+  });
+
+  it("returns 0 for a user with no messages", async () => {
+    const user = await createUser();
+
+    await expect(
+      prismaClient.message.countActiveDaysByUser({ userId: user.id }),
+    ).resolves.toBe(0);
+  });
+});
+
+describe("messageModel.countRepliesGivenByUser", () => {
+  it("counts replies to others' messages, not self-replies or non-replies", async () => {
+    const user = await createUser();
+    const other = await createUser();
+    const topic = await createTopic(user.id);
+    const mine = await createMessage(user.id, topic.id);
+    const theirs = await createMessage(other.id, topic.id);
+
+    await createMessage(user.id, topic.id, { replyToId: theirs.id });
+    await createMessage(user.id, topic.id, { replyToId: theirs.id });
+    await createMessage(user.id, topic.id, { replyToId: mine.id });
+    await createMessage(other.id, topic.id, { replyToId: mine.id });
+
+    await expect(
+      prismaClient.message.countRepliesGivenByUser({ userId: user.id }),
+    ).resolves.toBe(2);
   });
 });

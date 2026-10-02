@@ -2,6 +2,7 @@
 import { randomUUID } from "crypto";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { encrypt } from "@tim/crypto";
+import { parseCommand } from "@tim/commands";
 import { TIM_SANDBOX_EMAIL } from "./seed-constants";
 
 const prisma = new PrismaClient();
@@ -247,6 +248,7 @@ async function seedCircle(
         return {
           id,
           text: encrypt(m.text, id),
+          command: parseCommand(m.text)?.name ?? null,
           mediaUrl: m.mediaUrl,
           userId: getId(m.senderEmail),
           topicId: topic.id,

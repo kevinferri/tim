@@ -62,6 +62,50 @@ describe("writeMessage", () => {
   });
 });
 
+describe("writeMessage command", () => {
+  it("records the canonical command name, resolving aliases", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+
+    const yt = await createMessage(userId, topicId, "/yt never gonna");
+    const roll = await createMessage(userId, topicId, "/roll d20");
+
+    const rows = await pgClient("messages")
+      .whereIn("id", [yt.id, roll.id])
+      .select("id", "command");
+    const byId = Object.fromEntries(rows.map((r) => [r.id, r.command]));
+    expect(byId[yt.id]).toBe("youtube");
+    expect(byId[roll.id]).toBe("roll");
+  });
+
+  it("leaves command null for plain and unknown-slash messages", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+
+    const plain = await createMessage(userId, topicId, "hello");
+    const unknown = await createMessage(userId, topicId, "/shrug");
+
+    const rows = await pgClient("messages")
+      .whereIn("id", [plain.id, unknown.id])
+      .select("command");
+    expect(rows.map((r) => r.command)).toEqual([null, null]);
+  });
+
+  it("keeps the command when the text is edited", async () => {
+    const userId = await createUser();
+    const circleId = await createCircle(userId);
+    const topicId = await createTopic(userId, circleId);
+
+    const message = await createMessage(userId, topicId, "/8ball will it?");
+    await editMessage({ userId, messageId: message.id, text: "nevermind" });
+
+    const stored = await pgClient("messages").where("id", message.id).first();
+    expect(stored.command).toBe("8ball");
+  });
+});
+
 describe("writeMessage with replyToId", () => {
   it("persists and returns the replyToId", async () => {
     const userId = await createUser();

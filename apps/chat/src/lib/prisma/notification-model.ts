@@ -1,6 +1,7 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { NOTIFICATION_LIMIT } from "@/lib/notification-constants";
 import { getReadableMessage } from "@/lib/prisma/message-model";
+import { NotificationType } from "@tim/socket-types";
 
 // Skips notifications about a circle the user has since left, rather than
 // surfacing (or counting toward the badge) a dead link -- same pattern as
@@ -14,6 +15,27 @@ function forCurrentMember(userId: string) {
 }
 
 export const notificationModel = {
+  // Mentions are only recorded as notifications (message text is encrypted), so counts start when those did.
+  async countMentionsReceivedByUser({
+    userId,
+  }: {
+    userId: string;
+  }): Promise<number> {
+    return await prismaClient.notification.count({
+      where: { recipientId: userId, type: NotificationType.Mentioned },
+    });
+  },
+
+  async countMentionsSentByUser({
+    userId,
+  }: {
+    userId: string;
+  }): Promise<number> {
+    return await prismaClient.notification.count({
+      where: { actorId: userId, type: NotificationType.Mentioned },
+    });
+  },
+
   async getForUser({ userId, before }: { userId?: string; before?: string }) {
     if (!userId) return [];
 

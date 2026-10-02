@@ -407,3 +407,39 @@ describe("notificationModel.markAllReadForUser", () => {
     ).resolves.toBe(1);
   });
 });
+
+describe("notificationModel.countMentionsReceivedByUser / countMentionsSentByUser", () => {
+  it("counts only mention notifications, by recipient and by actor", async () => {
+    const alice = await createUser("Alice");
+    const bob = await createUser("Bob");
+    const topic = await createTopic(alice.id, [bob.id]);
+    const message = await createMessage(alice.id, topic.id);
+
+    await createNotification({
+      recipientId: bob.id,
+      actorId: alice.id,
+      messageId: message.id,
+    });
+    await createNotification({
+      recipientId: bob.id,
+      actorId: alice.id,
+      messageId: message.id,
+    });
+    await createNotification({
+      recipientId: bob.id,
+      actorId: alice.id,
+      messageId: message.id,
+      type: "reply:received",
+    });
+
+    await expect(
+      prismaClient.notification.countMentionsReceivedByUser({ userId: bob.id }),
+    ).resolves.toBe(2);
+    await expect(
+      prismaClient.notification.countMentionsSentByUser({ userId: alice.id }),
+    ).resolves.toBe(2);
+    await expect(
+      prismaClient.notification.countMentionsSentByUser({ userId: bob.id }),
+    ).resolves.toBe(0);
+  });
+});

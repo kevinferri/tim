@@ -16,7 +16,6 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { useSelf } from "@/components/auth/self-provider";
 import { ConnectionStatus } from "@/components/socket/connection-status";
 import { SetStatusModal } from "@/components/dashboard/set-status-modal";
-import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -27,7 +26,6 @@ import {
 export function UserDropDown() {
   const self = useSelf();
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const { updateStatus } = useUpdateUserStatus();
   const { status } = useUserStatus(self.id, {
     status: self.status,
     lastStatusUpdate: self.lastStatusUpdate,
@@ -80,15 +78,9 @@ export function UserDropDown() {
           <Separator />
           <DropdownMenuItem
             className="flex gap-3"
-            onClick={() => {
-              if (status) {
-                updateStatus(null);
-              } else {
-                setStatusModalOpen(true);
-              }
-            }}
+            onClick={() => setStatusModalOpen(true)}
           >
-            <SewingPinFilledIcon /> {status ? "Clear status" : "Set status"}
+            <SewingPinFilledIcon /> {status ? "Edit status" : "Set status"}
           </DropdownMenuItem>
           <Separator />
           <DropdownMenuItem onClick={() => signOut()} className="flex gap-3">

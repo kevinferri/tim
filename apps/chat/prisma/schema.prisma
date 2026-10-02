@@ -101,6 +101,9 @@ model Message {
   // Flat-thread root: null on roots; on replies = parent's threadRootId ?? parent.id.
   // Distinct from replyToId (the message being quoted).
   threadRootId String?
+  // CommandName (canonical, so /yt is "youtube") the message was sent with; null for plain messages.
+  // Lives outside `text` because that's encrypted at rest and can't be queried.
+  command      String?
 
   // Relations
   sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
@@ -126,6 +129,7 @@ model Message {
   @@index([userId, topicId])
   @@index([replyToId])
   @@index([threadRootId, createdAt])
+  @@index([userId, command])
 
   @@map(name: "messages")
 }

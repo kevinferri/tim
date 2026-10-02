@@ -4,11 +4,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { CrossCircledIcon } from "@radix-ui/react-icons";
-import { useSelf } from "@/components/auth/self-provider";
-import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
+import { useNow } from "@/lib/hooks/use-now";
+import { formatFeedTime, formatFullDateTime } from "@/lib/relative-time";
+import { formatStatus, splitStatus } from "@/lib/status";
 
 type Props = {
   status: string | null;
@@ -18,18 +17,26 @@ type Props = {
   isOnline?: boolean;
 };
 
-export const STATUS_COLOR = "bg-warning";
+// Tooltips invert the theme (bg-primary), so secondary text fades the tooltip's own color rather than using muted-foreground.
+function StatusSetAt(props: { lastStatusUpdate: Date | null }) {
+  const now = useNow();
+  if (!props.lastStatusUpdate || now === null) return null;
 
+  const setAt = new Date(props.lastStatusUpdate);
+  const ago = formatFeedTime(setAt, new Date(now));
+
+  return (
+    <span className="text-[11px] text-primary-foreground/70">
+      Set{" "}
+      <time dateTime={setAt.toISOString()} title={formatFullDateTime(setAt)}>
+        {ago === "Yesterday" ? "yesterday" : ago}
+      </time>
+    </span>
+  );
+}
+
+// The dot is presence only. Where presence isn't known (e.g. transcript avatars), a status shows as an emoji badge instead.
 export function UserStatus(props: Props) {
-  const self = useSelf();
-  const { updateStatus } = useUpdateUserStatus();
-
-  const getDotColor = () => {
-    if (props.status) return STATUS_COLOR;
-    if (Boolean(props.isOnline)) return "bg-success";
-    return "bg-muted-foreground";
-  };
-
   const statusUpdatedOn = useDateFormatter(
     props.lastStatusUpdate ?? undefined,
     {
@@ -41,21 +48,49 @@ export function UserStatus(props: Props) {
   );
 
   const variant = props.variant ?? "tooltip";
-  const dot = (
-    <span
-      className={`border relative inline-flex rounded-full w-3 h-3 ${getDotColor()}`}
-    />
-  );
-
-  if (!props.status && typeof props.isOnline === "undefined") return null;
 
   if (variant === "minimal") {
+    if (!props.status) return null;
     return (
-      <>
-        {dot} {props.status} (since {statusUpdatedOn})
-      </>
+      <span>
+        {formatStatus(props.status)}
+        {statusUpdatedOn && ` · since ${statusUpdatedOn}`}
+      </span>
     );
   }
+
+  if (typeof props.isOnline === "undefined") {
+    if (!props.status) return null;
+    const { emoji } = splitStatus(props.status);
+
+    return (
+      <TooltipProvider>
+        <Tooltip delayDuration={100}>
+          <TooltipTrigger asChild>
+            <span className="absolute -right-1 -bottom-1 flex size-[18px] cursor-default items-center justify-center rounded-full border-[1.5px] border-background bg-secondary text-[10px] leading-none">
+              {emoji}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <div className="flex flex-col gap-1">
+              <span className="text-[13px] font-medium">
+                {formatStatus(props.status)}
+              </span>
+              <StatusSetAt lastStatusUpdate={props.lastStatusUpdate} />
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  const dot = (
+    <span
+      className={`border relative inline-flex rounded-full w-3 h-3 ${
+        props.isOnline ? "bg-success" : "bg-muted-foreground"
+      }`}
+    />
+  );
 
   return (
     <TooltipProvider>
@@ -65,40 +100,21 @@ export function UserStatus(props: Props) {
             {dot}
           </div>
         </TooltipTrigger>
-        {props.status && (
-          <TooltipContent side="right">
-            <div className="flex flex-col">
-              <div className="flex gap-1 items-center">
-                <span className="flex gap-1 items-center text-sm">
-                  {dot} {props.status}
+        <TooltipContent side="right">
+          <div className="flex flex-col gap-1">
+            <span className="flex gap-1.5 items-center">
+              {dot} {props.isOnline ? "Online" : "Offline"}
+            </span>
+            {props.status && (
+              <>
+                <span className="text-[13px] font-medium">
+                  {formatStatus(props.status)}
                 </span>
-                {self.id === props.userId && props.status && (
-                  <div>
-                    <Button
-                      asChild
-                      className="p-1"
-                      variant="ghost"
-                      size="iconSm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        updateStatus(null);
-                      }}
-                    >
-                      <CrossCircledIcon />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <div className="flex ml-4 text-muted-foreground">
-                {statusUpdatedOn && (
-                  <span className="text-[10px]">
-                    since <time>{statusUpdatedOn}</time>
-                  </span>
-                )}
-              </div>
-            </div>
-          </TooltipContent>
-        )}
+                <StatusSetAt lastStatusUpdate={props.lastStatusUpdate} />
+              </>
+            )}
+          </div>
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

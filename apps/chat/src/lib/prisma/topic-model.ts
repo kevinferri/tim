@@ -182,8 +182,10 @@ export const topicModel = {
       where: { id: topicId },
       select: {
         name: true,
+        circleId: true,
         parentCircle: {
           select: {
+            name: true,
             members: {
               select: { id: true },
             },
@@ -196,6 +198,8 @@ export const topicModel = {
 
     return {
       name: topic.name,
+      circleId: topic.circleId,
+      circleName: topic.parentCircle.name,
       memberIds: topic.parentCircle.members.map(({ id }) => id),
     };
   },
