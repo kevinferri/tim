@@ -82,10 +82,10 @@ export function TopicSideBar() {
       header: "Notifications",
       node: <NotificationPanel />,
       icon: (
-        <div className="flex items-center gap-1.5 w-fu">
+        <div className="flex items-center gap-1.5">
           <BellIcon />
           {activeTab !== "notifications" && unreadCount > 0 && (
-            <Badge className="flex font-normal text-xs rounded-xl hover:bg-success px-2 bg-purple-500 min-w-7 justify-center">
+            <Badge className="flex font-normal text-xs rounded-xl hover:bg-purple-500 px-2 bg-purple-500 min-w-7 justify-center">
               {unreadCount}
             </Badge>
           )}

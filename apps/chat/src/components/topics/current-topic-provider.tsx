@@ -286,6 +286,21 @@ export function CurrentTopicProvider(props: Props) {
   );
 
   useEffect(() => () => window.clearTimeout(highlightTimerRef.current), []);
+
+  // Set by links from outside the topic (e.g. a notification) that should
+  // land on a message in the transcript rather than open it in the modal.
+  const [jumpTo, setJumpTo] = useQueryState("jumpTo");
+
+  useEffect(() => {
+    if (!jumpTo) return;
+
+    // A frame later, so TopicChat's initial scroll-to-bottom lands first.
+    const frame = requestAnimationFrame(() => {
+      jumpToMessage(jumpTo, "topic");
+      setJumpTo(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jumpTo, props.topicId, jumpToMessage, setJumpTo]);
   const [unseenCount, setUnseenCount] = useState(0);
   const {
     viewportRef,

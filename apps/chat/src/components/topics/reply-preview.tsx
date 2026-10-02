@@ -18,7 +18,7 @@ type Props = {
 // `mediaUrl` is overloaded: for /tim, /roll and /8ball it carries the generated
 // result rather than a URL (see the branching in message.tsx), so there's
 // nothing to show a thumbnail for.
-function getThumbnail(text: string, mediaUrl?: string | null) {
+export function getThumbnail(text: string, mediaUrl?: string | null) {
   const command = parseCommand(text ?? "")?.name;
 
   if (
@@ -50,7 +50,7 @@ export function ReplyPreview({
   return (
     <div
       className={cn(
-        "flex min-w-0 items-start gap-1.5 border-l-2 border-muted-foreground/25 pl-2 text-xs text-muted-foreground",
+        "flex min-w-0 items-start gap-1.5 border-l-2 border-muted-foreground/25 pl-2 text-sm text-muted-foreground",
         onClick && "group cursor-pointer hover:text-foreground",
         className,
       )}

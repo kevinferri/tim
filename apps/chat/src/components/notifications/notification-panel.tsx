@@ -1,54 +1,95 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { getDisplayName } from "@tim/user-display";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
+import { InfiniteLoader } from "@/components/ui/infinite-loader";
+import { Spinner } from "@/components/ui/spinner";
+import { useNow } from "@/lib/hooks/use-now";
+import { formatFeedTime, formatFullDateTime } from "@/lib/relative-time";
 import { useNotifications } from "@/components/notifications/use-notifications";
 import { notificationCopyMap } from "@/components/notifications/notification-copy";
 import { NotificationItem } from "@/components/notifications/notification-query-cache";
-import { Message } from "@/components/topics/message";
+import { getThumbnail } from "@/components/topics/reply-preview";
+import {
+  useTopicMetaContext,
+  useTopicUiContext,
+} from "@/components/topics/current-topic-provider";
 
-function NotificationRow({ notification }: { notification: NotificationItem }) {
-  const createdAt = useDateFormatter(new Date(notification.createdAt));
-  const copy = notificationCopyMap[notification.type];
+// Same inline thumbnail as ReplyPreview.
+function Thumbnail({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) return null;
 
   return (
-    <div className="flex gap-3 p-3 items-start">
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      onError={() => setFailed(true)}
+      className="mt-0.5 h-5 w-5 shrink-0 rounded-sm object-cover"
+    />
+  );
+}
+
+function NotificationRow({ notification }: { notification: NotificationItem }) {
+  const { topicId: currentTopicId } = useTopicMetaContext();
+  const { jumpToMessage } = useTopicUiContext();
+  const now = useNow();
+  const createdAt = new Date(notification.createdAt);
+  const copy = notificationCopyMap[notification.type];
+  const { topicId, topic, text, mediaUrl } = notification.message;
+  const thumbnail = getThumbnail(text ?? "", mediaUrl);
+
+  return (
+    <Link
+      href={`/circles/${topic.circleId}/topics/${topicId}?jumpTo=${notification.messageId}`}
+      onClick={(e) => {
+        if (topicId !== currentTopicId) return;
+
+        // Already in the topic: scroll to it in the transcript instead.
+        e.preventDefault();
+        jumpToMessage(notification.messageId, "topic");
+      }}
+      className="flex gap-3 p-3 items-start hover:bg-accent"
+    >
       <div className="flex">
         <UserAvatar
           {...notification.actor}
-          topicId={notification.message.topicId}
           showStatus={false}
           status={null}
           lastStatusUpdate={null}
         />
       </div>
-      <div className="flex flex-col gap-1 w-full">
-        <div className="text-sm text-muted-foreground mt-[-2px] flex items-center gap-1">
-          {copy.icon}
+      <div className="flex min-w-0 flex-col gap-1 w-full">
+        {/* Plain inline flow, so a wrapped header continues under the icon. */}
+        <div className="mt-[-2px] break-words text-sm text-muted-foreground">
+          <span className="mr-1 inline-block align-[-2px]">{copy.icon}</span>
           {getDisplayName(notification.actor.name)} {copy.text}
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span className="truncate">#{notification.message.topic.name}</span>
-          {createdAt && <span>· {createdAt}</span>}
+          <span className="truncate">#{topic.name}</span>
+          {now !== null && (
+            <time
+              dateTime={notification.createdAt}
+              title={formatFullDateTime(createdAt)}
+              className="shrink-0"
+            >
+              · {formatFeedTime(createdAt, new Date(now))}
+            </time>
+          )}
         </div>
-        <Card>
-          <CardContent className="p-0 m-0">
-            <Message
-              id={notification.messageId}
-              topicId={notification.message.topicId}
-              text={notification.message.text ?? undefined}
-              mediaUrl={notification.message.mediaUrl}
-              variant="minimal"
-              className="hover:bg-inherit"
-              hiddenElements={["sentBy", "sentAt"]}
-            />
-          </CardContent>
-        </Card>
+        {/* A snapshot, not a live message: the row links to the real one. */}
+        {(text || thumbnail) && (
+          <div className="flex min-w-0 items-start gap-1.5 text-sm text-primary">
+            {thumbnail && <Thumbnail key={thumbnail} src={thumbnail} />}
+            {text && <span className="line-clamp-2 break-words">{text}</span>}
+          </div>
+        )}
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -83,15 +124,14 @@ export function NotificationPanel() {
         <NotificationRow key={notification.id} notification={notification} />
       ))}
       {hasNextPage && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mx-3 mb-2"
-          disabled={isFetchingNextPage}
-          onClick={() => fetchNextPage()}
+        <InfiniteLoader
+          loading={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
         >
-          {isFetchingNextPage ? "Loading…" : "Load more"}
-        </Button>
+          <div className="flex justify-center p-3">
+            <Spinner />
+          </div>
+        </InfiniteLoader>
       )}
     </div>
   );
