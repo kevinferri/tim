@@ -136,7 +136,6 @@ describe("getMemberActivity", () => {
     const activity = await getMemberActivity({
       circleId: topic.circleId,
       userId: me.id,
-      highlightsReceived: 3,
     });
 
     // Three of the four messages fall inside the 60-day window (the 60-day-old one may straddle it).
@@ -150,7 +149,6 @@ describe("getMemberActivity", () => {
       repliesGiven: 1,
       activeDaysLast30: 3,
       activeDaysTotal: 4,
-      highlightsReceived: 3,
       recentSelfHighlights: 1,
       topicsCreated: 1,
       biggestFan: { name: "Simone de Beauvoir", highlights: 2 },

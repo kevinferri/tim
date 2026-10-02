@@ -44,37 +44,61 @@ export async function GET(req: NextRequest, { params }: Route) {
   const { topicId, userId } = await params;
 
   try {
-    const topic = await prismaClient.topic.getNameWithMemberIds({ topicId });
+    const timings: string[] = [];
+    // Server-Timing entries per query group, visible in DevTools' Network > Timing tab.
+    const timed = async <T>(label: string, run: () => Promise<T>) => {
+      const start = performance.now();
+      const result = await run();
+      timings.push(`${label};dur=${(performance.now() - start).toFixed(1)}`);
+      return result;
+    };
+
+    const topic = await timed("topic", () =>
+      prismaClient.topic.getNameWithMemberIds({ topicId }),
+    );
 
     if (!topic) return badRequest;
     if (!topic.memberIds.includes(loggedInUserId)) return notFound;
     if (!topic.memberIds.includes(userId)) return notFound;
 
-    const [topHighlights, circleStats, mentionsReceived, mentionsSent] =
-      await Promise.all([
+    const [
+      topHighlights,
+      circleStats,
+      memberActivity,
+      mentionsReceived,
+      mentionsSent,
+    ] = await Promise.all([
+      timed("highlights", () =>
         prismaClient.message.getTopHighlightedMessagesForTopic({
           requestingUserId: loggedInUserId,
           topicId,
           userId,
           select: DEFAULT_MESSAGE_SELECT,
         }),
-        getCircleStats(topic.circleId),
+      ),
+      timed("circle", () => getCircleStats(topic.circleId)),
+      timed("activity", () =>
+        getMemberActivity({ circleId: topic.circleId, userId }),
+      ),
+      timed("mentions-in", () =>
         prismaClient.notification.countMentionsReceivedByUser({
           userId,
           circleId: topic.circleId,
         }),
+      ),
+      timed("mentions-out", () =>
         prismaClient.notification.countMentionsSentByUser({
           userId,
           circleId: topic.circleId,
         }),
-      ]);
+      ),
+    ]);
     const member = circleStats.members.find((m) => m.userId === userId);
     const highlightScore = computeHighlightScore(circleStats.members, userId);
-    const activity = await getMemberActivity({
-      circleId: topic.circleId,
-      userId,
+    const activity = {
+      ...memberActivity,
       highlightsReceived: member?.highlights ?? 0,
-    });
+    };
 
     return NextResponse.json(
       {
@@ -102,7 +126,7 @@ export async function GET(req: NextRequest, { params }: Route) {
         mentionsReceived,
         mentionsSent,
       } as unknown as UserStatsForTopicResponse,
-      { status: 200 },
+      { status: 200, headers: { "Server-Timing": timings.join(", ") } },
     );
   } catch (e) {
     return badRequest;

@@ -75,7 +75,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
 
   const memberActivity = {
     messages: 20,
-    highlightsReceived: 18,
     repliesSent: 5,
     repliesGiven: 4,
     recentSelfHighlights: 0,
@@ -126,6 +125,9 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     const res = await GET(makeRequest(), makeParams());
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Server-Timing")).toMatch(
+      /topic;dur=[\d.]+.*circle;dur=[\d.]+/,
+    );
     expect(
       prismaClient.notification.countMentionsReceivedByUser,
     ).toHaveBeenCalledWith({ userId: "user-2", circleId: "circle-1" });
@@ -176,7 +178,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     vi.mocked(getMemberActivity).mockResolvedValue({
       ...memberActivity,
       messages: 0,
-      highlightsReceived: 0,
       repliesSent: 0,
       repliesGiven: 0,
       activeDaysTotal: 0,

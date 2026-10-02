@@ -283,6 +283,28 @@ describe("computeProfileBadges", () => {
     ]);
   });
 
+  it("always keeps the score rank, even when the cap would drop it", () => {
+    const badges = computeProfileBadges({
+      userId: "me",
+      circleName: "Sandbox",
+      circleCreatorId: "me",
+      score: { multiplier: 0.2, topPercent: 100, bottomPercent: 10 },
+      givingTag: null,
+      circle: {
+        commandCounts: { me: { roll: 9, giphy: 9 } },
+        repliesReceived: { me: 10 },
+        topMessageHighlights: { me: 10 },
+        highlightsGiven: { me: 20 },
+      },
+      activity: quietActivity,
+      now: NOW,
+    });
+
+    expect(badges).toHaveLength(5);
+    expect(badges.map((b) => b.key)).toContain("score");
+    expect(badges.at(-1)).toMatchObject({ key: "score", label: "Wallflower" });
+  });
+
   it("caps the row at five badges", () => {
     const badges = computeProfileBadges({
       userId: "me",

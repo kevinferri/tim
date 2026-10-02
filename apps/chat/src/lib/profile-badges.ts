@@ -426,7 +426,16 @@ export function computeProfileBadges(args: {
 
   // Rarest first, before capping, so the cap drops common badges rather than rare ones.
   // Array.prototype.sort is stable, so equal rarities keep their priority order.
-  return badges
-    .sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity])
-    .slice(0, MAX_BADGES);
+  const byRarity = (a: ProfileBadge, b: ProfileBadge) =>
+    RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity];
+  const sorted = badges.sort(byRarity);
+  const scoreBadge = sorted.find((b) => b.key === "score");
+  const top = sorted.slice(0, MAX_BADGES);
+  if (!scoreBadge || top.includes(scoreBadge)) return top;
+
+  // The score rank always shows, even when common, so the score number has its rank.
+  return [
+    ...sorted.filter((b) => b !== scoreBadge).slice(0, MAX_BADGES - 1),
+    scoreBadge,
+  ].sort(byRarity);
 }

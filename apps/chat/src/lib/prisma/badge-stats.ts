@@ -83,15 +83,14 @@ async function loadCircleStats(circleId: string): Promise<CircleStats> {
   };
 }
 
+// highlightsReceived comes from getCircleStats, so callers merge it in; keeping it out lets both run in parallel.
 export async function getMemberActivity({
   circleId,
   userId,
-  highlightsReceived,
 }: {
   circleId: string;
   userId: string;
-  highlightsReceived: number;
-}): Promise<MemberActivity> {
+}): Promise<Omit<MemberActivity, "highlightsReceived">> {
   const [
     [activity],
     [fan],
@@ -164,7 +163,6 @@ export async function getMemberActivity({
 
   return {
     ...activity,
-    highlightsReceived,
     recentSelfHighlights,
     recentActiveDays: dayRows.map((r) => r.day),
     topicsCreated,
