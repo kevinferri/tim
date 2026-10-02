@@ -380,50 +380,6 @@ export const TopicsList = ({
 
   const isGroupedView = !isMinimized && !searchQuery;
 
-  // Flat sort -- used while minimized (avatar rail) or searching, where
-  // grouping/dragging doesn't apply. isUnread here is the raw flag driving
-  // the sort; TopicRow decides whether to *show* the unread treatment.
-  const flatTopics = useMemo(() => {
-    if (!topics) return [];
-
-    return topics
-      .map((topic) => {
-        const isMuted = isMutedFor(topic.id);
-        const isUnread = unreadTopics[topic.id];
-        const isDefault = circle.defaultTopicId === topic.id;
-
-        return { ...topic, isMuted, isUnread, isDefault };
-      })
-      .filter((topic) => {
-        if (isMinimized) return true;
-        return topic.name.toLowerCase().includes(searchQuery.toLowerCase());
-      })
-      .sort((a, b) => {
-        if (a.isDefault !== b.isDefault) {
-          return a.isDefault ? -1 : 1;
-        }
-
-        if (a.isMuted !== b.isMuted) {
-          return a.isMuted ? 1 : -1;
-        }
-
-        if (a.isUnread !== b.isUnread) {
-          return a.isUnread ? -1 : 1;
-        }
-
-        return 0;
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    topics,
-    muteOverrides,
-    mutedTopicIds,
-    unreadTopics,
-    circle.defaultTopicId,
-    searchQuery,
-    isMinimized,
-  ]);
-
   const grouped = useMemo(() => {
     if (!topics) {
       return {
@@ -495,6 +451,64 @@ export const TopicsList = ({
 
     return [...overridden, ...appended];
   }, [grouped.activeTopics, dragOverrideIds]);
+
+  // Tiebreak for the flat sort so the rail/search follow the custom order too.
+  const customOrderIndex = useMemo(
+    () =>
+      new Map(
+        [...customOrderedActiveTopics, ...grouped.mutedTopicsList].map(
+          (topic, index) => [topic.id, index],
+        ),
+      ),
+    [customOrderedActiveTopics, grouped.mutedTopicsList],
+  );
+
+  // Flat sort -- used while minimized (avatar rail) or searching, where
+  // grouping/dragging doesn't apply. isUnread here is the raw flag driving
+  // the sort; TopicRow decides whether to *show* the unread treatment.
+  const flatTopics = useMemo(() => {
+    if (!topics) return [];
+
+    return topics
+      .map((topic) => {
+        const isMuted = isMutedFor(topic.id);
+        const isUnread = unreadTopics[topic.id];
+        const isDefault = circle.defaultTopicId === topic.id;
+
+        return { ...topic, isMuted, isUnread, isDefault };
+      })
+      .filter((topic) => {
+        if (isMinimized) return true;
+        return topic.name.toLowerCase().includes(searchQuery.toLowerCase());
+      })
+      .sort((a, b) => {
+        if (a.isDefault !== b.isDefault) {
+          return a.isDefault ? -1 : 1;
+        }
+
+        if (a.isMuted !== b.isMuted) {
+          return a.isMuted ? 1 : -1;
+        }
+
+        if (a.isUnread !== b.isUnread) {
+          return a.isUnread ? -1 : 1;
+        }
+
+        return (
+          (customOrderIndex.get(a.id) ?? 0) - (customOrderIndex.get(b.id) ?? 0)
+        );
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    topics,
+    muteOverrides,
+    mutedTopicIds,
+    unreadTopics,
+    circle.defaultTopicId,
+    searchQuery,
+    isMinimized,
+    customOrderIndex,
+  ]);
 
   // Current topic's hoist status is frozen on arrival (not live) so it holds
   // its position for the whole visit and only reflows once you leave. Gated
