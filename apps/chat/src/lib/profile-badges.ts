@@ -92,8 +92,6 @@ export type MemberActivity = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MAX_BADGES = 5;
-const PINNED_BADGES = ["score", "giving"];
 
 const COMMAND_BADGES: Partial<
   Record<CommandName, { emoji: string; label: string; noun: string }>
@@ -106,10 +104,10 @@ const COMMAND_BADGES: Partial<
 
 // Rank by total commands used in the circle, highest first.
 const COMMANDER_TIERS: Milestone[] = [
-  { min: 1_000, emoji: "🎖️", label: "Commander IV", rarity: "legendary" },
-  { min: 200, emoji: "🎖️", label: "Commander III", rarity: "epic" },
-  { min: 50, emoji: "🎖️", label: "Commander II", rarity: "rare" },
-  { min: 10, emoji: "🎖️", label: "Commander I", rarity: "common" },
+  { min: 3_000, emoji: "🎖️", label: "Commander IV", rarity: "legendary" },
+  { min: 750, emoji: "🎖️", label: "Commander III", rarity: "epic" },
+  { min: 150, emoji: "🎖️", label: "Commander II", rarity: "rare" },
+  { min: 25, emoji: "🎖️", label: "Commander I", rarity: "common" },
 ];
 
 type Milestone = {
@@ -425,16 +423,7 @@ export function computeProfileBadges(args: {
     });
   }
 
-  // Rarest first, before capping, so the cap drops common badges rather than rare ones.
+  // Rarest first; no cap, every earned badge shows.
   // Array.prototype.sort is stable, so equal rarities keep their priority order.
-  const byRarity = (a: ProfileBadge, b: ProfileBadge) =>
-    RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity];
-  const sorted = badges.sort(byRarity);
-
-  // The score rank and giving tag always show, even when common; the rest fill the remaining slots.
-  const pinned = sorted.filter((b) => PINNED_BADGES.includes(b.key));
-  const rest = sorted.filter((b) => !PINNED_BADGES.includes(b.key));
-  return [...pinned, ...rest.slice(0, MAX_BADGES - pinned.length)].sort(
-    byRarity,
-  );
+  return badges.sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]);
 }
