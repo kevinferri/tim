@@ -19,7 +19,8 @@
     "db:genpush": "pnpm db:generate && pnpm db:push",
     "db:migrate": "pnpm db:up && npx dotenv -e .env.local -- prisma migrate dev",
     "db:deploy": "npx prisma migrate deploy",
-    "db:seed": "pnpm db:up && npx dotenv -e .env.local -- prisma db seed"
+    "db:seed": "pnpm db:up && npx dotenv -e .env.local -- prisma db seed",
+    "backfill:commands": "tsx scripts/backfill-message-commands.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -407,3 +407,57 @@ describe("notificationModel.markAllReadForUser", () => {
     ).resolves.toBe(1);
   });
 });
+
+describe("notificationModel.countMentionsReceivedByUser / countMentionsSentByUser", () => {
+  it("counts only mention notifications in the circle, by recipient and by actor", async () => {
+    const alice = await createUser("Alice");
+    const bob = await createUser("Bob");
+    const topic = await createTopic(alice.id, [bob.id]);
+    const message = await createMessage(alice.id, topic.id);
+
+    await createNotification({
+      recipientId: bob.id,
+      actorId: alice.id,
+      messageId: message.id,
+    });
+    await createNotification({
+      recipientId: bob.id,
+      actorId: alice.id,
+      messageId: message.id,
+    });
+    await createNotification({
+      recipientId: bob.id,
+      actorId: alice.id,
+      messageId: message.id,
+      type: "reply:received",
+    });
+    // A mention in another circle the viewer may not share.
+    const otherTopic = await createTopic(alice.id, [bob.id]);
+    const otherMessage = await createMessage(alice.id, otherTopic.id);
+    await createNotification({
+      recipientId: bob.id,
+      actorId: alice.id,
+      messageId: otherMessage.id,
+    });
+
+    const circleId = topic.circleId;
+    await expect(
+      prismaClient.notification.countMentionsReceivedByUser({
+        userId: bob.id,
+        circleId,
+      }),
+    ).resolves.toBe(2);
+    await expect(
+      prismaClient.notification.countMentionsSentByUser({
+        userId: alice.id,
+        circleId,
+      }),
+    ).resolves.toBe(2);
+    await expect(
+      prismaClient.notification.countMentionsSentByUser({
+        userId: bob.id,
+        circleId,
+      }),
+    ).resolves.toBe(0);
+  });
+});

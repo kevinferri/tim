@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CalendarIcon,
   EnvelopeClosedIcon,
+  StarFilledIcon,
   StarIcon,
 } from "@radix-ui/react-icons";
 import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats/[userId]/route";
@@ -30,6 +31,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserStatus } from "@/components/dashboard/user-status";
 import { useUserStatus } from "@/components/dashboard/user-status-store";
+import { CommandIcon } from "@/components/topics/command-icon";
+import { COMMANDS, type CommandName } from "@tim/commands";
+import { ReplyIcon } from "@/components/icons/reply-icon";
+import type { BadgeRarity } from "@/lib/profile-badges";
 
 export function getInitials(name?: string) {
   if (!name) return "?";
@@ -48,17 +53,6 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-function getHlScoreEmoji(score?: number) {
-  if (!score) return ["0️⃣", "No"];
-  if (score > 200) return ["🦄", "Legendary"];
-  if (score > 150) return ["🏆", "Elite"];
-  if (score > 100) return ["🔥", "Great"];
-  if (score > 75) return ["👍", "Good"];
-  if (score > 50) return ["😐", "Average"];
-  if (score > 25) return ["😬", "Poor"];
-  return ["😭", "Pathetic"];
-}
-
 type Props = VariantProps<typeof variants> & {
   id: string;
   topicId?: string | null;
@@ -70,6 +64,8 @@ type Props = VariantProps<typeof variants> & {
   disableSheet?: boolean;
   showStatus?: boolean;
   isOnline?: boolean;
+  // Hide a status set after this time (e.g. a message's send time), since a status describes now.
+  statusVisibleAt?: Date;
   // Renders this instead of the avatar circle as the clickable element that opens the profile sheet -- the sheet's own content is unaffected either way.
   children?: ReactNode;
 };
@@ -93,8 +89,75 @@ const variants = cva("", {
   },
 });
 
-function StatsLoader() {
-  return <Skeleton className="w-[30px] h-8" />;
+// Overwatch-style rarity plates: rarer badges get richer color and a stronger glow.
+// Tooltip labels skip dark: variants since tooltips invert the theme; mid-tones read on both.
+const RARITY_STYLES: Record<BadgeRarity, { plate: string; label: string }> = {
+  common: {
+    plate:
+      "border-slate-400/60 from-slate-100 to-slate-200 text-slate-700 dark:border-slate-500/60 dark:from-slate-700/70 dark:to-slate-800/70 dark:text-slate-200",
+    label: "text-slate-500",
+  },
+  rare: {
+    plate:
+      "border-sky-400/80 from-sky-50 to-sky-200 text-sky-900 shadow-[0_0_6px_rgba(56,189,248,0.35)] dark:from-sky-500/30 dark:to-sky-900/50 dark:text-sky-100",
+    label: "text-sky-500",
+  },
+  epic: {
+    plate:
+      "border-fuchsia-400/80 from-fuchsia-50 to-fuchsia-200 text-fuchsia-900 shadow-[0_0_8px_rgba(217,70,239,0.4)] dark:from-fuchsia-500/30 dark:to-purple-900/50 dark:text-fuchsia-100",
+    label: "text-fuchsia-500",
+  },
+  legendary: {
+    plate:
+      "border-amber-400 from-amber-100 to-orange-200 text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.55)] dark:from-amber-400/40 dark:to-orange-700/50 dark:text-amber-50",
+    label: "text-amber-500",
+  },
+};
+
+function StatRow(props: { label: string; icon: ReactNode; value?: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="flex items-center gap-1.5 text-muted-foreground">
+        {props.icon} {props.label}
+      </span>
+      <span className="flex items-center font-medium tabular-nums">
+        {typeof props.value === "number"
+          ? formatNumber(props.value)
+          : (props.value ?? <Skeleton className="h-4 w-5" />)}
+      </span>
+    </div>
+  );
+}
+
+// Static list for inside a tooltip, where nested tooltips don't work.
+function CommandBreakdown(props: {
+  counts: Partial<Record<CommandName, number>>;
+}) {
+  const used = COMMANDS.filter((command) => props.counts[command.name]);
+
+  return (
+    <span className="flex items-center gap-3 pt-1">
+      {used.map((command) => (
+        <span key={command.name} className="flex items-center gap-1">
+          <CommandIcon name={command.name} className="size-4" />
+          {formatNumber(props.counts[command.name] ?? 0)}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function GotGave(props: { got: number; gave: number; gaveWord: string }) {
+  const word = (text: string) => (
+    <span className="text-xs font-normal text-muted-foreground">{text}</span>
+  );
+  return (
+    <span className="flex items-center gap-1">
+      {formatNumber(props.got)} {word("got")}
+      <span className="text-muted-foreground">·</span>
+      {formatNumber(props.gave)} {word(props.gaveWord)}
+    </span>
+  );
 }
 
 export function UserAvatar(props: Props) {
@@ -120,7 +183,8 @@ export function UserAvatar(props: Props) {
     enabled: !!props.topicId && open,
   });
 
-  const [emoji, rating] = getHlScoreEmoji(data?.highlightScore);
+  const score = data?.highlightScore;
+  const badges = data?.badges ?? [];
   const showStatus =
     typeof props.showStatus === "undefined" ? true : props.showStatus;
 
@@ -148,7 +212,13 @@ export function UserAvatar(props: Props) {
       </Avatar>
       {showStatus && (
         <UserStatus
-          status={status}
+          status={
+            props.statusVisibleAt &&
+            lastStatusUpdate &&
+            new Date(lastStatusUpdate) > new Date(props.statusVisibleAt)
+              ? null
+              : status
+          }
           userId={props.id}
           lastStatusUpdate={lastStatusUpdate}
           isOnline={props.isOnline}
@@ -165,128 +235,161 @@ export function UserAvatar(props: Props) {
       <SheetTitle className="hidden"></SheetTitle>
       <SheetContent className="p-0 h-full flex overflow-y-hidden flex-col md:min-w-[460px] w-full">
         <div className="flex flex-col gap-4 h-full overflow-y-hidden">
-          <div className="bg-secondary w-full flex flex-col items-center px-3 py-6 gap-3 flex-1">
-            <Avatar className="w-[140px] h-[140px] shadow-lg">
-              <AvatarImage
-                src={props.imageUrl ?? undefined}
-                className="rounded-full"
-              />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
+          <div className="w-full flex flex-col gap-5 p-5 shrink-0 border-b bg-secondary/50">
+            <div className="flex flex-col gap-5">
+              <div className="flex items-center gap-3 pr-6">
+                <Avatar className="size-12 shrink-0 shadow-md">
+                  <AvatarImage
+                    src={props.imageUrl ?? undefined}
+                    className="rounded-full"
+                  />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
 
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex gap-2 items-center">
-                <div className="text-2xl font-semibold">
-                  {props.name}{" "}
-                  {data && (
-                    <TooltipProvider>
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger>{emoji}</TooltipTrigger>
-                        <TooltipContent side="top">
-                          {rating} highlight score
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-xl font-semibold">
+                      {props.name}
+                    </span>
+                    {since && (
+                      <span className="flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px text-[10px] text-muted-foreground">
+                        <CalendarIcon className="size-2.5" /> Joined {since}
+                      </span>
+                    )}
+                  </div>
+
+                  {status && (
+                    <div className="text-xs text-muted-foreground">
+                      <UserStatus
+                        status={status}
+                        userId={props.id}
+                        lastStatusUpdate={lastStatusUpdate}
+                        variant="minimal"
+                      />
+                    </div>
                   )}
                 </div>
               </div>
-
-              {since && (
-                <div className="flex flex-col text-xs text-muted-foreground gap-1 items-center">
-                  <div className="flex items-center gap-1">
-                    <UserStatus
-                      status={status}
-                      userId={props.id}
-                      lastStatusUpdate={lastStatusUpdate}
-                      variant="minimal"
-                    />
+              {data && (
+                <TooltipProvider>
+                  <div className="flex flex-wrap gap-x-1.5 gap-y-2">
+                    {badges.map((badge) => (
+                      <Tooltip key={badge.key} delayDuration={100}>
+                        {/* Skewed plate, counter-skewed content so the text stays upright. */}
+                        <TooltipTrigger
+                          className={cn(
+                            "-skew-x-12 cursor-default rounded-sm border bg-gradient-to-b px-2 py-0.5",
+                            RARITY_STYLES[badge.rarity].plate,
+                          )}
+                        >
+                          <span className="flex skew-x-12 items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
+                            {badge.emoji} {badge.label}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <div className="flex flex-col gap-0.5">
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold uppercase tracking-wider",
+                                RARITY_STYLES[badge.rarity].label,
+                              )}
+                            >
+                              {badge.rarity}
+                            </span>
+                            {badge.tooltip}
+                            {badge.commandBreakdown && (
+                              <CommandBreakdown
+                                counts={badge.commandBreakdown}
+                              />
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <CalendarIcon /> Joined {since}
-                  </div>
-                </div>
+                </TooltipProvider>
               )}
             </div>
 
-            <div className="flex justify-between mt-3 w-full">
-              <div className="flex flex-col items-center flex-1">
-                <div className="text-2xl">
-                  <div
-                    className={`text 2xl ${
-                      data?.highlightScore
-                        ? "bg-highlight rounded-md px-1.5 dark:text-secondary"
-                        : ""
-                    }`}
-                  >
-                    {typeof data?.highlightScore !== "undefined" ? (
-                      formatNumber(data?.highlightScore)
-                    ) : (
-                      <StatsLoader />
-                    )}
-                  </div>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-x-8">
+                <div className="flex flex-col gap-2">
+                  <StatRow
+                    label="Score"
+                    icon={<StarIcon />}
+                    value={
+                      data && (score ? Math.round(score.multiplier * 100) : "—")
+                    }
+                  />
+                  <StatRow
+                    label="Sent"
+                    icon={<EnvelopeClosedIcon />}
+                    value={data?.messagesSent}
+                  />
+                  <StatRow
+                    label="Active days"
+                    icon={<CalendarIcon />}
+                    value={data?.activeDays}
+                  />
                 </div>
-                <div className="text-sm flex items-center gap-1">
-                  <StarIcon /> Score
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center flex-1">
-                <div className="text-2xl">
-                  <div className="text-2xl">
-                    {typeof data?.messagesSent !== "undefined" ? (
-                      formatNumber(data?.messagesSent)
-                    ) : (
-                      <StatsLoader />
-                    )}
-                  </div>
-                </div>
-                <div className="text-sm flex items-center gap-1.5">
-                  <EnvelopeClosedIcon /> Sent
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center flex-1">
-                <div className="text-2xl">
-                  {typeof data?.highlightsRecieved !== "undefined" ? (
-                    formatNumber(data?.highlightsRecieved)
-                  ) : (
-                    <StatsLoader />
-                  )}
-                </div>
-                <div className="text-sm flex items-center gap-1">
-                  <StarIcon /> Recieved
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center flex-1">
-                <div className="text-2xl">
-                  {typeof data?.highlightsGiven !== "undefined" ? (
-                    formatNumber(data?.highlightsGiven)
-                  ) : (
-                    <StatsLoader />
-                  )}
-                </div>
-                <div className="text-sm flex items-center gap-1">
-                  <StarIcon /> Given
+                <div className="flex flex-col gap-2">
+                  <StatRow
+                    label="Highlights"
+                    icon={<StarIcon />}
+                    value={
+                      data && (
+                        <GotGave
+                          got={data.highlightsReceived}
+                          gave={data.highlightsGiven}
+                          gaveWord="gave"
+                        />
+                      )
+                    }
+                  />
+                  <StatRow
+                    label="Replies"
+                    icon={<ReplyIcon />}
+                    value={
+                      data && (
+                        <GotGave
+                          got={data.repliesReceived}
+                          gave={data.repliesGiven}
+                          gaveWord="sent"
+                        />
+                      )
+                    }
+                  />
+                  <StatRow
+                    label="Mentions"
+                    icon={<span className="leading-none">@</span>}
+                    value={
+                      data && (
+                        <GotGave
+                          got={data.mentionsReceived}
+                          gave={data.mentionsSent}
+                          gaveWord="sent"
+                        />
+                      )
+                    }
+                  />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="px-6 text-center flex-1">
+          <div className="flex shrink-0 items-center justify-center gap-1.5 px-5">
             {data?.topicName && (
               <>
+                <StarFilledIcon className="text-highlight-icon" />
                 Top highlights in{" "}
-                <span className="font-pronounced">{data?.topicName}</span>
+                <span className="font-pronounced">{data.topicName}</span>
               </>
             )}
           </div>
 
           {data?.topHighlights.length === 0 && (
-            <div className="px-6 text-center">
-              <div className="text-muted-foreground text-sm">
-                {props.name} hasn&rsquo;t recieved any highlights in this topic
-              </div>
+            <div className="px-5 text-center text-sm text-muted-foreground">
+              {props.name} hasn&rsquo;t received any highlights in this topic
             </div>
           )}
 

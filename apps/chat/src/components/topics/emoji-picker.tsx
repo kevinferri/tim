@@ -10,38 +10,47 @@ import {
 import { Button } from "@/components/ui/button";
 import { FaceIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
+import { ReactNode, useState } from "react";
 
 type Props = {
   onEmojiSelect: (emoji: string) => void;
   disabled?: boolean;
+  // Replaces the default smiley button.
+  trigger?: ReactNode;
+  align?: "start" | "end";
+  closeOnSelect?: boolean;
 };
 
 export function EmojiPicker(props: Props) {
   const { theme } = useTheme();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="iconSm"
-          className="mb-[2px]"
-          disabled={props.disabled}
-        >
-          <FaceIcon />
-        </Button>
+        {props.trigger ?? (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            className="mb-[2px]"
+            disabled={props.disabled}
+          >
+            <FaceIcon />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         className="w-full p-0"
-        align="end"
+        align={props.align ?? "end"}
         sideOffset={12}
         alignOffset={-5}
       >
         <Picker
           data={data}
-          onEmojiSelect={({ native }: { native: string }) =>
-            props.onEmojiSelect(native)
-          }
+          onEmojiSelect={({ native }: { native: string }) => {
+            props.onEmojiSelect(native);
+            if (props.closeOnSelect) setOpen(false);
+          }}
           theme={theme}
           previewPosition="none"
           skinTonePosition="none"

@@ -8,6 +8,8 @@ import {
   useTopicMetaContext,
 } from "@/components/topics/current-topic-provider";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
+import { useUserStatus } from "@/components/dashboard/user-status-store";
+import { formatStatus } from "@/lib/status";
 
 type MemberProps = {
   id: string;
@@ -22,6 +24,10 @@ type MemberProps = {
 
 function Member(props: MemberProps) {
   const { topicId } = useTopicMetaContext();
+  const { status } = useUserStatus(props.id, {
+    status: props.status,
+    lastStatusUpdate: props.lastStatusUpdate,
+  });
 
   return (
     <div
@@ -42,7 +48,14 @@ function Member(props: MemberProps) {
           isOnline={props.isOnline}
         />
       </div>
-      <div>{props.name}</div>
+      <div className="min-w-0">
+        <div>{props.name}</div>
+        {status && (
+          <div className="truncate text-xs text-muted-foreground">
+            {formatStatus(status)}
+          </div>
+        )}
+      </div>
       <div className="ml-auto">
         <Badge variant="secondary">{props.isAdmin ? "Admin" : "Member"}</Badge>
       </div>

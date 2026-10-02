@@ -9,6 +9,14 @@ export function adjustHeight(
   target.style.height = `${target.scrollHeight + 0.5}px`;
 }
 
+// Keyed off message age rather than mount, so history/reloads and remounts
+// (virtualization, thread sheet) don't replay an arrival animation.
+export function remainingAnimationMs(durationMs: number, createdAtMs?: number) {
+  if (!createdAtMs) return 0;
+  const age = Date.now() - createdAtMs;
+  return Math.min(Math.max(durationMs - age, 0), durationMs);
+}
+
 export function truncateText(str: string, maxLength = 50) {
   const words = str.split(/\s+/);
   if (words.length <= maxLength) return str;

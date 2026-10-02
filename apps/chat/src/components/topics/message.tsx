@@ -227,6 +227,7 @@ const MessageComponent = (props: MessageProps) => {
             disableSheet={props.context === "user-sheet"}
             status={props.sentBy.status}
             lastStatusUpdate={props.sentBy.lastStatusUpdate}
+            statusVisibleAt={createdAt}
           />
         )}
 
@@ -357,10 +358,17 @@ const MessageComponent = (props: MessageProps) => {
               (parseCommand(props.text ?? "")?.name === CommandName.Tim ? (
                 <OpenAiViewer content={props.mediaUrl} />
               ) : parseCommand(props.text ?? "")?.name === CommandName.Roll ? (
-                <RollResult content={props.mediaUrl} />
+                <RollResult
+                  content={props.mediaUrl}
+                  prompt={props.text}
+                  createdAt={props.createdAt}
+                />
               ) : parseCommand(props.text ?? "")?.name ===
                 CommandName.EightBall ? (
-                <EightBallResult content={props.mediaUrl} />
+                <EightBallResult
+                  content={props.mediaUrl}
+                  createdAt={props.createdAt}
+                />
               ) : (
                 <MediaViewer
                   priority={props.context === "topic"}

@@ -36,6 +36,8 @@ async function createMessage(
     mediaUrl: string | null;
     replyToId: string;
     threadRootId: string;
+    command: string;
+    createdAt: Date;
   }> = {},
 ) {
   // The AAD binds ciphertext to its row id, so it must be known before encrypting -- generate it up front instead of relying on Prisma's DB-side @default(uuid()).
@@ -50,6 +52,8 @@ async function createMessage(
       mediaUrl: overrides.mediaUrl,
       replyToId: overrides.replyToId,
       threadRootId: overrides.threadRootId,
+      command: overrides.command,
+      createdAt: overrides.createdAt,
     },
   });
 }

@@ -1,5 +1,6 @@
 import { v4 } from "uuid";
 import { Message } from "@tim/db-types";
+import { parseCommand } from "@tim/commands";
 import { encrypt } from "../lib/encryption";
 import { pgClient } from "./client";
 
@@ -44,6 +45,8 @@ export async function writeMessage({
     .insert({
       id,
       text: encrypt(text, id),
+      // Set only here, not in editMessage: it records the command that actually ran.
+      command: parseCommand(text ?? "")?.name ?? null,
       mediaUrl,
       userId,
       topicId,
