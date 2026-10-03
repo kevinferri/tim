@@ -113,22 +113,6 @@ module.exports = {
           },
         },
         // Ease-in falling, ease-out rising, so each hop reads as gravity.
-        // Flames licking up from the bottom of the score badge; irregular steps so it never looks like a loop.
-        "badge-flame": {
-          "0%, 100%": { opacity: "0.75", transform: "scaleY(0.85)" },
-          "20%": { opacity: "1", transform: "scaleY(1.1)" },
-          "35%": { opacity: "0.8", transform: "scaleY(0.95)" },
-          "55%": { opacity: "1", transform: "scaleY(1.2)" },
-          "70%": { opacity: "0.7", transform: "scaleY(0.9)" },
-          "85%": { opacity: "0.95", transform: "scaleY(1.05)" },
-        },
-        // Firelight around the plate, on a different period than the flames.
-        "badge-firelight": {
-          "0%, 100%": { boxShadow: "0 0 6px 0 rgba(251,146,60,0.45)" },
-          "30%": { boxShadow: "0 0 12px 1px rgba(251,146,60,0.7)" },
-          "50%": { boxShadow: "0 0 8px 0 rgba(249,115,22,0.5)" },
-          "75%": { boxShadow: "0 0 14px 2px rgba(251,191,36,0.65)" },
-        },
         "die-bounce": {
           "0%": {
             transform: "translateY(-16px)",
@@ -193,8 +177,8 @@ module.exports = {
       },
       animation: {
         // Both match ROLL_DURATION_MS in roll-result.tsx.
-        "badge-flame": "badge-flame 1.3s ease-in-out infinite",
-        "badge-firelight": "badge-firelight 1.9s ease-in-out infinite",
+        // Light travelling around the score badge's border.
+        "badge-edge": "spin 2.4s linear infinite",
         "die-bounce": "die-bounce 1.5s",
         "die-spin": "die-spin 1.5s cubic-bezier(0.2, 0.7, 0.3, 1)",
         "eight-ball-shake": "eight-ball-shake 0.7s ease-in-out",
