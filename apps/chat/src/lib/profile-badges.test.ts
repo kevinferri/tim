@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeProfileBadges,
+  type ProfileStats,
   currentStreak,
   CircleBadgeAggregates,
   getScoreRank,
@@ -32,13 +33,33 @@ const quietActivity: MemberActivity = {
   topicsCreated: 0,
 };
 
+const zeroStats: ProfileStats = {
+  messages: 0,
+  activeDays: 0,
+  highlightsReceived: 0,
+  highlightsGiven: 0,
+  repliesReceived: 0,
+  repliesGiven: 0,
+  mentionsReceived: 0,
+  mentionsSent: 0,
+};
+
+// Stat badges always show; tests about other badges filter them out.
+function badgesFor(
+  args: Omit<Parameters<typeof computeProfileBadges>[0], "stats">,
+) {
+  return computeProfileBadges({ ...args, stats: zeroStats }).filter(
+    (b) => !b.key.startsWith("stat-"),
+  );
+}
+
 function badgeKeys(
   overrides: {
     circle?: Partial<CircleBadgeAggregates>;
     activity?: Partial<MemberActivity>;
   } = {},
 ) {
-  return computeProfileBadges({
+  return badgesFor({
     userId: "me",
     circleName: "Sandbox",
     circleCreatorId: "someone-else",
@@ -56,7 +77,7 @@ describe("computeProfileBadges", () => {
   });
 
   it("puts the score rank and giving tag first", () => {
-    const badges = computeProfileBadges({
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
@@ -133,7 +154,7 @@ describe("computeProfileBadges", () => {
   });
 
   it("calls out a recent self-highlight", () => {
-    const badges = computeProfileBadges({
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
@@ -155,51 +176,8 @@ describe("computeProfileBadges", () => {
     ]);
   });
 
-  it("shows only the highest message milestone reached", () => {
-    const badges = computeProfileBadges({
-      userId: "me",
-      circleName: "Sandbox",
-      circleCreatorId: "someone-else",
-      score: null,
-      givingTag: null,
-      circle: emptyCircle,
-      activity: { ...quietActivity, messages: 1234 },
-      now: NOW,
-    });
-
-    expect(badges).toContainEqual({
-      key: "messages-milestone",
-      emoji: "🎤",
-      label: "1K Club",
-      tooltip: "Sent 1,234 messages in Sandbox",
-      rarity: "rare",
-    });
-  });
-
-  it("shows only the highest active-days milestone reached", () => {
-    expect(badgeKeys({ activity: { activeDaysTotal: 140 } })).toEqual([
-      "days-milestone",
-    ]);
-    expect(
-      computeProfileBadges({
-        userId: "me",
-        circleName: "Sandbox",
-        circleCreatorId: "someone-else",
-        score: null,
-        givingTag: null,
-        circle: emptyCircle,
-        activity: { ...quietActivity, activeDaysTotal: 140 },
-        now: NOW,
-      })[0].label,
-    ).toBe("Regular Fixture");
-  });
-
-  it("has no milestone under 100 messages", () => {
-    expect(badgeKeys({ activity: { messages: 99 } })).toEqual([]);
-  });
-
   it("awards a Commander rank by total commands, with a breakdown", () => {
-    const [commander] = computeProfileBadges({
+    const [commander] = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
@@ -225,7 +203,7 @@ describe("computeProfileBadges", () => {
       commandBreakdown: { roll: 9, giphy: 9, "8ball": 9 },
     });
     const ranks = (total: number) =>
-      computeProfileBadges({
+      badgesFor({
         userId: "me",
         circleName: "Sandbox",
         circleCreatorId: "someone-else",
@@ -246,7 +224,7 @@ describe("computeProfileBadges", () => {
   });
 
   it("names their biggest fan by first name", () => {
-    const [fan] = computeProfileBadges({
+    const [fan] = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
@@ -264,7 +242,7 @@ describe("computeProfileBadges", () => {
   });
 
   it("shows every earned badge, rarest first, with no cap", () => {
-    const badges = computeProfileBadges({
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "me",
@@ -301,7 +279,7 @@ describe("computeProfileBadges", () => {
   });
 
   it("awards Founder to the circle's creator", () => {
-    const badges = computeProfileBadges({
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "me",
@@ -329,7 +307,7 @@ describe("computeProfileBadges", () => {
         new Date(NOW.getTime() - i * DAY).toISOString().slice(0, 10),
       );
     const streakBadge = (n: number) =>
-      computeProfileBadges({
+      badgesFor({
         userId: "me",
         circleName: "Sandbox",
         circleCreatorId: "someone-else",
@@ -352,6 +330,57 @@ describe("computeProfileBadges", () => {
     expect(badgeKeys({ activity: { topicsCreated: 3 } })).toEqual([
       "topic-starter",
     ]);
+  });
+});
+
+describe("stat badges", () => {
+  const statBadges = (stats: Partial<ProfileStats>) =>
+    computeProfileBadges({
+      userId: "me",
+      circleName: "Sandbox",
+      circleCreatorId: "someone-else",
+      score: null,
+      givingTag: null,
+      circle: emptyCircle,
+      activity: quietActivity,
+      stats: { ...zeroStats, ...stats },
+      now: NOW,
+    }).filter((b) => b.key.startsWith("stat-"));
+
+  it("always shows one badge per stat, common at zero", () => {
+    const badges = statBadges({});
+    expect(badges).toHaveLength(8);
+    expect(badges.every((b) => b.rarity === "common")).toBe(true);
+  });
+
+  it("raises each stat's rarity with its count", () => {
+    const byKey = Object.fromEntries(
+      statBadges({
+        messages: 1_234,
+        highlightsReceived: 300,
+        highlightsGiven: 1_000,
+        mentionsReceived: 30,
+      }).map((b) => [b.key, b]),
+    );
+
+    expect(byKey["stat-messages"]).toMatchObject({
+      label: "1K Club",
+      rarity: "rare",
+      tooltip: "Sent 1,234 messages in Sandbox",
+    });
+    expect(byKey["stat-highlightsReceived"]).toMatchObject({
+      label: "Fan Favorite",
+      rarity: "epic",
+    });
+    expect(byKey["stat-highlightsGiven"]).toMatchObject({
+      label: "Patron Saint",
+      rarity: "legendary",
+    });
+    expect(byKey["stat-mentionsReceived"].rarity).toBe("rare");
+    expect(byKey["stat-repliesGiven"]).toMatchObject({
+      label: "Chimes In",
+      rarity: "common",
+    });
   });
 });
 

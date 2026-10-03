@@ -117,19 +117,113 @@ type Milestone = {
   rarity: BadgeRarity;
 };
 
-// Highest first; only the top tier reached is shown.
-const MESSAGE_MILESTONES: Milestone[] = [
-  { min: 10_000, emoji: "🌌", label: "10K Club", rarity: "legendary" },
-  { min: 5_000, emoji: "🏛️", label: "5K Club", rarity: "epic" },
-  { min: 1_000, emoji: "🎤", label: "1K Club", rarity: "rare" },
-  { min: 500, emoji: "💬", label: "500 Club", rarity: "common" },
-  { min: 100, emoji: "🐣", label: "100 Club", rarity: "common" },
-];
+// The profile's stat values, each with an always-on badge whose rarity climbs with the number.
+export type ProfileStats = {
+  messages: number;
+  activeDays: number;
+  highlightsReceived: number;
+  highlightsGiven: number;
+  repliesReceived: number;
+  repliesGiven: number;
+  mentionsReceived: number;
+  mentionsSent: number;
+};
 
-const ACTIVE_DAY_MILESTONES: Milestone[] = [
-  { min: 365, emoji: "🦕", label: "Ancient One", rarity: "legendary" },
-  { min: 100, emoji: "🧱", label: "Regular Fixture", rarity: "rare" },
-  { min: 30, emoji: "🪴", label: "Putting Down Roots", rarity: "common" },
+type StatLadder = {
+  stat: keyof ProfileStats;
+  tooltip: (n: string, circleName: string) => string;
+  // Lowest first; the first tier starts at 0 so the badge always shows.
+  tiers: [Milestone, Milestone, Milestone, Milestone];
+};
+
+const tier = (
+  min: number,
+  emoji: string,
+  label: string,
+  rarity: BadgeRarity,
+): Milestone => ({ min, emoji, label, rarity });
+
+const STAT_LADDERS: StatLadder[] = [
+  {
+    stat: "messages",
+    tooltip: (n, c) => `Sent ${n} messages in ${c}`,
+    tiers: [
+      tier(0, "💬", "Chatter", "common"),
+      tier(1_000, "🎤", "1K Club", "rare"),
+      tier(5_000, "🏛️", "5K Club", "epic"),
+      tier(10_000, "🌌", "10K Club", "legendary"),
+    ],
+  },
+  {
+    stat: "activeDays",
+    tooltip: (n, c) => `Posted on ${n} different days in ${c}`,
+    tiers: [
+      tier(0, "🌱", "Sprout", "common"),
+      tier(30, "🪴", "Putting Down Roots", "rare"),
+      tier(100, "🧱", "Regular Fixture", "epic"),
+      tier(365, "🦕", "Ancient One", "legendary"),
+    ],
+  },
+  {
+    stat: "highlightsReceived",
+    tooltip: (n, c) => `Received ${n} highlights in ${c}`,
+    tiers: [
+      tier(0, "✨", "Spark", "common"),
+      tier(50, "🌟", "Rising Star", "rare"),
+      tier(250, "💫", "Fan Favorite", "epic"),
+      tier(1_000, "🌠", "Superstar", "legendary"),
+    ],
+  },
+  {
+    stat: "highlightsGiven",
+    tooltip: (n, c) => `Gave ${n} highlights in ${c}`,
+    tiers: [
+      tier(0, "👏", "Applauder", "common"),
+      tier(50, "🙌", "Cheerleader", "rare"),
+      tier(250, "🎉", "Hype Squad", "epic"),
+      tier(1_000, "😇", "Patron Saint", "legendary"),
+    ],
+  },
+  {
+    stat: "repliesReceived",
+    tooltip: (n, c) => `Got ${n} replies in ${c}`,
+    tiers: [
+      tier(0, "💭", "Murmur", "common"),
+      tier(25, "🗨️", "Discussion Piece", "rare"),
+      tier(100, "🔥", "Hot Topic", "epic"),
+      tier(500, "🌋", "Thread Magnet", "legendary"),
+    ],
+  },
+  {
+    stat: "repliesGiven",
+    tooltip: (n, c) => `Sent ${n} replies in ${c}`,
+    tiers: [
+      tier(0, "↩️", "Chimes In", "common"),
+      tier(50, "💬", "Conversationalist", "rare"),
+      tier(200, "🎙️", "Debate Club", "epic"),
+      tier(1_000, "📻", "Talk Show Host", "legendary"),
+    ],
+  },
+  {
+    stat: "mentionsReceived",
+    tooltip: (n, c) => `@mentioned ${n} times in ${c}`,
+    tiers: [
+      tier(0, "📇", "On the List", "common"),
+      tier(25, "📣", "In Demand", "rare"),
+      tier(100, "🔔", "Most Wanted", "epic"),
+      tier(500, "📢", "Household Name", "legendary"),
+    ],
+  },
+  {
+    stat: "mentionsSent",
+    tooltip: (n, c) => `@mentioned others ${n} times in ${c}`,
+    tiers: [
+      tier(0, "☎️", "Caller", "common"),
+      tier(25, "📞", "Connector", "rare"),
+      tier(100, "🕸️", "Networker", "epic"),
+      tier(500, "🦋", "Social Butterfly", "legendary"),
+    ],
+  },
 ];
 
 const GIVING_TAGS = {
@@ -176,6 +270,7 @@ export function computeProfileBadges(args: {
   givingTag: GivingTag | null;
   circle: CircleBadgeAggregates;
   activity: MemberActivity;
+  stats: ProfileStats;
   now: Date;
 }): ProfileBadge[] {
   const {
@@ -186,6 +281,7 @@ export function computeProfileBadges(args: {
     givingTag,
     circle,
     activity,
+    stats,
     now,
   } = args;
   const badges: ProfileBadge[] = [];
@@ -312,27 +408,15 @@ export function computeProfileBadges(args: {
     });
   }
 
-  const milestone = MESSAGE_MILESTONES.find((m) => activity.messages >= m.min);
-  if (milestone) {
+  for (const ladder of STAT_LADDERS) {
+    const value = stats[ladder.stat];
+    const reached = [...ladder.tiers].reverse().find((t) => value >= t.min)!;
     add({
-      key: "messages-milestone",
-      emoji: milestone.emoji,
-      label: milestone.label,
-      rarity: milestone.rarity,
-      tooltip: `Sent ${activity.messages.toLocaleString("en-US")} messages in ${circleName}`,
-    });
-  }
-
-  const dayMilestone = ACTIVE_DAY_MILESTONES.find(
-    (m) => activity.activeDaysTotal >= m.min,
-  );
-  if (dayMilestone) {
-    add({
-      key: "days-milestone",
-      emoji: dayMilestone.emoji,
-      label: dayMilestone.label,
-      rarity: dayMilestone.rarity,
-      tooltip: `Posted on ${activity.activeDaysTotal} different days in ${circleName}`,
+      key: `stat-${ladder.stat}`,
+      emoji: reached.emoji,
+      label: reached.label,
+      rarity: reached.rarity,
+      tooltip: ladder.tooltip(value.toLocaleString("en-US"), circleName),
     });
   }
 

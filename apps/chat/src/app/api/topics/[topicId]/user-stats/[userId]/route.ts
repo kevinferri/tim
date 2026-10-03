@@ -100,6 +100,18 @@ export async function GET(req: NextRequest, { params }: Route) {
       highlightsReceived: member?.highlights ?? 0,
     };
 
+    // Everything is scoped to this circle: the viewer only shares this circle with them.
+    const stats = {
+      messages: activity.messages,
+      activeDays: activity.activeDaysTotal,
+      highlightsReceived: member?.highlights ?? 0,
+      highlightsGiven: member?.given ?? 0,
+      repliesReceived: circleStats.repliesReceived[userId] ?? 0,
+      repliesGiven: activity.repliesGiven,
+      mentionsReceived,
+      mentionsSent,
+    };
+
     return NextResponse.json(
       {
         topicName: topic.name,
@@ -113,16 +125,16 @@ export async function GET(req: NextRequest, { params }: Route) {
           givingTag: computeGivingTag(circleStats.members, userId),
           circle: circleStats,
           activity,
+          stats,
           now: new Date(),
         }),
-        // Everything is scoped to this circle: the viewer only shares this circle with them.
-        messagesSent: activity.messages,
-        highlightsGiven: member?.given ?? 0,
-        highlightsReceived: member?.highlights ?? 0,
+        messagesSent: stats.messages,
+        highlightsGiven: stats.highlightsGiven,
+        highlightsReceived: stats.highlightsReceived,
         topHighlights,
-        repliesReceived: circleStats.repliesReceived[userId] ?? 0,
-        repliesGiven: activity.repliesGiven,
-        activeDays: activity.activeDaysTotal,
+        repliesReceived: stats.repliesReceived,
+        repliesGiven: stats.repliesGiven,
+        activeDays: stats.activeDays,
         mentionsReceived,
         mentionsSent,
       } as unknown as UserStatsForTopicResponse,

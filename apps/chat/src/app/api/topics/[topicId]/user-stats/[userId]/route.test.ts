@@ -125,6 +125,10 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     const res = await GET(makeRequest(), makeParams());
 
     expect(res.status).toBe(200);
+    const statBadgeCount = (await res.clone().json()).badges.filter(
+      (b: { key: string }) => b.key.startsWith("stat-"),
+    ).length;
+    expect(statBadgeCount).toBe(8);
     expect(res.headers.get("Server-Timing")).toMatch(
       /topic;dur=[\d.]+.*circle;dur=[\d.]+/,
     );
@@ -140,7 +144,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
         bottomPercent: 100,
         place: 1,
       },
-      badges: [
+      badges: expect.arrayContaining([
         {
           key: "score",
           // First of two: first place never ranks below Grandmaster.
@@ -156,7 +160,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
           tooltip: "Gave 1, got 18 highlights in Sandbox",
           rarity: "common",
         },
-      ],
+      ]),
       messagesSent: 20,
       highlightsGiven: 1,
       highlightsReceived: 18,
