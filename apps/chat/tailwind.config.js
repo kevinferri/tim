@@ -62,7 +62,8 @@ module.exports = {
         },
         highlight: {
           DEFAULT: "#ffffcd",
-          icon: "#dfa0a1",
+          // Overwatch-style gold; deeper in light mode for contrast on white.
+          icon: "hsl(var(--highlight-icon) / <alpha-value>)",
         },
       },
       boxShadow: {
