@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   ArrowTopRightIcon,
   ArrowBottomLeftIcon,
@@ -15,34 +14,46 @@ type Props = {
   isPlayingInGlobal?: boolean;
 };
 
-export function PlayerHeader({
-  isGlobal = false,
+type ToggleProps = Pick<Props, "isPlayingInGlobal"> & {
+  onExpandClick?: () => void;
+  onCloseClick?: () => void;
+};
+
+// Pops an inline video out to picture-in-picture, or brings it back.
+export function PlayerToggleButton({
   onExpandClick,
   onCloseClick,
   isPlayingInGlobal = false,
-}: Props) {
-  const action = isGlobal
-    ? { icon: Cross1Icon, onClick: onCloseClick }
-    : isPlayingInGlobal
-      ? { icon: ArrowBottomLeftIcon, onClick: onCloseClick }
-      : { icon: ArrowTopRightIcon, onClick: onExpandClick };
-
-  const { icon: Icon, onClick } = action;
+}: ToggleProps) {
+  const Icon = isPlayingInGlobal ? ArrowBottomLeftIcon : ArrowTopRightIcon;
 
   return (
-    <div
-      className={cn(
-        "flex items-center justify-end bg-secondary p-2",
-        isGlobal && "cursor-grab",
-      )}
+    <Button
+      variant="ghost"
+      size="iconXs"
+      aria-label={
+        isPlayingInGlobal ? "Return to message" : "Play in picture-in-picture"
+      }
+      onClick={isPlayingInGlobal ? onCloseClick : onExpandClick}
+      className="hover:opacity-80"
     >
+      <Icon />
+    </Button>
+  );
+}
+
+// The picture-in-picture player's drag handle.
+export function PlayerHeader({ onCloseClick }: Pick<Props, "onCloseClick">) {
+  return (
+    <div className="flex cursor-grab items-center justify-end bg-secondary p-2">
       <Button
         variant="ghost"
         size="iconXs"
-        onClick={onClick}
+        aria-label="Close"
+        onClick={onCloseClick}
         className="hover:opacity-80"
       >
-        <Icon />
+        <Cross1Icon />
       </Button>
     </div>
   );

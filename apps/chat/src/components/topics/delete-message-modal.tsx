@@ -17,20 +17,37 @@ import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 type Props = {
   messageId: string;
   topicId: string;
+  // Controlled (no trash-button trigger) when opened from elsewhere, e.g. the long-press menu.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function DeleteMessageModal({ messageId, topicId }: Props) {
-  const deleteMessage = useSocketEmit<Props>(SocketEvent.DeleteMessage);
+export function DeleteMessageModal({
+  messageId,
+  topicId,
+  open,
+  onOpenChange,
+}: Props) {
+  const deleteMessage = useSocketEmit<{ messageId: string; topicId: string }>(
+    SocketEvent.DeleteMessage,
+  );
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button className="font-normal" size="iconSm" variant="outline" asChild>
-          <div>
-            <TrashIcon />
-          </div>
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {open === undefined && (
+        <DialogTrigger asChild>
+          <Button
+            className="font-normal"
+            size="iconSm"
+            variant="outline"
+            asChild
+          >
+            <div>
+              <TrashIcon />
+            </div>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete message</DialogTitle>

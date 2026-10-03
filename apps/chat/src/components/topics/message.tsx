@@ -3,7 +3,8 @@ import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { HighlightTooltip } from "@/components/topics/highlight-tooltip";
+import { MessageHighlights } from "@/components/topics/message-highlights";
+import { MessageContextMenu } from "@/components/topics/message-context-menu";
 import {
   useTopicGifContext,
   useTopicMetaContext,
@@ -11,7 +12,10 @@ import {
 } from "@/components/topics/current-topic-provider";
 import { MediaViewer } from "@/components/topics/media-viewer";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { MessageActions } from "@/components/topics/message-actions";
+import {
+  MessageActions,
+  getOwnMessageActions,
+} from "@/components/topics/message-actions";
 import { MessageText } from "@/components/topics/message-text";
 import { LinkPreview } from "@/components/topics/link-preview";
 import { ReplyPreview } from "@/components/topics/reply-preview";
@@ -27,10 +31,12 @@ import {
   truncateText,
 } from "@/components/topics/message-utils";
 import { MessageSentAt } from "@/components/topics/message-sent-at";
-import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
-import { RollResult } from "@/components/topics/roll-result";
-import { EightBallResult } from "@/components/topics/eight-ball-result";
-import { CommandName, parseCommand } from "@tim/commands";
+import {
+  isBareRoll,
+  renderCommandResult,
+} from "@/components/topics/message-attachment";
+import { parseCommand } from "@tim/commands";
+import { useCanHover } from "@/lib/hooks/use-can-hover";
 import { getDisplayName } from "@tim/user-display";
 import {
   MessageSurface,
@@ -43,6 +49,7 @@ export type Highlights = {
   id: Highlight["id"];
   userId: Highlight["userId"];
   createdBy?: {
+    name?: User["name"];
     imageUrl: User["imageUrl"];
   };
   [key: string]: any;
@@ -102,6 +109,7 @@ const MessageComponent = (props: MessageProps) => {
   } = useTopicUiContext();
   const { addShufflingGif, shufflingGifs } = useTopicGifContext();
   const self = useSelf();
+  const canHover = useCanHover();
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingText, setEditingText] = useState(props.text);
@@ -126,6 +134,9 @@ const MessageComponent = (props: MessageProps) => {
   const highlightedBySelf = !!highlights?.find(
     (highlight) => self.id === highlight.userId,
   );
+
+  const command = useMemo(() => parseCommand(props.text ?? ""), [props.text]);
+  const ownActions = getOwnMessageActions(props.text ?? "", props.mediaUrl);
 
   const links = useMemo(
     () => getLinksFromMessage(props.text ?? undefined),
@@ -180,256 +191,273 @@ const MessageComponent = (props: MessageProps) => {
   };
 
   const isThreadSidebar = props.context === "sidebar";
+
+  const onStartEdit = () => {
+    setIsEditing(true);
+    // scrollToBottom is the main transcript's and sets isAtBottom, which gates
+    // its live-window trim. In the thread panel isNewestMessage is
+    // thread-local, so acting on it here would pin (and trim) a transcript the
+    // user isn't even looking at.
+    if (isNewestMessage && !isThreadSidebar) {
+      scrollToBottom({ behavior: "instant" });
+    }
+  };
+
+  const onShuffleGif = () => {
+    if (!props.id) return;
+    addShufflingGif(props.id);
+    setShuffledGifLoading(true);
+    shuffleGif.emit({ messageId: props.id, topicId });
+  };
+
+  const onReply = () => {
+    if (!props.id || !props.sentBy?.id) return;
+    // The thread sheet is modal, so the composer is unreachable until it
+    // closes -- dismiss it and stage the reply there.
+    if (isThreadSidebar) setOpenThreadRootId(undefined);
+    setReplyingTo({
+      id: props.id,
+      text: props.text ?? "",
+      mediaUrl: props.mediaUrl,
+      senderName: props.sentBy.name ?? null,
+      senderId: props.sentBy.id,
+    });
+  };
   // In the thread panel the root is already on screen — quoting it on every
   // direct reply just burns vertical space. Keep quotes only for reply-to-reply.
+  const showHighlights =
+    !props.hiddenElements?.includes("highlights") && highlights.length > 0;
+  const showReplyCount =
+    props.variant !== "minimal" &&
+    props.context === "topic" &&
+    !props.threadRootId &&
+    replyCount > 0;
+
   const showReplyPreview =
     props.variant !== "minimal" &&
     !!props.replyTo &&
     !(isThreadSidebar && props.replyToId === props.threadRootId);
 
   return (
-    <div
-      id={props.id ? messageAnchorId(props.context, props.id) : undefined}
-      className={cn(
-        baseStyles,
-        isOpenThreadRoot || isJumpTarget ? markerRingStyles : "",
-        highlightedBySelf ? highlightStyles : "",
-        props.variant === "minimal"
-          ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
-          : "",
-        props.className,
-      )}
-      onDoubleClick={(e) => {
-        if (props.variant !== "minimal") handleToggleHighlight();
-
-        const element = e.target as HTMLElement;
-        if (element.tagName !== "TEXTAREA" && typeof window !== "undefined") {
-          window.getSelection()?.removeAllRanges();
-        }
-      }}
-      onMouseEnter={() => {
-        if (isActionEligable) setShowActions(true);
-      }}
-      onMouseLeave={() => {
-        if (isActionEligable) setShowActions(false);
-      }}
+    <MessageContextMenu
+      enabled={!canHover && isActionEligable && !!props.id}
+      messageId={props.id!}
+      topicId={topicId}
+      text={props.text ?? ""}
+      sentBySelf={sentBySelf}
+      highlightedBySelf={highlightedBySelf}
+      onHighlight={handleToggleHighlight}
+      onReply={onReply}
+      onEdit={ownActions.canEdit ? onStartEdit : undefined}
+      onShuffleGif={ownActions.canShuffle ? onShuffleGif : undefined}
     >
       <div
-        className={cn("flex items-start gap-3 overflow-hidden leading-none")}
-      >
-        {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
-          <UserAvatar
-            id={props.sentBy.id}
-            name={props.sentBy.name}
-            imageUrl={props.sentBy.imageUrl}
-            createdAt={props.sentBy.createdAt}
-            topicId={topicId}
-            disableSheet={props.context === "user-sheet"}
-            status={props.sentBy.status}
-            lastStatusUpdate={props.sentBy.lastStatusUpdate}
-            statusVisibleAt={createdAt}
-          />
+        id={props.id ? messageAnchorId(props.context, props.id) : undefined}
+        className={cn(
+          baseStyles,
+          isOpenThreadRoot || isJumpTarget ? markerRingStyles : "",
+          highlightedBySelf ? highlightStyles : "",
+          props.variant === "minimal"
+            ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
+            : "",
+          // Long-press opens the message menu, so keep iOS's own callout/selection out of it.
+          !canHover && "select-none [-webkit-touch-callout:none]",
+          props.className,
         )}
+        onDoubleClick={(e) => {
+          if (props.variant !== "minimal") handleToggleHighlight();
 
+          const element = e.target as HTMLElement;
+          if (element.tagName !== "TEXTAREA" && typeof window !== "undefined") {
+            window.getSelection()?.removeAllRanges();
+          }
+        }}
+        onMouseEnter={() => {
+          if (isActionEligable && canHover) setShowActions(true);
+        }}
+        onMouseLeave={() => {
+          if (isActionEligable) setShowActions(false);
+        }}
+      >
         <div
-          className={cn(
-            "flex flex-1 flex-col gap-1 overflow-hidden leading-none min-w-0",
-          )}
+          className={cn("flex items-start gap-3 overflow-hidden leading-none")}
         >
-          <div className="flex gap-2 items-center min-w-0">
-            {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
-              <UserAvatar
-                id={props.sentBy.id}
-                topicId={topicId}
-                name={props.sentBy.name}
-                imageUrl={props.sentBy.imageUrl}
-                createdAt={props.sentBy.createdAt}
-                disableSheet={props.context === "user-sheet"}
-                status={props.sentBy.status}
-                lastStatusUpdate={props.sentBy.lastStatusUpdate}
-              >
-                <span
-                  className={cn(
-                    "font-semibold truncate",
-                    props.sentBy.id === self.id && "text-mention",
-                  )}
+          {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
+            <UserAvatar
+              id={props.sentBy.id}
+              name={props.sentBy.name}
+              imageUrl={props.sentBy.imageUrl}
+              createdAt={props.sentBy.createdAt}
+              topicId={topicId}
+              disableSheet={props.context === "user-sheet"}
+              status={props.sentBy.status}
+              lastStatusUpdate={props.sentBy.lastStatusUpdate}
+              statusVisibleAt={createdAt}
+            />
+          )}
+
+          <div
+            className={cn(
+              "flex flex-1 flex-col gap-1 overflow-hidden leading-none min-w-0",
+            )}
+          >
+            <div className="flex gap-2 items-center min-w-0">
+              {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
+                <UserAvatar
+                  id={props.sentBy.id}
+                  topicId={topicId}
+                  name={props.sentBy.name}
+                  imageUrl={props.sentBy.imageUrl}
+                  createdAt={props.sentBy.createdAt}
+                  disableSheet={props.context === "user-sheet"}
+                  status={props.sentBy.status}
+                  lastStatusUpdate={props.sentBy.lastStatusUpdate}
                 >
-                  {getDisplayName(props.sentBy.name)}
-                </span>
-              </UserAvatar>
-            )}
-
-            {!props.hiddenElements?.includes("sentAt") && (
-              <MessageSentAt sentAt={createdAt} />
-            )}
-
-            {showActions && isActionEligable && (
-              <MessageActions
-                sentBySelf={sentBySelf}
-                // The oldest message has nothing above it to straddle into --
-                // and in the thread panel a negative offset would clip out of
-                // the scroll viewport -- so pin it flush to the top edge.
-                className={isFirstMessage ? "top-0" : ""}
-                messageId={props.id!}
-                text={props.text ?? ""}
-                mediaUrl={props.mediaUrl ?? ""}
-                isShufflingGif={isShufflingGif}
-                onEditMessage={() => {
-                  setIsEditing(true);
-                  // scrollToBottom is the main transcript's and sets
-                  // isAtBottom, which gates its live-window trim. In the thread
-                  // panel isNewestMessage is thread-local, so acting on it here
-                  // would pin (and trim) a transcript the user isn't even
-                  // looking at.
-                  if (isNewestMessage && !isThreadSidebar) {
-                    scrollToBottom({ behavior: "instant" });
-                  }
-                }}
-                onShuffleGif={() => {
-                  if (!props.id) return;
-                  addShufflingGif(props.id);
-                  setShuffledGifLoading(true);
-                  shuffleGif.emit({ messageId: props.id, topicId });
-                }}
-                onReply={() => {
-                  if (!props.id || !props.sentBy?.id) return;
-                  // The thread sheet is modal, so the composer is unreachable
-                  // until it closes -- dismiss it and stage the reply there.
-                  if (isThreadSidebar) setOpenThreadRootId(undefined);
-                  setReplyingTo({
-                    id: props.id,
-                    text: props.text ?? "",
-                    mediaUrl: props.mediaUrl,
-                    senderName: props.sentBy.name ?? null,
-                    senderId: props.sentBy.id,
-                  });
-                }}
-              />
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1 min-w-0">
-            {showReplyPreview && props.replyTo && (
-              <ReplyPreview
-                senderName={props.replyTo.sentBy?.name ?? null}
-                text={props.replyTo.text ?? ""}
-                mediaUrl={props.replyTo.mediaUrl}
-                onClick={() => {
-                  // From the transcript, the thread is the better destination:
-                  // it renders the quoted message's root at the top, so it
-                  // answers "what were they replying to" and gives the rest of
-                  // the conversation. Elsewhere -- inside the thread itself, or
-                  // in a modal/sheet where stacking another would be odd --
-                  // jump to the quoted message instead.
-                  if (props.context === "topic" && props.threadRootId) {
-                    setOpenThreadRootId(props.threadRootId);
-                    return;
-                  }
-
-                  jumpToMessage(props.replyTo!.id, props.context);
-                }}
-              />
-            )}
-
-            {isEditing ? (
-              <MessageEdit
-                onEditCancel={onEditCancel}
-                onEditConfirm={onEditConfirm}
-                editingText={editingText ?? ""}
-                onChange={(e) => {
-                  setEditingText(e.target.value);
-                  adjustHeight(e.target);
-                }}
-              />
-            ) : (
-              <MessageText
-                id={props.id!}
-                topicId={topicId}
-                text={
-                  props.variant === "minimal"
-                    ? truncateText(props.text ?? "")
-                    : props.text
-                }
-                isNewestMessage={isNewestMessage}
-              />
-            )}
-
-            {props.mediaUrl &&
-              (parseCommand(props.text ?? "")?.name === CommandName.Tim ? (
-                <OpenAiViewer content={props.mediaUrl} />
-              ) : parseCommand(props.text ?? "")?.name === CommandName.Roll ? (
-                <RollResult
-                  content={props.mediaUrl}
-                  prompt={props.text}
-                  createdAt={props.createdAt}
-                />
-              ) : parseCommand(props.text ?? "")?.name ===
-                CommandName.EightBall ? (
-                <EightBallResult
-                  content={props.mediaUrl}
-                  createdAt={props.createdAt}
-                />
-              ) : (
-                <MediaViewer
-                  priority={props.context === "topic"}
-                  variant={props.variant}
-                  url={props.mediaUrl}
-                  skipVirtualization={isRecentMessage}
-                  onImageExpanded={() => {
-                    if (props.id)
-                      expandImage.emit({ topicId, messageId: props.id });
-                  }}
-                  onPreviewLoad={() => {
-                    if (shuffledGifLoading) {
-                      setShuffledGifLoading(false);
-                    }
-                  }}
-                />
-              ))}
-
-            {props.variant !== "minimal" &&
-              links.map((link, i) => {
-                return (
-                  <LinkPreview
-                    messageId={props.id!}
-                    topicId={topicId}
-                    key={`${props.id}${link}${i}`}
-                    link={link}
-                    mediaUrl={props.mediaUrl}
-                  />
-                );
-              })}
-
-            {props.variant !== "minimal" &&
-              props.context === "topic" &&
-              !props.threadRootId &&
-              replyCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="inline"
-                  // No hover fill: it would read as a box under the message.
-                  // Hover shifts colour, matching ReplyPreview.
-                  className="self-start gap-1.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                  onClick={() => setOpenThreadRootId(props.id)}
-                >
-                  <ReplyIcon />
-                  {replyCount} {replyCount === 1 ? "reply" : "replies"}
-                </Button>
+                  <span
+                    className={cn(
+                      "truncate text-sm font-semibold",
+                      props.sentBy.id === self.id && "text-mention",
+                    )}
+                  >
+                    {getDisplayName(props.sentBy.name)}
+                  </span>
+                </UserAvatar>
               )}
+
+              {!props.hiddenElements?.includes("sentAt") && (
+                <MessageSentAt sentAt={createdAt} />
+              )}
+
+              {showActions && isActionEligable && (
+                <MessageActions
+                  sentBySelf={sentBySelf}
+                  // The oldest message has nothing above it to straddle into --
+                  // and in the thread panel a negative offset would clip out of
+                  // the scroll viewport -- so pin it flush to the top edge.
+                  className={isFirstMessage ? "top-0" : ""}
+                  messageId={props.id!}
+                  text={props.text ?? ""}
+                  mediaUrl={props.mediaUrl ?? ""}
+                  isShufflingGif={isShufflingGif}
+                  highlightedBySelf={highlightedBySelf}
+                  onHighlight={handleToggleHighlight}
+                  onEditMessage={onStartEdit}
+                  onShuffleGif={onShuffleGif}
+                  onReply={onReply}
+                />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 min-w-0">
+              {showReplyPreview && props.replyTo && (
+                <ReplyPreview
+                  senderName={props.replyTo.sentBy?.name ?? null}
+                  text={props.replyTo.text ?? ""}
+                  mediaUrl={props.replyTo.mediaUrl}
+                  onClick={() => {
+                    // From the transcript, the thread is the better destination:
+                    // it renders the quoted message's root at the top, so it
+                    // answers "what were they replying to" and gives the rest of
+                    // the conversation. Elsewhere -- inside the thread itself, or
+                    // in a modal/sheet where stacking another would be odd --
+                    // jump to the quoted message instead.
+                    if (props.context === "topic" && props.threadRootId) {
+                      setOpenThreadRootId(props.threadRootId);
+                      return;
+                    }
+
+                    jumpToMessage(props.replyTo!.id, props.context);
+                  }}
+                />
+              )}
+
+              {isEditing ? (
+                <MessageEdit
+                  onEditCancel={onEditCancel}
+                  onEditConfirm={onEditConfirm}
+                  editingText={editingText ?? ""}
+                  onChange={(e) => {
+                    setEditingText(e.target.value);
+                    adjustHeight(e.target);
+                  }}
+                />
+              ) : isBareRoll(command) ? null : (
+                <MessageText
+                  id={props.id!}
+                  topicId={topicId}
+                  text={
+                    props.variant === "minimal"
+                      ? truncateText(props.text ?? "")
+                      : props.text
+                  }
+                  isNewestMessage={isNewestMessage}
+                />
+              )}
+
+              {props.mediaUrl &&
+                (renderCommandResult(command, {
+                  content: props.mediaUrl,
+                  createdAt: props.createdAt,
+                }) ?? (
+                  <MediaViewer
+                    priority={props.context === "topic"}
+                    variant={props.variant}
+                    url={props.mediaUrl}
+                    skipVirtualization={isRecentMessage}
+                    onImageExpanded={() => {
+                      if (props.id)
+                        expandImage.emit({ topicId, messageId: props.id });
+                    }}
+                    onPreviewLoad={() => {
+                      if (shuffledGifLoading) {
+                        setShuffledGifLoading(false);
+                      }
+                    }}
+                  />
+                ))}
+
+              {props.variant !== "minimal" &&
+                links.map((link, i) => {
+                  return (
+                    <LinkPreview
+                      messageId={props.id!}
+                      topicId={topicId}
+                      key={`${props.id}${link}${i}`}
+                      link={link}
+                      mediaUrl={props.mediaUrl}
+                    />
+                  );
+                })}
+
+              {(showHighlights || showReplyCount) && (
+                <div className="mt-1 flex flex-wrap items-center gap-3">
+                  {showHighlights && (
+                    <MessageHighlights
+                      highlights={highlights}
+                      highlightedBySelf={highlightedBySelf}
+                      onToggle={handleToggleHighlight}
+                    />
+                  )}
+                  {showReplyCount && (
+                    <Button
+                      variant="ghost"
+                      size="inline"
+                      // No hover fill: it would read as a box under the message.
+                      // Hover shifts colour, matching ReplyPreview.
+                      className="gap-1.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                      onClick={() => setOpenThreadRootId(props.id)}
+                    >
+                      <ReplyIcon />
+                      {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {!props.hiddenElements?.includes("highlights") && (
-          <HighlightTooltip
-            className={props.hiddenElements?.includes("sentAt") ? "mt-0" : ""}
-            highlightedBySelf={highlightedBySelf}
-            highlights={highlights}
-            messageId={props.id!}
-            onHighlight={handleToggleHighlight}
-          />
-        )}
       </div>
-    </div>
+    </MessageContextMenu>
   );
 };
 

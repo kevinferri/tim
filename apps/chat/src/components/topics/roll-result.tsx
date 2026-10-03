@@ -4,8 +4,10 @@ import { remainingAnimationMs } from "@/components/topics/message-utils";
 
 type Props = {
   content: string;
-  // The original "/roll d20" text -- the result string doesn't carry the side count.
-  prompt?: string;
+  // From the "/roll d20" prompt -- the result string doesn't carry the side count.
+  sides: number;
+  // Labels the die "d20" when the message text is hidden.
+  showSides?: boolean;
   createdAt?: Date;
 };
 
@@ -33,9 +35,9 @@ const FACE_TRANSFORMS = [
   "rotateX(-90deg)",
 ];
 
-// Mirrors rollDice() in command-handler.ts.
-function sidesFromPrompt(prompt: string): number {
-  const arg = prompt.trim().split(/\s+/)[1] ?? "";
+// Mirrors rollDice() in command-handler.ts. Takes what follows "/roll".
+export function sidesFromPrompt(prompt: string): number {
+  const arg = prompt.trim().split(/\s+/)[0] ?? "";
   const sides = parseInt(arg.replace(/^d/i, ""), 10);
   return Number.isInteger(sides) && sides > 0 ? sides : 6;
 }
@@ -111,10 +113,7 @@ export function RollResult(props: Props) {
   // Primitive -- callers may pass a fresh Date object every render.
   const createdAtMs =
     match && props.createdAt ? new Date(props.createdAt).getTime() : undefined;
-  const shuffledFaces = useShuffledFaces(
-    sidesFromPrompt(props.prompt ?? ""),
-    createdAtMs,
-  );
+  const shuffledFaces = useShuffledFaces(props.sides, createdAtMs);
   const isRolling = shuffledFaces !== null;
   // Negative delay resumes the animations mid-way if this remounts during a roll.
   const [tumbleDelayMs] = useState(
@@ -140,7 +139,7 @@ export function RollResult(props: Props) {
     <div
       role="img"
       aria-label={isRolling ? "Rolling a die" : `Rolled ${result}`}
-      className="w-fit p-3"
+      className="flex w-fit flex-col items-center gap-1 p-3"
     >
       {/* Bounce and spin are separate elements so each gets its own easing. */}
       <div
@@ -178,6 +177,11 @@ export function RollResult(props: Props) {
           )}
         </div>
       </div>
+      {props.showSides && (
+        <span className="text-[11px] font-medium text-muted-foreground">
+          d{props.sides}
+        </span>
+      )}
     </div>
   );
 }

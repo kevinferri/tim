@@ -146,7 +146,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
           // First of two: first place is always at least Champion.
           emoji: "👑",
           label: "Champion",
-          tooltip: "Highlight score 140 · Top 50% in Sandbox",
+          tooltip: "Highlight score 140 in Sandbox",
           rarity: "legendary",
         },
         {

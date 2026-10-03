@@ -18,7 +18,7 @@ export function MessageSentAt(props: Props) {
         suppressHydrationWarning
         dateTime={sentAt.toISOString()}
         title={now === null ? undefined : formatFullDateTime(sentAt)}
-        className="text-muted-foreground text-xs"
+        className="text-[11px] text-muted-foreground/80"
       >
         {now === null ? undefined : formatTranscriptTime(sentAt, new Date(now))}
       </time>

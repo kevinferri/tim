@@ -11,6 +11,8 @@ import { CommandName, parseCommand } from "@tim/commands";
 import {
   Pencil1Icon,
   SewingPinFilledIcon,
+  StarFilledIcon,
+  StarIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
 import { useTopicMetaContext } from "@/components/topics/current-topic-provider";
@@ -25,6 +27,8 @@ type Props = {
   onEditMessage?: () => void;
   onShuffleGif?: () => void;
   onReply?: () => void;
+  onHighlight: () => void;
+  highlightedBySelf: boolean;
   isShufflingGif?: boolean;
   className?: string;
   sentBySelf: boolean;
@@ -32,13 +36,21 @@ type Props = {
 
 const DELAY_DURATION = 100;
 
+// Commands can't be edited; a random gif can be reshuffled instead.
+export function getOwnMessageActions(text: string, mediaUrl?: string | null) {
+  const isRandomGif =
+    isGiphy(mediaUrl ?? undefined) &&
+    parseCommand(text)?.name === CommandName.Giphy;
+  return { canShuffle: isRandomGif, canEdit: !isValidCommand(text) };
+}
+
 export function MessageActions(props: Props) {
   const { topicId } = useTopicMetaContext();
   const { updateStatus } = useUpdateUserStatus();
-  const showEdit = !isValidCommand(props.text);
-  const isRandomGif =
-    isGiphy(props.mediaUrl ?? undefined) &&
-    parseCommand(props.text)?.name === CommandName.Giphy;
+  const { canShuffle: isRandomGif, canEdit: showEdit } = getOwnMessageActions(
+    props.text,
+    props.mediaUrl,
+  );
 
   return (
     <div
@@ -51,6 +63,23 @@ export function MessageActions(props: Props) {
     >
       <div className="flex gap-1">
         <TooltipProvider>
+          <Tooltip delayDuration={DELAY_DURATION}>
+            <TooltipTrigger asChild>
+              <Button
+                size="iconSm"
+                variant="outline"
+                aria-pressed={props.highlightedBySelf}
+                // Pinned like the highlights pill: ghost/outline hover would recolour the star.
+                className="text-highlight-icon hover:text-highlight-icon"
+                onClick={props.onHighlight}
+              >
+                {props.highlightedBySelf ? <StarFilledIcon /> : <StarIcon />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {props.highlightedBySelf ? "Remove highlight" : "Highlight"}
+            </TooltipContent>
+          </Tooltip>
           {props.onReply && (
             <Tooltip delayDuration={DELAY_DURATION}>
               <TooltipTrigger asChild>

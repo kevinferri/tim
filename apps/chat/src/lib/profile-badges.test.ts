@@ -99,7 +99,7 @@ describe("computeProfileBadges", () => {
     expect(badges[0]).toMatchObject({
       label: "Grandmaster",
       rarity: "epic",
-      tooltip: "Highlight score 160 · Top 20% in Sandbox",
+      tooltip: "Highlight score 160 in Sandbox",
     });
   });
 

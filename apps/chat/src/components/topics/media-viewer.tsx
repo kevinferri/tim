@@ -12,9 +12,12 @@ import {
   getYoutubeVideoFromUrl,
 } from "./message-utils";
 import { MediaViewerImage } from "./media-viewer-image";
+import { AttachmentFrame } from "./message-attachment";
+import { ExternalLinkIcon } from "@radix-ui/react-icons";
 
 type VideoProvider = {
   type: "youtube" | "twitch";
+  label: string;
   match: (url: string) => { id: string; videoUrl: string } | undefined;
   getIframeSrc: (id: string) => string;
 };
@@ -22,19 +25,23 @@ type VideoProvider = {
 const VIDEO_PROVIDERS: VideoProvider[] = [
   {
     type: "youtube",
+    label: "YouTube",
     match: getYoutubeVideoFromUrl,
     getIframeSrc: (id: string) =>
       `https://www.youtube.com/embed/${id}?color=white&disablekb=1&rel=0&modestbranding=1`,
   },
   {
     type: "twitch",
+    label: "Twitch",
     match: getTwitchStreamFromUrl,
     getIframeSrc: (id: string) =>
       `https://player.twitch.tv/?channel=${id}&parent=${window.location.hostname}`,
   },
 ];
 
-function prepareVideoPlayer(url: string): VideoPlayerData | undefined {
+function prepareVideoPlayer(
+  url: string,
+): (VideoPlayerData & { label: string }) | undefined {
   for (const provider of VIDEO_PROVIDERS) {
     const match = provider.match(url);
     if (!match) continue;
@@ -44,6 +51,7 @@ function prepareVideoPlayer(url: string): VideoPlayerData | undefined {
       videoId: match.id,
       type: provider.type,
       iframeSrc: provider.getIframeSrc(match.id),
+      label: provider.label,
     };
   }
 }
@@ -89,6 +97,17 @@ export function MediaViewer({
         skipVirtualization={skipVirtualization}
         isPlayingInGlobal={isPlayingInGlobal}
         onGlobalClick={handleGlobalClick}
+        caption={
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 hover:text-foreground"
+          >
+            {videoData.label}
+            <ExternalLinkIcon className="size-3" />
+          </a>
+        }
       />
     );
   }
@@ -96,13 +115,15 @@ export function MediaViewer({
   return (
     <Dialog>
       <DialogTrigger asChild onClick={onImageExpanded}>
-        <div className="relative w-fit max-w-full cursor-zoom-in">
-          <MediaViewerImage
-            src={url}
-            priority={priority}
-            onLoad={onPreviewLoad}
-            className="w-auto h-auto max-w-[min(100%,24rem)] max-h-96 rounded-md shadow-lg hover:opacity-80"
-          />
+        <div className="w-fit max-w-full cursor-zoom-in">
+          <AttachmentFrame fit>
+            <MediaViewerImage
+              src={url}
+              priority={priority}
+              onLoad={onPreviewLoad}
+              className="block h-auto max-h-96 w-auto max-w-full hover:opacity-90"
+            />
+          </AttachmentFrame>
         </div>
       </DialogTrigger>
 

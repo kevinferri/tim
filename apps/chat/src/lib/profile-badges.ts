@@ -252,14 +252,10 @@ export function computeProfileBadges(args: {
     });
 
   if (score) {
-    const rank =
-      score.topPercent <= 50
-        ? `Top ${score.topPercent}%`
-        : `Bottom ${score.bottomPercent}%`;
     add({
       key: "score",
       ...getScoreRank(score),
-      tooltip: `Highlight score ${Math.round(score.multiplier * 100)} · ${rank} in ${circleName}`,
+      tooltip: `Highlight score ${Math.round(score.multiplier * 100)} in ${circleName}`,
     });
   }
 

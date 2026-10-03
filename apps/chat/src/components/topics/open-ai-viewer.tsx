@@ -1,7 +1,7 @@
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Sparkles } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { AttachmentFrame } from "@/components/topics/message-attachment";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -91,8 +91,8 @@ const markdownComponents: Components = {
 
 export function OpenAiViewer(props: Props) {
   return (
-    <Card className="border-primary/10 bg-secondary shadow-sm">
-      <CardContent className="p-3">
+    <AttachmentFrame wide>
+      <div className="p-3">
         <span className="mb-1 flex w-fit items-center gap-1.5 rounded-full bg-foreground/5 py-1 pl-1 pr-3 text-sm font-medium uppercase tracking-wide text-muted-foreground">
           <img
             src="/assets/logo.svg"
@@ -107,7 +107,7 @@ export function OpenAiViewer(props: Props) {
             {props.content.trim()}
           </Markdown>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </AttachmentFrame>
   );
 }
