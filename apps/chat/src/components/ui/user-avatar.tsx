@@ -292,14 +292,14 @@ export function UserAvatar(props: Props) {
                           <TooltipTrigger
                             className="relative -skew-x-12 cursor-default overflow-hidden rounded-sm p-[1.5px]"
                             style={{
-                              boxShadow: `0 0 8px rgba(${RARITY_GLOW[badge.rarity]}, 0.4)`,
+                              boxShadow: `0 0 9px rgba(${RARITY_GLOW[badge.rarity]}, 0.5)`,
                             }}
                           >
                             {/* Centered with margins, not translate: the spin animation owns `transform`. */}
                             <span
                               className="pointer-events-none absolute left-1/2 top-1/2 -ml-[100%] -mt-[100%] aspect-square w-[200%] motion-safe:animate-badge-edge"
                               style={{
-                                background: `conic-gradient(from 0deg, rgba(${RARITY_GLOW[badge.rarity]}, 0.25), rgba(${RARITY_GLOW[badge.rarity]}, 0.55) 12%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 30%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 50%, rgba(${RARITY_GLOW[badge.rarity]}, 0.55) 62%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 80%)`,
+                                background: `conic-gradient(from 0deg, rgba(${RARITY_GLOW[badge.rarity]}, 0.2), rgba(${RARITY_GLOW[badge.rarity]}, 0.8) 12%, rgba(${RARITY_GLOW[badge.rarity]}, 0.2) 30%, rgba(${RARITY_GLOW[badge.rarity]}, 0.2) 50%, rgba(${RARITY_GLOW[badge.rarity]}, 0.8) 62%, rgba(${RARITY_GLOW[badge.rarity]}, 0.2) 80%)`,
                               }}
                             />
                             <span

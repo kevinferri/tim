@@ -184,18 +184,22 @@ const GIVING_TAGS = {
 } as const;
 
 // Highlight score rank, by standing in the circle: smoothing compresses multipliers toward the
-// average, so even the circle's best can sit near 1x. Overwatch-style ranks; first place never ranks below Grandmaster.
+// average, so even the circle's best can sit near 1x. Overwatch-style ranks; in small circles a
+// percentile can't reach the top tiers, so #1 is at least Champion and #2 at least Grandmaster.
 export function getScoreRank(
-  score: Pick<HighlightScore, "topPercent" | "place">,
+  score: Pick<HighlightScore, "topPercent" | "place" | "multiplier">,
 ): {
   emoji: string;
   label: string;
   rarity: BadgeRarity;
 } {
   const top = score.topPercent;
+  // An all-way tie at the average puts everyone in first place.
+  const aboveAverage = score.multiplier > 1;
   if (top <= 5) return { emoji: "🏆", label: "Top 500", rarity: "legendary" };
-  if (top <= 10) return { emoji: "👑", label: "Champion", rarity: "legendary" };
-  if (top <= 20 || score.place === 1)
+  if (top <= 10 || (score.place === 1 && aboveAverage))
+    return { emoji: "👑", label: "Champion", rarity: "legendary" };
+  if (top <= 20 || (score.place === 2 && aboveAverage))
     return { emoji: "🔱", label: "Grandmaster", rarity: "epic" };
   if (top <= 30) return { emoji: "💠", label: "Master", rarity: "epic" };
   if (top <= 40) return { emoji: "💎", label: "Diamond", rarity: "rare" };
