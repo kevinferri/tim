@@ -280,12 +280,13 @@ export function UserAvatar(props: Props) {
                           className={cn(
                             "-skew-x-12 cursor-default rounded-sm border bg-gradient-to-b px-2 py-0.5",
                             RARITY_STYLES[badge.rarity].plate,
-                            badge.key === "score" && "relative overflow-hidden",
+                            badge.key === "score" &&
+                              "relative overflow-hidden motion-safe:animate-badge-firelight",
                           )}
                         >
-                          {/* The headline score rank gets a sweeping shine. */}
+                          {/* The headline score rank burns: flames rising from the bottom edge. */}
                           {badge.key === "score" && (
-                            <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-badge-shine bg-gradient-to-r from-transparent via-white/60 to-transparent motion-reduce:hidden" />
+                            <span className="pointer-events-none absolute inset-0 origin-bottom animate-badge-flame bg-gradient-to-t from-orange-500/50 via-amber-400/20 to-transparent motion-reduce:hidden" />
                           )}
                           <span className="relative flex skew-x-12 items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
                             {badge.emoji} {badge.label}
