@@ -24,6 +24,7 @@ export const DEFAULT_MESSAGE_SELECT = {
       userId: true,
       createdBy: {
         select: {
+          name: true,
           imageUrl: true,
         },
       },

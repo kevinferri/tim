@@ -2,14 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { LinkMetadataResponse } from "@/app/api/link-metadata/route";
@@ -20,6 +13,7 @@ import {
 } from "@/components/topics/message-utils";
 import { VideoPlayer } from "@/components/topics/video-player";
 import { useLazyVisible } from "@/lib/hooks/use-lazy-visible";
+import { AttachmentFrame } from "@/components/topics/message-attachment";
 
 type Props = {
   link: string;
@@ -83,78 +77,84 @@ export function LinkPreview(props: Props) {
   if (alreadyEmbedded || error) return null;
 
   return (
-    <div ref={containerRef} className="hidden md:block">
+    <div ref={containerRef} className="flex flex-col gap-1">
       {/* No header/PiP here -- ogVideo is an arbitrary scraped URL with no
           stable provider/videoId to match against global-player state,
           unlike the youtube/twitch VideoPlayer usages. Plain inline embed by
           design. */}
       {data?.ogVideo && !getYoutubeVideoFromUrl(data?.ogVideo) && (
-        <VideoPlayer src={data.ogVideo} />
+        <div className="hidden md:block">
+          <VideoPlayer src={data.ogVideo} />
+        </div>
       )}
-      <Link
-        target="_blank"
-        href={props.link}
-        onClick={() => {
-          clickedLink.emit({
-            topicId: props.topicId,
-            messageId: props.messageId,
-          });
-        }}
-      >
-        <Card className="my-2 hover:bg-secondary">
-          <CardHeader className="p-4">
-            {data ? (
-              <>
-                <div className="flex gap-3 items-start">
-                  <div>
-                    {data.ogImage ? (
-                      <Avatar className="w-[160px] h-auto rounded-md">
-                        <AvatarImage
-                          src={data.ogImage}
-                          className="aspect-auto"
-                        />
-                      </Avatar>
-                    ) : (
-                      <Avatar className="rounded-md w-12 h-12">
-                        <AvatarFallback className="rounded-md">
-                          <ExternalLinkIcon />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <CardTitle className="leading-snug flex flex-col font-semibold text-sm">
-                      <div>{data.ogSiteName}</div>
-                      <div>{data.ogTitle}</div>
-                    </CardTitle>
-                    {data.ogDescription && (
-                      <CardDescription className="text-xs">
-                        {data.ogDescription}
-                      </CardDescription>
-                    )}
-                  </div>
+      <AttachmentFrame className="transition-colors hover:bg-secondary">
+        <Link
+          target="_blank"
+          href={props.link}
+          className="flex gap-3 p-2.5"
+          onClick={() => {
+            clickedLink.emit({
+              topicId: props.topicId,
+              messageId: props.messageId,
+            });
+          }}
+        >
+          {data ? (
+            <>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-xs text-muted-foreground">
+                  {data.ogSiteName || hostname(props.link)}
+                </span>
+                {data.ogTitle && (
+                  <span className="line-clamp-2 text-sm font-semibold leading-snug">
+                    {data.ogTitle}
+                  </span>
+                )}
+                {data.ogDescription && (
+                  <span className="line-clamp-2 text-xs leading-snug text-muted-foreground max-sm:hidden">
+                    {data.ogDescription}
+                  </span>
+                )}
+              </div>
+              {data.ogImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={data.ogImage}
+                  alt=""
+                  className="size-14 shrink-0 rounded-md object-cover sm:size-20"
+                />
+              ) : (
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                  <ExternalLinkIcon />
                 </div>
-              </>
-            ) : (
-              <PreviewLoader />
-            )}
-          </CardHeader>
-        </Card>
-      </Link>
+              )}
+            </>
+          ) : (
+            <PreviewLoader />
+          )}
+        </Link>
+      </AttachmentFrame>
     </div>
   );
 }
 
+function hostname(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 function PreviewLoader() {
   return (
-    <div className="flex gap-4">
-      <Skeleton className="h-[100px] w-[140px] rounded-md flex-shrink-0" />
-      <div className="flex flex-col gap-3 flex-1">
+    <div className="flex flex-1 gap-3">
+      <div className="flex flex-1 flex-col gap-2">
+        <Skeleton className="h-3 w-1/3" />
         <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-3 w-2/3" />
       </div>
+      <Skeleton className="size-14 shrink-0 rounded-md sm:size-20" />
     </div>
   );
 }

@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { NotificationType } from "@tim/socket-types";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { playHighlightChime } from "@/lib/sounds";
+import { bumpTitleBadge } from "@/lib/title-badges";
 import {
   notificationsQueryKey,
   unreadNotificationCountQueryKey,
@@ -27,7 +30,17 @@ export function NotificationSync() {
     });
   };
 
-  const socket = useSocketHandler(SocketEvent.CreateNotification, invalidate);
+  const socket = useSocketHandler<{ notificationType: NotificationType }>(
+    SocketEvent.CreateNotification,
+    ({ notificationType }) => {
+      invalidate();
+      if (notificationType === NotificationType.HighlightRecieved) {
+        // Like the new-message sound: only when Tim isn't the window you're looking at.
+        if (!document.hasFocus()) playHighlightChime();
+        bumpTitleBadge("highlights");
+      }
+    },
+  );
 
   // Both queries use staleTime: Infinity, so notifications pushed while
   // disconnected would otherwise never show up.

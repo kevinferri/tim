@@ -18,12 +18,11 @@ vi.mock("@/lib/prisma/client", () => ({
 }));
 
 vi.mock("@/lib/prisma/badge-stats", () => ({
-  getCircleStats: vi.fn(),
-  getMemberActivity: vi.fn(),
+  getMemberStats: vi.fn(),
 }));
 
 import { getLoggedInUserId } from "@/lib/session";
-import { getCircleStats, getMemberActivity } from "@/lib/prisma/badge-stats";
+import { getMemberStats } from "@/lib/prisma/badge-stats";
 import { prismaClient } from "@/lib/prisma/client";
 import { GET } from "./route";
 
@@ -75,6 +74,11 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
 
   const memberActivity = {
     messages: 20,
+    highlightsReceived: 18,
+    highlightsGiven: 1,
+    topMessageHighlights: 0,
+    repliesReceived: 4,
+    commandCounts: {},
     repliesGiven: 4,
     recentSelfHighlights: 0,
     lastMessageAt: new Date(),
@@ -99,18 +103,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     vi.mocked(
       prismaClient.message.getTopHighlightedMessagesForTopic,
     ).mockResolvedValue([{ id: "message-1" }] as any);
-    vi.mocked(getCircleStats).mockResolvedValue({
-      members: [
-        { userId: "user-1", messages: 20, highlights: 2, given: 18 },
-        { userId: "user-2", messages: 20, highlights: 18, given: 1 },
-      ],
-      commandCounts: {},
-      // Under the 5-reply minimum for Conversation Starter.
-      repliesReceived: { "user-2": 4 },
-      topMessageHighlights: {},
-      highlightsGiven: { "user-1": 18, "user-2": 1 },
-    });
-    vi.mocked(getMemberActivity).mockResolvedValue(memberActivity);
+    vi.mocked(getMemberStats).mockResolvedValue(memberActivity);
     vi.mocked(
       prismaClient.notification.countMentionsReceivedByUser,
     ).mockResolvedValue(7);
@@ -124,30 +117,30 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     const statBadgeCount = (await res.clone().json()).badges.filter(
       (b: { key: string }) => b.key.startsWith("stat-"),
     ).length;
-    expect(statBadgeCount).toBe(4);
+    // 20 messages, 18 got, 1 given, 2 active days: under every stat milestone.
+    expect(statBadgeCount).toBe(0);
     expect(res.headers.get("Server-Timing")).toMatch(
-      /topic;dur=[\d.]+.*circle;dur=[\d.]+/,
+      /topic;dur=[\d.]+.*member;dur=[\d.]+/,
     );
     expect(
       prismaClient.notification.countMentionsReceivedByUser,
     ).toHaveBeenCalledWith({ userId: "user-2", circleId: "circle-1" });
+    expect(getMemberStats).toHaveBeenCalledWith({
+      userId: "user-2",
+      circleId: "circle-1",
+    });
     await expect(res.json()).resolves.toEqual({
       topicName: "General",
       circleName: "Sandbox",
-      highlightScore: {
-        multiplier: 1.4,
-        topPercent: 50,
-        bottomPercent: 100,
-        place: 1,
-      },
+      // 18 highlights / (20 messages + 20 smoothing) per 100 messages.
+      highlightScore: { value: 45 },
       badges: expect.arrayContaining([
         {
           key: "score",
-          // First of two: first place is always at least Champion.
-          emoji: "👑",
-          label: "Champion",
-          tooltip: "Highlight score 140 · Top 50% in Sandbox",
-          rarity: "legendary",
+          emoji: "🥇",
+          label: "Gold",
+          tooltip: "Highlight score 45 in Sandbox",
+          rarity: "common",
         },
         {
           key: "giving",
@@ -174,16 +167,12 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     vi.mocked(
       prismaClient.message.getTopHighlightedMessagesForTopic,
     ).mockResolvedValue([] as any);
-    vi.mocked(getCircleStats).mockResolvedValue({
-      members: [{ userId: "user-1", messages: 5, highlights: 3, given: 0 }],
-      commandCounts: {},
-      repliesReceived: {},
-      topMessageHighlights: {},
-      highlightsGiven: {},
-    });
-    vi.mocked(getMemberActivity).mockResolvedValue({
+    vi.mocked(getMemberStats).mockResolvedValue({
       ...memberActivity,
       messages: 0,
+      highlightsReceived: 0,
+      highlightsGiven: 0,
+      repliesReceived: 0,
       repliesGiven: 0,
       activeDaysTotal: 0,
     });

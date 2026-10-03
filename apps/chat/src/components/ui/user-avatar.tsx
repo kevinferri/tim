@@ -79,6 +79,8 @@ const variants = cva("", {
     },
     size: {
       default: "h-9 w-9",
+      // Spans a message's name line plus its first line of text.
+      md: "h-10 w-10",
       sm: "h-8 w-8",
       xs: "h-6 w-6",
     },
@@ -358,9 +360,7 @@ export function UserAvatar(props: Props) {
                   <StatRow
                     label="Score"
                     icon={<StarIcon />}
-                    value={
-                      data && (score ? Math.round(score.multiplier * 100) : "—")
-                    }
+                    value={data && (score ? score.value : "—")}
                   />
                   <StatRow
                     label="Sent"

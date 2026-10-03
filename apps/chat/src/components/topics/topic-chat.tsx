@@ -25,7 +25,6 @@ export function TopicChat() {
     scrollToBottom,
     isAtBottom,
     unseenCount,
-    blopSoundRef,
     viewportRef,
     contentRef,
     bottomSentinelRef,
@@ -123,7 +122,6 @@ export function TopicChat() {
           })}
 
           <div ref={bottomSentinelRef} />
-          <audio ref={blopSoundRef} src="/sounds/blop.mp3" />
         </div>
       </ScrollArea>
 

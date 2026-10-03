@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { getDisplayName } from "@tim/user-display";
-import { CommandName, parseCommand } from "@tim/commands";
+import { parseCommand } from "@tim/commands";
+import { isResultCommand } from "@/components/topics/message-attachment";
 import { Button } from "@/components/ui/button";
 import { ReplyIcon } from "@/components/icons/reply-icon";
 import { cn } from "@/lib/utils";
@@ -19,21 +20,11 @@ type Props = {
   className?: string;
 };
 
-// `mediaUrl` is overloaded: for /tim, /roll and /8ball it carries the generated
-// result rather than a URL (see the branching in message.tsx), so there's
-// nothing to show a thumbnail for. Video links (e.g. /yt) point at a page, not
+// `mediaUrl` is overloaded: for result commands (/tim, /roll, /8ball) it carries
+// the generated result rather than a URL, so there's nothing to show a thumbnail for. Video links (e.g. /yt) point at a page, not
 // an image, so they're mapped to the provider's thumbnail instead.
 export function getThumbnail(text: string, mediaUrl?: string | null) {
-  const command = parseCommand(text ?? "")?.name;
-
-  if (
-    command === CommandName.Tim ||
-    command === CommandName.Roll ||
-    command === CommandName.EightBall
-  ) {
-    return undefined;
-  }
-
+  if (isResultCommand(parseCommand(text ?? "")?.name)) return undefined;
   if (!mediaUrl) return undefined;
 
   const youtube = getYoutubeVideoFromUrl(mediaUrl);

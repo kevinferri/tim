@@ -1,6 +1,8 @@
 "use client";
 
-import { PlayerHeader } from "./video-player-header";
+import type { ReactNode } from "react";
+import { PlayerHeader, PlayerToggleButton } from "./video-player-header";
+import { AttachmentFrame } from "./message-attachment";
 import { DraggableVideoContainer } from "./draggable-video-container";
 import { useDraggableVideo } from "./use-draggable-video";
 import { VideoPlayerFrame } from "./video-player-frame";
@@ -12,6 +14,7 @@ type Props = {
   onGlobalClick?: () => void;
   isGlobal?: boolean;
   isPlayingInGlobal?: boolean;
+  caption?: ReactNode;
 };
 
 export function VideoPlayer({
@@ -21,6 +24,7 @@ export function VideoPlayer({
   skipVirtualization = false,
   isGlobal = false,
   isPlayingInGlobal = false,
+  caption,
 }: Props) {
   const draggableVideo = useDraggableVideo(isGlobal);
 
@@ -33,19 +37,6 @@ export function VideoPlayer({
     />
   );
 
-  const header = isGlobal ? (
-    <PlayerHeader isGlobal onCloseClick={onGlobalClick} />
-  ) : (
-    onGlobalClick && (
-      <PlayerHeader
-        onExpandClick={onGlobalClick}
-        onCloseClick={onGlobalClick}
-        isGlobal={false}
-        isPlayingInGlobal={isPlayingInGlobal}
-      />
-    )
-  );
-
   if (isGlobal) {
     return (
       <DraggableVideoContainer
@@ -56,16 +47,26 @@ export function VideoPlayer({
         onDragStop={draggableVideo.onDragStop}
         onMeasureHeight={draggableVideo.onMeasureHeight}
       >
-        {header}
+        <PlayerHeader onCloseClick={onGlobalClick} />
         {frame}
       </DraggableVideoContainer>
     );
   }
 
   return (
-    <div className="max-w-[640px] shadow-xl overflow-hidden rounded-md">
-      {header}
+    <AttachmentFrame
+      caption={caption}
+      action={
+        onGlobalClick && (
+          <PlayerToggleButton
+            onExpandClick={onGlobalClick}
+            onCloseClick={onGlobalClick}
+            isPlayingInGlobal={isPlayingInGlobal}
+          />
+        )
+      }
+    >
       {frame}
-    </div>
+    </AttachmentFrame>
   );
 }

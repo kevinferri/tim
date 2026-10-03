@@ -183,7 +183,7 @@ export function MessageText(props: Props) {
     >
       <div
         className={cn(
-          "whitespace-pre-line break-words leading-normal",
+          "whitespace-pre-line break-words leading-snug",
           isOnlyEmoji ? "text-4xl" : "",
         )}
         style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}

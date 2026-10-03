@@ -62,7 +62,8 @@ module.exports = {
         },
         highlight: {
           DEFAULT: "#ffffcd",
-          icon: "#dfa0a1",
+          // Soft gold; deeper in light mode for contrast on white.
+          icon: "hsl(var(--highlight-icon) / <alpha-value>)",
         },
       },
       boxShadow: {
@@ -74,18 +75,18 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       width: {
-        "sidebar-nav": "220px",
-        "sidebar-nav-lg": "280px",
-        "sidebar-detail": "280px",
-        "sidebar-detail-lg": "320px",
+        "sidebar-nav": "240px",
+        "sidebar-nav-lg": "300px",
+        "sidebar-detail": "300px",
+        "sidebar-detail-lg": "340px",
       },
       minWidth: {
-        "sidebar-nav": "220px",
-        "sidebar-nav-lg": "280px",
+        "sidebar-nav": "240px",
+        "sidebar-nav-lg": "300px",
       },
       maxWidth: {
-        "sidebar-nav": "220px",
-        "sidebar-nav-lg": "280px",
+        "sidebar-nav": "240px",
+        "sidebar-nav-lg": "300px",
       },
       keyframes: {
         "accordion-down": {
@@ -157,6 +158,31 @@ module.exports = {
           "60%": { transform: "translate(3px, -1px) rotate(3deg)" },
           "80%": { transform: "translate(-1px, 0) rotate(-1deg)" },
         },
+        "highlight-pop": {
+          "0%": { transform: "scale(1) rotate(0)" },
+          "35%": { transform: "scale(1.7) rotate(-18deg)" },
+          "65%": { transform: "scale(0.9) rotate(6deg)" },
+          "100%": { transform: "scale(1) rotate(0)" },
+        },
+        "highlight-sweep": {
+          "0%": { transform: "rotate(0deg)", opacity: "1" },
+          "70%": { opacity: "1" },
+          "100%": { transform: "rotate(360deg)", opacity: "0" },
+        },
+        "highlight-flash": {
+          "0%": { boxShadow: "inset 0 0 0 0 hsl(var(--highlight-icon) / 0)" },
+          "25%": {
+            boxShadow: "inset 0 0 10px 0 hsl(var(--highlight-icon) / 0.45)",
+          },
+          "100%": { boxShadow: "inset 0 0 0 0 hsl(var(--highlight-icon) / 0)" },
+        },
+        "highlight-spark": {
+          "0%": { transform: "translate(0, 0) scale(1)", opacity: "1" },
+          "100%": {
+            transform: "translate(var(--spark-x), var(--spark-y)) scale(0.2)",
+            opacity: "0",
+          },
+        },
         "eight-ball-reveal": {
           "0%": {
             opacity: "0",
@@ -182,6 +208,11 @@ module.exports = {
         "die-bounce": "die-bounce 1.5s",
         "die-spin": "die-spin 1.5s cubic-bezier(0.2, 0.7, 0.3, 1)",
         "eight-ball-shake": "eight-ball-shake 0.7s ease-in-out",
+        // One-shot burst when a message gets highlighted; see message-highlights.tsx.
+        "highlight-pop": "highlight-pop 0.55s ease-out",
+        "highlight-sweep": "highlight-sweep 0.9s ease-out forwards",
+        "highlight-flash": "highlight-flash 0.9s ease-out",
+        "highlight-spark": "highlight-spark 0.6s ease-out forwards",
         // Delayed until the shake ends; `both` keeps it hidden during the delay.
         "eight-ball-reveal":
           "eight-ball-reveal 2.2s cubic-bezier(0.22, 1, 0.36, 1) 0.8s both",

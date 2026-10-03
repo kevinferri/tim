@@ -9,7 +9,7 @@ type Props = {
   isPlayingInGlobal?: boolean;
 };
 
-const frameContainerStyles = "relative pt-[56.25%] border";
+const frameContainerStyles = "relative pt-[56.25%]";
 
 export function VideoPlayerFrame({
   src,

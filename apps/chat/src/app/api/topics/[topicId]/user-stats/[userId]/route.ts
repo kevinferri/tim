@@ -10,12 +10,12 @@ import {
   HighlightScore,
 } from "@/lib/highlight-score";
 import { computeProfileBadges, ProfileBadge } from "@/lib/profile-badges";
-import { getCircleStats, getMemberActivity } from "@/lib/prisma/badge-stats";
+import { getMemberStats } from "@/lib/prisma/badge-stats";
 
 export type UserStatsForTopicResponse = {
   topicName: string;
   circleName: string;
-  // Within this circle; null if they haven't posted or nobody's been highlighted yet.
+  // Within this circle; null if they haven't posted there.
   highlightScore: HighlightScore | null;
   // Score rank, giving tag and performance badges within this circle, in display order.
   badges: ProfileBadge[];
@@ -61,52 +61,46 @@ export async function GET(req: NextRequest, { params }: Route) {
     if (!topic.memberIds.includes(loggedInUserId)) return notFound;
     if (!topic.memberIds.includes(userId)) return notFound;
 
-    const [
-      topHighlights,
-      circleStats,
-      memberActivity,
-      mentionsReceived,
-      mentionsSent,
-    ] = await Promise.all([
-      timed("highlights", () =>
-        prismaClient.message.getTopHighlightedMessagesForTopic({
-          requestingUserId: loggedInUserId,
-          topicId,
-          userId,
-          select: DEFAULT_MESSAGE_SELECT,
-        }),
-      ),
-      timed("circle", () => getCircleStats(topic.circleId)),
-      timed("activity", () =>
-        getMemberActivity({ circleId: topic.circleId, userId }),
-      ),
-      timed("mentions-in", () =>
-        prismaClient.notification.countMentionsReceivedByUser({
-          userId,
-          circleId: topic.circleId,
-        }),
-      ),
-      timed("mentions-out", () =>
-        prismaClient.notification.countMentionsSentByUser({
-          userId,
-          circleId: topic.circleId,
-        }),
-      ),
-    ]);
-    const member = circleStats.members.find((m) => m.userId === userId);
-    const highlightScore = computeHighlightScore(circleStats.members, userId);
-    const activity = {
-      ...memberActivity,
-      highlightsReceived: member?.highlights ?? 0,
+    const [topHighlights, activity, mentionsReceived, mentionsSent] =
+      await Promise.all([
+        timed("highlights", () =>
+          prismaClient.message.getTopHighlightedMessagesForTopic({
+            requestingUserId: loggedInUserId,
+            topicId,
+            userId,
+            select: DEFAULT_MESSAGE_SELECT,
+          }),
+        ),
+        timed("member", () =>
+          getMemberStats({ circleId: topic.circleId, userId }),
+        ),
+        timed("mentions-in", () =>
+          prismaClient.notification.countMentionsReceivedByUser({
+            userId,
+            circleId: topic.circleId,
+          }),
+        ),
+        timed("mentions-out", () =>
+          prismaClient.notification.countMentionsSentByUser({
+            userId,
+            circleId: topic.circleId,
+          }),
+        ),
+      ]);
+    const counts = {
+      messages: activity.messages,
+      received: activity.highlightsReceived,
+      given: activity.highlightsGiven,
     };
+    const highlightScore = computeHighlightScore(counts);
 
     // Everything is scoped to this circle: the viewer only shares this circle with them.
     const stats = {
       messages: activity.messages,
       activeDays: activity.activeDaysTotal,
-      highlightsReceived: member?.highlights ?? 0,
-      highlightsGiven: member?.given ?? 0,
-      repliesReceived: circleStats.repliesReceived[userId] ?? 0,
+      highlightsReceived: activity.highlightsReceived,
+      highlightsGiven: activity.highlightsGiven,
+      repliesReceived: activity.repliesReceived,
       repliesGiven: activity.repliesGiven,
       mentionsReceived,
       mentionsSent,
@@ -122,8 +116,7 @@ export async function GET(req: NextRequest, { params }: Route) {
           circleName: topic.circleName,
           circleCreatorId: topic.circleCreatorId,
           score: highlightScore,
-          givingTag: computeGivingTag(circleStats.members, userId),
-          circle: circleStats,
+          givingTag: computeGivingTag(counts),
           activity,
           stats,
           now: new Date(),
