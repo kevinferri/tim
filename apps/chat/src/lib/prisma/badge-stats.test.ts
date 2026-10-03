@@ -1,7 +1,7 @@
 import crypto from "crypto";
-import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect } from "vitest";
 import { prismaClient, resetDb } from "@/test/db";
-import { getCircleStats, getMemberActivity } from "./badge-stats";
+import { getMemberStats } from "./badge-stats";
 
 beforeEach(resetDb);
 
@@ -42,10 +42,11 @@ function message(
   });
 }
 
-describe("getCircleStats", () => {
-  it("aggregates commands, replies received and top-message highlights per member", async () => {
+describe("getMemberStats", () => {
+  it("counts highlights, replies and commands for the member, excluding their own", async () => {
     const a = await createUser();
     const b = await createUser();
+    const c = await createUser();
     const topic = await createTopic(a.id);
 
     await message(a.id, topic.id, { command: "roll" });
@@ -58,59 +59,51 @@ describe("getCircleStats", () => {
     await message(b.id, topic.id, { replyToId: other.id });
     await message(a.id, topic.id, { replyToId: popular.id }); // self-reply: excluded
 
-    const c = await createUser();
+    const bMessage = await message(b.id, topic.id);
     await prismaClient.highlight.createMany({
       data: [
         { userId: b.id, messageId: popular.id },
         { userId: c.id, messageId: popular.id },
         { userId: a.id, messageId: popular.id }, // self-highlight: excluded
         { userId: b.id, messageId: other.id },
+        { userId: a.id, messageId: bMessage.id }, // given
       ],
     });
 
-    const stats = await getCircleStats(topic.circleId);
-
-    expect(stats.commandCounts).toEqual({
-      [a.id]: { roll: 2 },
-      [b.id]: { giphy: 1 },
+    expect(
+      await getMemberStats({ circleId: topic.circleId, userId: a.id }),
+    ).toMatchObject({
+      highlightsReceived: 3,
+      topMessageHighlights: 2,
+      highlightsGiven: 1,
+      repliesReceived: 2,
+      commandCounts: { roll: 2 },
     });
-    expect(stats.repliesReceived).toEqual({ [a.id]: 2 });
-    expect(stats.topMessageHighlights).toEqual({ [a.id]: 2 });
-    // a only self-highlighted, which doesn't count as given.
-    expect(stats.highlightsGiven).toEqual({ [a.id]: 0, [b.id]: 2, [c.id]: 1 });
   });
-});
 
-describe("getCircleStats caching", () => {
-  afterEach(() => vi.restoreAllMocks());
-
-  it("serves stale stats instantly, then the background refresh", async () => {
+  it("ignores activity in other circles", async () => {
     const a = await createUser();
-    const topic = await createTopic(a.id);
-    await message(a.id, topic.id);
+    const b = await createUser();
+    const here = await createTopic(a.id);
+    const elsewhere = await createTopic(a.id);
 
-    const first = await getCircleStats(topic.circleId);
-    expect(first.members).toEqual([
-      expect.objectContaining({ userId: a.id, messages: 1 }),
-    ]);
+    const theirs = await message(a.id, elsewhere.id, { command: "roll" });
+    await prismaClient.highlight.create({
+      data: { userId: b.id, messageId: theirs.id },
+    });
+    await message(a.id, here.id);
 
-    await message(a.id, topic.id);
-    const start = Date.now();
-    // Past the 5-minute fresh window, inside the 1-hour stale window.
-    vi.spyOn(Date, "now").mockReturnValue(start + 6 * 60_000);
-
-    expect(await getCircleStats(topic.circleId)).toBe(first);
-
-    await vi.waitFor(async () => {
-      const refreshed = await getCircleStats(topic.circleId);
-      expect(refreshed.members).toEqual([
-        expect.objectContaining({ userId: a.id, messages: 2 }),
-      ]);
+    expect(
+      await getMemberStats({ circleId: here.circleId, userId: a.id }),
+    ).toMatchObject({
+      messages: 1,
+      highlightsReceived: 0,
+      commandCounts: {},
     });
   });
 });
 
-describe("getMemberActivity", () => {
+describe("getMemberStats activity", () => {
   it("summarises the member's own activity in the circle", async () => {
     const me = await createUser();
     const fan = await createUser("Simone de Beauvoir");
@@ -162,7 +155,7 @@ describe("getMemberActivity", () => {
       },
     });
 
-    const activity = await getMemberActivity({
+    const activity = await getMemberStats({
       circleId: topic.circleId,
       userId: me.id,
     });

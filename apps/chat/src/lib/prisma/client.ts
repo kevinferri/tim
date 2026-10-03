@@ -3,7 +3,6 @@ import { userModel } from "@/lib/prisma/user-model";
 import { circleModel } from "@/lib/prisma/circle-model";
 import { topicModel } from "@/lib/prisma/topic-model";
 import { messageModel } from "@/lib/prisma/message-model";
-import { highlightModel } from "@/lib/prisma/highlight-model";
 import { topicReadStateModel } from "@/lib/prisma/topic-read-state-model";
 import { topicPreferenceModel } from "@/lib/prisma/topic-preference-model";
 import { notificationModel } from "@/lib/prisma/notification-model";
@@ -42,7 +41,6 @@ const createClient = () => {
       circle: circleModel,
       topic: topicModel,
       message: messageModel,
-      highlight: highlightModel,
       topicReadState: topicReadStateModel,
       topicPreference: topicPreferenceModel,
       notification: notificationModel,
