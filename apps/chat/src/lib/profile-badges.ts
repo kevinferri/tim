@@ -32,7 +32,6 @@ const BADGE_RARITY: Record<string, BadgeRarity> = {
   firehose: "rare",
   "reply-guy": "common",
   "new-kid": "common",
-  "biggest-fan": "rare",
   founder: "legendary",
   "hype-man": "epic",
   "topic-starter": "rare",
@@ -85,7 +84,6 @@ export type MemberActivity = {
   activeDaysLast30: number;
   activeDaysTotal: number;
   joinedAt: Date;
-  biggestFan: { name: string; highlights: number } | null;
   // Distinct UTC days they posted, newest first ("2026-10-02"); recent ones only, for streaks.
   recentActiveDays: string[];
   topicsCreated: number;
@@ -489,16 +487,6 @@ export function computeProfileBadges(args: {
       emoji: "🆕",
       label: "New Kid",
       tooltip: "Joined in the last two weeks",
-    });
-  }
-
-  if (activity.biggestFan && activity.biggestFan.highlights >= 3) {
-    const firstName = activity.biggestFan.name.split(" ")[0];
-    add({
-      key: "biggest-fan",
-      emoji: "💞",
-      label: `Biggest Fan: ${firstName}`,
-      tooltip: `${activity.biggestFan.name} has highlighted ${activity.biggestFan.highlights} of their messages`,
     });
   }
 

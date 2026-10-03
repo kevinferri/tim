@@ -111,7 +111,7 @@ describe("getCircleStats caching", () => {
 });
 
 describe("getMemberActivity", () => {
-  it("summarises the member's own activity and biggest fan in the circle", async () => {
+  it("summarises the member's own activity in the circle", async () => {
     const me = await createUser();
     const fan = await createUser("Simone de Beauvoir");
     const casual = await createUser();
@@ -180,7 +180,6 @@ describe("getMemberActivity", () => {
       activeDaysTotal: 4,
       recentSelfHighlights: 1,
       topicsCreated: 1,
-      biggestFan: { name: "Simone de Beauvoir", highlights: 2 },
     });
   });
 });

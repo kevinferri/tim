@@ -28,7 +28,6 @@ const quietActivity: MemberActivity = {
   activeDaysLast30: 3,
   activeDaysTotal: 6,
   joinedAt: new Date("2026-01-01T00:00:00Z"),
-  biggestFan: null,
   recentActiveDays: [],
   topicsCreated: 0,
 };
@@ -229,23 +228,6 @@ describe("computeProfileBadges", () => {
     expect(ranks(150)).toMatchObject({ label: "Commander II", rarity: "rare" });
     expect(ranks(750)?.rarity).toBe("epic");
     expect(ranks(3000)?.rarity).toBe("legendary");
-  });
-
-  it("names their biggest fan by first name", () => {
-    const [fan] = badgesFor({
-      userId: "me",
-      circleName: "Sandbox",
-      circleCreatorId: "someone-else",
-      score: null,
-      circle: emptyCircle,
-      activity: {
-        ...quietActivity,
-        biggestFan: { name: "Simone de Beauvoir", highlights: 5 },
-      },
-      now: NOW,
-    });
-
-    expect(fan.label).toBe("Biggest Fan: Simone");
   });
 
   it("shows every earned badge, rarest first, with no cap", () => {

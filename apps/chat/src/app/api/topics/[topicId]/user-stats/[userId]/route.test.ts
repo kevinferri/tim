@@ -82,7 +82,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     activeDaysLast30: 2,
     activeDaysTotal: 2,
     joinedAt: new Date("2026-01-01T00:00:00Z"),
-    biggestFan: null,
     recentActiveDays: [],
     topicsCreated: 0,
   };

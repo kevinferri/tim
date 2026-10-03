@@ -111,25 +111,19 @@ export async function getMemberActivity({
   circleId: string;
   userId: string;
 }): Promise<Omit<MemberActivity, "highlightsReceived">> {
-  const [
-    [activity],
-    [fan],
-    recentSelfHighlights,
-    user,
-    dayRows,
-    topicsCreated,
-  ] = await Promise.all([
-    // createdAt is tz-less UTC, so compare against now() in UTC.
-    prismaClient.$queryRaw<
-      {
-        messages: number;
-        repliesSent: number;
-        repliesGiven: number;
-        lastMessageAt: Date | null;
-        activeDaysLast30: number;
-        activeDaysTotal: number;
-      }[]
-    >`
+  const [[activity], recentSelfHighlights, user, dayRows, topicsCreated] =
+    await Promise.all([
+      // createdAt is tz-less UTC, so compare against now() in UTC.
+      prismaClient.$queryRaw<
+        {
+          messages: number;
+          repliesSent: number;
+          repliesGiven: number;
+          lastMessageAt: Date | null;
+          activeDaysLast30: number;
+          activeDaysTotal: number;
+        }[]
+      >`
       SELECT
         COUNT(*)::int AS messages,
         (COUNT(*) FILTER (WHERE m."replyToId" IS NOT NULL))::int AS "repliesSent",
@@ -144,32 +138,19 @@ export async function getMemberActivity({
       LEFT JOIN messages parent ON parent.id = m."replyToId"
       WHERE t."circleId" = ${circleId} AND m."userId" = ${userId}
     `,
-    prismaClient.$queryRaw<{ name: string | null; highlights: number }[]>`
-      SELECT u.name, COUNT(*)::int AS highlights
-      FROM highlights h
-      JOIN messages m ON m.id = h."messageId"
-      JOIN topics t ON t.id = m."topicId"
-      JOIN users u ON u.id = h."userId"
-      WHERE t."circleId" = ${circleId}
-        AND m."userId" = ${userId}
-        AND h."userId" <> ${userId}
-      GROUP BY u.id, u.name
-      ORDER BY highlights DESC
-      LIMIT 1
-    `,
-    prismaClient.highlight.count({
-      where: {
-        userId,
-        createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-        message: { userId, topic: { circleId } },
-      },
-    }),
-    prismaClient.user.findUnique({
-      where: { id: userId },
-      select: { createdAt: true },
-    }),
-    // Enough history for the longest streak tier; createdAt is tz-less UTC.
-    prismaClient.$queryRaw<{ day: string }[]>`
+      prismaClient.highlight.count({
+        where: {
+          userId,
+          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          message: { userId, topic: { circleId } },
+        },
+      }),
+      prismaClient.user.findUnique({
+        where: { id: userId },
+        select: { createdAt: true },
+      }),
+      // Enough history for the longest streak tier; createdAt is tz-less UTC.
+      prismaClient.$queryRaw<{ day: string }[]>`
       SELECT DISTINCT to_char(m."createdAt"::date, 'YYYY-MM-DD') AS day
       FROM messages m
       JOIN topics t ON t.id = m."topicId"
@@ -178,8 +159,8 @@ export async function getMemberActivity({
         AND m."createdAt" > (now() AT TIME ZONE 'UTC') - interval '60 days'
       ORDER BY day DESC
     `,
-    prismaClient.topic.count({ where: { circleId, userId } }),
-  ]);
+      prismaClient.topic.count({ where: { circleId, userId } }),
+    ]);
 
   return {
     ...activity,
@@ -187,8 +168,5 @@ export async function getMemberActivity({
     recentActiveDays: dayRows.map((r) => r.day),
     topicsCreated,
     joinedAt: user?.createdAt ?? new Date(0),
-    biggestFan: fan?.name
-      ? { name: fan.name, highlights: fan.highlights }
-      : null,
   };
 }
