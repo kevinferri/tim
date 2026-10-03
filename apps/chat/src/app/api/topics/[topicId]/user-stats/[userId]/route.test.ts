@@ -117,7 +117,8 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     const statBadgeCount = (await res.clone().json()).badges.filter(
       (b: { key: string }) => b.key.startsWith("stat-"),
     ).length;
-    expect(statBadgeCount).toBe(4);
+    // 20 messages, 18 got, 1 given, 2 active days: under every stat milestone.
+    expect(statBadgeCount).toBe(0);
     expect(res.headers.get("Server-Timing")).toMatch(
       /topic;dur=[\d.]+.*member;dur=[\d.]+/,
     );

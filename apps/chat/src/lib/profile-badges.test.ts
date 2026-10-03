@@ -38,8 +38,7 @@ const zeroStats: ProfileStats = {
 
 const evenTag = { kind: "even" as const, given: 0, received: 0 };
 
-// Stat badges and the giving tag always show; tests about other badges filter them out
-// (the giving tag only when the test doesn't pass its own).
+// Tests about other badges filter out the stat badges (and default to an even, hidden, giving tag).
 function badgesFor(
   args: Omit<
     Parameters<typeof computeProfileBadges>[0],
@@ -52,9 +51,7 @@ function badgesFor(
     ...args,
     givingTag: args.givingTag ?? evenTag,
     stats: zeroStats,
-  }).filter(
-    (b) => !b.key.startsWith("stat-") && (args.givingTag || b.key !== "giving"),
-  );
+  }).filter((b) => !b.key.startsWith("stat-"));
 }
 
 function badgeKeys(
@@ -203,7 +200,7 @@ describe("computeProfileBadges", () => {
       circleName: "Sandbox",
       circleCreatorId: "me",
       score: { value: 5, placed: true },
-      givingTag: { kind: "even", given: 10, received: 10 },
+      givingTag: { kind: "generous", given: 30, received: 10 },
       activity: {
         ...quietActivity,
         commandCounts: { roll: 60, giphy: 9, "8ball": 9, tim: 9 },
@@ -279,10 +276,8 @@ describe("stat badges", () => {
       now: NOW,
     }).filter((b) => b.key.startsWith("stat-"));
 
-  it("always shows one badge per stat, common at zero", () => {
-    const badges = statBadges({});
-    expect(badges).toHaveLength(4);
-    expect(badges.every((b) => b.rarity === "common")).toBe(true);
+  it("shows no stat badge before its first milestone", () => {
+    expect(statBadges({ messages: 999, highlightsGiven: 49 })).toEqual([]);
   });
 
   it("raises each stat's rarity with its count", () => {
@@ -307,10 +302,7 @@ describe("stat badges", () => {
       label: "Patron Saint",
       rarity: "legendary",
     });
-    expect(byKey["stat-activeDays"]).toMatchObject({
-      label: "Sprout",
-      rarity: "common",
-    });
+    expect(byKey["stat-activeDays"]).toBeUndefined();
   });
 });
 

@@ -109,7 +109,7 @@ type Milestone = {
   rarity: BadgeRarity;
 };
 
-// The profile's stat values; the ones in STAT_LADDERS get an always-on badge whose rarity climbs with the number.
+// The profile's stat values; the ones in STAT_LADDERS earn a badge at each milestone, rarer as the number climbs.
 export type ProfileStats = {
   messages: number;
   activeDays: number;
@@ -124,8 +124,8 @@ export type ProfileStats = {
 type StatLadder = {
   stat: keyof ProfileStats;
   tooltip: (n: string, circleName: string) => string;
-  // Lowest first; the first tier starts at 0 so the badge always shows.
-  tiers: [Milestone, Milestone, Milestone, Milestone];
+  // Lowest first. Below the first milestone there's no badge: the stat row already shows the number.
+  tiers: [Milestone, Milestone, Milestone];
 };
 
 const tier = (
@@ -140,7 +140,6 @@ const STAT_LADDERS: StatLadder[] = [
     stat: "messages",
     tooltip: (n, c) => `Sent ${n} messages in ${c}`,
     tiers: [
-      tier(0, "💬", "Chatter", "common"),
       tier(1_000, "🎤", "1K Club", "rare"),
       tier(5_000, "🏛️", "5K Club", "epic"),
       tier(10_000, "🌌", "10K Club", "legendary"),
@@ -150,7 +149,6 @@ const STAT_LADDERS: StatLadder[] = [
     stat: "activeDays",
     tooltip: (n, c) => `Posted on ${n} different days in ${c}`,
     tiers: [
-      tier(0, "🌱", "Sprout", "common"),
       tier(30, "🪴", "Putting Down Roots", "rare"),
       tier(100, "🧱", "Regular Fixture", "epic"),
       tier(365, "🦕", "Ancient One", "legendary"),
@@ -160,7 +158,6 @@ const STAT_LADDERS: StatLadder[] = [
     stat: "highlightsReceived",
     tooltip: (n, c) => `Received ${n} highlights in ${c}`,
     tiers: [
-      tier(0, "✨", "Spark", "common"),
       tier(50, "🌟", "Rising Star", "rare"),
       tier(250, "💫", "Fan Favorite", "epic"),
       tier(1_000, "🌠", "Superstar", "legendary"),
@@ -170,7 +167,6 @@ const STAT_LADDERS: StatLadder[] = [
     stat: "highlightsGiven",
     tooltip: (n, c) => `Gave ${n} highlights in ${c}`,
     tiers: [
-      tier(0, "👏", "Applauder", "common"),
       tier(50, "🙌", "Cheerleader", "rare"),
       tier(250, "🎉", "Hype Squad", "epic"),
       tier(1_000, "😇", "Patron Saint", "legendary"),
@@ -180,7 +176,6 @@ const STAT_LADDERS: StatLadder[] = [
 
 const GIVING_TAGS = {
   generous: { emoji: "🎁", label: "Generous" },
-  even: { emoji: "🤝", label: "Even" },
   greedy: { emoji: "🐉", label: "Greedy" },
 } as const;
 
@@ -254,11 +249,14 @@ export function computeProfileBadges(args: {
     });
   }
 
-  add({
-    key: "giving",
-    ...GIVING_TAGS[givingTag.kind],
-    tooltip: `Gave ${givingTag.given}, got ${givingTag.received} highlights in ${circleName}`,
-  });
+  // Even is the default and says nothing about them.
+  if (givingTag.kind !== "even") {
+    add({
+      key: "giving",
+      ...GIVING_TAGS[givingTag.kind],
+      tooltip: `Gave ${givingTag.given}, got ${givingTag.received} highlights in ${circleName}`,
+    });
+  }
 
   if (userId === circleCreatorId) {
     add({
@@ -324,7 +322,8 @@ export function computeProfileBadges(args: {
 
   for (const ladder of STAT_LADDERS) {
     const value = stats[ladder.stat];
-    const reached = [...ladder.tiers].reverse().find((t) => value >= t.min)!;
+    const reached = [...ladder.tiers].reverse().find((t) => value >= t.min);
+    if (!reached) continue;
     add({
       key: `stat-${ladder.stat}`,
       emoji: reached.emoji,
