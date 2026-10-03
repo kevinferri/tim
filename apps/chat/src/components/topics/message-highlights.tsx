@@ -154,7 +154,7 @@ export function MessageHighlights(props: Props) {
             onClick={props.onToggle}
             onDoubleClick={(e) => e.stopPropagation()}
             className={cn(
-              "relative flex h-5 w-fit shrink-0 items-center gap-1 rounded-full border px-1.5 text-[11px] font-medium leading-none tabular-nums transition-colors",
+              "relative flex h-6 w-fit shrink-0 items-center gap-1 rounded-full border px-2 text-xs font-medium leading-none tabular-nums transition-colors",
               props.highlightedBySelf
                 ? "border-highlight-icon/60 bg-highlight-icon/15 text-foreground hover:bg-highlight-icon/25"
                 : "border-border bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -181,7 +181,7 @@ export function MessageHighlights(props: Props) {
                 bursting && "motion-safe:animate-highlight-pop",
               )}
             >
-              <StarFilledIcon className="size-3 text-highlight-icon" />
+              <StarFilledIcon className="size-3.5 text-highlight-icon" />
             </span>
             <span
               key={`count-${highlights.length}`}
