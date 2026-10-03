@@ -113,6 +113,11 @@ module.exports = {
           },
         },
         // Ease-in falling, ease-out rising, so each hop reads as gravity.
+        // A light band sweeping across, then a pause before the next pass.
+        "badge-shine": {
+          "0%": { transform: "translateX(-150%) skewX(-20deg)" },
+          "45%, 100%": { transform: "translateX(400%) skewX(-20deg)" },
+        },
         "die-bounce": {
           "0%": {
             transform: "translateY(-16px)",
@@ -177,6 +182,7 @@ module.exports = {
       },
       animation: {
         // Both match ROLL_DURATION_MS in roll-result.tsx.
+        "badge-shine": "badge-shine 3.5s ease-in-out infinite",
         "die-bounce": "die-bounce 1.5s",
         "die-spin": "die-spin 1.5s cubic-bezier(0.2, 0.7, 0.3, 1)",
         "eight-ball-shake": "eight-ball-shake 0.7s ease-in-out",

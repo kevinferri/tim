@@ -230,7 +230,27 @@ describe("computeProfileBadges", () => {
     expect(ranks(3000)?.rarity).toBe("legendary");
   });
 
-  it("shows every earned badge, rarest first, with no cap", () => {
+  it("leads with the score rank, even when it's common", () => {
+    const badges = badgesFor({
+      userId: "me",
+      circleName: "Sandbox",
+      circleCreatorId: "me",
+      score: {
+        multiplier: 0.9,
+        topPercent: 70,
+        bottomPercent: 40,
+        place: 5,
+      },
+      circle: emptyCircle,
+      activity: quietActivity,
+      now: NOW,
+    });
+
+    expect(badges.map((b) => b.key)).toEqual(["score", "founder"]);
+    expect(badges[0]).toMatchObject({ label: "Silver", rarity: "common" });
+  });
+
+  it("shows every earned badge, score first then rarest first, with no cap", () => {
     const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
@@ -254,9 +274,11 @@ describe("computeProfileBadges", () => {
 
     expect(badges.length).toBeGreaterThan(5);
     const rank = { common: 0, rare: 1, epic: 2, legendary: 3 };
-    const ranks = badges.map((b) => rank[b.rarity]);
+    // Score rank leads; everything after it is rarest first.
+    expect(badges[0].key).toBe("score");
+    const ranks = badges.slice(1).map((b) => rank[b.rarity]);
     expect(ranks).toEqual([...ranks].sort((a, b) => b - a));
-    expect(badges[0].rarity).toBe("legendary");
+    expect(badges[1].rarity).toBe("legendary");
     expect(badges.map((b) => b.key)).toEqual(
       expect.arrayContaining([
         "score",

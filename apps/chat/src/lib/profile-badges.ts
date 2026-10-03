@@ -490,7 +490,9 @@ export function computeProfileBadges(args: {
     });
   }
 
-  // Rarest first; no cap, every earned badge shows.
+  // The score rank leads as the headline badge; the rest go rarest first, uncapped.
   // Array.prototype.sort is stable, so equal rarities keep their priority order.
-  return badges.sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]);
+  const rank = (b: ProfileBadge) =>
+    b.key === "score" ? Infinity : RARITY_RANK[b.rarity];
+  return badges.sort((a, b) => rank(b) - rank(a));
 }
