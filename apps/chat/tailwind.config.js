@@ -113,38 +113,6 @@ module.exports = {
           },
         },
         // Ease-in falling, ease-out rising, so each hop reads as gravity.
-        // The score badge's glow, flickering faintly (about ±15%) on irregular steps, like a steady flame.
-        "badge-radiance": {
-          "0%, 100%": {
-            boxShadow:
-              "0 0 3px rgba(var(--glow), 0.9), 0 0 10px rgba(var(--glow), 0.55), 0 0 20px rgba(var(--glow), 0.25), inset 0 0 6px rgba(var(--glow), 0.35)",
-          },
-          "23%": {
-            boxShadow:
-              "0 0 3px rgba(var(--glow), 0.95), 0 0 10px rgba(var(--glow), 0.62), 0 0 20px rgba(var(--glow), 0.3), inset 0 0 6px rgba(var(--glow), 0.4)",
-          },
-          "41%": {
-            boxShadow:
-              "0 0 3px rgba(var(--glow), 0.85), 0 0 10px rgba(var(--glow), 0.5), 0 0 20px rgba(var(--glow), 0.22), inset 0 0 6px rgba(var(--glow), 0.32)",
-          },
-          "67%": {
-            boxShadow:
-              "0 0 3px rgba(var(--glow), 1), 0 0 10px rgba(var(--glow), 0.6), 0 0 20px rgba(var(--glow), 0.28), inset 0 0 6px rgba(var(--glow), 0.38)",
-          },
-          "82%": {
-            boxShadow:
-              "0 0 3px rgba(var(--glow), 0.88), 0 0 10px rgba(var(--glow), 0.52), 0 0 20px rgba(var(--glow), 0.24), inset 0 0 6px rgba(var(--glow), 0.34)",
-          },
-        },
-        // A wisp of flame rising off the score badge's top edge and fading out.
-        "badge-wisp": {
-          "0%": { opacity: "0", transform: "translateY(3px) scale(0.7, 0.5)" },
-          "30%": { opacity: "1" },
-          "100%": {
-            opacity: "0",
-            transform: "translateY(-12px) scale(0.5, 1.5)",
-          },
-        },
         "die-bounce": {
           "0%": {
             transform: "translateY(-16px)",
@@ -209,8 +177,8 @@ module.exports = {
       },
       animation: {
         // Both match ROLL_DURATION_MS in roll-result.tsx.
-        "badge-radiance": "badge-radiance 3.2s ease-in-out infinite",
-        "badge-wisp": "badge-wisp 1.4s ease-out infinite",
+        // Light travelling around the score badge's border.
+        "badge-edge": "spin 2.4s linear infinite",
         "die-bounce": "die-bounce 1.5s",
         "die-spin": "die-spin 1.5s cubic-bezier(0.2, 0.7, 0.3, 1)",
         "eight-ball-shake": "eight-ball-shake 0.7s ease-in-out",
