@@ -121,7 +121,9 @@ const MessageComponent = (props: MessageProps) => {
   const canModify = sentBySelf && inCurrentTopic;
   // Replies stage in this topic's composer, which a modal or sheet covers.
   const canReply =
-    inCurrentTopic && props.context !== "modal" && props.context !== "user-sheet";
+    inCurrentTopic &&
+    props.context !== "modal" &&
+    props.context !== "user-sheet";
   const isRecentMessage = props.isRecentMessage ?? false;
   const isFirstMessage = props.isFirstMessage ?? false;
   const isNewestMessage = props.isNewestMessage ?? false;
@@ -235,9 +237,7 @@ const MessageComponent = (props: MessageProps) => {
   };
   const showHighlights = highlights.length > 0;
   const showReplyCount =
-    props.context === "topic" &&
-    !props.threadRootId &&
-    replyCount > 0;
+    props.context === "topic" && !props.threadRootId && replyCount > 0;
 
   // In the thread panel the root is already on screen — quoting it on every
   // direct reply just burns vertical space. Keep quotes only for reply-to-reply.
@@ -284,9 +284,7 @@ const MessageComponent = (props: MessageProps) => {
         }}
       >
         <div
-          className={cn(
-            "flex items-start gap-3 overflow-x-clip leading-none",
-          )}
+          className={cn("flex items-start gap-3 overflow-x-clip leading-none")}
         >
           {props.sentBy && (
             <UserAvatar

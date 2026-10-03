@@ -54,7 +54,8 @@ export function ReplyPreview({
       className={cn(
         "flex min-w-0 items-start gap-1.5 border-l-2 border-muted-foreground/25 pl-2 text-sm text-muted-foreground",
         // Content-width, so the rest of the row stays double-click-to-highlight.
-        onClick && "group w-fit max-w-full cursor-pointer hover:text-foreground",
+        onClick &&
+          "group w-fit max-w-full cursor-pointer hover:text-foreground",
         className,
       )}
       onClick={onClick}

@@ -3,11 +3,7 @@
 // Scoping by surface keeps ids unique so jump-to-message resolves the copy the
 // user actually clicked from, not whichever one comes first in the document.
 export type MessageSurface =
-  | "topic"
-  | "sidebar"
-  | "user-sheet"
-  | "modal"
-  | "notification";
+  "topic" | "sidebar" | "user-sheet" | "modal" | "notification";
 
 export function messageAnchorId(
   surface: MessageSurface | undefined,
