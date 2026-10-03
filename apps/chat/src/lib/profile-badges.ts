@@ -26,7 +26,6 @@ const BADGE_RARITY: Record<string, BadgeRarity> = {
   "self-highlighter": "common",
   "record-holder": "legendary",
   "one-hit-wonder": "epic",
-  "conversation-starter": "epic",
   ghost: "common",
   firehose: "rare",
   founder: "legendary",
@@ -109,7 +108,7 @@ type Milestone = {
   rarity: BadgeRarity;
 };
 
-// The profile's stat values, each with an always-on badge whose rarity climbs with the number.
+// The profile's stat values; the ones in STAT_LADDERS get an always-on badge whose rarity climbs with the number.
 export type ProfileStats = {
   messages: number;
   activeDays: number;
@@ -174,46 +173,6 @@ const STAT_LADDERS: StatLadder[] = [
       tier(50, "🙌", "Cheerleader", "rare"),
       tier(250, "🎉", "Hype Squad", "epic"),
       tier(1_000, "😇", "Patron Saint", "legendary"),
-    ],
-  },
-  {
-    stat: "repliesReceived",
-    tooltip: (n, c) => `Got ${n} replies in ${c}`,
-    tiers: [
-      tier(0, "💭", "Murmur", "common"),
-      tier(25, "🗨️", "Discussion Piece", "rare"),
-      tier(100, "🔥", "Hot Topic", "epic"),
-      tier(500, "🌋", "Thread Magnet", "legendary"),
-    ],
-  },
-  {
-    stat: "repliesGiven",
-    tooltip: (n, c) => `Sent ${n} replies in ${c}`,
-    tiers: [
-      tier(0, "↩️", "Chimes In", "common"),
-      tier(50, "💬", "Conversationalist", "rare"),
-      tier(200, "🎙️", "Debate Club", "epic"),
-      tier(1_000, "📻", "Talk Show Host", "legendary"),
-    ],
-  },
-  {
-    stat: "mentionsReceived",
-    tooltip: (n, c) => `@mentioned ${n} times in ${c}`,
-    tiers: [
-      tier(0, "📇", "On the List", "common"),
-      tier(25, "📣", "In Demand", "rare"),
-      tier(100, "🔔", "Most Wanted", "epic"),
-      tier(500, "📢", "Household Name", "legendary"),
-    ],
-  },
-  {
-    stat: "mentionsSent",
-    tooltip: (n, c) => `@mentioned others ${n} times in ${c}`,
-    tiers: [
-      tier(0, "☎️", "Caller", "common"),
-      tier(25, "📞", "Connector", "rare"),
-      tier(100, "🕸️", "Networker", "epic"),
-      tier(500, "🦋", "Social Butterfly", "legendary"),
     ],
   },
 ];
@@ -352,15 +311,6 @@ export function computeProfileBadges(args: {
       emoji: "💯",
       label: "One-Hit Wonder",
       tooltip: `One message got ${topMessage} of their ${activity.highlightsReceived} highlights`,
-    });
-  }
-
-  if (isTop(circle.repliesReceived, userId, 5)) {
-    add({
-      key: "conversation-starter",
-      emoji: "🧵",
-      label: "Conversation Starter",
-      tooltip: `Their messages draw the most replies in ${circleName}`,
     });
   }
 

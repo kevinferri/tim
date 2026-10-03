@@ -134,12 +134,6 @@ describe("computeProfileBadges", () => {
     ).toEqual([]);
   });
 
-  it("awards Conversation Starter for drawing the most replies", () => {
-    expect(
-      badgeKeys({ circle: { repliesReceived: { me: 12, other: 3 } } }),
-    ).toContain("conversation-starter");
-  });
-
   it("awards Ghost when long silent", () => {
     expect(
       badgeKeys({
@@ -342,7 +336,7 @@ describe("stat badges", () => {
 
   it("always shows one badge per stat, common at zero", () => {
     const badges = statBadges({});
-    expect(badges).toHaveLength(8);
+    expect(badges).toHaveLength(4);
     expect(badges.every((b) => b.rarity === "common")).toBe(true);
   });
 
@@ -352,7 +346,6 @@ describe("stat badges", () => {
         messages: 1_234,
         highlightsReceived: 300,
         highlightsGiven: 1_000,
-        mentionsReceived: 30,
       }).map((b) => [b.key, b]),
     );
 
@@ -369,9 +362,8 @@ describe("stat badges", () => {
       label: "Patron Saint",
       rarity: "legendary",
     });
-    expect(byKey["stat-mentionsReceived"].rarity).toBe("rare");
-    expect(byKey["stat-repliesGiven"]).toMatchObject({
-      label: "Chimes In",
+    expect(byKey["stat-activeDays"]).toMatchObject({
+      label: "Sprout",
       rarity: "common",
     });
   });

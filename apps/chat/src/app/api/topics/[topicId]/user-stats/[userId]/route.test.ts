@@ -124,7 +124,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     const statBadgeCount = (await res.clone().json()).badges.filter(
       (b: { key: string }) => b.key.startsWith("stat-"),
     ).length;
-    expect(statBadgeCount).toBe(8);
+    expect(statBadgeCount).toBe(4);
     expect(res.headers.get("Server-Timing")).toMatch(
       /topic;dur=[\d.]+.*circle;dur=[\d.]+/,
     );
