@@ -40,6 +40,7 @@ import {
 } from "@/components/topics/message-attachment";
 import { parseCommand } from "@tim/commands";
 import { useCanHover } from "@/lib/hooks/use-can-hover";
+import { primeHighlightChime } from "@/lib/highlight-chime";
 import { getDisplayName } from "@tim/user-display";
 import {
   MessageSurface,
@@ -171,6 +172,7 @@ const MessageComponent = (props: MessageProps) => {
 
   const handleToggleHighlight = () => {
     if (!props.id) return;
+    if (!highlightedBySelf) primeHighlightChime();
     toggleHighlight.emit({
       messageId: props.id,
       topicId,
@@ -300,15 +302,14 @@ const MessageComponent = (props: MessageProps) => {
               status={props.sentBy.status}
               lastStatusUpdate={props.sentBy.lastStatusUpdate}
               statusVisibleAt={createdAt}
+              size="md"
             />
           )}
 
           <div
-            className={cn(
-              "flex flex-1 flex-col gap-1 overflow-hidden leading-none min-w-0",
-            )}
+            className={cn("flex min-w-0 flex-1 flex-col gap-0.5 leading-none")}
           >
-            <div className="flex gap-2 items-center min-w-0">
+            <div className="flex h-4 min-w-0 items-center gap-2">
               {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
                 <UserAvatar
                   id={props.sentBy.id}

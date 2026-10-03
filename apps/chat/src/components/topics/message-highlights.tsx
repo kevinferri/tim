@@ -20,11 +20,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { playHighlightChime } from "@/lib/highlight-chime";
 
 export type HighlightBurst = {
   // Bumped each time the count goes up; remounting on it replays the animations.
   key: number;
-  // You did it: sparks and a haptic tick on top.
+  // You did it: sparks, a chime and a haptic tick on top.
   own: boolean;
 };
 
@@ -141,6 +142,7 @@ export function MessageHighlights(props: Props) {
     if (burstKey === 0 || !own) return;
     setSparkKey(burstKey);
     navigator.vibrate?.(10);
+    playHighlightChime();
     const timeout = setTimeout(() => setSparkKey(null), SPARK_DURATION_MS);
     return () => clearTimeout(timeout);
   }, [burstKey, own]);

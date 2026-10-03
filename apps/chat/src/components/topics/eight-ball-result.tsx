@@ -28,8 +28,8 @@ export function EightBallResult(props: Props) {
   );
 
   return (
-    // Room for the shake: the message column is overflow-hidden.
-    <div className="p-1.5">
+    // Room for the shake; the negative margin keeps the ball on the text's left edge.
+    <div className="-ml-1.5 p-1.5">
       <div
         role="img"
         aria-label={`Magic 8-ball: ${answer}`}

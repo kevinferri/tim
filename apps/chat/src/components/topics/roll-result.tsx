@@ -135,11 +135,11 @@ export function RollResult(props: Props) {
     : undefined;
 
   return (
-    // Padding gives the tumbling corners room: the message column is overflow-hidden.
+    // Room for the tumbling corners; the negative margin keeps the die on the text's left edge.
     <div
       role="img"
       aria-label={isRolling ? "Rolling a die" : `Rolled ${result}`}
-      className="flex w-fit flex-col items-center gap-1 p-3"
+      className="-ml-3 flex w-fit flex-col items-center gap-1 p-3"
     >
       {/* Bounce and spin are separate elements so each gets its own easing. */}
       <div
