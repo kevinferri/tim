@@ -3,7 +3,10 @@ import type { Message as DbMessage, Highlight, User } from "@prisma/client";
 import { useSelf } from "@/components/auth/self-provider";
 import { cn } from "@/lib/utils";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
-import { MessageHighlights } from "@/components/topics/message-highlights";
+import {
+  MessageHighlights,
+  useHighlightBurst,
+} from "@/components/topics/message-highlights";
 import { MessageContextMenu } from "@/components/topics/message-context-menu";
 import {
   useTopicGifContext,
@@ -133,6 +136,10 @@ const MessageComponent = (props: MessageProps) => {
 
   const highlightedBySelf = !!highlights?.find(
     (highlight) => self.id === highlight.userId,
+  );
+  const highlightBurst = useHighlightBurst(
+    highlights.length,
+    highlightedBySelf,
   );
 
   const command = useMemo(() => parseCommand(props.text ?? ""), [props.text]);
@@ -436,6 +443,7 @@ const MessageComponent = (props: MessageProps) => {
                       highlights={highlights}
                       highlightedBySelf={highlightedBySelf}
                       onToggle={handleToggleHighlight}
+                      burst={highlightBurst}
                     />
                   )}
                   {showReplyCount && (
