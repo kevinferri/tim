@@ -125,10 +125,12 @@ const RARITY_STYLES: Record<BadgeRarity, { plate: string; label: string }> = {
 function StatRow(props: { label: string; icon: ReactNode; value?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-1.5 text-muted-foreground">
-        {props.icon} {props.label}
+      {/* The label gives way (truncates) before the value ever wraps or overflows. */}
+      <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+        <span className="shrink-0">{props.icon}</span>
+        <span className="truncate">{props.label}</span>
       </span>
-      <span className="flex items-center font-medium tabular-nums">
+      <span className="flex shrink-0 items-center whitespace-nowrap font-medium tabular-nums">
         {typeof props.value === "number"
           ? formatNumber(props.value)
           : (props.value ?? <Skeleton className="h-4 w-5" />)}
@@ -290,14 +292,14 @@ export function UserAvatar(props: Props) {
                           <TooltipTrigger
                             className="relative -skew-x-12 cursor-default overflow-hidden rounded-sm p-[1.5px]"
                             style={{
-                              boxShadow: `0 0 10px rgba(${RARITY_GLOW[badge.rarity]}, 0.55)`,
+                              boxShadow: `0 0 8px rgba(${RARITY_GLOW[badge.rarity]}, 0.4)`,
                             }}
                           >
                             {/* Centered with margins, not translate: the spin animation owns `transform`. */}
                             <span
                               className="pointer-events-none absolute left-1/2 top-1/2 -ml-[100%] -mt-[100%] aspect-square w-[200%] motion-safe:animate-badge-edge"
                               style={{
-                                background: `conic-gradient(from 0deg, rgba(${RARITY_GLOW[badge.rarity]}, 0.15), rgba(${RARITY_GLOW[badge.rarity]}, 1) 12%, rgba(${RARITY_GLOW[badge.rarity]}, 0.15) 30%, rgba(${RARITY_GLOW[badge.rarity]}, 0.15) 50%, rgba(${RARITY_GLOW[badge.rarity]}, 1) 62%, rgba(${RARITY_GLOW[badge.rarity]}, 0.15) 80%)`,
+                                background: `conic-gradient(from 0deg, rgba(${RARITY_GLOW[badge.rarity]}, 0.25), rgba(${RARITY_GLOW[badge.rarity]}, 0.55) 12%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 30%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 50%, rgba(${RARITY_GLOW[badge.rarity]}, 0.55) 62%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 80%)`,
                               }}
                             />
                             <span
@@ -350,7 +352,8 @@ export function UserAvatar(props: Props) {
             </div>
 
             <div className="flex flex-col gap-2 text-sm">
-              <div className="grid grid-cols-2 gap-x-8">
+              {/* The got/gave column needs more room than the single values; stack them on narrow sheets. */}
+              <div className="grid grid-cols-1 gap-x-8 gap-y-2 min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
                 <div className="flex flex-col gap-2">
                   <StatRow
                     label="Score"
