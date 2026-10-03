@@ -62,7 +62,7 @@ module.exports = {
         },
         highlight: {
           DEFAULT: "#ffffcd",
-          // Overwatch-style gold; deeper in light mode for contrast on white.
+          // Soft gold; deeper in light mode for contrast on white.
           icon: "hsl(var(--highlight-icon) / <alpha-value>)",
         },
       },

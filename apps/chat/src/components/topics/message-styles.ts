@@ -18,7 +18,7 @@ export const baseStyles = [
 
 // A thin accent on the left edge marks messages you've highlighted.
 export const highlightStyles = [
-  "after:w-[3px]",
+  "after:w-[2px]",
   "after:bg-highlight-icon",
   "after:[transition:300ms]",
 ];
