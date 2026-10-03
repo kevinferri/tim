@@ -79,7 +79,7 @@ describe("computeProfileBadges", () => {
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
-      score: { value: 230, placed: true },
+      score: { value: 230 },
       givingTag: { kind: "generous", given: 20, received: 4 },
       activity: quietActivity,
       now: NOW,
@@ -185,7 +185,7 @@ describe("computeProfileBadges", () => {
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "me",
-      score: { value: 25, placed: true },
+      score: { value: 25 },
       activity: quietActivity,
       now: NOW,
     });
@@ -199,7 +199,7 @@ describe("computeProfileBadges", () => {
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "me",
-      score: { value: 5, placed: true },
+      score: { value: 5 },
       givingTag: { kind: "generous", given: 30, received: 10 },
       activity: {
         ...quietActivity,
@@ -324,17 +324,11 @@ describe("currentStreak", () => {
 
 describe("getScoreRank", () => {
   it("ranks by highlights per 100 messages", () => {
-    const rank = (value: number) => getScoreRank({ value, placed: true });
+    const rank = (value: number) => getScoreRank({ value });
     expect(rank(0)).toMatchObject({ label: "Bronze", rarity: "common" });
     expect(rank(40).label).toBe("Gold");
     expect(rank(110)).toMatchObject({ label: "Diamond", rarity: "rare" });
     expect(rank(300)).toMatchObject({ label: "Champion", rarity: "legendary" });
     expect(rank(1000).label).toBe("Top 500");
-  });
-
-  it("stays In Placements until enough messages, whatever the score", () => {
-    expect(getScoreRank({ value: 500, placed: false }).label).toBe(
-      "In Placements",
-    );
   });
 });

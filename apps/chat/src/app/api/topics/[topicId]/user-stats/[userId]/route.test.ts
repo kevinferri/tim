@@ -133,7 +133,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       topicName: "General",
       circleName: "Sandbox",
       // 18 highlights / (20 messages + 20 smoothing) per 100 messages.
-      highlightScore: { value: 45, placed: true },
+      highlightScore: { value: 45 },
       badges: expect.arrayContaining([
         {
           key: "score",

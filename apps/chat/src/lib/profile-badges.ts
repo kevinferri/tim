@@ -1,9 +1,5 @@
 import { CommandName } from "@tim/commands";
-import {
-  PLACEMENT_MESSAGES,
-  type GivingTag,
-  type HighlightScore,
-} from "@/lib/highlight-score";
+import type { GivingTag, HighlightScore } from "@/lib/highlight-score";
 
 export type BadgeRarity = "common" | "rare" | "epic" | "legendary";
 
@@ -198,9 +194,6 @@ export function getScoreRank(score: HighlightScore): {
   label: string;
   rarity: BadgeRarity;
 } {
-  if (!score.placed) {
-    return { emoji: "❔", label: "In Placements", rarity: "common" };
-  }
   const { emoji, label, rarity } = SCORE_RANKS.find(
     (r) => score.value >= r.min,
   )!;
@@ -243,9 +236,7 @@ export function computeProfileBadges(args: {
     add({
       key: "score",
       ...getScoreRank(score),
-      tooltip: score.placed
-        ? `Highlight score ${score.value} in ${circleName}`
-        : `Highlight score ${score.value} in ${circleName}, ranked after ${PLACEMENT_MESSAGES} messages`,
+      tooltip: `Highlight score ${score.value} in ${circleName}`,
     });
   }
 

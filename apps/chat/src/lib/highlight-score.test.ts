@@ -5,7 +5,7 @@ describe("computeHighlightScore", () => {
   it("is highlights from others per 100 messages, lightly smoothed", () => {
     expect(
       computeHighlightScore({ messages: 980, received: 1500, given: 0 }),
-    ).toEqual({ value: 150, placed: true });
+    ).toEqual({ value: 150 });
   });
 
   it("doesn't let a tiny sample beat a strong regular", () => {
@@ -21,15 +21,6 @@ describe("computeHighlightScore", () => {
     })!;
 
     expect(regular.value).toBeGreaterThan(lucky.value);
-  });
-
-  it("stays in placements until enough messages", () => {
-    expect(
-      computeHighlightScore({ messages: 19, received: 40, given: 0 })!.placed,
-    ).toBe(false);
-    expect(
-      computeHighlightScore({ messages: 20, received: 40, given: 0 })!.placed,
-    ).toBe(true);
   });
 
   it("is null for someone who hasn't posted in the circle", () => {

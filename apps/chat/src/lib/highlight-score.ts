@@ -11,11 +11,8 @@ export type MemberHighlightCounts = {
 export type HighlightScore = {
   // Highlights from others per 100 messages, lightly smoothed.
   value: number;
-  // False until they've sent enough messages for the score to mean much.
-  placed: boolean;
 };
 
-export const PLACEMENT_MESSAGES = 20;
 // Blended into the message count so a few lucky early messages can't top the ranks.
 const SMOOTHING_MESSAGES = 20;
 
@@ -28,7 +25,6 @@ export function computeHighlightScore(
     value: Math.round(
       (counts.received / (counts.messages + SMOOTHING_MESSAGES)) * 100,
     ),
-    placed: counts.messages >= PLACEMENT_MESSAGES,
   };
 }
 
