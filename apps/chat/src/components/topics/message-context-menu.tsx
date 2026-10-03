@@ -4,7 +4,6 @@ import { useState, type ReactNode } from "react";
 import {
   CopyIcon,
   Pencil1Icon,
-  SewingPinFilledIcon,
   StarFilledIcon,
   StarIcon,
   TrashIcon,
@@ -20,7 +19,6 @@ import {
 } from "@/components/ui/context-menu";
 import { ReplyIcon } from "@/components/icons/reply-icon";
 import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
-import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 
 type Props = {
   children: ReactNode;
@@ -56,7 +54,6 @@ function Item(props: {
 
 // Long-press menu for a message on touch screens.
 export function MessageContextMenu(props: Props) {
-  const { updateStatus } = useUpdateUserStatus();
   const [isDeleting, setIsDeleting] = useState(false);
 
   if (!props.enabled) return <>{props.children}</>;
@@ -86,12 +83,6 @@ export function MessageContextMenu(props: Props) {
           {props.sentBySelf && (
             <>
               <ContextMenuSeparator />
-              <Item
-                icon={<SewingPinFilledIcon />}
-                onSelect={() => updateStatus(props.text)}
-              >
-                Set as status
-              </Item>
               {props.onShuffleGif && (
                 <Item icon={<UpdateIcon />} onSelect={props.onShuffleGif}>
                   Shuffle gif

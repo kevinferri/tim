@@ -10,14 +10,12 @@ import { isGiphy, isValidCommand } from "@/components/topics/message-utils";
 import { CommandName, parseCommand } from "@tim/commands";
 import {
   Pencil1Icon,
-  SewingPinFilledIcon,
   StarFilledIcon,
   StarIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
 import { useTopicMetaContext } from "@/components/topics/current-topic-provider";
 import { cn } from "@/lib/utils";
-import { useUpdateUserStatus } from "@/lib/hooks/use-update-status";
 import { ReplyIcon } from "@/components/icons/reply-icon";
 
 type Props = {
@@ -46,7 +44,6 @@ export function getOwnMessageActions(text: string, mediaUrl?: string | null) {
 
 export function MessageActions(props: Props) {
   const { topicId } = useTopicMetaContext();
-  const { updateStatus } = useUpdateUserStatus();
   const { canShuffle: isRandomGif, canEdit: showEdit } = getOwnMessageActions(
     props.text,
     props.mediaUrl,
@@ -92,18 +89,6 @@ export function MessageActions(props: Props) {
           )}
           {props.sentBySelf && (
             <>
-              <Tooltip delayDuration={DELAY_DURATION}>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="iconSm"
-                    variant="outline"
-                    onClick={() => updateStatus(props.text)}
-                  >
-                    <SewingPinFilledIcon />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Set as status</TooltipContent>
-              </Tooltip>
               <Tooltip delayDuration={DELAY_DURATION}>
                 <TooltipTrigger asChild>
                   {isRandomGif ? (
