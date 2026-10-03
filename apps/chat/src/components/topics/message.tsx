@@ -32,12 +32,10 @@ import {
   adjustHeight,
   getLinksFromMessage,
   truncateText,
+  isBareRoll,
 } from "@/components/topics/message-utils";
 import { MessageSentAt } from "@/components/topics/message-sent-at";
-import {
-  isBareRoll,
-  renderCommandResult,
-} from "@/components/topics/message-attachment";
+import { renderCommandResult } from "@/components/topics/message-attachment";
 import { parseCommand } from "@tim/commands";
 import { useCanHover } from "@/lib/hooks/use-can-hover";
 import { getDisplayName } from "@tim/user-display";

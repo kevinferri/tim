@@ -3,6 +3,7 @@ import { CommandName, type ParsedCommand } from "@tim/commands";
 import { cn } from "@/lib/utils";
 import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
 import { RollResult, sidesFromPrompt } from "@/components/topics/roll-result";
+import { isBareRoll } from "@/components/topics/message-utils";
 import { EightBallResult } from "@/components/topics/eight-ball-result";
 
 type FrameProps = {
@@ -44,14 +45,6 @@ type ResultProps = {
   content: string;
   createdAt?: Date;
 };
-
-// A bare "/roll d20" says nothing the die doesn't, so the die carries it instead.
-export function isBareRoll(command?: ParsedCommand) {
-  return (
-    command?.name === CommandName.Roll &&
-    /^\s*(d?\d+)?\s*$/i.test(command.prompt)
-  );
-}
 
 // For these commands mediaUrl holds the generated result, not a URL.
 const RESULT_RENDERERS: Partial<

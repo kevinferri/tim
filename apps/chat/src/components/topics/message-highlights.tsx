@@ -36,6 +36,7 @@ type Props = {
 };
 
 const MAX_FACES = 3;
+const MAX_NAMES = 3;
 const SPARK_COUNT = 8;
 const SPARK_DISTANCE = 26;
 const SPARK_DURATION_MS = 600;
@@ -56,8 +57,8 @@ function highlighterNames(highlights: Highlights) {
   const names = highlights.map((h) =>
     getDisplayName(h.createdBy?.name ?? null),
   );
-  if (names.length <= 3) return names.join(", ");
-  return `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+  if (names.length <= MAX_NAMES) return names.join(", ");
+  return `${names.slice(0, MAX_NAMES).join(", ")} and ${names.length - MAX_NAMES} more`;
 }
 
 // Tracks increases in a message's highlight count across renders. Starts at rest,
