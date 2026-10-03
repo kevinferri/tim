@@ -434,12 +434,13 @@ export function UserAvatar(props: Props) {
           )}
 
           <ScrollArea className="basis-full overflow-y-scroll no-scrollbar">
-            {data?.topHighlights.map((message: MessageData) => {
+            {data?.topHighlights.map((message: MessageData, i) => {
               return (
                 <Message
                   key={`${message.id}-user-avatar`}
                   {...message}
                   context="user-sheet"
+                  isFirstMessage={i === 0}
                 />
               );
             })}
