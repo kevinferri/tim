@@ -283,6 +283,17 @@ const MessageComponent = (props: MessageProps) => {
           if (isActionEligable) setShowActions(false);
         }}
       >
+        {/* A glint down the highlight edge as it draws in, like the score badge's border light. */}
+        {highlightBurst.own && highlightBurst.key > 0 && (
+          <span
+            key={highlightBurst.key}
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 w-3 overflow-hidden motion-reduce:hidden"
+          >
+            <span className="absolute left-0 h-2/5 w-[1.5px] bg-gradient-to-b from-transparent via-white to-transparent opacity-0 shadow-[0_0_6px_1px_hsl(var(--highlight-icon))] animate-highlight-edge" />
+          </span>
+        )}
+
         <div
           className={cn("flex items-start gap-3 overflow-x-clip leading-none")}
         >

@@ -15,7 +15,7 @@ type Props = {
 
 export const CirclesNav = async ({ circles }: Props) => {
   return (
-    <div className="flex flex-col border-r">
+    <div className="flex flex-col border-r bg-sidebar">
       <div className="flex flex-col items-center px-3 py-2">
         <Link href={Routes.Home} className="hover:opacity-80">
           <Avatar className="h-8 w-8">

@@ -95,7 +95,7 @@ export function TopicSideBar() {
   } as const;
 
   return (
-    <div className="relative hidden w-sidebar-detail shrink-0 flex-col border-l shadow-md md:flex lg:w-sidebar-detail-lg">
+    <div className="relative hidden w-sidebar-detail shrink-0 flex-col border-l bg-sidebar shadow-md md:flex lg:w-sidebar-detail-lg">
       <Tabs
         defaultValue="members"
         className="flex min-h-0 flex-1 flex-col"

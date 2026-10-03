@@ -5,7 +5,7 @@ export const baseStyles = [
   "transition-shadow",
   "p-3",
   "relative",
-  "hover:bg-slate-50",
+  "hover:bg-black/[0.03]",
   "dark:hover:bg-slate-900",
   "after:content-['']",
   "after:h-full",
@@ -18,7 +18,7 @@ export const baseStyles = [
 
 // A thin accent on the left edge marks messages you've highlighted.
 export const highlightStyles = [
-  "after:w-[2px]",
+  "after:w-[1.5px]",
   "after:bg-highlight-icon",
   "after:[transition:300ms]",
 ];

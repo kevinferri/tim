@@ -657,7 +657,7 @@ export const TopicsList = ({
   return (
     <div
       className={cn(
-        `flex flex-col shadow-md border-r shrink-0`,
+        `flex flex-col shadow-md border-r shrink-0 bg-sidebar`,
         isMinimized
           ? ""
           : "max-w-sidebar-nav min-w-sidebar-nav lg:max-w-sidebar-nav-lg lg:min-w-sidebar-nav-lg",

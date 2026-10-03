@@ -32,7 +32,7 @@ function Member(props: MemberProps) {
   return (
     <div
       className={`flex gap-3 items-center ${
-        props.isOnline ? "" : "opacity-40"
+        props.isOnline ? "" : "text-muted-foreground"
       }`}
     >
       <div className="relative">
