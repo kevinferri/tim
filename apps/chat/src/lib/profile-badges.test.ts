@@ -44,12 +44,24 @@ const zeroStats: ProfileStats = {
   mentionsSent: 0,
 };
 
-// Stat badges always show; tests about other badges filter them out.
+const evenTag = { kind: "even" as const, given: 0, received: 0 };
+
+// Stat badges and the giving tag always show; tests about other badges filter them out
+// (the giving tag only when the test doesn't pass its own).
 function badgesFor(
-  args: Omit<Parameters<typeof computeProfileBadges>[0], "stats">,
+  args: Omit<
+    Parameters<typeof computeProfileBadges>[0],
+    "stats" | "givingTag"
+  > & {
+    givingTag?: Parameters<typeof computeProfileBadges>[0]["givingTag"];
+  },
 ) {
-  return computeProfileBadges({ ...args, stats: zeroStats }).filter(
-    (b) => !b.key.startsWith("stat-"),
+  return computeProfileBadges({
+    ...args,
+    givingTag: args.givingTag ?? evenTag,
+    stats: zeroStats,
+  }).filter(
+    (b) => !b.key.startsWith("stat-") && (args.givingTag || b.key !== "giving"),
   );
 }
 
@@ -64,7 +76,6 @@ function badgeKeys(
     circleName: "Sandbox",
     circleCreatorId: "someone-else",
     score: null,
-    givingTag: null,
     circle: { ...emptyCircle, ...overrides.circle },
     activity: { ...quietActivity, ...overrides.activity },
     now: NOW,
@@ -159,7 +170,6 @@ describe("computeProfileBadges", () => {
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
       score: null,
-      givingTag: null,
       circle: emptyCircle,
       activity: { ...quietActivity, recentSelfHighlights: 1 },
       now: NOW,
@@ -182,7 +192,6 @@ describe("computeProfileBadges", () => {
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
       score: null,
-      givingTag: null,
       circle: {
         ...emptyCircle,
         // Not the top user of any command, so no per-command "most uses" badges.
@@ -208,7 +217,6 @@ describe("computeProfileBadges", () => {
         circleName: "Sandbox",
         circleCreatorId: "someone-else",
         score: null,
-        givingTag: null,
         circle: {
           ...emptyCircle,
           commandCounts: { me: { roll: total }, other: { roll: 99_999 } },
@@ -229,7 +237,6 @@ describe("computeProfileBadges", () => {
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
       score: null,
-      givingTag: null,
       circle: emptyCircle,
       activity: {
         ...quietActivity,
@@ -284,7 +291,6 @@ describe("computeProfileBadges", () => {
       circleName: "Sandbox",
       circleCreatorId: "me",
       score: null,
-      givingTag: null,
       circle: emptyCircle,
       activity: quietActivity,
       now: NOW,
@@ -312,7 +318,6 @@ describe("computeProfileBadges", () => {
         circleName: "Sandbox",
         circleCreatorId: "someone-else",
         score: null,
-        givingTag: null,
         circle: emptyCircle,
         activity: { ...quietActivity, recentActiveDays: days(n) },
         now: NOW,
@@ -340,7 +345,7 @@ describe("stat badges", () => {
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
       score: null,
-      givingTag: null,
+      givingTag: evenTag,
       circle: emptyCircle,
       activity: quietActivity,
       stats: { ...zeroStats, ...stats },

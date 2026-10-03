@@ -267,7 +267,7 @@ export function computeProfileBadges(args: {
   circleName: string;
   circleCreatorId: string;
   score: HighlightScore | null;
-  givingTag: GivingTag | null;
+  givingTag: GivingTag;
   circle: CircleBadgeAggregates;
   activity: MemberActivity;
   stats: ProfileStats;
@@ -308,13 +308,11 @@ export function computeProfileBadges(args: {
     });
   }
 
-  if (givingTag) {
-    add({
-      key: "giving",
-      ...GIVING_TAGS[givingTag.kind],
-      tooltip: `Gave ${givingTag.given}, got ${givingTag.received} highlights in ${circleName}`,
-    });
-  }
+  add({
+    key: "giving",
+    ...GIVING_TAGS[givingTag.kind],
+    tooltip: `Gave ${givingTag.given}, got ${givingTag.received} highlights in ${circleName}`,
+  });
 
   if (userId === circleCreatorId) {
     add({
