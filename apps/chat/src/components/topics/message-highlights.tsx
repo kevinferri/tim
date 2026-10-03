@@ -20,7 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { playHighlightChime } from "@/lib/highlight-chime";
+import { playHighlightChime } from "@/lib/sounds";
 
 export type HighlightBurst = {
   // Bumped each time the count goes up; remounting on it replays the animations.

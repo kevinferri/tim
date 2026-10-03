@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { MessageProps } from "@/components/topics/message";
 import {
   SocketEvent,
@@ -8,6 +8,7 @@ import {
 import { useWindowFocus } from "@/lib/hooks/use-window-focus";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 import { useMessageSound } from "@/components/dashboard/use-message-sound";
+import { playMessagePop } from "@/lib/sounds";
 
 type UseTopicActivityProps = {
   topicId: string;
@@ -19,7 +20,6 @@ export function useTopicActivity({
   baseTitle,
 }: UseTopicActivityProps) {
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-  const blopSoundRef = useRef<null | HTMLAudioElement>(null);
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
   const { isMessageSoundEnabled } = useMessageSound();
@@ -56,14 +56,13 @@ export function useTopicActivity({
       });
 
       if (isMessageSoundEnabled) {
-        blopSoundRef.current?.play();
+        playMessagePop();
       }
     }
   }, [windowFocused, baseTitle, isMessageSoundEnabled]);
 
   return {
     unreadMessageCount,
-    blopSoundRef,
     notifyOnNewMessage,
     windowFocused,
   };

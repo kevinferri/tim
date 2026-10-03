@@ -40,7 +40,6 @@ import {
 } from "@/components/topics/message-attachment";
 import { parseCommand } from "@tim/commands";
 import { useCanHover } from "@/lib/hooks/use-can-hover";
-import { primeHighlightChime } from "@/lib/highlight-chime";
 import { getDisplayName } from "@tim/user-display";
 import {
   MessageSurface,
@@ -172,7 +171,6 @@ const MessageComponent = (props: MessageProps) => {
 
   const handleToggleHighlight = () => {
     if (!props.id) return;
-    if (!highlightedBySelf) primeHighlightChime();
     toggleHighlight.emit({
       messageId: props.id,
       topicId,

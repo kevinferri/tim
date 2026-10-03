@@ -202,7 +202,6 @@ type UiContextValue = {
   isAtBottom: boolean;
   unseenCount: number;
   scrollToBottom: (options?: ScrollToBottomOptions) => void;
-  blopSoundRef: MutableRefObject<HTMLAudioElement | null>;
   generatingCommand?: string;
   setGeneratingCommand: (command?: string) => void;
   replyingTo?: ReplyingToMessage;
@@ -318,7 +317,7 @@ export function CurrentTopicProvider(props: Props) {
     setHighlightedMessageId(undefined);
   }, [props.topicId]);
 
-  const { blopSoundRef, notifyOnNewMessage } = useTopicActivity({
+  const { notifyOnNewMessage } = useTopicActivity({
     topicId: props.topicId,
     baseTitle,
   });
@@ -467,7 +466,6 @@ export function CurrentTopicProvider(props: Props) {
       isAtBottom,
       unseenCount,
       scrollToBottom,
-      blopSoundRef,
       generatingCommand,
       setGeneratingCommand,
       replyingTo,
@@ -484,7 +482,6 @@ export function CurrentTopicProvider(props: Props) {
       isAtBottom,
       unseenCount,
       scrollToBottom,
-      blopSoundRef,
       generatingCommand,
       replyingTo,
       openThreadRootId,
