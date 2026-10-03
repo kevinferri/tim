@@ -14,6 +14,8 @@ export type HighlightScore = {
   topPercent: number;
   // The same rank from the other end, for phrasing the lower half as "bottom N%".
   bottomPercent: number;
+  // 1 = best in the circle; ties share a place.
+  place: number;
 };
 
 // Pseudo-messages at the circle average blended into everyone's rate, so a few lucky messages can't top the circle.
@@ -47,6 +49,7 @@ export function computeHighlightScore(
     multiplier: mine / average,
     topPercent: percent(ahead + 1),
     bottomPercent: percent(behind + 1),
+    place: ahead + 1,
   };
 }
 
@@ -56,20 +59,17 @@ export type GivingTag = {
   received: number;
 };
 
-// Blended into both sides so a couple of early highlights can't swing the tag.
-const GIVING_SMOOTHING = 3;
-const GIVING_MIN_ACTIVITY = 5;
+// Blended into both sides so a few early highlights can't swing the tag; low activity reads as "even".
+const GIVING_SMOOTHING = 5;
 const GIVING_RATIO = 2;
 
 export function computeGivingTag(
   members: MemberHighlightCounts[],
   userId: string,
-): GivingTag | null {
+): GivingTag {
   const me = members.find((m) => m.userId === userId);
-  if (!me) return null;
-
-  const { given, highlights: received } = me;
-  if (given + received < GIVING_MIN_ACTIVITY) return null;
+  const given = me?.given ?? 0;
+  const received = me?.highlights ?? 0;
 
   const ratio = (given + GIVING_SMOOTHING) / (received + GIVING_SMOOTHING);
   const kind =

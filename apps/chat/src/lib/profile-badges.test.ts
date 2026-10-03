@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeProfileBadges,
+  type ProfileStats,
   currentStreak,
   CircleBadgeAggregates,
   getScoreRank,
@@ -32,18 +33,49 @@ const quietActivity: MemberActivity = {
   topicsCreated: 0,
 };
 
+const zeroStats: ProfileStats = {
+  messages: 0,
+  activeDays: 0,
+  highlightsReceived: 0,
+  highlightsGiven: 0,
+  repliesReceived: 0,
+  repliesGiven: 0,
+  mentionsReceived: 0,
+  mentionsSent: 0,
+};
+
+const evenTag = { kind: "even" as const, given: 0, received: 0 };
+
+// Stat badges and the giving tag always show; tests about other badges filter them out
+// (the giving tag only when the test doesn't pass its own).
+function badgesFor(
+  args: Omit<
+    Parameters<typeof computeProfileBadges>[0],
+    "stats" | "givingTag"
+  > & {
+    givingTag?: Parameters<typeof computeProfileBadges>[0]["givingTag"];
+  },
+) {
+  return computeProfileBadges({
+    ...args,
+    givingTag: args.givingTag ?? evenTag,
+    stats: zeroStats,
+  }).filter(
+    (b) => !b.key.startsWith("stat-") && (args.givingTag || b.key !== "giving"),
+  );
+}
+
 function badgeKeys(
   overrides: {
     circle?: Partial<CircleBadgeAggregates>;
     activity?: Partial<MemberActivity>;
   } = {},
 ) {
-  return computeProfileBadges({
+  return badgesFor({
     userId: "me",
     circleName: "Sandbox",
     circleCreatorId: "someone-else",
     score: null,
-    givingTag: null,
     circle: { ...emptyCircle, ...overrides.circle },
     activity: { ...quietActivity, ...overrides.activity },
     now: NOW,
@@ -56,11 +88,11 @@ describe("computeProfileBadges", () => {
   });
 
   it("puts the score rank and giving tag first", () => {
-    const badges = computeProfileBadges({
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
-      score: { multiplier: 1.6, topPercent: 20, bottomPercent: 100 },
+      score: { multiplier: 1.6, topPercent: 20, bottomPercent: 100, place: 2 },
       givingTag: { kind: "generous", given: 20, received: 4 },
       circle: emptyCircle,
       activity: { ...quietActivity, joinedAt: NOW },
@@ -69,7 +101,8 @@ describe("computeProfileBadges", () => {
 
     expect(badges.map((b) => b.key)).toEqual(["score", "giving", "new-kid"]);
     expect(badges[0]).toMatchObject({
-      label: "Crowd Favorite",
+      label: "Grandmaster",
+      rarity: "epic",
       tooltip: "Highlight score 160 · Top 20% in Sandbox",
     });
   });
@@ -132,12 +165,11 @@ describe("computeProfileBadges", () => {
   });
 
   it("calls out a recent self-highlight", () => {
-    const badges = computeProfileBadges({
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
       score: null,
-      givingTag: null,
       circle: emptyCircle,
       activity: { ...quietActivity, recentSelfHighlights: 1 },
       now: NOW,
@@ -154,61 +186,17 @@ describe("computeProfileBadges", () => {
     ]);
   });
 
-  it("shows only the highest message milestone reached", () => {
-    const badges = computeProfileBadges({
-      userId: "me",
-      circleName: "Sandbox",
-      circleCreatorId: "someone-else",
-      score: null,
-      givingTag: null,
-      circle: emptyCircle,
-      activity: { ...quietActivity, messages: 1234 },
-      now: NOW,
-    });
-
-    expect(badges).toContainEqual({
-      key: "messages-milestone",
-      emoji: "🎤",
-      label: "1K Club",
-      tooltip: "Sent 1,234 messages in Sandbox",
-      rarity: "rare",
-    });
-  });
-
-  it("shows only the highest active-days milestone reached", () => {
-    expect(badgeKeys({ activity: { activeDaysTotal: 140 } })).toEqual([
-      "days-milestone",
-    ]);
-    expect(
-      computeProfileBadges({
-        userId: "me",
-        circleName: "Sandbox",
-        circleCreatorId: "someone-else",
-        score: null,
-        givingTag: null,
-        circle: emptyCircle,
-        activity: { ...quietActivity, activeDaysTotal: 140 },
-        now: NOW,
-      })[0].label,
-    ).toBe("Regular Fixture");
-  });
-
-  it("has no milestone under 100 messages", () => {
-    expect(badgeKeys({ activity: { messages: 99 } })).toEqual([]);
-  });
-
   it("awards a Commander rank by total commands, with a breakdown", () => {
-    const [commander] = computeProfileBadges({
+    const [commander] = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
       score: null,
-      givingTag: null,
       circle: {
         ...emptyCircle,
-        // Under the 5-use minimum for the per-command "most uses" badges.
+        // Not the top user of any command, so no per-command "most uses" badges.
         commandCounts: {
-          me: { roll: 4, giphy: 4, "8ball": 4 },
+          me: { roll: 9, giphy: 9, "8ball": 9 },
           other: { roll: 40, giphy: 40, "8ball": 40 },
         },
       },
@@ -220,28 +208,35 @@ describe("computeProfileBadges", () => {
       key: "commander",
       label: "Commander I",
       rarity: "common",
-      tooltip: "Used 12 commands in Sandbox",
-      commandBreakdown: { roll: 4, giphy: 4, "8ball": 4 },
+      tooltip: "Used 27 commands in Sandbox",
+      commandBreakdown: { roll: 9, giphy: 9, "8ball": 9 },
     });
-    expect(
-      badgeKeys({
+    const ranks = (total: number) =>
+      badgesFor({
+        userId: "me",
+        circleName: "Sandbox",
+        circleCreatorId: "someone-else",
+        score: null,
         circle: {
-          commandCounts: {
-            me: { roll: 40, tim: 20 },
-            other: { roll: 99, tim: 99 },
-          },
+          ...emptyCircle,
+          commandCounts: { me: { roll: total }, other: { roll: 99_999 } },
         },
-      }),
-    ).toEqual(["commander"]);
+        activity: quietActivity,
+        now: NOW,
+      }).find((b) => b.key === "commander");
+    expect(ranks(24)).toBeUndefined();
+    expect(ranks(149)?.label).toBe("Commander I");
+    expect(ranks(150)).toMatchObject({ label: "Commander II", rarity: "rare" });
+    expect(ranks(750)?.rarity).toBe("epic");
+    expect(ranks(3000)?.rarity).toBe("legendary");
   });
 
   it("names their biggest fan by first name", () => {
-    const [fan] = computeProfileBadges({
+    const [fan] = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "someone-else",
       score: null,
-      givingTag: null,
       circle: emptyCircle,
       activity: {
         ...quietActivity,
@@ -253,65 +248,49 @@ describe("computeProfileBadges", () => {
     expect(fan.label).toBe("Biggest Fan: Simone");
   });
 
-  it("sorts rarest first so the cap drops common badges", () => {
-    const badges = computeProfileBadges({
+  it("shows every earned badge, rarest first, with no cap", () => {
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
-      circleCreatorId: "someone-else",
-      score: { multiplier: 0.2, topPercent: 100, bottomPercent: 10 },
+      circleCreatorId: "me",
+      score: { multiplier: 0.2, topPercent: 100, bottomPercent: 10, place: 10 },
       givingTag: { kind: "even", given: 10, received: 10 },
       circle: {
-        commandCounts: { me: { roll: 9 } },
+        commandCounts: { me: { roll: 9, giphy: 9, "8ball": 9, tim: 9 } },
         repliesReceived: { me: 10 },
         topMessageHighlights: { me: 10 },
-        highlightsGiven: {},
+        highlightsGiven: { me: 20 },
       },
       activity: {
         ...quietActivity,
         recentSelfHighlights: 2,
+        activeDaysLast30: 25,
         joinedAt: NOW,
       },
       now: NOW,
     });
 
-    expect(badges.map((b) => b.key)).toEqual([
-      "record-holder",
-      "conversation-starter",
-      "command-roll",
-      "score",
-      "giving",
-    ]);
+    expect(badges.length).toBeGreaterThan(5);
+    const rank = { common: 0, rare: 1, epic: 2, legendary: 3 };
+    const ranks = badges.map((b) => rank[b.rarity]);
+    expect(ranks).toEqual([...ranks].sort((a, b) => b - a));
+    expect(badges[0].rarity).toBe("legendary");
+    expect(badges.map((b) => b.key)).toEqual(
+      expect.arrayContaining([
+        "score",
+        "giving",
+        "new-kid",
+        "self-highlighter",
+      ]),
+    );
   });
 
-  it("caps the row at five badges", () => {
-    const badges = computeProfileBadges({
-      userId: "me",
-      circleName: "Sandbox",
-      circleCreatorId: "someone-else",
-      score: { multiplier: 2, topPercent: 10, bottomPercent: 100 },
-      givingTag: { kind: "even", given: 10, received: 10 },
-      circle: {
-        commandCounts: { me: { roll: 9, "8ball": 9, giphy: 9, tim: 9 } },
-        repliesReceived: { me: 10 },
-        topMessageHighlights: { me: 10 },
-        highlightsGiven: {},
-      },
-      activity: { ...quietActivity, activeDaysLast30: 25, joinedAt: NOW },
-      now: NOW,
-    });
-
-    expect(badges).toHaveLength(5);
-  });
-});
-
-describe("Founder, Hype Man, streak and Topic Starter", () => {
   it("awards Founder to the circle's creator", () => {
-    const badges = computeProfileBadges({
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
       circleCreatorId: "me",
       score: null,
-      givingTag: null,
       circle: emptyCircle,
       activity: quietActivity,
       now: NOW,
@@ -334,12 +313,11 @@ describe("Founder, Hype Man, streak and Topic Starter", () => {
         new Date(NOW.getTime() - i * DAY).toISOString().slice(0, 10),
       );
     const streakBadge = (n: number) =>
-      computeProfileBadges({
+      badgesFor({
         userId: "me",
         circleName: "Sandbox",
         circleCreatorId: "someone-else",
         score: null,
-        givingTag: null,
         circle: emptyCircle,
         activity: { ...quietActivity, recentActiveDays: days(n) },
         now: NOW,
@@ -360,6 +338,57 @@ describe("Founder, Hype Man, streak and Topic Starter", () => {
   });
 });
 
+describe("stat badges", () => {
+  const statBadges = (stats: Partial<ProfileStats>) =>
+    computeProfileBadges({
+      userId: "me",
+      circleName: "Sandbox",
+      circleCreatorId: "someone-else",
+      score: null,
+      givingTag: evenTag,
+      circle: emptyCircle,
+      activity: quietActivity,
+      stats: { ...zeroStats, ...stats },
+      now: NOW,
+    }).filter((b) => b.key.startsWith("stat-"));
+
+  it("always shows one badge per stat, common at zero", () => {
+    const badges = statBadges({});
+    expect(badges).toHaveLength(8);
+    expect(badges.every((b) => b.rarity === "common")).toBe(true);
+  });
+
+  it("raises each stat's rarity with its count", () => {
+    const byKey = Object.fromEntries(
+      statBadges({
+        messages: 1_234,
+        highlightsReceived: 300,
+        highlightsGiven: 1_000,
+        mentionsReceived: 30,
+      }).map((b) => [b.key, b]),
+    );
+
+    expect(byKey["stat-messages"]).toMatchObject({
+      label: "1K Club",
+      rarity: "rare",
+      tooltip: "Sent 1,234 messages in Sandbox",
+    });
+    expect(byKey["stat-highlightsReceived"]).toMatchObject({
+      label: "Fan Favorite",
+      rarity: "epic",
+    });
+    expect(byKey["stat-highlightsGiven"]).toMatchObject({
+      label: "Patron Saint",
+      rarity: "legendary",
+    });
+    expect(byKey["stat-mentionsReceived"].rarity).toBe("rare");
+    expect(byKey["stat-repliesGiven"]).toMatchObject({
+      label: "Chimes In",
+      rarity: "common",
+    });
+  });
+});
+
 describe("currentStreak", () => {
   it("counts back from today, or from yesterday if they haven't posted today", () => {
     expect(currentStreak(["2026-10-02", "2026-10-01", "2026-09-30"], NOW)).toBe(
@@ -377,9 +406,19 @@ describe("currentStreak", () => {
 });
 
 describe("getScoreRank", () => {
-  it("maps multipliers to ranks", () => {
-    expect(getScoreRank(5.2).label).toBe("Mythic");
-    expect(getScoreRank(1).label).toBe("Regular");
-    expect(getScoreRank(0.2).label).toBe("Wallflower");
+  it("ranks by standing in the circle", () => {
+    expect(getScoreRank({ topPercent: 4, place: 1 }).label).toBe("Top 500");
+    expect(getScoreRank({ topPercent: 45, place: 5 }).label).toBe("Platinum");
+    expect(getScoreRank({ topPercent: 100, place: 9 }).label).toBe(
+      "In Placements",
+    );
+  });
+
+  it("never ranks first place below Grandmaster, even in a small circle", () => {
+    // Tied for first of 3: "top 33%" would otherwise be Master.
+    expect(getScoreRank({ topPercent: 33, place: 1 })).toMatchObject({
+      label: "Grandmaster",
+      rarity: "epic",
+    });
   });
 });

@@ -36,6 +36,8 @@ describe("computeHighlightScore", () => {
     expect(computeHighlightScore(members, "a")!.topPercent).toBe(25);
     expect(computeHighlightScore(members, "d")!.topPercent).toBe(100);
     expect(computeHighlightScore(members, "d")!.bottomPercent).toBe(25);
+    expect(computeHighlightScore(members, "a")!.place).toBe(1);
+    expect(computeHighlightScore(members, "d")!.place).toBe(4);
   });
 
   it("gives tied members the same rank", () => {
@@ -81,8 +83,8 @@ describe("computeGivingTag", () => {
     expect(computeGivingTag(member(10, 12), "me")?.kind).toBe("even");
   });
 
-  it("doesn't tag anyone until there's enough activity", () => {
-    expect(computeGivingTag(member(0, 3), "me")).toBeNull();
+  it("reads low activity as even", () => {
+    expect(computeGivingTag(member(0, 3), "me").kind).toBe("even");
   });
 
   it("smooths small samples toward even", () => {
@@ -90,7 +92,11 @@ describe("computeGivingTag", () => {
     expect(computeGivingTag(member(1, 4), "me")?.kind).toBe("even");
   });
 
-  it("returns null for someone with no activity in the circle", () => {
-    expect(computeGivingTag(member(5, 5), "someone-else")).toBeNull();
+  it("tags someone with no activity in the circle as even", () => {
+    expect(computeGivingTag(member(5, 5), "someone-else")).toEqual({
+      kind: "even",
+      given: 0,
+      received: 0,
+    });
   });
 });

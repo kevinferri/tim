@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { beforeEach, describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { prismaClient, resetDb } from "@/test/db";
 import { getCircleStats, getMemberActivity } from "./badge-stats";
 
@@ -81,6 +81,35 @@ describe("getCircleStats", () => {
   });
 });
 
+describe("getCircleStats caching", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("serves stale stats instantly, then the background refresh", async () => {
+    const a = await createUser();
+    const topic = await createTopic(a.id);
+    await message(a.id, topic.id);
+
+    const first = await getCircleStats(topic.circleId);
+    expect(first.members).toEqual([
+      expect.objectContaining({ userId: a.id, messages: 1 }),
+    ]);
+
+    await message(a.id, topic.id);
+    const start = Date.now();
+    // Past the 5-minute fresh window, inside the 1-hour stale window.
+    vi.spyOn(Date, "now").mockReturnValue(start + 6 * 60_000);
+
+    expect(await getCircleStats(topic.circleId)).toBe(first);
+
+    await vi.waitFor(async () => {
+      const refreshed = await getCircleStats(topic.circleId);
+      expect(refreshed.members).toEqual([
+        expect.objectContaining({ userId: a.id, messages: 2 }),
+      ]);
+    });
+  });
+});
+
 describe("getMemberActivity", () => {
   it("summarises the member's own activity and biggest fan in the circle", async () => {
     const me = await createUser();
@@ -136,7 +165,6 @@ describe("getMemberActivity", () => {
     const activity = await getMemberActivity({
       circleId: topic.circleId,
       userId: me.id,
-      highlightsReceived: 3,
     });
 
     // Three of the four messages fall inside the 60-day window (the 60-day-old one may straddle it).
@@ -150,7 +178,6 @@ describe("getMemberActivity", () => {
       repliesGiven: 1,
       activeDaysLast30: 3,
       activeDaysTotal: 4,
-      highlightsReceived: 3,
       recentSelfHighlights: 1,
       topicsCreated: 1,
       biggestFan: { name: "Simone de Beauvoir", highlights: 2 },

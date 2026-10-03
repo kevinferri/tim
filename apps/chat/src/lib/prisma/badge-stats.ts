@@ -10,23 +10,43 @@ export type CircleStats = CircleBadgeAggregates & {
   members: MemberHighlightCounts[];
 };
 
-// Circle-wide scans are shared by every profile opened in the circle, so cache them briefly.
-const CIRCLE_STATS_TTL_MS = 60_000;
+// Circle-wide stats scan the whole circle's messages and highlights, which is slow on big circles,
+// so serve them stale-while-revalidate: fresh for 5 min, then served instantly while one refresh runs.
+const CIRCLE_STATS_FRESH_MS = 5 * 60_000;
+const CIRCLE_STATS_MAX_STALE_MS = 60 * 60_000;
 const circleStatsCache = new Map<
   string,
-  { expiresAt: number; stats: Promise<CircleStats> }
+  { loadedAt: number; stats: Promise<CircleStats>; refreshing: boolean }
 >();
 
 export function getCircleStats(circleId: string): Promise<CircleStats> {
   const cached = circleStatsCache.get(circleId);
-  if (cached && cached.expiresAt > Date.now()) return cached.stats;
+  const age = cached ? Date.now() - cached.loadedAt : Infinity;
+
+  if (cached && age < CIRCLE_STATS_MAX_STALE_MS) {
+    if (age > CIRCLE_STATS_FRESH_MS && !cached.refreshing) {
+      cached.refreshing = true;
+      loadCircleStats(circleId)
+        .then((stats) =>
+          circleStatsCache.set(circleId, {
+            loadedAt: Date.now(),
+            stats: Promise.resolve(stats),
+            refreshing: false,
+          }),
+        )
+        // Keep serving the stale copy; the next request retries.
+        .catch(() => (cached.refreshing = false));
+    }
+    return cached.stats;
+  }
 
   const stats = loadCircleStats(circleId);
   circleStatsCache.set(circleId, {
-    expiresAt: Date.now() + CIRCLE_STATS_TTL_MS,
+    loadedAt: Date.now(),
     stats,
+    refreshing: false,
   });
-  // Don't cache a failure for the whole TTL.
+  // Don't cache a failure.
   stats.catch(() => circleStatsCache.delete(circleId));
   return stats;
 }
@@ -83,15 +103,14 @@ async function loadCircleStats(circleId: string): Promise<CircleStats> {
   };
 }
 
+// highlightsReceived comes from getCircleStats, so callers merge it in; keeping it out lets both run in parallel.
 export async function getMemberActivity({
   circleId,
   userId,
-  highlightsReceived,
 }: {
   circleId: string;
   userId: string;
-  highlightsReceived: number;
-}): Promise<MemberActivity> {
+}): Promise<Omit<MemberActivity, "highlightsReceived">> {
   const [
     [activity],
     [fan],
@@ -164,7 +183,6 @@ export async function getMemberActivity({
 
   return {
     ...activity,
-    highlightsReceived,
     recentSelfHighlights,
     recentActiveDays: dayRows.map((r) => r.day),
     topicsCreated,

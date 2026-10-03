@@ -75,7 +75,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
 
   const memberActivity = {
     messages: 20,
-    highlightsReceived: 18,
     repliesSent: 5,
     repliesGiven: 4,
     recentSelfHighlights: 0,
@@ -126,20 +125,33 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     const res = await GET(makeRequest(), makeParams());
 
     expect(res.status).toBe(200);
+    const statBadgeCount = (await res.clone().json()).badges.filter(
+      (b: { key: string }) => b.key.startsWith("stat-"),
+    ).length;
+    expect(statBadgeCount).toBe(8);
+    expect(res.headers.get("Server-Timing")).toMatch(
+      /topic;dur=[\d.]+.*circle;dur=[\d.]+/,
+    );
     expect(
       prismaClient.notification.countMentionsReceivedByUser,
     ).toHaveBeenCalledWith({ userId: "user-2", circleId: "circle-1" });
     await expect(res.json()).resolves.toEqual({
       topicName: "General",
       circleName: "Sandbox",
-      highlightScore: { multiplier: 1.4, topPercent: 50, bottomPercent: 100 },
-      badges: [
+      highlightScore: {
+        multiplier: 1.4,
+        topPercent: 50,
+        bottomPercent: 100,
+        place: 1,
+      },
+      badges: expect.arrayContaining([
         {
           key: "score",
-          emoji: "✨",
-          label: "Quotable",
+          // First of two: first place never ranks below Grandmaster.
+          emoji: "🔱",
+          label: "Grandmaster",
           tooltip: "Highlight score 140 · Top 50% in Sandbox",
-          rarity: "common",
+          rarity: "epic",
         },
         {
           key: "giving",
@@ -148,7 +160,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
           tooltip: "Gave 1, got 18 highlights in Sandbox",
           rarity: "common",
         },
-      ],
+      ]),
       messagesSent: 20,
       highlightsGiven: 1,
       highlightsReceived: 18,
@@ -176,7 +188,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     vi.mocked(getMemberActivity).mockResolvedValue({
       ...memberActivity,
       messages: 0,
-      highlightsReceived: 0,
       repliesSent: 0,
       repliesGiven: 0,
       activeDaysTotal: 0,

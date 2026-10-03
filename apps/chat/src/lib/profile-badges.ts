@@ -92,7 +92,6 @@ export type MemberActivity = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MAX_BADGES = 5;
 
 const COMMAND_BADGES: Partial<
   Record<CommandName, { emoji: string; label: string; noun: string }>
@@ -105,10 +104,10 @@ const COMMAND_BADGES: Partial<
 
 // Rank by total commands used in the circle, highest first.
 const COMMANDER_TIERS: Milestone[] = [
-  { min: 1_000, emoji: "🎖️", label: "Commander IV", rarity: "legendary" },
-  { min: 200, emoji: "🎖️", label: "Commander III", rarity: "epic" },
-  { min: 50, emoji: "🎖️", label: "Commander II", rarity: "rare" },
-  { min: 10, emoji: "🎖️", label: "Commander I", rarity: "common" },
+  { min: 3_000, emoji: "🎖️", label: "Commander IV", rarity: "legendary" },
+  { min: 750, emoji: "🎖️", label: "Commander III", rarity: "epic" },
+  { min: 150, emoji: "🎖️", label: "Commander II", rarity: "rare" },
+  { min: 25, emoji: "🎖️", label: "Commander I", rarity: "common" },
 ];
 
 type Milestone = {
@@ -118,19 +117,113 @@ type Milestone = {
   rarity: BadgeRarity;
 };
 
-// Highest first; only the top tier reached is shown.
-const MESSAGE_MILESTONES: Milestone[] = [
-  { min: 10_000, emoji: "🌌", label: "10K Club", rarity: "legendary" },
-  { min: 5_000, emoji: "🏛️", label: "5K Club", rarity: "epic" },
-  { min: 1_000, emoji: "🎤", label: "1K Club", rarity: "rare" },
-  { min: 500, emoji: "💬", label: "500 Club", rarity: "common" },
-  { min: 100, emoji: "🐣", label: "100 Club", rarity: "common" },
-];
+// The profile's stat values, each with an always-on badge whose rarity climbs with the number.
+export type ProfileStats = {
+  messages: number;
+  activeDays: number;
+  highlightsReceived: number;
+  highlightsGiven: number;
+  repliesReceived: number;
+  repliesGiven: number;
+  mentionsReceived: number;
+  mentionsSent: number;
+};
 
-const ACTIVE_DAY_MILESTONES: Milestone[] = [
-  { min: 365, emoji: "🦕", label: "Ancient One", rarity: "legendary" },
-  { min: 100, emoji: "🧱", label: "Regular Fixture", rarity: "rare" },
-  { min: 30, emoji: "🪴", label: "Putting Down Roots", rarity: "common" },
+type StatLadder = {
+  stat: keyof ProfileStats;
+  tooltip: (n: string, circleName: string) => string;
+  // Lowest first; the first tier starts at 0 so the badge always shows.
+  tiers: [Milestone, Milestone, Milestone, Milestone];
+};
+
+const tier = (
+  min: number,
+  emoji: string,
+  label: string,
+  rarity: BadgeRarity,
+): Milestone => ({ min, emoji, label, rarity });
+
+const STAT_LADDERS: StatLadder[] = [
+  {
+    stat: "messages",
+    tooltip: (n, c) => `Sent ${n} messages in ${c}`,
+    tiers: [
+      tier(0, "💬", "Chatter", "common"),
+      tier(1_000, "🎤", "1K Club", "rare"),
+      tier(5_000, "🏛️", "5K Club", "epic"),
+      tier(10_000, "🌌", "10K Club", "legendary"),
+    ],
+  },
+  {
+    stat: "activeDays",
+    tooltip: (n, c) => `Posted on ${n} different days in ${c}`,
+    tiers: [
+      tier(0, "🌱", "Sprout", "common"),
+      tier(30, "🪴", "Putting Down Roots", "rare"),
+      tier(100, "🧱", "Regular Fixture", "epic"),
+      tier(365, "🦕", "Ancient One", "legendary"),
+    ],
+  },
+  {
+    stat: "highlightsReceived",
+    tooltip: (n, c) => `Received ${n} highlights in ${c}`,
+    tiers: [
+      tier(0, "✨", "Spark", "common"),
+      tier(50, "🌟", "Rising Star", "rare"),
+      tier(250, "💫", "Fan Favorite", "epic"),
+      tier(1_000, "🌠", "Superstar", "legendary"),
+    ],
+  },
+  {
+    stat: "highlightsGiven",
+    tooltip: (n, c) => `Gave ${n} highlights in ${c}`,
+    tiers: [
+      tier(0, "👏", "Applauder", "common"),
+      tier(50, "🙌", "Cheerleader", "rare"),
+      tier(250, "🎉", "Hype Squad", "epic"),
+      tier(1_000, "😇", "Patron Saint", "legendary"),
+    ],
+  },
+  {
+    stat: "repliesReceived",
+    tooltip: (n, c) => `Got ${n} replies in ${c}`,
+    tiers: [
+      tier(0, "💭", "Murmur", "common"),
+      tier(25, "🗨️", "Discussion Piece", "rare"),
+      tier(100, "🔥", "Hot Topic", "epic"),
+      tier(500, "🌋", "Thread Magnet", "legendary"),
+    ],
+  },
+  {
+    stat: "repliesGiven",
+    tooltip: (n, c) => `Sent ${n} replies in ${c}`,
+    tiers: [
+      tier(0, "↩️", "Chimes In", "common"),
+      tier(50, "💬", "Conversationalist", "rare"),
+      tier(200, "🎙️", "Debate Club", "epic"),
+      tier(1_000, "📻", "Talk Show Host", "legendary"),
+    ],
+  },
+  {
+    stat: "mentionsReceived",
+    tooltip: (n, c) => `@mentioned ${n} times in ${c}`,
+    tiers: [
+      tier(0, "📇", "On the List", "common"),
+      tier(25, "📣", "In Demand", "rare"),
+      tier(100, "🔔", "Most Wanted", "epic"),
+      tier(500, "📢", "Household Name", "legendary"),
+    ],
+  },
+  {
+    stat: "mentionsSent",
+    tooltip: (n, c) => `@mentioned others ${n} times in ${c}`,
+    tiers: [
+      tier(0, "☎️", "Caller", "common"),
+      tier(25, "📞", "Connector", "rare"),
+      tier(100, "🕸️", "Networker", "epic"),
+      tier(500, "🦋", "Social Butterfly", "legendary"),
+    ],
+  },
 ];
 
 const GIVING_TAGS = {
@@ -139,30 +232,27 @@ const GIVING_TAGS = {
   greedy: { emoji: "🐉", label: "Greedy" },
 } as const;
 
-// Highlight score rank, by highlights-per-message relative to the circle average (1 = average).
-export function getScoreRank(multiplier: number): {
+// Highlight score rank, by standing in the circle: smoothing compresses multipliers toward the
+// average, so even the circle's best can sit near 1x. Overwatch-style ranks; first place never ranks below Grandmaster.
+export function getScoreRank(
+  score: Pick<HighlightScore, "topPercent" | "place">,
+): {
   emoji: string;
   label: string;
   rarity: BadgeRarity;
 } {
-  if (multiplier >= 5)
-    return { emoji: "🦄", label: "Mythic", rarity: "legendary" };
-  if (multiplier >= 4)
-    return { emoji: "👑", label: "Legend", rarity: "legendary" };
-  if (multiplier >= 3) return { emoji: "💎", label: "Icon", rarity: "epic" };
-  if (multiplier >= 2.5)
-    return { emoji: "🎬", label: "Main Character", rarity: "epic" };
-  if (multiplier >= 2)
-    return { emoji: "🌟", label: "Headliner", rarity: "rare" };
-  if (multiplier >= 1.5)
-    return { emoji: "🔥", label: "Crowd Favorite", rarity: "rare" };
-  if (multiplier >= 1.1)
-    return { emoji: "✨", label: "Quotable", rarity: "common" };
-  if (multiplier >= 0.75)
-    return { emoji: "💬", label: "Regular", rarity: "common" };
-  if (multiplier >= 0.5)
-    return { emoji: "🫥", label: "Under the Radar", rarity: "common" };
-  return { emoji: "🪴", label: "Wallflower", rarity: "common" };
+  const top = score.topPercent;
+  if (top <= 5) return { emoji: "🏆", label: "Top 500", rarity: "legendary" };
+  if (top <= 10) return { emoji: "👑", label: "Champion", rarity: "legendary" };
+  if (top <= 20 || score.place === 1)
+    return { emoji: "🔱", label: "Grandmaster", rarity: "epic" };
+  if (top <= 30) return { emoji: "💠", label: "Master", rarity: "epic" };
+  if (top <= 40) return { emoji: "💎", label: "Diamond", rarity: "rare" };
+  if (top <= 50) return { emoji: "🔷", label: "Platinum", rarity: "rare" };
+  if (top <= 60) return { emoji: "🥇", label: "Gold", rarity: "common" };
+  if (top <= 75) return { emoji: "🥈", label: "Silver", rarity: "common" };
+  if (top <= 90) return { emoji: "🥉", label: "Bronze", rarity: "common" };
+  return { emoji: "❔", label: "In Placements", rarity: "common" };
 }
 
 // Ties share the top spot.
@@ -177,9 +267,10 @@ export function computeProfileBadges(args: {
   circleName: string;
   circleCreatorId: string;
   score: HighlightScore | null;
-  givingTag: GivingTag | null;
+  givingTag: GivingTag;
   circle: CircleBadgeAggregates;
   activity: MemberActivity;
+  stats: ProfileStats;
   now: Date;
 }): ProfileBadge[] {
   const {
@@ -190,6 +281,7 @@ export function computeProfileBadges(args: {
     givingTag,
     circle,
     activity,
+    stats,
     now,
   } = args;
   const badges: ProfileBadge[] = [];
@@ -211,18 +303,16 @@ export function computeProfileBadges(args: {
         : `Bottom ${score.bottomPercent}%`;
     add({
       key: "score",
-      ...getScoreRank(score.multiplier),
+      ...getScoreRank(score),
       tooltip: `Highlight score ${Math.round(score.multiplier * 100)} · ${rank} in ${circleName}`,
     });
   }
 
-  if (givingTag) {
-    add({
-      key: "giving",
-      ...GIVING_TAGS[givingTag.kind],
-      tooltip: `Gave ${givingTag.given}, got ${givingTag.received} highlights in ${circleName}`,
-    });
-  }
+  add({
+    key: "giving",
+    ...GIVING_TAGS[givingTag.kind],
+    tooltip: `Gave ${givingTag.given}, got ${givingTag.received} highlights in ${circleName}`,
+  });
 
   if (userId === circleCreatorId) {
     add({
@@ -316,27 +406,15 @@ export function computeProfileBadges(args: {
     });
   }
 
-  const milestone = MESSAGE_MILESTONES.find((m) => activity.messages >= m.min);
-  if (milestone) {
+  for (const ladder of STAT_LADDERS) {
+    const value = stats[ladder.stat];
+    const reached = [...ladder.tiers].reverse().find((t) => value >= t.min)!;
     add({
-      key: "messages-milestone",
-      emoji: milestone.emoji,
-      label: milestone.label,
-      rarity: milestone.rarity,
-      tooltip: `Sent ${activity.messages.toLocaleString("en-US")} messages in ${circleName}`,
-    });
-  }
-
-  const dayMilestone = ACTIVE_DAY_MILESTONES.find(
-    (m) => activity.activeDaysTotal >= m.min,
-  );
-  if (dayMilestone) {
-    add({
-      key: "days-milestone",
-      emoji: dayMilestone.emoji,
-      label: dayMilestone.label,
-      rarity: dayMilestone.rarity,
-      tooltip: `Posted on ${activity.activeDaysTotal} different days in ${circleName}`,
+      key: `stat-${ladder.stat}`,
+      emoji: reached.emoji,
+      label: reached.label,
+      rarity: reached.rarity,
+      tooltip: ladder.tooltip(value.toLocaleString("en-US"), circleName),
     });
   }
 
@@ -424,9 +502,7 @@ export function computeProfileBadges(args: {
     });
   }
 
-  // Rarest first, before capping, so the cap drops common badges rather than rare ones.
+  // Rarest first; no cap, every earned badge shows.
   // Array.prototype.sort is stable, so equal rarities keep their priority order.
-  return badges
-    .sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity])
-    .slice(0, MAX_BADGES);
+  return badges.sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]);
 }
