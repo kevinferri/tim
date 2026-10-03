@@ -4,9 +4,8 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { NotificationType } from "@tim/socket-types";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
-import { getDisplayName } from "@tim/user-display";
 import { playHighlightChime } from "@/lib/sounds";
-import { flashTitle } from "@/lib/title-alert";
+import { bumpTitleBadge } from "@/lib/title-badges";
 import {
   notificationsQueryKey,
   unreadNotificationCountQueryKey,
@@ -31,16 +30,16 @@ export function NotificationSync() {
     });
   };
 
-  const socket = useSocketHandler<{
-    notificationType: NotificationType;
-    actor: { name: string | null };
-  }>(SocketEvent.CreateNotification, ({ notificationType, actor }) => {
-    invalidate();
-    if (notificationType === NotificationType.HighlightRecieved) {
-      playHighlightChime();
-      flashTitle(`⭐ ${getDisplayName(actor.name)} highlighted your message`);
-    }
-  });
+  const socket = useSocketHandler<{ notificationType: NotificationType }>(
+    SocketEvent.CreateNotification,
+    ({ notificationType }) => {
+      invalidate();
+      if (notificationType === NotificationType.HighlightRecieved) {
+        playHighlightChime();
+        bumpTitleBadge("highlights");
+      }
+    },
+  );
 
   // Both queries use staleTime: Infinity, so notifications pushed while
   // disconnected would otherwise never show up.

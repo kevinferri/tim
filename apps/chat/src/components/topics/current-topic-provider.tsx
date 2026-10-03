@@ -248,7 +248,6 @@ export function CurrentTopicProvider(props: Props) {
   const {
     socketState: { isConnected },
   } = useSocketContext();
-  const baseTitle = `${props.circleName} - ${props.topicName}`;
   const [generatingCommand, setGeneratingCommand] = useState<
     string | undefined
   >();
@@ -319,7 +318,6 @@ export function CurrentTopicProvider(props: Props) {
 
   const { notifyOnNewMessage } = useTopicActivity({
     topicId: props.topicId,
-    baseTitle,
   });
 
   useEffect(() => {
