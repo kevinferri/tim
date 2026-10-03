@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { withAllRead, NotificationItem } from "./notification-query-cache";
+import { QueryClient, InfiniteData } from "@tanstack/react-query";
+import {
+  withAllRead,
+  NotificationItem,
+  notificationsQueryKey,
+  updateNotificationMessages,
+} from "./notification-query-cache";
 
 function notif(
   id: string,
@@ -13,6 +19,7 @@ function notif(
     messageId: "m1",
     actor: { id: "u1", name: "Actor", imageUrl: null },
     message: {
+      id: "m1",
       topicId: "t1",
       text: "hello",
       mediaUrl: null,
@@ -47,5 +54,30 @@ describe("withAllRead", () => {
       actor: original.actor,
       message: original.message,
     });
+  });
+});
+
+describe("updateNotificationMessages", () => {
+  it("patches every notification pointing at the message, across pages", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData<InfiniteData<NotificationItem[]>>(
+      notificationsQueryKey,
+      {
+        pages: [[notif("n1"), notif("n2", { messageId: "m2" })], [notif("n3")]],
+        pageParams: [undefined, "n2"],
+      },
+    );
+
+    updateNotificationMessages(queryClient, "m1", (m) => ({
+      ...m,
+      highlights: [{ id: "h1", userId: "u2" }],
+    }));
+
+    const pages = queryClient.getQueryData<InfiniteData<NotificationItem[]>>(
+      notificationsQueryKey,
+    )!.pages;
+    expect(pages[0][0].message.highlights).toHaveLength(1);
+    expect(pages[0][1].message.highlights).toBeUndefined();
+    expect(pages[1][0].message.highlights).toHaveLength(1);
   });
 });

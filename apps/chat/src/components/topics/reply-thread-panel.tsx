@@ -116,7 +116,6 @@ export function ReplyThreadPanel({ topicId, threadRootId }: Props) {
                   )}
                   <Message
                     {...message}
-                    variant="default"
                     context="sidebar"
                     className={THREAD_MESSAGE_CLASS}
                     {...getMessagePositionFlags(recency, message.id)}

@@ -22,12 +22,6 @@ export function remainingAnimationMs(durationMs: number, createdAtMs?: number) {
   return Math.min(Math.max(durationMs - age, 0), durationMs);
 }
 
-export function truncateText(str: string, maxLength = 50) {
-  const words = str.split(/\s+/);
-  if (words.length <= maxLength) return str;
-  return `${str.split(" ").splice(0, maxLength).join(" ")}...`;
-}
-
 export function getLinksFromMessage(message?: string) {
   if (!message) return [];
 

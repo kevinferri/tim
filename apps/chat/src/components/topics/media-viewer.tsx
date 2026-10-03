@@ -58,7 +58,6 @@ function prepareVideoPlayer(
 
 type Props = {
   url: string;
-  variant?: "default" | "minimal";
   onPreviewLoad?: () => void;
   onImageExpanded?: () => void;
   priority?: boolean;

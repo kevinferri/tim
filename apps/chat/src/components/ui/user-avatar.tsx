@@ -276,7 +276,6 @@ export function UserAvatar(props: Props) {
                         status={status}
                         userId={props.id}
                         lastStatusUpdate={lastStatusUpdate}
-                        variant="minimal"
                       />
                     </div>
                   )}
@@ -440,7 +439,6 @@ export function UserAvatar(props: Props) {
                 <Message
                   key={`${message.id}-user-avatar`}
                   {...message}
-                  variant="minimal"
                   context="user-sheet"
                 />
               );

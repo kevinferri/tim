@@ -38,7 +38,6 @@ function Content(props: ContentProps) {
     return (
       <Message
         {...props.message}
-        variant="minimal"
         context="modal"
         {...getMessagePositionFlags(props.recency, props.message.id)}
       />

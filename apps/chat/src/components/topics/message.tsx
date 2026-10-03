@@ -31,7 +31,6 @@ import { MessageEdit } from "@/components/topics/message-edit";
 import {
   adjustHeight,
   getLinksFromMessage,
-  truncateText,
   isBareRoll,
 } from "@/components/topics/message-utils";
 import { MessageSentAt } from "@/components/topics/message-sent-at";
@@ -87,9 +86,7 @@ export type MessageData = {
 };
 
 export type MessageProps = MessageData & {
-  variant: "default" | "minimal";
   className?: string;
-  hiddenElements?: Array<"sentBy" | "sentAt" | "highlights">;
   context?: MessageSurface;
   // Computed once by whoever renders the list, not by this component, so
   // unrelated messages don't re-render when a new one arrives.
@@ -99,7 +96,10 @@ export type MessageProps = MessageData & {
 };
 
 const MessageComponent = (props: MessageProps) => {
-  const { topicId } = useTopicMetaContext();
+  const { topicId: currentTopicId } = useTopicMetaContext();
+  // Notifications can show a message from another topic.
+  const topicId = props.topicId ?? currentTopicId;
+  const inCurrentTopic = topicId === currentTopicId;
   const {
     scrollToBottom,
     setReplyingTo,
@@ -117,12 +117,17 @@ const MessageComponent = (props: MessageProps) => {
   const [shuffledGifLoading, setShuffledGifLoading] = useState(false);
   const createdAt = new Date(props.createdAt || new Date());
   const sentBySelf = props.sentBy?.id === self.id;
+  // Edit/delete/shuffle are room events, so only for the topic you're in.
+  const canModify = sentBySelf && inCurrentTopic;
+  // Replies stage in this topic's composer, which a modal or sheet covers.
+  const canReply =
+    inCurrentTopic && props.context !== "modal" && props.context !== "user-sheet";
   const isRecentMessage = props.isRecentMessage ?? false;
   const isFirstMessage = props.isFirstMessage ?? false;
   const isNewestMessage = props.isNewestMessage ?? false;
   const isShufflingGif =
     (props.id && shufflingGifs.includes(props.id)) || shuffledGifLoading;
-  const isActionEligable = props.variant !== "minimal";
+  const isActionEligable = !!props.id;
   const replyCount = props.replyCount ?? 0;
   const isJumpTarget = !!props.id && highlightedMessageId === props.id;
   // Keeps the transcript's copy of the root lit while its thread sheet is open,
@@ -200,10 +205,10 @@ const MessageComponent = (props: MessageProps) => {
   const onStartEdit = () => {
     setIsEditing(true);
     // scrollToBottom is the main transcript's and sets isAtBottom, which gates
-    // its live-window trim. In the thread panel isNewestMessage is
-    // thread-local, so acting on it here would pin (and trim) a transcript the
-    // user isn't even looking at.
-    if (isNewestMessage && !isThreadSidebar) {
+    // its live-window trim. Elsewhere isNewestMessage is relative to some
+    // other list, so acting on it would pin (and trim) a transcript the user
+    // isn't even looking at.
+    if (isNewestMessage && props.context === "topic") {
       scrollToBottom({ behavior: "instant" });
     }
   };
@@ -228,18 +233,15 @@ const MessageComponent = (props: MessageProps) => {
       senderId: props.sentBy.id,
     });
   };
-  // In the thread panel the root is already on screen — quoting it on every
-  // direct reply just burns vertical space. Keep quotes only for reply-to-reply.
-  const showHighlights =
-    !props.hiddenElements?.includes("highlights") && highlights.length > 0;
+  const showHighlights = highlights.length > 0;
   const showReplyCount =
-    props.variant !== "minimal" &&
     props.context === "topic" &&
     !props.threadRootId &&
     replyCount > 0;
 
+  // In the thread panel the root is already on screen — quoting it on every
+  // direct reply just burns vertical space. Keep quotes only for reply-to-reply.
   const showReplyPreview =
-    props.variant !== "minimal" &&
     !!props.replyTo &&
     !(isThreadSidebar && props.replyToId === props.threadRootId);
 
@@ -249,10 +251,10 @@ const MessageComponent = (props: MessageProps) => {
       messageId={props.id!}
       topicId={topicId}
       text={props.text ?? ""}
-      sentBySelf={sentBySelf}
+      canModify={canModify}
       highlightedBySelf={highlightedBySelf}
       onHighlight={handleToggleHighlight}
-      onReply={onReply}
+      onReply={canReply ? onReply : undefined}
       onEdit={ownActions.canEdit ? onStartEdit : undefined}
       onShuffleGif={ownActions.canShuffle ? onShuffleGif : undefined}
     >
@@ -262,15 +264,12 @@ const MessageComponent = (props: MessageProps) => {
           baseStyles,
           isOpenThreadRoot || isJumpTarget ? markerRingStyles : "",
           highlightedBySelf ? highlightStyles : "",
-          props.variant === "minimal"
-            ? "after:bg-inherit dark:after:bg-inherit dark:text-primary"
-            : "",
           // Long-press opens the message menu, so keep iOS's own callout/selection out of it.
           !canHover && "select-none [-webkit-touch-callout:none]",
           props.className,
         )}
         onDoubleClick={(e) => {
-          if (props.variant !== "minimal") handleToggleHighlight();
+          handleToggleHighlight();
 
           const element = e.target as HTMLElement;
           if (element.tagName !== "TEXTAREA" && typeof window !== "undefined") {
@@ -286,11 +285,10 @@ const MessageComponent = (props: MessageProps) => {
       >
         <div
           className={cn(
-            // Clip sideways only: the highlights pill is taller than the name line it sits on.
             "flex items-start gap-3 overflow-x-clip leading-none",
           )}
         >
-          {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
+          {props.sentBy && (
             <UserAvatar
               id={props.sentBy.id}
               name={props.sentBy.name}
@@ -309,7 +307,7 @@ const MessageComponent = (props: MessageProps) => {
             className={cn("flex min-w-0 flex-1 flex-col gap-0.5 leading-none")}
           >
             <div className="flex h-4 min-w-0 items-center gap-2">
-              {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
+              {props.sentBy && (
                 <UserAvatar
                   id={props.sentBy.id}
                   topicId={topicId}
@@ -331,23 +329,11 @@ const MessageComponent = (props: MessageProps) => {
                 </UserAvatar>
               )}
 
-              {!props.hiddenElements?.includes("sentAt") && (
-                <MessageSentAt sentAt={createdAt} />
-              )}
-
-              {/* On the name line, so the first highlight doesn't change the message's height. */}
-              {showHighlights && (
-                <MessageHighlights
-                  highlights={highlights}
-                  highlightedBySelf={highlightedBySelf}
-                  onToggle={handleToggleHighlight}
-                  burst={highlightBurst}
-                />
-              )}
+              <MessageSentAt sentAt={createdAt} />
 
               {showActions && isActionEligable && (
                 <MessageActions
-                  sentBySelf={sentBySelf}
+                  canModify={canModify}
                   // The oldest message has nothing above it to straddle into --
                   // and in the thread panel a negative offset would clip out of
                   // the scroll viewport -- so pin it flush to the top edge.
@@ -360,7 +346,7 @@ const MessageComponent = (props: MessageProps) => {
                   onHighlight={handleToggleHighlight}
                   onEditMessage={onStartEdit}
                   onShuffleGif={onShuffleGif}
-                  onReply={onReply}
+                  onReply={canReply ? onReply : undefined}
                 />
               )}
             </div>
@@ -402,11 +388,7 @@ const MessageComponent = (props: MessageProps) => {
                 <MessageText
                   id={props.id!}
                   topicId={topicId}
-                  text={
-                    props.variant === "minimal"
-                      ? truncateText(props.text ?? "")
-                      : props.text
-                  }
+                  text={props.text}
                   isNewestMessage={isNewestMessage}
                 />
               )}
@@ -418,7 +400,6 @@ const MessageComponent = (props: MessageProps) => {
                 }) ?? (
                   <MediaViewer
                     priority={props.context === "topic"}
-                    variant={props.variant}
                     url={props.mediaUrl}
                     skipVirtualization={isRecentMessage}
                     onImageExpanded={() => {
@@ -433,18 +414,15 @@ const MessageComponent = (props: MessageProps) => {
                   />
                 ))}
 
-              {props.variant !== "minimal" &&
-                links.map((link, i) => {
-                  return (
-                    <LinkPreview
-                      messageId={props.id!}
-                      topicId={topicId}
-                      key={`${props.id}${link}${i}`}
-                      link={link}
-                      mediaUrl={props.mediaUrl}
-                    />
-                  );
-                })}
+              {links.map((link, i) => (
+                <LinkPreview
+                  messageId={props.id!}
+                  topicId={topicId}
+                  key={`${props.id}${link}${i}`}
+                  link={link}
+                  mediaUrl={props.mediaUrl}
+                />
+              ))}
 
               {showReplyCount && (
                 <div className="mt-1">
@@ -463,6 +441,17 @@ const MessageComponent = (props: MessageProps) => {
               )}
             </div>
           </div>
+
+          {showHighlights && (
+            <div className="self-center">
+              <MessageHighlights
+                highlights={highlights}
+                highlightedBySelf={highlightedBySelf}
+                onToggle={handleToggleHighlight}
+                burst={highlightBurst}
+              />
+            </div>
+          )}
         </div>
       </div>
     </MessageContextMenu>

@@ -19,7 +19,6 @@ export function MediaList() {
           <Message
             key={message.id}
             {...message}
-            variant="minimal"
             {...getMessagePositionFlags(recency, message.id)}
           />
         );
