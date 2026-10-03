@@ -334,6 +334,16 @@ const MessageComponent = (props: MessageProps) => {
                 <MessageSentAt sentAt={createdAt} />
               )}
 
+              {/* On the name line, so the first highlight doesn't change the message's height. */}
+              {showHighlights && (
+                <MessageHighlights
+                  highlights={highlights}
+                  highlightedBySelf={highlightedBySelf}
+                  onToggle={handleToggleHighlight}
+                  burst={highlightBurst}
+                />
+              )}
+
               {showActions && isActionEligable && (
                 <MessageActions
                   sentBySelf={sentBySelf}
@@ -435,29 +445,19 @@ const MessageComponent = (props: MessageProps) => {
                   );
                 })}
 
-              {(showHighlights || showReplyCount) && (
-                <div className="mt-1 flex flex-wrap items-center gap-3">
-                  {showHighlights && (
-                    <MessageHighlights
-                      highlights={highlights}
-                      highlightedBySelf={highlightedBySelf}
-                      onToggle={handleToggleHighlight}
-                      burst={highlightBurst}
-                    />
-                  )}
-                  {showReplyCount && (
-                    <Button
-                      variant="ghost"
-                      size="inline"
-                      // No hover fill: it would read as a box under the message.
-                      // Hover shifts colour, matching ReplyPreview.
-                      className="gap-1.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                      onClick={() => setOpenThreadRootId(props.id)}
-                    >
-                      <ReplyIcon />
-                      {replyCount} {replyCount === 1 ? "reply" : "replies"}
-                    </Button>
-                  )}
+              {showReplyCount && (
+                <div className="mt-1">
+                  <Button
+                    variant="ghost"
+                    size="inline"
+                    // No hover fill: it would read as a box under the message.
+                    // Hover shifts colour, matching ReplyPreview.
+                    className="gap-1.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                    onClick={() => setOpenThreadRootId(props.id)}
+                  >
+                    <ReplyIcon />
+                    {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                  </Button>
                 </div>
               )}
             </div>

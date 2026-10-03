@@ -132,7 +132,7 @@ function Sparks(props: { anchor: RefObject<HTMLElement | null> }) {
   );
 }
 
-// Who highlighted a message, under its content. Renders nothing until someone has.
+// Who highlighted a message, beside its timestamp. Renders nothing until someone has.
 export function MessageHighlights(props: Props) {
   const starRef = useRef<HTMLSpanElement>(null);
   const [sparkKey, setSparkKey] = useState<number | null>(null);
@@ -166,7 +166,7 @@ export function MessageHighlights(props: Props) {
             onClick={props.onToggle}
             onDoubleClick={(e) => e.stopPropagation()}
             className={cn(
-              "relative flex h-7 w-fit items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-1 text-xs font-medium tabular-nums transition-colors",
+              "relative flex h-5 w-fit shrink-0 items-center gap-1 rounded-full border pl-1.5 pr-0.5 text-[11px] font-medium leading-none tabular-nums transition-colors",
               props.highlightedBySelf
                 ? "border-highlight-icon/60 bg-highlight-icon/15 text-foreground hover:bg-highlight-icon/25"
                 : "border-border bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -193,7 +193,7 @@ export function MessageHighlights(props: Props) {
                 bursting && "motion-safe:animate-highlight-pop",
               )}
             >
-              <StarFilledIcon className="size-3.5 text-highlight-icon" />
+              <StarFilledIcon className="size-3 text-highlight-icon" />
             </span>
             <span
               key={`count-${highlights.length}`}
@@ -204,14 +204,14 @@ export function MessageHighlights(props: Props) {
             >
               {highlights.length}
             </span>
-            <span className="flex -space-x-1.5">
+            <span className="flex -space-x-1">
               {faces.map((h) => (
                 <Avatar
                   key={h.id}
-                  className="size-5 border-2 border-background active:scale-100"
+                  className="size-4 border-[1.5px] border-background active:scale-100"
                 >
                   <AvatarImage src={h.createdBy?.imageUrl ?? undefined} />
-                  <AvatarFallback className="text-[8px]">
+                  <AvatarFallback className="text-[7px]">
                     {getDisplayName(h.createdBy?.name ?? null).slice(0, 1)}
                   </AvatarFallback>
                 </Avatar>

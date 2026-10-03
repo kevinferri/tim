@@ -75,18 +75,18 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       width: {
-        "sidebar-nav": "220px",
-        "sidebar-nav-lg": "280px",
-        "sidebar-detail": "280px",
-        "sidebar-detail-lg": "320px",
+        "sidebar-nav": "240px",
+        "sidebar-nav-lg": "300px",
+        "sidebar-detail": "300px",
+        "sidebar-detail-lg": "340px",
       },
       minWidth: {
-        "sidebar-nav": "220px",
-        "sidebar-nav-lg": "280px",
+        "sidebar-nav": "240px",
+        "sidebar-nav-lg": "300px",
       },
       maxWidth: {
-        "sidebar-nav": "220px",
-        "sidebar-nav-lg": "280px",
+        "sidebar-nav": "240px",
+        "sidebar-nav-lg": "300px",
       },
       keyframes: {
         "accordion-down": {
