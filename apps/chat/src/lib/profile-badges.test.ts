@@ -69,7 +69,7 @@ describe("computeProfileBadges", () => {
 
     expect(badges.map((b) => b.key)).toEqual(["score", "giving", "new-kid"]);
     expect(badges[0]).toMatchObject({
-      label: "Icon",
+      label: "Grandmaster",
       rarity: "epic",
       tooltip: "Highlight score 160 · Top 20% in Sandbox",
     });
@@ -373,19 +373,17 @@ describe("currentStreak", () => {
 
 describe("getScoreRank", () => {
   it("ranks by standing in the circle", () => {
-    expect(getScoreRank({ topPercent: 4, place: 1 }).label).toBe("Mythic");
-    expect(getScoreRank({ topPercent: 45, place: 5 }).label).toBe(
-      "Crowd Favorite",
-    );
+    expect(getScoreRank({ topPercent: 4, place: 1 }).label).toBe("Top 500");
+    expect(getScoreRank({ topPercent: 45, place: 5 }).label).toBe("Platinum");
     expect(getScoreRank({ topPercent: 100, place: 9 }).label).toBe(
-      "Wallflower",
+      "In Placements",
     );
   });
 
-  it("never ranks first place below Icon, even in a small circle", () => {
-    // Tied for first of 3: "top 33%" would otherwise be Main Character or lower.
+  it("never ranks first place below Grandmaster, even in a small circle", () => {
+    // Tied for first of 3: "top 33%" would otherwise be Master.
     expect(getScoreRank({ topPercent: 33, place: 1 })).toMatchObject({
-      label: "Icon",
+      label: "Grandmaster",
       rarity: "epic",
     });
   });

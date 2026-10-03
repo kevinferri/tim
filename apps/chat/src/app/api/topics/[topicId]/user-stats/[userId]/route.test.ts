@@ -143,9 +143,9 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       badges: [
         {
           key: "score",
-          // First of two: first place never ranks below Icon.
-          emoji: "💎",
-          label: "Icon",
+          // First of two: first place never ranks below Grandmaster.
+          emoji: "🔱",
+          label: "Grandmaster",
           tooltip: "Highlight score 140 · Top 50% in Sandbox",
           rarity: "epic",
         },

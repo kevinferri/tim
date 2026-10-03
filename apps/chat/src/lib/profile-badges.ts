@@ -139,7 +139,7 @@ const GIVING_TAGS = {
 } as const;
 
 // Highlight score rank, by standing in the circle: smoothing compresses multipliers toward the
-// average, so even the circle's best can sit near 1x. First place never ranks below Icon.
+// average, so even the circle's best can sit near 1x. Overwatch-style ranks; first place never ranks below Grandmaster.
 export function getScoreRank(
   score: Pick<HighlightScore, "topPercent" | "place">,
 ): {
@@ -148,20 +148,17 @@ export function getScoreRank(
   rarity: BadgeRarity;
 } {
   const top = score.topPercent;
-  if (top <= 5) return { emoji: "🦄", label: "Mythic", rarity: "legendary" };
-  if (top <= 10) return { emoji: "👑", label: "Legend", rarity: "legendary" };
+  if (top <= 5) return { emoji: "🏆", label: "Top 500", rarity: "legendary" };
+  if (top <= 10) return { emoji: "👑", label: "Champion", rarity: "legendary" };
   if (top <= 20 || score.place === 1)
-    return { emoji: "💎", label: "Icon", rarity: "epic" };
-  if (top <= 30)
-    return { emoji: "🎬", label: "Main Character", rarity: "epic" };
-  if (top <= 40) return { emoji: "🌟", label: "Headliner", rarity: "rare" };
-  if (top <= 50)
-    return { emoji: "🔥", label: "Crowd Favorite", rarity: "rare" };
-  if (top <= 60) return { emoji: "✨", label: "Quotable", rarity: "common" };
-  if (top <= 75) return { emoji: "💬", label: "Regular", rarity: "common" };
-  if (top <= 90)
-    return { emoji: "🫥", label: "Under the Radar", rarity: "common" };
-  return { emoji: "🪴", label: "Wallflower", rarity: "common" };
+    return { emoji: "🔱", label: "Grandmaster", rarity: "epic" };
+  if (top <= 30) return { emoji: "💠", label: "Master", rarity: "epic" };
+  if (top <= 40) return { emoji: "💎", label: "Diamond", rarity: "rare" };
+  if (top <= 50) return { emoji: "🔷", label: "Platinum", rarity: "rare" };
+  if (top <= 60) return { emoji: "🥇", label: "Gold", rarity: "common" };
+  if (top <= 75) return { emoji: "🥈", label: "Silver", rarity: "common" };
+  if (top <= 90) return { emoji: "🥉", label: "Bronze", rarity: "common" };
+  return { emoji: "❔", label: "In Placements", rarity: "common" };
 }
 
 // Ties share the top spot.
