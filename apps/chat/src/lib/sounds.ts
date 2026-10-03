@@ -63,12 +63,12 @@ export function playHighlightChime() {
   ]);
 }
 
-// A rounded bubble pop for an incoming message, with a faint sparkle on top.
+// A soft, low bubble "boop" for an incoming message, with a faint overtone for roundness.
 export function playMessagePop() {
   const ctx = ready();
   if (!ctx) return;
   play(ctx, [
-    { frequency: 440, glideTo: 880, delay: 0, peak: 0.12, decay: 0.22 },
-    { frequency: 1760, delay: 0.05, peak: 0.02, decay: 0.15 },
+    { frequency: 360, glideTo: 640, delay: 0, peak: 0.1, decay: 0.21 },
+    { frequency: 1280, delay: 0.045, peak: 0.015, decay: 0.13 },
   ]);
 }
