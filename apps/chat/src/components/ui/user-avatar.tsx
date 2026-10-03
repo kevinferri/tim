@@ -89,6 +89,14 @@ const variants = cva("", {
   },
 });
 
+// RGB triples for each rarity's border light and glow on the score badge.
+const RARITY_GLOW: Record<BadgeRarity, string> = {
+  common: "148, 163, 184",
+  rare: "56, 189, 248",
+  epic: "217, 70, 239",
+  legendary: "251, 191, 36",
+};
+
 // Overwatch-style rarity plates: rarer badges get richer color and a stronger glow.
 // Tooltip labels skip dark: variants since tooltips invert the theme; mid-tones read on both.
 const RARITY_STYLES: Record<BadgeRarity, { plate: string; label: string }> = {
@@ -117,10 +125,12 @@ const RARITY_STYLES: Record<BadgeRarity, { plate: string; label: string }> = {
 function StatRow(props: { label: string; icon: ReactNode; value?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-1.5 text-muted-foreground">
-        {props.icon} {props.label}
+      {/* The label gives way (truncates) before the value ever wraps or overflows. */}
+      <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+        <span className="shrink-0">{props.icon}</span>
+        <span className="truncate">{props.label}</span>
       </span>
-      <span className="flex items-center font-medium tabular-nums">
+      <span className="flex shrink-0 items-center whitespace-nowrap font-medium tabular-nums">
         {typeof props.value === "number"
           ? formatNumber(props.value)
           : (props.value ?? <Skeleton className="h-4 w-5" />)}
@@ -276,16 +286,46 @@ export function UserAvatar(props: Props) {
                     {badges.map((badge) => (
                       <Tooltip key={badge.key} delayDuration={100}>
                         {/* Skewed plate, counter-skewed content so the text stays upright. */}
-                        <TooltipTrigger
-                          className={cn(
-                            "-skew-x-12 cursor-default rounded-sm border bg-gradient-to-b px-2 py-0.5",
-                            RARITY_STYLES[badge.rarity].plate,
-                          )}
-                        >
-                          <span className="flex skew-x-12 items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
-                            {badge.emoji} {badge.label}
-                          </span>
-                        </TooltipTrigger>
+                        {badge.key === "score" ? (
+                          // The headline score rank: light streams around its border in the rarity color,
+                          // over a steady glow. The plate sits 1.5px inside a rotating conic gradient.
+                          <TooltipTrigger
+                            className="relative -skew-x-12 cursor-default overflow-hidden rounded-sm p-[1.5px]"
+                            style={{
+                              boxShadow: `0 0 8px rgba(${RARITY_GLOW[badge.rarity]}, 0.4)`,
+                            }}
+                          >
+                            {/* Centered with margins, not translate: the spin animation owns `transform`. */}
+                            <span
+                              className="pointer-events-none absolute left-1/2 top-1/2 -ml-[100%] -mt-[100%] aspect-square w-[200%] motion-safe:animate-badge-edge"
+                              style={{
+                                background: `conic-gradient(from 0deg, rgba(${RARITY_GLOW[badge.rarity]}, 0.25), rgba(${RARITY_GLOW[badge.rarity]}, 0.55) 12%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 30%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 50%, rgba(${RARITY_GLOW[badge.rarity]}, 0.55) 62%, rgba(${RARITY_GLOW[badge.rarity]}, 0.25) 80%)`,
+                              }}
+                            />
+                            <span
+                              className={cn(
+                                // Solid base under the semi-transparent gradient, so the light only shows at the edge.
+                                "relative block rounded-[2px] bg-background bg-gradient-to-b px-2 py-0.5",
+                                RARITY_STYLES[badge.rarity].plate,
+                              )}
+                            >
+                              <span className="flex skew-x-12 items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
+                                {badge.emoji} {badge.label}
+                              </span>
+                            </span>
+                          </TooltipTrigger>
+                        ) : (
+                          <TooltipTrigger
+                            className={cn(
+                              "-skew-x-12 cursor-default rounded-sm border bg-gradient-to-b px-2 py-0.5",
+                              RARITY_STYLES[badge.rarity].plate,
+                            )}
+                          >
+                            <span className="flex skew-x-12 items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
+                              {badge.emoji} {badge.label}
+                            </span>
+                          </TooltipTrigger>
+                        )}
                         <TooltipContent side="bottom">
                           <div className="flex flex-col gap-0.5">
                             <span
@@ -312,7 +352,8 @@ export function UserAvatar(props: Props) {
             </div>
 
             <div className="flex flex-col gap-2 text-sm">
-              <div className="grid grid-cols-2 gap-x-8">
+              {/* The got/gave column needs more room than the single values; stack them on narrow sheets. */}
+              <div className="grid grid-cols-1 gap-x-8 gap-y-2 min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
                 <div className="flex flex-col gap-2">
                   <StatRow
                     label="Score"

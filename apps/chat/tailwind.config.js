@@ -176,6 +176,8 @@ module.exports = {
         },
       },
       animation: {
+        // Light travelling around the score badge's border.
+        "badge-edge": "spin 3.2s linear infinite",
         // Both match ROLL_DURATION_MS in roll-result.tsx.
         "die-bounce": "die-bounce 1.5s",
         "die-spin": "die-spin 1.5s cubic-bezier(0.2, 0.7, 0.3, 1)",

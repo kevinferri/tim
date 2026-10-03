@@ -26,13 +26,8 @@ const BADGE_RARITY: Record<string, BadgeRarity> = {
   "self-highlighter": "common",
   "record-holder": "legendary",
   "one-hit-wonder": "epic",
-  "conversation-starter": "epic",
-  regular: "rare",
   ghost: "common",
   firehose: "rare",
-  "reply-guy": "common",
-  "new-kid": "common",
-  "biggest-fan": "rare",
   founder: "legendary",
   "hype-man": "epic",
   "topic-starter": "rare",
@@ -76,16 +71,12 @@ export type CircleBadgeAggregates = {
 export type MemberActivity = {
   messages: number;
   highlightsReceived: number;
-  repliesSent: number;
   // Replies to other people's messages.
   repliesGiven: number;
   // Highlights on their own messages in the last 30 days.
   recentSelfHighlights: number;
   lastMessageAt: Date | null;
-  activeDaysLast30: number;
   activeDaysTotal: number;
-  joinedAt: Date;
-  biggestFan: { name: string; highlights: number } | null;
   // Distinct UTC days they posted, newest first ("2026-10-02"); recent ones only, for streaks.
   recentActiveDays: string[];
   topicsCreated: number;
@@ -117,7 +108,7 @@ type Milestone = {
   rarity: BadgeRarity;
 };
 
-// The profile's stat values, each with an always-on badge whose rarity climbs with the number.
+// The profile's stat values; the ones in STAT_LADDERS get an always-on badge whose rarity climbs with the number.
 export type ProfileStats = {
   messages: number;
   activeDays: number;
@@ -182,46 +173,6 @@ const STAT_LADDERS: StatLadder[] = [
       tier(50, "🙌", "Cheerleader", "rare"),
       tier(250, "🎉", "Hype Squad", "epic"),
       tier(1_000, "😇", "Patron Saint", "legendary"),
-    ],
-  },
-  {
-    stat: "repliesReceived",
-    tooltip: (n, c) => `Got ${n} replies in ${c}`,
-    tiers: [
-      tier(0, "💭", "Murmur", "common"),
-      tier(25, "🗨️", "Discussion Piece", "rare"),
-      tier(100, "🔥", "Hot Topic", "epic"),
-      tier(500, "🌋", "Thread Magnet", "legendary"),
-    ],
-  },
-  {
-    stat: "repliesGiven",
-    tooltip: (n, c) => `Sent ${n} replies in ${c}`,
-    tiers: [
-      tier(0, "↩️", "Chimes In", "common"),
-      tier(50, "💬", "Conversationalist", "rare"),
-      tier(200, "🎙️", "Debate Club", "epic"),
-      tier(1_000, "📻", "Talk Show Host", "legendary"),
-    ],
-  },
-  {
-    stat: "mentionsReceived",
-    tooltip: (n, c) => `@mentioned ${n} times in ${c}`,
-    tiers: [
-      tier(0, "📇", "On the List", "common"),
-      tier(25, "📣", "In Demand", "rare"),
-      tier(100, "🔔", "Most Wanted", "epic"),
-      tier(500, "📢", "Household Name", "legendary"),
-    ],
-  },
-  {
-    stat: "mentionsSent",
-    tooltip: (n, c) => `@mentioned others ${n} times in ${c}`,
-    tiers: [
-      tier(0, "☎️", "Caller", "common"),
-      tier(25, "📞", "Connector", "rare"),
-      tier(100, "🕸️", "Networker", "epic"),
-      tier(500, "🦋", "Social Butterfly", "legendary"),
     ],
   },
 ];
@@ -363,15 +314,6 @@ export function computeProfileBadges(args: {
     });
   }
 
-  if (isTop(circle.repliesReceived, userId, 5)) {
-    add({
-      key: "conversation-starter",
-      emoji: "🧵",
-      label: "Conversation Starter",
-      tooltip: `Their messages draw the most replies in ${circleName}`,
-    });
-  }
-
   for (const [command, badge] of Object.entries(COMMAND_BADGES)) {
     const byUser = Object.fromEntries(
       Object.entries(circle.commandCounts).map(([id, counts]) => [
@@ -422,14 +364,7 @@ export function computeProfileBadges(args: {
     ? now.getTime() - new Date(activity.lastMessageAt).getTime()
     : null;
 
-  if (activity.activeDaysLast30 >= 20) {
-    add({
-      key: "regular",
-      emoji: "📅",
-      label: "Regular as Clockwork",
-      tooltip: `Posted on ${activity.activeDaysLast30} of the last 30 days`,
-    });
-  } else if (sinceLastMessage !== null && sinceLastMessage > 30 * DAY_MS) {
+  if (sinceLastMessage !== null && sinceLastMessage > 30 * DAY_MS) {
     add({
       key: "ghost",
       emoji: "👻",
@@ -447,18 +382,6 @@ export function computeProfileBadges(args: {
       emoji: "🌊",
       label: "Firehose",
       tooltip: `Sends about ${Math.round(perActiveDay)} messages on days they post`,
-    });
-  }
-
-  if (
-    activity.repliesSent >= 15 &&
-    activity.repliesSent >= activity.messages - activity.repliesSent
-  ) {
-    add({
-      key: "reply-guy",
-      emoji: "🗣️",
-      label: "Reply Guy",
-      tooltip: `${activity.repliesSent} of their ${activity.messages} messages are replies`,
     });
   }
 
@@ -483,26 +406,9 @@ export function computeProfileBadges(args: {
     });
   }
 
-  if (now.getTime() - new Date(activity.joinedAt).getTime() < 14 * DAY_MS) {
-    add({
-      key: "new-kid",
-      emoji: "🆕",
-      label: "New Kid",
-      tooltip: "Joined in the last two weeks",
-    });
-  }
-
-  if (activity.biggestFan && activity.biggestFan.highlights >= 3) {
-    const firstName = activity.biggestFan.name.split(" ")[0];
-    add({
-      key: "biggest-fan",
-      emoji: "💞",
-      label: `Biggest Fan: ${firstName}`,
-      tooltip: `${activity.biggestFan.name} has highlighted ${activity.biggestFan.highlights} of their messages`,
-    });
-  }
-
-  // Rarest first; no cap, every earned badge shows.
+  // The score rank leads as the headline badge; the rest go rarest first, uncapped.
   // Array.prototype.sort is stable, so equal rarities keep their priority order.
-  return badges.sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]);
+  const rank = (b: ProfileBadge) =>
+    b.key === "score" ? Infinity : RARITY_RANK[b.rarity];
+  return badges.sort((a, b) => rank(b) - rank(a));
 }

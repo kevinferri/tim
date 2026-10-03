@@ -21,14 +21,10 @@ const emptyCircle: CircleBadgeAggregates = {
 const quietActivity: MemberActivity = {
   messages: 12,
   highlightsReceived: 0,
-  repliesSent: 0,
   repliesGiven: 0,
   recentSelfHighlights: 0,
   lastMessageAt: new Date(NOW.getTime() - 2 * DAY),
-  activeDaysLast30: 3,
   activeDaysTotal: 6,
-  joinedAt: new Date("2026-01-01T00:00:00Z"),
-  biggestFan: null,
   recentActiveDays: [],
   topicsCreated: 0,
 };
@@ -95,11 +91,11 @@ describe("computeProfileBadges", () => {
       score: { multiplier: 1.6, topPercent: 20, bottomPercent: 100, place: 2 },
       givingTag: { kind: "generous", given: 20, received: 4 },
       circle: emptyCircle,
-      activity: { ...quietActivity, joinedAt: NOW },
+      activity: quietActivity,
       now: NOW,
     });
 
-    expect(badges.map((b) => b.key)).toEqual(["score", "giving", "new-kid"]);
+    expect(badges.map((b) => b.key)).toEqual(["score", "giving"]);
     expect(badges[0]).toMatchObject({
       label: "Grandmaster",
       rarity: "epic",
@@ -138,16 +134,7 @@ describe("computeProfileBadges", () => {
     ).toEqual([]);
   });
 
-  it("awards Conversation Starter for drawing the most replies", () => {
-    expect(
-      badgeKeys({ circle: { repliesReceived: { me: 12, other: 3 } } }),
-    ).toContain("conversation-starter");
-  });
-
-  it("awards Regular as Clockwork, or Ghost when long silent", () => {
-    expect(badgeKeys({ activity: { activeDaysLast30: 22 } })).toContain(
-      "regular",
-    );
+  it("awards Ghost when long silent", () => {
     expect(
       badgeKeys({
         activity: { lastMessageAt: new Date(NOW.getTime() - 45 * DAY) },
@@ -155,13 +142,10 @@ describe("computeProfileBadges", () => {
     ).toContain("ghost");
   });
 
-  it("awards Firehose and Reply Guy from their own activity", () => {
+  it("awards Firehose for lots of messages per active day", () => {
     expect(
       badgeKeys({ activity: { messages: 120, activeDaysTotal: 4 } }),
     ).toContain("firehose");
-    expect(
-      badgeKeys({ activity: { messages: 30, repliesSent: 18 } }),
-    ).toContain("reply-guy");
   });
 
   it("calls out a recent self-highlight", () => {
@@ -231,24 +215,27 @@ describe("computeProfileBadges", () => {
     expect(ranks(3000)?.rarity).toBe("legendary");
   });
 
-  it("names their biggest fan by first name", () => {
-    const [fan] = badgesFor({
+  it("leads with the score rank, even when it's common", () => {
+    const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
-      circleCreatorId: "someone-else",
-      score: null,
-      circle: emptyCircle,
-      activity: {
-        ...quietActivity,
-        biggestFan: { name: "Simone de Beauvoir", highlights: 5 },
+      circleCreatorId: "me",
+      score: {
+        multiplier: 0.9,
+        topPercent: 70,
+        bottomPercent: 40,
+        place: 5,
       },
+      circle: emptyCircle,
+      activity: quietActivity,
       now: NOW,
     });
 
-    expect(fan.label).toBe("Biggest Fan: Simone");
+    expect(badges.map((b) => b.key)).toEqual(["score", "founder"]);
+    expect(badges[0]).toMatchObject({ label: "Silver", rarity: "common" });
   });
 
-  it("shows every earned badge, rarest first, with no cap", () => {
+  it("shows every earned badge, score first then rarest first, with no cap", () => {
     const badges = badgesFor({
       userId: "me",
       circleName: "Sandbox",
@@ -264,24 +251,19 @@ describe("computeProfileBadges", () => {
       activity: {
         ...quietActivity,
         recentSelfHighlights: 2,
-        activeDaysLast30: 25,
-        joinedAt: NOW,
       },
       now: NOW,
     });
 
     expect(badges.length).toBeGreaterThan(5);
     const rank = { common: 0, rare: 1, epic: 2, legendary: 3 };
-    const ranks = badges.map((b) => rank[b.rarity]);
+    // Score rank leads; everything after it is rarest first.
+    expect(badges[0].key).toBe("score");
+    const ranks = badges.slice(1).map((b) => rank[b.rarity]);
     expect(ranks).toEqual([...ranks].sort((a, b) => b - a));
-    expect(badges[0].rarity).toBe("legendary");
+    expect(badges[1].rarity).toBe("legendary");
     expect(badges.map((b) => b.key)).toEqual(
-      expect.arrayContaining([
-        "score",
-        "giving",
-        "new-kid",
-        "self-highlighter",
-      ]),
+      expect.arrayContaining(["score", "giving", "self-highlighter"]),
     );
   });
 
@@ -354,7 +336,7 @@ describe("stat badges", () => {
 
   it("always shows one badge per stat, common at zero", () => {
     const badges = statBadges({});
-    expect(badges).toHaveLength(8);
+    expect(badges).toHaveLength(4);
     expect(badges.every((b) => b.rarity === "common")).toBe(true);
   });
 
@@ -364,7 +346,6 @@ describe("stat badges", () => {
         messages: 1_234,
         highlightsReceived: 300,
         highlightsGiven: 1_000,
-        mentionsReceived: 30,
       }).map((b) => [b.key, b]),
     );
 
@@ -381,9 +362,8 @@ describe("stat badges", () => {
       label: "Patron Saint",
       rarity: "legendary",
     });
-    expect(byKey["stat-mentionsReceived"].rarity).toBe("rare");
-    expect(byKey["stat-repliesGiven"]).toMatchObject({
-      label: "Chimes In",
+    expect(byKey["stat-activeDays"]).toMatchObject({
+      label: "Sprout",
       rarity: "common",
     });
   });
