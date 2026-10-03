@@ -79,6 +79,11 @@ describe("computeGivingTag", () => {
     expect(computeGivingTag(member(1, 20), "me")?.kind).toBe("greedy");
   });
 
+  it("tags moderate imbalances in an active circle", () => {
+    expect(computeGivingTag(member(400, 280), "me").kind).toBe("generous");
+    expect(computeGivingTag(member(280, 400), "me").kind).toBe("greedy");
+  });
+
   it("tags a rough balance as even", () => {
     expect(computeGivingTag(member(10, 12), "me")?.kind).toBe("even");
   });

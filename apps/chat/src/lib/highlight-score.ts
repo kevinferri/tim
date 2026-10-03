@@ -60,8 +60,9 @@ export type GivingTag = {
 };
 
 // Blended into both sides so a few early highlights can't swing the tag; low activity reads as "even".
-const GIVING_SMOOTHING = 5;
-const GIVING_RATIO = 2;
+// Circle-wide, given and received total the same, so ratios cluster near 1 and a wide cutoff tags everyone even.
+const GIVING_SMOOTHING = 15;
+const GIVING_RATIO = 1.3;
 
 export function computeGivingTag(
   members: MemberHighlightCounts[],

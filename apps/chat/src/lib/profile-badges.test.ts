@@ -387,18 +387,33 @@ describe("currentStreak", () => {
 
 describe("getScoreRank", () => {
   it("ranks by standing in the circle", () => {
-    expect(getScoreRank({ topPercent: 4, place: 1 }).label).toBe("Top 500");
-    expect(getScoreRank({ topPercent: 45, place: 5 }).label).toBe("Platinum");
-    expect(getScoreRank({ topPercent: 100, place: 9 }).label).toBe(
-      "In Placements",
+    expect(getScoreRank({ topPercent: 4, place: 1, multiplier: 2 }).label).toBe(
+      "Top 500",
     );
+    expect(
+      getScoreRank({ topPercent: 45, place: 5, multiplier: 1 }).label,
+    ).toBe("Platinum");
+    expect(
+      getScoreRank({ topPercent: 100, place: 9, multiplier: 0.5 }).label,
+    ).toBe("In Placements");
   });
 
-  it("never ranks first place below Grandmaster, even in a small circle", () => {
-    // Tied for first of 3: "top 33%" would otherwise be Master.
-    expect(getScoreRank({ topPercent: 33, place: 1 })).toMatchObject({
-      label: "Grandmaster",
-      rarity: "epic",
-    });
+  it("makes first place legendary, even in a small circle", () => {
+    // First of 7 is only "top 14%".
+    expect(
+      getScoreRank({ topPercent: 14, place: 1, multiplier: 1.3 }),
+    ).toMatchObject({ label: "Champion", rarity: "legendary" });
+  });
+
+  it("makes second place at least Grandmaster", () => {
+    expect(
+      getScoreRank({ topPercent: 43, place: 2, multiplier: 1.1 }),
+    ).toMatchObject({ label: "Grandmaster", rarity: "epic" });
+  });
+
+  it("doesn't reward an all-way tie at the average", () => {
+    expect(
+      getScoreRank({ topPercent: 33, place: 1, multiplier: 1 }).label,
+    ).toBe("Diamond");
   });
 });

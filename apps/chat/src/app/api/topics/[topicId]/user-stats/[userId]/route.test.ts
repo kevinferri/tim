@@ -143,11 +143,11 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
       badges: expect.arrayContaining([
         {
           key: "score",
-          // First of two: first place never ranks below Grandmaster.
-          emoji: "🔱",
-          label: "Grandmaster",
+          // First of two: first place is always at least Champion.
+          emoji: "👑",
+          label: "Champion",
           tooltip: "Highlight score 140 · Top 50% in Sandbox",
-          rarity: "epic",
+          rarity: "legendary",
         },
         {
           key: "giving",
