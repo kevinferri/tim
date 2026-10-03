@@ -53,7 +53,7 @@ function play(ctx: AudioContext, tones: Tone[]) {
   }
 }
 
-// E6 then B6: a bright, soft two-note "ding" for a highlight given or received.
+// E6 then B6: a bright, soft two-note "ding" for a highlight received while away.
 export function playHighlightChime() {
   const ctx = ready();
   if (!ctx) return;

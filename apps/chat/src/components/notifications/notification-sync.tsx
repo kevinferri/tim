@@ -35,7 +35,8 @@ export function NotificationSync() {
     ({ notificationType }) => {
       invalidate();
       if (notificationType === NotificationType.HighlightRecieved) {
-        playHighlightChime();
+        // Like the new-message sound: only when Tim isn't the window you're looking at.
+        if (!document.hasFocus()) playHighlightChime();
         bumpTitleBadge("highlights");
       }
     },

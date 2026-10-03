@@ -287,7 +287,10 @@ const MessageComponent = (props: MessageProps) => {
         }}
       >
         <div
-          className={cn("flex items-start gap-3 overflow-hidden leading-none")}
+          className={cn(
+            // Clip sideways only: the highlights pill is taller than the name line it sits on.
+            "flex items-start gap-3 overflow-x-clip leading-none",
+          )}
         >
           {!props.hiddenElements?.includes("sentBy") && props.sentBy && (
             <UserAvatar
