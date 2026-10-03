@@ -13,13 +13,14 @@ export function TopHighlights() {
 
   return (
     <>
-      {topHighlights.map((message: MessageProps) => {
+      {topHighlights.map((message: MessageProps, i) => {
         return (
           <Message
             key={message.id}
             {...message}
-            variant="minimal"
             {...getMessagePositionFlags(recency, message.id)}
+            // Toolbar placement is relative to this list, not the transcript.
+            isFirstMessage={i === 0}
           />
         );
       })}

@@ -14,13 +14,14 @@ export function MediaList() {
 
   return (
     <ScrollArea className="h-full">
-      {mediaMessages.map((message: MessageProps) => {
+      {mediaMessages.map((message: MessageProps, i) => {
         return (
           <Message
             key={message.id}
             {...message}
-            variant="minimal"
             {...getMessagePositionFlags(recency, message.id)}
+            // Toolbar placement is relative to this list, not the transcript.
+            isFirstMessage={i === 0}
           />
         );
       })}

@@ -1,6 +1,9 @@
 import { prismaClient } from "@/lib/prisma/client";
 import { NOTIFICATION_LIMIT } from "@/lib/notification-constants";
-import { getReadableMessage } from "@/lib/prisma/message-model";
+import {
+  DEFAULT_MESSAGE_SELECT,
+  normalizeMessages,
+} from "@/lib/prisma/message-model";
 import { NotificationType } from "@tim/socket-types";
 
 // Skips notifications about a circle the user has since left, rather than
@@ -95,26 +98,21 @@ export const notificationModel = {
         actor: {
           select: { id: true, name: true, imageUrl: true },
         },
+        // Same shape as the transcript's, so the panel renders a real <Message>.
         message: {
           select: {
-            topicId: true,
-            text: true,
-            mediaUrl: true,
+            ...DEFAULT_MESSAGE_SELECT,
             topic: { select: { id: true, name: true, circleId: true } },
           },
         },
       },
     });
 
-    // Message.text is encrypted at rest (realtime-server writes it); decrypt
-    // it here the same way message-model.ts's normalizeMessages does for the
-    // transcript, so the notification list can preview it inline.
-    return notifications.map((n) => ({
+    const messages = normalizeMessages(notifications.map((n) => n.message));
+
+    return notifications.map((n, i) => ({
       ...n,
-      message: {
-        ...n.message,
-        text: getReadableMessage(n.message.text, n.messageId) ?? null,
-      },
+      message: { ...messages[i], text: messages[i].text ?? null },
     }));
   },
 

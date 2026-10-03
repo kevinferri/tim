@@ -35,8 +35,6 @@ type Props = {
   burst: HighlightBurst;
 };
 
-const MAX_FACES = 3;
-const MAX_NAMES = 3;
 const SPARK_COUNT = 8;
 const SPARK_DISTANCE = 26;
 const SPARK_DURATION_MS = 600;
@@ -52,14 +50,6 @@ const RING_MASK: CSSProperties = {
 
 const SWEEP_GRADIENT =
   "conic-gradient(from 0deg, transparent 0%, hsl(var(--highlight-icon)) 10%, transparent 25%, transparent 50%, hsl(var(--highlight-icon)) 60%, transparent 75%)";
-
-function highlighterNames(highlights: Highlights) {
-  const names = highlights.map((h) =>
-    getDisplayName(h.createdBy?.name ?? null),
-  );
-  if (names.length <= MAX_NAMES) return names.join(", ");
-  return `${names.slice(0, MAX_NAMES).join(", ")} and ${names.length - MAX_NAMES} more`;
-}
 
 // Tracks increases in a message's highlight count across renders. Starts at rest,
 // so loading or scrolling a message back into view doesn't replay anything.
@@ -132,7 +122,7 @@ function Sparks(props: { anchor: RefObject<HTMLElement | null> }) {
   );
 }
 
-// Who highlighted a message, beside its timestamp. Renders nothing until someone has.
+// Highlight count; who highlighted it is in the tooltip. Renders nothing until someone has.
 export function MessageHighlights(props: Props) {
   const starRef = useRef<HTMLSpanElement>(null);
   const [sparkKey, setSparkKey] = useState<number | null>(null);
@@ -149,7 +139,6 @@ export function MessageHighlights(props: Props) {
   const highlights = uniqBy(props.highlights, "userId");
   if (highlights.length === 0) return null;
 
-  const faces = highlights.slice(0, MAX_FACES);
   const bursting = burstKey > 0;
 
   return (
@@ -165,7 +154,7 @@ export function MessageHighlights(props: Props) {
             onClick={props.onToggle}
             onDoubleClick={(e) => e.stopPropagation()}
             className={cn(
-              "relative flex h-5 w-fit shrink-0 items-center gap-1 rounded-full border pl-1.5 pr-0.5 text-[11px] font-medium leading-none tabular-nums transition-colors",
+              "relative flex h-5 w-fit shrink-0 items-center gap-1 rounded-full border px-1.5 text-[11px] font-medium leading-none tabular-nums transition-colors",
               props.highlightedBySelf
                 ? "border-highlight-icon/60 bg-highlight-icon/15 text-foreground hover:bg-highlight-icon/25"
                 : "border-border bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -203,26 +192,22 @@ export function MessageHighlights(props: Props) {
             >
               {highlights.length}
             </span>
-            <span className="flex -space-x-1">
-              {faces.map((h) => (
-                <Avatar
-                  key={h.id}
-                  className="size-4 border-[1.5px] border-background active:scale-100"
-                >
-                  <AvatarImage src={h.createdBy?.imageUrl ?? undefined} />
-                  <AvatarFallback className="text-[7px]">
-                    {getDisplayName(h.createdBy?.name ?? null).slice(0, 1)}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-            </span>
             {sparkKey !== null && (
               <Sparks key={`sparks-${sparkKey}`} anchor={starRef} />
             )}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top" align="start">
-          Highlighted by {highlighterNames(highlights)}
+        <TooltipContent side="left" className="px-2">
+          <div className="flex max-w-60 flex-wrap gap-1.5">
+            {highlights.map((h) => (
+              <Avatar key={h.id} className="size-7">
+                <AvatarImage src={h.createdBy?.imageUrl ?? undefined} />
+                <AvatarFallback className="text-xs">
+                  {getDisplayName(h.createdBy?.name ?? null).slice(0, 1)}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

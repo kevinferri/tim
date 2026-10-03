@@ -7,7 +7,7 @@ import {
 import { MessageProps } from "@/components/topics/message";
 
 function msg(id: string, extra: Partial<MessageProps> = {}): MessageProps {
-  return { id, variant: "default", ...extra } as MessageProps;
+  return { id, ...extra } as MessageProps;
 }
 
 describe("adjustReplyCounts", () => {

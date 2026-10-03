@@ -27,10 +27,10 @@ type Props = {
   messageId: string;
   topicId: string;
   text: string;
-  sentBySelf: boolean;
+  canModify: boolean;
   highlightedBySelf: boolean;
   onHighlight: () => void;
-  onReply: () => void;
+  onReply?: () => void;
   onEdit?: () => void;
   onShuffleGif?: () => void;
 };
@@ -69,9 +69,11 @@ export function MessageContextMenu(props: Props) {
           >
             {props.highlightedBySelf ? "Remove highlight" : "Highlight"}
           </Item>
-          <Item icon={<ReplyIcon />} onSelect={props.onReply}>
-            Reply
-          </Item>
+          {props.onReply && (
+            <Item icon={<ReplyIcon />} onSelect={props.onReply}>
+              Reply
+            </Item>
+          )}
           {props.text && (
             <Item
               icon={<CopyIcon />}
@@ -80,7 +82,7 @@ export function MessageContextMenu(props: Props) {
               Copy text
             </Item>
           )}
-          {props.sentBySelf && (
+          {props.canModify && (
             <>
               <ContextMenuSeparator />
               {props.onShuffleGif && (
@@ -105,7 +107,7 @@ export function MessageContextMenu(props: Props) {
         </ContextMenuContent>
       </ContextMenu>
 
-      {props.sentBySelf && (
+      {props.canModify && (
         <DeleteMessageModal
           messageId={props.messageId}
           topicId={props.topicId}

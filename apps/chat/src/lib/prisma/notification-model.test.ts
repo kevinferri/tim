@@ -90,9 +90,12 @@ describe("notificationModel.getForUser", () => {
       readAt: null,
       actor: { id: actor.id, name: "Actor" },
       message: {
+        id: messageB.id,
         topicId: topic.id,
         text: "hello",
         mediaUrl: null,
+        highlights: [],
+        sentBy: { id: actor.id, name: "Actor" },
         topic: { id: topic.id, name: "Test Topic", circleId: topic.circleId },
       },
     });

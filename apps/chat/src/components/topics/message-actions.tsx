@@ -29,7 +29,8 @@ type Props = {
   highlightedBySelf: boolean;
   isShufflingGif?: boolean;
   className?: string;
-  sentBySelf: boolean;
+  // Own message, in the topic you're in: edit/shuffle/delete.
+  canModify: boolean;
 };
 
 const DELAY_DURATION = 100;
@@ -66,8 +67,11 @@ export function MessageActions(props: Props) {
                 size="iconSm"
                 variant="outline"
                 aria-pressed={props.highlightedBySelf}
-                // Pinned like the highlights pill: ghost/outline hover would recolour the star.
-                className="text-highlight-icon hover:text-highlight-icon"
+                // Gold only once it's yours, like the pill and the left edge.
+                className={cn(
+                  props.highlightedBySelf &&
+                    "text-highlight-icon hover:text-highlight-icon",
+                )}
                 onClick={props.onHighlight}
               >
                 {props.highlightedBySelf ? <StarFilledIcon /> : <StarIcon />}
@@ -87,7 +91,7 @@ export function MessageActions(props: Props) {
               <TooltipContent>Reply</TooltipContent>
             </Tooltip>
           )}
-          {props.sentBySelf && (
+          {props.canModify && (
             <>
               <Tooltip delayDuration={DELAY_DURATION}>
                 <TooltipTrigger asChild>
