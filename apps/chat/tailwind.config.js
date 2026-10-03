@@ -136,6 +136,15 @@ module.exports = {
               "0 0 3px rgba(var(--glow), 0.88), 0 0 10px rgba(var(--glow), 0.52), 0 0 20px rgba(var(--glow), 0.24), inset 0 0 6px rgba(var(--glow), 0.34)",
           },
         },
+        // A wisp of flame rising off the score badge's top edge and fading out.
+        "badge-wisp": {
+          "0%": { opacity: "0", transform: "translateY(3px) scale(0.7, 0.5)" },
+          "30%": { opacity: "1" },
+          "100%": {
+            opacity: "0",
+            transform: "translateY(-12px) scale(0.5, 1.5)",
+          },
+        },
         "die-bounce": {
           "0%": {
             transform: "translateY(-16px)",
@@ -201,6 +210,7 @@ module.exports = {
       animation: {
         // Both match ROLL_DURATION_MS in roll-result.tsx.
         "badge-radiance": "badge-radiance 3.2s ease-in-out infinite",
+        "badge-wisp": "badge-wisp 1.4s ease-out infinite",
         "die-bounce": "die-bounce 1.5s",
         "die-spin": "die-spin 1.5s cubic-bezier(0.2, 0.7, 0.3, 1)",
         "eight-ball-shake": "eight-ball-shake 0.7s ease-in-out",

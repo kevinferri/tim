@@ -93,6 +93,15 @@ const variants = cva("", {
 const RADIANCE_SHADOW =
   "0 0 3px rgba(var(--glow), 0.9), 0 0 10px rgba(var(--glow), 0.55), 0 0 20px rgba(var(--glow), 0.25), inset 0 0 6px rgba(var(--glow), 0.35)";
 
+// Uneven spacing and timing so the flame tails never line up into a pattern.
+const FLAME_WISPS = [
+  { left: "8%", delay: "0s", duration: "1.3s" },
+  { left: "27%", delay: "0.55s", duration: "1.6s" },
+  { left: "46%", delay: "0.2s", duration: "1.2s" },
+  { left: "64%", delay: "0.85s", duration: "1.5s" },
+  { left: "83%", delay: "0.4s", duration: "1.35s" },
+];
+
 // RGB triples for each rarity's border and glow on the score badge.
 const RARITY_GLOW: Record<BadgeRarity, string> = {
   common: "148, 163, 184",
@@ -293,7 +302,7 @@ export function UserAvatar(props: Props) {
                           // layered glow (see badge-radiance), flickering faintly like a flame.
                           <TooltipTrigger
                             className={cn(
-                              "-skew-x-12 cursor-default rounded-sm border-[1.5px] bg-background bg-gradient-to-b px-2 py-0.5 motion-safe:animate-badge-radiance",
+                              "relative -skew-x-12 cursor-default rounded-sm border-[1.5px] bg-background bg-gradient-to-b px-2 py-0.5 motion-safe:animate-badge-radiance",
                               RARITY_STYLES[badge.rarity].plate,
                             )}
                             style={
@@ -304,6 +313,20 @@ export function UserAvatar(props: Props) {
                               } as CSSProperties
                             }
                           >
+                            {/* Flame tails: wisps rising off the top edge on staggered timings. */}
+                            {FLAME_WISPS.map((wisp) => (
+                              <span
+                                key={wisp.left}
+                                className="pointer-events-none absolute bottom-full h-4 w-3 origin-bottom rounded-full blur-[1.5px] motion-safe:animate-badge-wisp motion-reduce:hidden"
+                                style={{
+                                  left: wisp.left,
+                                  animationDelay: wisp.delay,
+                                  animationDuration: wisp.duration,
+                                  background:
+                                    "radial-gradient(ellipse at bottom, rgba(var(--glow), 1), rgba(var(--glow), 0.35) 45%, rgba(var(--glow), 0) 75%)",
+                                }}
+                              />
+                            ))}
                             <span className="flex skew-x-12 items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
                               {badge.emoji} {badge.label}
                             </span>
