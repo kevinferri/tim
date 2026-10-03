@@ -194,7 +194,7 @@ export function MessageHighlights(props: Props) {
               <StarFilledIcon className="size-3.5 text-highlight-icon" />
             </span>
             <span
-              key={highlights.length}
+              key={`count-${highlights.length}`}
               className={cn(
                 bursting &&
                   "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 duration-300",
@@ -215,7 +215,9 @@ export function MessageHighlights(props: Props) {
                 </Avatar>
               ))}
             </span>
-            {sparkKey !== null && <Sparks key={sparkKey} anchor={starRef} />}
+            {sparkKey !== null && (
+              <Sparks key={`sparks-${sparkKey}`} anchor={starRef} />
+            )}
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" align="start">
