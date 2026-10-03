@@ -75,13 +75,10 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
 
   const memberActivity = {
     messages: 20,
-    repliesSent: 5,
     repliesGiven: 4,
     recentSelfHighlights: 0,
     lastMessageAt: new Date(),
-    activeDaysLast30: 2,
     activeDaysTotal: 2,
-    joinedAt: new Date("2026-01-01T00:00:00Z"),
     recentActiveDays: [],
     topicsCreated: 0,
   };
@@ -187,7 +184,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     vi.mocked(getMemberActivity).mockResolvedValue({
       ...memberActivity,
       messages: 0,
-      repliesSent: 0,
       repliesGiven: 0,
       activeDaysTotal: 0,
     });

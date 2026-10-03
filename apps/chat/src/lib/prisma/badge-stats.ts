@@ -111,27 +111,21 @@ export async function getMemberActivity({
   circleId: string;
   userId: string;
 }): Promise<Omit<MemberActivity, "highlightsReceived">> {
-  const [[activity], recentSelfHighlights, user, dayRows, topicsCreated] =
+  const [[activity], recentSelfHighlights, dayRows, topicsCreated] =
     await Promise.all([
       // createdAt is tz-less UTC, so compare against now() in UTC.
       prismaClient.$queryRaw<
         {
           messages: number;
-          repliesSent: number;
           repliesGiven: number;
           lastMessageAt: Date | null;
-          activeDaysLast30: number;
           activeDaysTotal: number;
         }[]
       >`
       SELECT
         COUNT(*)::int AS messages,
-        (COUNT(*) FILTER (WHERE m."replyToId" IS NOT NULL))::int AS "repliesSent",
         (COUNT(*) FILTER (WHERE parent."userId" <> m."userId"))::int AS "repliesGiven",
         MAX(m."createdAt") AS "lastMessageAt",
-        (COUNT(DISTINCT m."createdAt"::date) FILTER (
-          WHERE m."createdAt" > (now() AT TIME ZONE 'UTC') - interval '30 days'
-        ))::int AS "activeDaysLast30",
         COUNT(DISTINCT m."createdAt"::date)::int AS "activeDaysTotal"
       FROM messages m
       JOIN topics t ON t.id = m."topicId"
@@ -144,10 +138,6 @@ export async function getMemberActivity({
           createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
           message: { userId, topic: { circleId } },
         },
-      }),
-      prismaClient.user.findUnique({
-        where: { id: userId },
-        select: { createdAt: true },
       }),
       // Enough history for the longest streak tier; createdAt is tz-less UTC.
       prismaClient.$queryRaw<{ day: string }[]>`
@@ -167,6 +157,5 @@ export async function getMemberActivity({
     recentSelfHighlights,
     recentActiveDays: dayRows.map((r) => r.day),
     topicsCreated,
-    joinedAt: user?.createdAt ?? new Date(0),
   };
 }

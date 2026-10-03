@@ -174,9 +174,7 @@ describe("getMemberActivity", () => {
     );
     expect(activity).toMatchObject({
       messages: 5,
-      repliesSent: 2,
       repliesGiven: 1,
-      activeDaysLast30: 3,
       activeDaysTotal: 4,
       recentSelfHighlights: 1,
       topicsCreated: 1,

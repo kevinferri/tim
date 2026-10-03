@@ -21,13 +21,10 @@ const emptyCircle: CircleBadgeAggregates = {
 const quietActivity: MemberActivity = {
   messages: 12,
   highlightsReceived: 0,
-  repliesSent: 0,
   repliesGiven: 0,
   recentSelfHighlights: 0,
   lastMessageAt: new Date(NOW.getTime() - 2 * DAY),
-  activeDaysLast30: 3,
   activeDaysTotal: 6,
-  joinedAt: new Date("2026-01-01T00:00:00Z"),
   recentActiveDays: [],
   topicsCreated: 0,
 };
@@ -94,11 +91,11 @@ describe("computeProfileBadges", () => {
       score: { multiplier: 1.6, topPercent: 20, bottomPercent: 100, place: 2 },
       givingTag: { kind: "generous", given: 20, received: 4 },
       circle: emptyCircle,
-      activity: { ...quietActivity, joinedAt: NOW },
+      activity: quietActivity,
       now: NOW,
     });
 
-    expect(badges.map((b) => b.key)).toEqual(["score", "giving", "new-kid"]);
+    expect(badges.map((b) => b.key)).toEqual(["score", "giving"]);
     expect(badges[0]).toMatchObject({
       label: "Grandmaster",
       rarity: "epic",
@@ -143,10 +140,7 @@ describe("computeProfileBadges", () => {
     ).toContain("conversation-starter");
   });
 
-  it("awards Regular as Clockwork, or Ghost when long silent", () => {
-    expect(badgeKeys({ activity: { activeDaysLast30: 22 } })).toContain(
-      "regular",
-    );
+  it("awards Ghost when long silent", () => {
     expect(
       badgeKeys({
         activity: { lastMessageAt: new Date(NOW.getTime() - 45 * DAY) },
@@ -154,13 +148,10 @@ describe("computeProfileBadges", () => {
     ).toContain("ghost");
   });
 
-  it("awards Firehose and Reply Guy from their own activity", () => {
+  it("awards Firehose for lots of messages per active day", () => {
     expect(
       badgeKeys({ activity: { messages: 120, activeDaysTotal: 4 } }),
     ).toContain("firehose");
-    expect(
-      badgeKeys({ activity: { messages: 30, repliesSent: 18 } }),
-    ).toContain("reply-guy");
   });
 
   it("calls out a recent self-highlight", () => {
@@ -266,8 +257,6 @@ describe("computeProfileBadges", () => {
       activity: {
         ...quietActivity,
         recentSelfHighlights: 2,
-        activeDaysLast30: 25,
-        joinedAt: NOW,
       },
       now: NOW,
     });
@@ -280,12 +269,7 @@ describe("computeProfileBadges", () => {
     expect(ranks).toEqual([...ranks].sort((a, b) => b - a));
     expect(badges[1].rarity).toBe("legendary");
     expect(badges.map((b) => b.key)).toEqual(
-      expect.arrayContaining([
-        "score",
-        "giving",
-        "new-kid",
-        "self-highlighter",
-      ]),
+      expect.arrayContaining(["score", "giving", "self-highlighter"]),
     );
   });
 

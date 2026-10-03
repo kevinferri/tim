@@ -27,11 +27,8 @@ const BADGE_RARITY: Record<string, BadgeRarity> = {
   "record-holder": "legendary",
   "one-hit-wonder": "epic",
   "conversation-starter": "epic",
-  regular: "rare",
   ghost: "common",
   firehose: "rare",
-  "reply-guy": "common",
-  "new-kid": "common",
   founder: "legendary",
   "hype-man": "epic",
   "topic-starter": "rare",
@@ -75,15 +72,12 @@ export type CircleBadgeAggregates = {
 export type MemberActivity = {
   messages: number;
   highlightsReceived: number;
-  repliesSent: number;
   // Replies to other people's messages.
   repliesGiven: number;
   // Highlights on their own messages in the last 30 days.
   recentSelfHighlights: number;
   lastMessageAt: Date | null;
-  activeDaysLast30: number;
   activeDaysTotal: number;
-  joinedAt: Date;
   // Distinct UTC days they posted, newest first ("2026-10-02"); recent ones only, for streaks.
   recentActiveDays: string[];
   topicsCreated: number;
@@ -420,14 +414,7 @@ export function computeProfileBadges(args: {
     ? now.getTime() - new Date(activity.lastMessageAt).getTime()
     : null;
 
-  if (activity.activeDaysLast30 >= 20) {
-    add({
-      key: "regular",
-      emoji: "📅",
-      label: "Regular as Clockwork",
-      tooltip: `Posted on ${activity.activeDaysLast30} of the last 30 days`,
-    });
-  } else if (sinceLastMessage !== null && sinceLastMessage > 30 * DAY_MS) {
+  if (sinceLastMessage !== null && sinceLastMessage > 30 * DAY_MS) {
     add({
       key: "ghost",
       emoji: "👻",
@@ -445,18 +432,6 @@ export function computeProfileBadges(args: {
       emoji: "🌊",
       label: "Firehose",
       tooltip: `Sends about ${Math.round(perActiveDay)} messages on days they post`,
-    });
-  }
-
-  if (
-    activity.repliesSent >= 15 &&
-    activity.repliesSent >= activity.messages - activity.repliesSent
-  ) {
-    add({
-      key: "reply-guy",
-      emoji: "🗣️",
-      label: "Reply Guy",
-      tooltip: `${activity.repliesSent} of their ${activity.messages} messages are replies`,
     });
   }
 
@@ -478,15 +453,6 @@ export function computeProfileBadges(args: {
       emoji: "🗂️",
       label: "Topic Starter",
       tooltip: `Created ${activity.topicsCreated} topics in ${circleName}`,
-    });
-  }
-
-  if (now.getTime() - new Date(activity.joinedAt).getTime() < 14 * DAY_MS) {
-    add({
-      key: "new-kid",
-      emoji: "🆕",
-      label: "New Kid",
-      tooltip: "Joined in the last two weeks",
     });
   }
 
