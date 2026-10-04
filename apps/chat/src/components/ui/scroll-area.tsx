@@ -13,8 +13,9 @@ const ScrollArea = React.forwardRef<
   <div
     ref={ref}
     // overflow-x-hidden isn't just for clipping: paired with overflow-y-auto it gives this flex child a min-width of 0 per the flexbox spec, so it can't grow past its container to fit a wide descendant.
+    // overscroll-y-contain: a swipe past the top mustn't chain to the page and trigger mobile pull-to-refresh.
     className={cn(
-      "relative overflow-x-hidden overflow-y-auto themed-scrollbar",
+      "relative overflow-x-hidden overflow-y-auto overscroll-y-contain themed-scrollbar",
       className,
     )}
     {...props}
