@@ -8,6 +8,9 @@ export type VideoPlayerData = {
   type: "youtube" | "twitch";
   videoId: string;
   iframeSrc: string;
+  thumbnailUrl?: string;
+  oembedUrl?: string;
+  channelName?: string;
 };
 
 type Store = {

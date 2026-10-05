@@ -9,6 +9,9 @@ import { VideoPlayerFrame } from "./video-player-frame";
 
 type Props = {
   src: string;
+  thumbnailUrl?: string;
+  oembedUrl?: string;
+  channelName?: string;
   onPreviewLoad?: () => void;
   skipVirtualization?: boolean;
   onGlobalClick?: () => void;
@@ -19,6 +22,9 @@ type Props = {
 
 export function VideoPlayer({
   src,
+  thumbnailUrl,
+  oembedUrl,
+  channelName,
   onPreviewLoad,
   onGlobalClick,
   skipVirtualization = false,
@@ -31,8 +37,12 @@ export function VideoPlayer({
   const frame = (
     <VideoPlayerFrame
       src={src}
+      thumbnailUrl={thumbnailUrl}
+      oembedUrl={oembedUrl}
+      channelName={channelName}
       onLoad={onPreviewLoad}
       skipVirtualization={skipVirtualization}
+      skipFacade={isGlobal}
       isPlayingInGlobal={isPlayingInGlobal}
     />
   );

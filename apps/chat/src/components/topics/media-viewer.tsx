@@ -20,6 +20,9 @@ type VideoProvider = {
   label: string;
   match: (url: string) => { id: string; videoUrl: string } | undefined;
   getIframeSrc: (id: string) => string;
+  getThumbnailUrl?: (id: string) => string;
+  getOembedUrl?: (videoUrl: string) => string;
+  getChannelName?: (id: string) => string;
 };
 
 const VIDEO_PROVIDERS: VideoProvider[] = [
@@ -28,14 +31,19 @@ const VIDEO_PROVIDERS: VideoProvider[] = [
     label: "YouTube",
     match: getYoutubeVideoFromUrl,
     getIframeSrc: (id: string) =>
-      `https://www.youtube.com/embed/${id}?color=white&disablekb=1&rel=0&modestbranding=1`,
+      `https://www.youtube.com/embed/${id}?autoplay=1&color=white&disablekb=1&rel=0&modestbranding=1`,
+    getThumbnailUrl: (id: string) =>
+      `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+    getOembedUrl: (videoUrl: string) =>
+      `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(videoUrl)}`,
   },
   {
     type: "twitch",
     label: "Twitch",
     match: getTwitchStreamFromUrl,
     getIframeSrc: (id: string) =>
-      `https://player.twitch.tv/?channel=${id}&parent=${window.location.hostname}`,
+      `https://player.twitch.tv/?channel=${id}&parent=${window.location.hostname}&autoplay=true`,
+    getChannelName: (id: string) => id,
   },
 ];
 
@@ -51,6 +59,9 @@ function prepareVideoPlayer(
       videoId: match.id,
       type: provider.type,
       iframeSrc: provider.getIframeSrc(match.id),
+      thumbnailUrl: provider.getThumbnailUrl?.(match.id),
+      oembedUrl: provider.getOembedUrl?.(match.videoUrl),
+      channelName: provider.getChannelName?.(match.id),
       label: provider.label,
     };
   }
@@ -92,6 +103,9 @@ export function MediaViewer({
     return (
       <VideoPlayer
         src={videoData.iframeSrc}
+        thumbnailUrl={videoData.thumbnailUrl}
+        oembedUrl={videoData.oembedUrl}
+        channelName={videoData.channelName}
         onPreviewLoad={onPreviewLoad}
         skipVirtualization={skipVirtualization}
         isPlayingInGlobal={isPlayingInGlobal}
