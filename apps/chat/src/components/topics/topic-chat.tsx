@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   getMessagePositionFlags,
@@ -15,7 +15,7 @@ import { isToday, MessageDateSeparator } from "./message-date-separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Button } from "@/components/ui/button";
-import { MoreMessagesSkeleton } from "@/components/topics/more-messages-skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 export function TopicChat() {
   const { markTopicAsRead } = useUnreadTopics();
@@ -82,11 +82,9 @@ export function TopicChat() {
               loading={loadingMoreMessages}
               fetchNextPage={loadMoreMessages}
               containerRef={viewportRef}
-              // Fetch well before the top so a normal scroll never hits the edge.
-              rootMargin="1200px 0px 0px 0px"
             >
-              <div className="flex flex-col">
-                <MoreMessagesSkeleton />
+              <div className="flex justify-center p-3">
+                <Spinner />
               </div>
             </InfiniteLoader>
           )}
@@ -106,23 +104,20 @@ export function TopicChat() {
                 currentDate.getDate() !== prevDate.getDate() ||
                 currentDate.getMonth() !== prevDate.getMonth() ||
                 currentDate.getFullYear() !== prevDate.getFullYear()) &&
+              !(index === 0 && loadingMoreMessages) &&
               !(isVeryFirstMessage && isToday(currentDate));
 
-            // Separator sits outside the anchored element so one appearing
-            // above a message doesn't shift it -- see useTopicScroll.
             return (
-              <Fragment key={message.id}>
+              <div key={message.id}>
                 {showDateSeparator && (
                   <MessageDateSeparator date={currentDate} />
                 )}
-                <div data-scroll-anchor>
-                  <Message
-                    {...message}
-                    context="topic"
-                    {...getMessagePositionFlags(recency, message.id)}
-                  />
-                </div>
-              </Fragment>
+                <Message
+                  {...message}
+                  context="topic"
+                  {...getMessagePositionFlags(recency, message.id)}
+                />
+              </div>
             );
           })}
 
