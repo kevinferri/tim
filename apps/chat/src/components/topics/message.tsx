@@ -307,7 +307,6 @@ const MessageComponent = (props: MessageProps) => {
               disableSheet={props.context === "user-sheet"}
               status={props.sentBy.status}
               lastStatusUpdate={props.sentBy.lastStatusUpdate}
-              statusVisibleAt={createdAt}
               size="md"
             />
           )}

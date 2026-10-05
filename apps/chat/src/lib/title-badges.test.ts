@@ -28,15 +28,15 @@ describe("bumpTitleBadge", () => {
   it("counts messages and highlights ahead of the title", () => {
     bumpTitleBadge("messages");
     bumpTitleBadge("messages");
-    expect(document.title).toBe("(💬 2) Sandbox - General");
+    expect(document.title).toBe("(💬2) Sandbox - General");
 
     bumpTitleBadge("highlights");
-    expect(document.title).toBe("(💬 2) (⭐ 1) Sandbox - General");
+    expect(document.title).toBe("(💬2) (⭐1) Sandbox - General");
   });
 
   it("shows highlights alone when no messages came in", () => {
     bumpTitleBadge("highlights");
-    expect(document.title).toBe("(⭐ 1) Sandbox - General");
+    expect(document.title).toBe("(⭐1) Sandbox - General");
   });
 
   it("clears on focus", () => {
@@ -51,7 +51,7 @@ describe("bumpTitleBadge", () => {
     // e.g. navigating to another topic sets a new base title
     document.title = "Sandbox - Ethics";
     bumpTitleBadge("messages");
-    expect(document.title).toBe("(💬 2) Sandbox - Ethics");
+    expect(document.title).toBe("(💬2) Sandbox - Ethics");
   });
 
   it("does nothing while the window is focused", () => {

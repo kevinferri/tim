@@ -64,8 +64,6 @@ type Props = VariantProps<typeof variants> & {
   disableSheet?: boolean;
   showStatus?: boolean;
   isOnline?: boolean;
-  // Hide a status set after this time (e.g. a message's send time), since a status describes now.
-  statusVisibleAt?: Date;
   // Renders this instead of the avatar circle as the clickable element that opens the profile sheet -- the sheet's own content is unaffected either way.
   children?: ReactNode;
 };
@@ -224,13 +222,7 @@ export function UserAvatar(props: Props) {
       </Avatar>
       {showStatus && (
         <UserStatus
-          status={
-            props.statusVisibleAt &&
-            lastStatusUpdate &&
-            new Date(lastStatusUpdate) > new Date(props.statusVisibleAt)
-              ? null
-              : status
-          }
+          status={status}
           userId={props.id}
           lastStatusUpdate={lastStatusUpdate}
           isOnline={props.isOnline}
