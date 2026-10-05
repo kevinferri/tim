@@ -452,7 +452,8 @@ const MessageComponent = (props: MessageProps) => {
           </div>
 
           {showHighlights && (
-            <div className="self-center">
+            // Avatar-height box: centered on one-line messages, pinned to the top on taller ones.
+            <div className="flex h-10 shrink-0 items-center">
               <MessageHighlights
                 highlights={highlights}
                 highlightedBySelf={highlightedBySelf}
