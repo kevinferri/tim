@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  MutableRefObject,
-} from "react";
+import { useCallback, useMemo } from "react";
 import uniqBy from "lodash.uniqby";
 import { useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { MessageProps, MessageData } from "@/components/topics/message";
@@ -22,8 +16,6 @@ type UseTopicMessagesProps = {
   topicId: string;
   existingMessages: MessageData[];
   messagesLimit: number;
-  viewportRef: MutableRefObject<HTMLDivElement | null>;
-  suppressAutoStickRef: MutableRefObject<boolean>;
   isAtBottom: boolean;
   onNewMessage?: (message: MessageProps) => void;
   onMediaMessage?: (message: MessageProps) => void;
@@ -47,8 +39,6 @@ export function useTopicMessages({
   topicId,
   existingMessages,
   messagesLimit,
-  viewportRef,
-  suppressAutoStickRef,
   isAtBottom,
   onNewMessage,
   onMediaMessage,
@@ -207,38 +197,6 @@ export function useTopicMessages({
   const loadMoreMessages = useCallback(() => {
     fetchNextPage();
   }, [fetchNextPage]);
-
-  // Keyed on the committed `messages` array (not the fetch promise) so
-  // back-to-back load-more pages don't race each other's restoration.
-  const prevOldestIdRef = useRef<string | undefined>(undefined);
-  const prevLengthRef = useRef(0);
-  const prevScrollHeightRef = useRef<number | undefined>(undefined);
-
-  useLayoutEffect(() => {
-    const viewport = viewportRef.current;
-    const oldestId = messages[0]?.id;
-    const prevOldestId = prevOldestIdRef.current;
-    const prevScrollHeight = prevScrollHeightRef.current;
-
-    // True only for a load-more prepend, not the bottom-trim path above.
-    const isPrepend =
-      viewport &&
-      prevScrollHeight !== undefined &&
-      prevOldestId !== undefined &&
-      oldestId !== undefined &&
-      oldestId !== prevOldestId &&
-      messages.length > prevLengthRef.current;
-
-    if (isPrepend) {
-      // Consumed by the resize observer on its next notification.
-      suppressAutoStickRef.current = true;
-      viewport.scrollTop += viewport.scrollHeight - prevScrollHeight;
-    }
-
-    prevOldestIdRef.current = oldestId;
-    prevLengthRef.current = messages.length;
-    prevScrollHeightRef.current = viewport?.scrollHeight;
-  }, [messages, viewportRef, suppressAutoStickRef]);
 
   // Re-fetches page 0 directly (react-query v5 dropped invalidateQueries's
   // refetchPage filter) to replace the live window after a reconnect, since

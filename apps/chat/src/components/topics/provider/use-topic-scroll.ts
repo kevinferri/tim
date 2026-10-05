@@ -16,8 +16,6 @@ export function useTopicScroll() {
 
   const [isAtBottom, setIsAtBottomState] = useState(true);
   const isAtBottomRef = useRef(true);
-  // Set by load-more so the resize observer below ignores its prepend.
-  const suppressAutoStickRef = useRef(false);
 
   const setIsAtBottom = useCallback((value: boolean) => {
     isAtBottomRef.current = value;
@@ -58,6 +56,51 @@ export function useTopicScroll() {
     return () => observer.disconnect();
   }, [setIsAtBottom]);
 
+  // Self-managed scroll anchoring (native overflow-anchor is disabled on the
+  // viewport): remembers the first visible message so any height change above
+  // it -- a load-more prepend, a late-loading image or link preview -- can be
+  // cancelled out before paint.
+  const anchorRef = useRef<{ el: HTMLElement; top: number } | null>(null);
+
+  const captureAnchor = useCallback(() => {
+    const viewport = viewportRef.current;
+    const content = contentRef.current;
+    if (!viewport || !content) return;
+
+    const anchors = content.querySelectorAll<HTMLElement>(
+      ":scope > [data-scroll-anchor]",
+    );
+    const scrollTop = viewport.scrollTop;
+
+    // offsetTop is relative to the (positioned) viewport, so this is a
+    // layout-only binary search with no getBoundingClientRect per item.
+    let lo = 0;
+    let hi = anchors.length - 1;
+    let found: HTMLElement | null = null;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const el = anchors[mid];
+      if (el.offsetTop + el.offsetHeight > scrollTop) {
+        found = el;
+        hi = mid - 1;
+      } else {
+        lo = mid + 1;
+      }
+    }
+
+    anchorRef.current = found
+      ? { el: found, top: found.offsetTop - scrollTop }
+      : null;
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    viewport.addEventListener("scroll", captureAnchor, { passive: true });
+    return () => viewport.removeEventListener("scroll", captureAnchor);
+  }, [captureAnchor]);
+
   // Checks scroll position against the pre-change height directly (not the
   // async isAtBottomRef) so a fast resize can't race the IntersectionObserver,
   // and also reacts to net shrinks (e.g. window trimming) that a "grew" check
@@ -79,15 +122,12 @@ export function useTopicScroll() {
 
       previousHeight = nextHeight;
 
-      // Consumed on read rather than cleared by a timer, which raced this callback.
-      if (suppressAutoStickRef.current) {
-        suppressAutoStickRef.current = false;
-        return;
-      }
+      if (!viewport || !heightChanged) return;
 
-      if (heightChanged && wasAtBottom) {
-        viewport?.scrollTo({ top: nextHeight, behavior: "instant" });
+      if (wasAtBottom) {
+        viewport.scrollTo({ top: nextHeight, behavior: "instant" });
         setIsAtBottom(true);
+        captureAnchor();
 
         requestAnimationFrame(() => {
           const v = viewportRef.current;
@@ -97,13 +137,22 @@ export function useTopicScroll() {
             v.scrollTo({ top: liveHeight, behavior: "instant" });
           }
           previousHeight = liveHeight;
+          captureAnchor();
         });
+        return;
       }
+
+      const anchor = anchorRef.current;
+      if (anchor?.el.isConnected) {
+        const drift = anchor.el.offsetTop - viewport.scrollTop - anchor.top;
+        if (drift !== 0) viewport.scrollTop += drift;
+      }
+      captureAnchor();
     });
 
     observer.observe(content);
     return () => observer.disconnect();
-  }, [setIsAtBottom]);
+  }, [setIsAtBottom, captureAnchor]);
 
   return {
     viewportRef,
@@ -111,6 +160,5 @@ export function useTopicScroll() {
     bottomSentinelRef,
     isAtBottom,
     scrollToBottom,
-    suppressAutoStickRef,
   };
 }

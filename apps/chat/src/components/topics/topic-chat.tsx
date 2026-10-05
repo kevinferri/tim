@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect } from "react";
+import { Fragment, useEffect, useLayoutEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   getMessagePositionFlags,
@@ -82,6 +82,8 @@ export function TopicChat() {
               loading={loadingMoreMessages}
               fetchNextPage={loadMoreMessages}
               containerRef={viewportRef}
+              // Fetch well before the top so a normal scroll never hits the edge.
+              rootMargin="1200px 0px 0px 0px"
             >
               <div className="flex flex-col">
                 <MoreMessagesSkeleton />
@@ -104,20 +106,23 @@ export function TopicChat() {
                 currentDate.getDate() !== prevDate.getDate() ||
                 currentDate.getMonth() !== prevDate.getMonth() ||
                 currentDate.getFullYear() !== prevDate.getFullYear()) &&
-              !(index === 0 && loadingMoreMessages) &&
               !(isVeryFirstMessage && isToday(currentDate));
 
+            // Separator sits outside the anchored element so one appearing
+            // above a message doesn't shift it -- see useTopicScroll.
             return (
-              <div key={message.id}>
+              <Fragment key={message.id}>
                 {showDateSeparator && (
                   <MessageDateSeparator date={currentDate} />
                 )}
-                <Message
-                  {...message}
-                  context="topic"
-                  {...getMessagePositionFlags(recency, message.id)}
-                />
-              </div>
+                <div data-scroll-anchor>
+                  <Message
+                    {...message}
+                    context="topic"
+                    {...getMessagePositionFlags(recency, message.id)}
+                  />
+                </div>
+              </Fragment>
             );
           })}
 

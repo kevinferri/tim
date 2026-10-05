@@ -306,7 +306,6 @@ export function CurrentTopicProvider(props: Props) {
     bottomSentinelRef,
     isAtBottom,
     scrollToBottom,
-    suppressAutoStickRef,
   } = useTopicScroll();
 
   // Drop reply/thread UI state when navigating to another topic.
@@ -371,8 +370,6 @@ export function CurrentTopicProvider(props: Props) {
     topicId: props.topicId,
     existingMessages: props.existingMessages,
     messagesLimit: props.messagesLimit,
-    viewportRef,
-    suppressAutoStickRef,
     isAtBottom,
     onNewMessage,
     onMediaMessage,
