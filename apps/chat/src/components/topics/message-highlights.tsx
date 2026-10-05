@@ -143,7 +143,7 @@ export function MessageHighlights(props: Props) {
 
   return (
     <TooltipProvider>
-      <Tooltip delayDuration={300}>
+      <Tooltip delayDuration={100}>
         <TooltipTrigger asChild>
           <button
             // Remounts on each burst so the flash replays.
