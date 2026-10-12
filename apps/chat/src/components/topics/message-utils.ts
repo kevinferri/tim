@@ -4,7 +4,6 @@ import {
   CommandName,
   isCommandMessage,
   parseCommand,
-  type ParsedCommand,
 } from "@tim/commands";
 
 export function adjustHeight(
@@ -231,11 +230,3 @@ export function tokenizeMessage(
   return tokens;
 }
 
-// A bare "/roll d20" (or "/roll 20", which rolls the same die) says nothing the die doesn't,
-// so the die carries the label instead. Anything more, like "/roll d20 for initiative", stays.
-export function isBareRoll(command?: ParsedCommand) {
-  return (
-    command?.name === CommandName.Roll &&
-    /^\s*(d?\d+)?\s*$/i.test(command.prompt)
-  );
-}

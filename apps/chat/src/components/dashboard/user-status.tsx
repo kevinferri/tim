@@ -87,7 +87,7 @@ export function UserStatus(props: Props) {
   const dot = (
     <span
       className={`border relative inline-flex rounded-full w-3 h-3 ${
-        props.isOnline ? "bg-success" : "bg-muted-foreground"
+        props.isOnline ? "bg-success" : "bg-slate-300 dark:bg-slate-600"
       }`}
     />
   );

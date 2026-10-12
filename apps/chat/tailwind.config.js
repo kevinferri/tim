@@ -64,8 +64,9 @@ module.exports = {
         },
         highlight: {
           DEFAULT: "#ffffcd",
-          // Soft gold; deeper in light mode for contrast on white.
+          // Classic gold; deeper in light mode for contrast on white.
           icon: "hsl(var(--highlight-icon) / <alpha-value>)",
+          row: "hsl(var(--highlight-row) / <alpha-value>)",
         },
       },
       boxShadow: {
@@ -178,12 +179,6 @@ module.exports = {
           },
           "100%": { boxShadow: "inset 0 0 0 0 hsl(var(--highlight-icon) / 0)" },
         },
-        // `top`, not translate: the glint's height is a % of the row, not of itself.
-        "highlight-edge": {
-          "0%": { top: "-40%", opacity: "0" },
-          "15%": { opacity: "1" },
-          "100%": { top: "100%", opacity: "0" },
-        },
         "highlight-spark": {
           "0%": { transform: "translate(0, 0) scale(1)", opacity: "1" },
           "100%": {
@@ -221,7 +216,6 @@ module.exports = {
         "highlight-sweep": "highlight-sweep 0.9s ease-out forwards",
         "highlight-flash": "highlight-flash 0.9s ease-out",
         "highlight-spark": "highlight-spark 0.6s ease-out forwards",
-        "highlight-edge": "highlight-edge 0.6s ease-out forwards",
         // Delayed until the shake ends; `both` keeps it hidden during the delay.
         "eight-ball-reveal":
           "eight-ball-reveal 2.2s cubic-bezier(0.22, 1, 0.36, 1) 0.8s both",

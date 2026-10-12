@@ -6,8 +6,6 @@ type Props = {
   content: string;
   // From the "/roll d20" prompt -- the result string doesn't carry the side count.
   sides: number;
-  // Labels the die "d20" when the message text is hidden.
-  showSides?: boolean;
   createdAt?: Date;
 };
 
@@ -135,11 +133,11 @@ export function RollResult(props: Props) {
     : undefined;
 
   return (
-    // Room for the tumbling corners; the negative margin keeps the die on the text's left edge.
+    // Tumble room; negative margins keep the die spaced and aligned like other attachments.
     <div
       role="img"
       aria-label={isRolling ? "Rolling a die" : `Rolled ${result}`}
-      className="-ml-3 flex w-fit flex-col items-center gap-1 p-3"
+      className="-my-3 -ml-3 flex w-fit flex-col items-center p-3"
     >
       {/* Bounce and spin are separate elements so each gets its own easing. */}
       <div
@@ -177,11 +175,6 @@ export function RollResult(props: Props) {
           )}
         </div>
       </div>
-      {props.showSides && (
-        <span className="text-[11px] font-medium text-muted-foreground">
-          d{props.sides}
-        </span>
-      )}
     </div>
   );
 }

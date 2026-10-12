@@ -31,7 +31,6 @@ import { MessageEdit } from "@/components/topics/message-edit";
 import {
   adjustHeight,
   getLinksFromMessage,
-  isBareRoll,
 } from "@/components/topics/message-utils";
 import { MessageSentAt } from "@/components/topics/message-sent-at";
 import { renderCommandResult } from "@/components/topics/message-attachment";
@@ -283,17 +282,6 @@ const MessageComponent = (props: MessageProps) => {
           if (isActionEligable) setShowActions(false);
         }}
       >
-        {/* A glint down the highlight edge as it draws in, like the score badge's border light. */}
-        {highlightBurst.own && highlightBurst.key > 0 && (
-          <span
-            key={highlightBurst.key}
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-0 w-3 overflow-hidden motion-reduce:hidden"
-          >
-            <span className="absolute left-0 h-2/5 w-[1.5px] bg-gradient-to-b from-transparent via-white to-transparent opacity-0 shadow-[0_0_6px_1px_hsl(var(--highlight-icon))] animate-highlight-edge" />
-          </span>
-        )}
-
         <div
           className={cn("flex items-start gap-3 overflow-x-clip leading-none")}
         >
@@ -307,12 +295,13 @@ const MessageComponent = (props: MessageProps) => {
               disableSheet={props.context === "user-sheet"}
               status={props.sentBy.status}
               lastStatusUpdate={props.sentBy.lastStatusUpdate}
-              size="md"
+              // Trying 36px; md (40px) spans the name line plus the first line of text.
+              size="default"
             />
           )}
 
           <div
-            className={cn("flex min-w-0 flex-1 flex-col gap-0.5 leading-none")}
+            className={cn("flex min-w-0 flex-1 flex-col gap-px leading-none")}
           >
             <div className="flex h-4 min-w-0 items-center gap-2">
               {props.sentBy && (
@@ -392,7 +381,7 @@ const MessageComponent = (props: MessageProps) => {
                     adjustHeight(e.target);
                   }}
                 />
-              ) : isBareRoll(command) ? null : (
+              ) : (
                 <MessageText
                   id={props.id!}
                   topicId={topicId}
@@ -433,7 +422,7 @@ const MessageComponent = (props: MessageProps) => {
               ))}
 
               {showReplyCount && (
-                <div className="mt-1">
+                <div>
                   <Button
                     variant="ghost"
                     size="inline"
@@ -451,8 +440,8 @@ const MessageComponent = (props: MessageProps) => {
           </div>
 
           {showHighlights && (
-            // Avatar-height box: centered on one-line messages, pinned to the top on taller ones.
-            <div className="flex h-10 shrink-0 items-center">
+            // Centers the 24px pill on a one-line message (39px) without adding height; pinned to the top on taller ones.
+            <div className="shrink-0 pt-[7.5px]">
               <MessageHighlights
                 highlights={highlights}
                 highlightedBySelf={highlightedBySelf}

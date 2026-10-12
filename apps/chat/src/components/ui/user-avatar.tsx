@@ -268,6 +268,7 @@ export function UserAvatar(props: Props) {
                         status={status}
                         userId={props.id}
                         lastStatusUpdate={lastStatusUpdate}
+                        variant="minimal"
                       />
                     </div>
                   )}

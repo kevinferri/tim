@@ -3,7 +3,6 @@ import { CommandName, type ParsedCommand } from "@tim/commands";
 import { cn } from "@/lib/utils";
 import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
 import { RollResult, sidesFromPrompt } from "@/components/topics/roll-result";
-import { isBareRoll } from "@/components/topics/message-utils";
 import { EightBallResult } from "@/components/topics/eight-ball-result";
 
 type FrameProps = {
@@ -55,7 +54,6 @@ const RESULT_RENDERERS: Partial<
     <RollResult
       content={content}
       sides={sidesFromPrompt(command.prompt)}
-      showSides={isBareRoll(command)}
       createdAt={createdAt}
     />
   ),
