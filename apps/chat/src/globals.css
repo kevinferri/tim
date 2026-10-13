@@ -92,6 +92,11 @@
   * {
     @apply border-border;
   }
+  /* Load-more swipes start at the list's top edge, which mobile browsers can latch to the page and turn into pull-to-refresh. */
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
   body {
     @apply bg-background text-foreground;
   }

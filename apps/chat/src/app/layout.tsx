@@ -147,7 +147,8 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
             <CircleRoomConnect circleIds={circleIds ?? []} />
             <TopicRoomConnect />
             <NotificationSync />
-            <div className="flex flex-col h-screen">
+            {/* dvh, not h-screen: 100vh exceeds the visible mobile viewport, making the page itself scrollable. */}
+            <div className="flex flex-col h-dvh">
               <div className="flex overflow-hidden basis-full">
                 <CirclesNav circles={circles} />
                 {children}
