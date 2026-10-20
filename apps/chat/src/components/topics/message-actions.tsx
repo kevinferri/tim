@@ -69,14 +69,13 @@ export function MessageActions(props: Props) {
                 size="iconSm"
                 variant="outline"
                 aria-pressed={props.highlightedBySelf}
-                // Gold only once it's yours, like the pill and the left edge.
-                className={cn(
-                  props.highlightedBySelf &&
-                    "text-highlight-icon hover:text-highlight-icon",
-                )}
                 onClick={props.onHighlight}
               >
-                {props.highlightedBySelf ? <StarFilledIcon /> : <StarIcon />}
+                {props.highlightedBySelf ? (
+                  <StarFilledIcon className="text-highlight-icon" />
+                ) : (
+                  <StarIcon />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
