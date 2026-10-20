@@ -191,6 +191,7 @@ export type ReplyingToMessage = {
   id: string;
   text: string;
   mediaUrl?: string | null;
+  command?: string | null;
   senderName: string | null;
   senderId: string;
 };

@@ -8,6 +8,7 @@ import { useDateFormatter } from "@/lib/hooks/use-date-formatter";
 import { useNow } from "@/lib/hooks/use-now";
 import { formatFeedTime, formatFullDateTime } from "@/lib/relative-time";
 import { formatStatus, splitStatus } from "@/lib/status";
+import { cn } from "@/lib/utils";
 
 type Props = {
   status: string | null;
@@ -84,11 +85,14 @@ export function UserStatus(props: Props) {
     );
   }
 
-  const dot = (
+  // The border only reads as a ring on the avatar; on the inverted tooltip it tints the dot.
+  const dot = (bordered: boolean) => (
     <span
-      className={`border relative inline-flex rounded-full w-3 h-3 ${
-        props.isOnline ? "bg-success" : "bg-slate-300 dark:bg-slate-600"
-      }`}
+      className={cn(
+        "relative inline-flex rounded-full w-3 h-3",
+        bordered && "border",
+        props.isOnline ? "bg-success" : "bg-slate-300 dark:bg-slate-600",
+      )}
     />
   );
 
@@ -97,13 +101,13 @@ export function UserStatus(props: Props) {
       <Tooltip delayDuration={100}>
         <TooltipTrigger asChild>
           <div className="cursor-pointer absolute flex right-0 bottom-0">
-            {dot}
+            {dot(true)}
           </div>
         </TooltipTrigger>
         <TooltipContent side="right">
           <div className="flex flex-col gap-1">
             <span className="flex gap-1.5 items-center">
-              {dot} {props.isOnline ? "Online" : "Offline"}
+              {dot(false)} {props.isOnline ? "Online" : "Offline"}
             </span>
             {props.status && (
               <>

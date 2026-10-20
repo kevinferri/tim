@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CommandName, type ParsedCommand } from "@tim/commands";
+import { CommandName } from "@tim/commands";
 import { cn } from "@/lib/utils";
 import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
 import { RollResult, sidesFromPrompt } from "@/components/topics/roll-result";
@@ -40,7 +40,7 @@ export function AttachmentFrame(props: FrameProps) {
 }
 
 type ResultProps = {
-  command: ParsedCommand;
+  prompt: string;
   content: string;
   createdAt?: Date;
 };
@@ -50,10 +50,10 @@ const RESULT_RENDERERS: Partial<
   Record<CommandName, (props: ResultProps) => ReactNode>
 > = {
   [CommandName.Tim]: ({ content }) => <OpenAiViewer content={content} />,
-  [CommandName.Roll]: ({ command, content, createdAt }) => (
+  [CommandName.Roll]: ({ prompt, content, createdAt }) => (
     <RollResult
       content={content}
-      sides={sidesFromPrompt(command.prompt)}
+      sides={sidesFromPrompt(prompt)}
       createdAt={createdAt}
     />
   ),
@@ -67,9 +67,9 @@ export function isResultCommand(name?: CommandName) {
 }
 
 export function renderCommandResult(
-  command: ParsedCommand | undefined,
-  props: Omit<ResultProps, "command">,
+  name: CommandName | undefined,
+  props: ResultProps,
 ) {
-  const render = command && RESULT_RENDERERS[command.name];
-  return render ? render({ command, ...props }) : undefined;
+  const render = name && RESULT_RENDERERS[name];
+  return render ? render(props) : undefined;
 }
