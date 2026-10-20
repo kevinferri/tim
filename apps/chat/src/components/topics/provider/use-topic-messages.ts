@@ -232,7 +232,10 @@ export function useTopicMessages({
     if (isPrepend) {
       // Consumed by the resize observer on its next notification.
       suppressAutoStickRef.current = true;
+      // iOS momentum scrolling overwrites a programmatic scrollTop; pausing overflow ends the fling first.
+      viewport.style.overflowY = "hidden";
       viewport.scrollTop += viewport.scrollHeight - prevScrollHeight;
+      viewport.style.overflowY = "";
     }
 
     prevOldestIdRef.current = oldestId;
