@@ -255,7 +255,7 @@ describe("editMessage", () => {
 });
 
 describe("getMessageForUser", () => {
-  it("returns the message id/text when owned by the user", async () => {
+  it("returns the message id/text/command when owned by the user", async () => {
     const userId = await createUser();
     const circleId = await createCircle(userId);
     const topicId = await createTopic(userId, circleId);
@@ -263,7 +263,7 @@ describe("getMessageForUser", () => {
 
     await expect(
       getMessageForUser({ messageId: message.id, userId }),
-    ).resolves.toEqual({ id: message.id, text: message.text });
+    ).resolves.toEqual({ id: message.id, text: message.text, command: null });
   });
 
   it("returns undefined for a message owned by a different user", async () => {

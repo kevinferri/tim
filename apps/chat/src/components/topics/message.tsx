@@ -34,7 +34,7 @@ import {
 } from "@/components/topics/message-utils";
 import { MessageSentAt } from "@/components/topics/message-sent-at";
 import { renderCommandResult } from "@/components/topics/message-attachment";
-import { parseCommand } from "@tim/commands";
+import { parseCommand, toCommandName } from "@tim/commands";
 import { useCanHover } from "@/lib/hooks/use-can-hover";
 import { getDisplayName } from "@tim/user-display";
 import {
@@ -59,6 +59,7 @@ export type MessageData = {
   id?: string;
   text?: string;
   mediaUrl?: string | null;
+  command?: string | null;
   createdAt?: Date;
   replyToId?: string | null;
   threadRootId?: string | null;
@@ -79,6 +80,7 @@ export type MessageData = {
     id: string;
     text?: string;
     mediaUrl?: string | null;
+    command?: string | null;
     sentBy?: { id: string; name: string | null };
   } | null;
   [key: string]: any;
@@ -146,8 +148,12 @@ const MessageComponent = (props: MessageProps) => {
     highlightedBySelf,
   );
 
-  const command = useMemo(() => parseCommand(props.text ?? ""), [props.text]);
-  const ownActions = getOwnMessageActions(props.text ?? "", props.mediaUrl);
+  const commandName = toCommandName(props.command);
+  const commandPrompt = useMemo(
+    () => (commandName ? (parseCommand(props.text ?? "")?.prompt ?? "") : ""),
+    [commandName, props.text],
+  );
+  const ownActions = getOwnMessageActions(commandName, props.mediaUrl);
 
   const links = useMemo(
     () => getLinksFromMessage(props.text ?? undefined),
@@ -230,6 +236,7 @@ const MessageComponent = (props: MessageProps) => {
       id: props.id,
       text: props.text ?? "",
       mediaUrl: props.mediaUrl,
+      command: props.command,
       senderName: props.sentBy.name ?? null,
       senderId: props.sentBy.id,
     });
@@ -282,6 +289,17 @@ const MessageComponent = (props: MessageProps) => {
           if (isActionEligable) setShowActions(false);
         }}
       >
+        {/* A glint down the highlight edge as it draws in, like the score badge's border light. */}
+        {highlightBurst.own && highlightBurst.key > 0 && (
+          <span
+            key={highlightBurst.key}
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 w-3 overflow-hidden motion-reduce:hidden"
+          >
+            <span className="absolute left-0 h-2/5 w-[1.5px] bg-gradient-to-b from-transparent via-white to-transparent opacity-0 shadow-[0_0_6px_1px_hsl(var(--highlight-icon))] animate-highlight-edge" />
+          </span>
+        )}
+
         <div
           className={cn("flex items-start gap-3 overflow-x-clip leading-none")}
         >
@@ -336,7 +354,7 @@ const MessageComponent = (props: MessageProps) => {
                   // the scroll viewport -- so pin it flush to the top edge.
                   className={isFirstMessage ? "top-0" : ""}
                   messageId={props.id!}
-                  text={props.text ?? ""}
+                  command={commandName}
                   mediaUrl={props.mediaUrl ?? ""}
                   isShufflingGif={isShufflingGif}
                   highlightedBySelf={highlightedBySelf}
@@ -354,6 +372,7 @@ const MessageComponent = (props: MessageProps) => {
                   senderName={props.replyTo.sentBy?.name ?? null}
                   text={props.replyTo.text ?? ""}
                   mediaUrl={props.replyTo.mediaUrl}
+                  command={props.replyTo.command}
                   onClick={() => {
                     // From the transcript, the thread is the better destination:
                     // it renders the quoted message's root at the top, so it
@@ -391,7 +410,8 @@ const MessageComponent = (props: MessageProps) => {
               )}
 
               {props.mediaUrl &&
-                (renderCommandResult(command, {
+                (renderCommandResult(commandName, {
+                  prompt: commandPrompt,
                   content: props.mediaUrl,
                   createdAt: props.createdAt,
                 }) ?? (

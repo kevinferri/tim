@@ -16,6 +16,7 @@ export const DEFAULT_MESSAGE_SELECT = {
   createdAt: true,
   topicId: true,
   mediaUrl: true,
+  command: true,
   replyToId: true,
   threadRootId: true,
   highlights: {
@@ -45,6 +46,7 @@ export const DEFAULT_MESSAGE_SELECT = {
       id: true,
       text: true,
       mediaUrl: true,
+      command: true,
       createdAt: true,
       sentBy: {
         select: {

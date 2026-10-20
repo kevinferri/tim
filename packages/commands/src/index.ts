@@ -36,6 +36,11 @@ export function parseCommand(text: string): ParsedCommand | undefined {
   return { name, token, prompt: words.slice(1).join(" ") };
 }
 
+// Narrows the Message.command column (a plain string in the DB) to a known CommandName.
+export function toCommandName(value?: string | null): CommandName | undefined {
+  return Object.values(CommandName).find((name) => name === value);
+}
+
 export function isCommandMessage(text: string): boolean {
   return parseCommand(text) !== undefined;
 }

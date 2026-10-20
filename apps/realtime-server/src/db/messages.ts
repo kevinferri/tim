@@ -59,6 +59,7 @@ export async function writeMessage({
       "text",
       "topicId",
       "mediaUrl",
+      "command",
       "replyToId",
       "threadRootId",
       "createdAt",
@@ -69,7 +70,13 @@ export async function writeMessage({
 
 type ReplyPreviewRow = Pick<
   Message,
-  "id" | "text" | "mediaUrl" | "userId" | "threadRootId" | "createdAt"
+  | "id"
+  | "text"
+  | "mediaUrl"
+  | "command"
+  | "userId"
+  | "threadRootId"
+  | "createdAt"
 > & { name: string | null };
 
 // Scoped to topicId so it doubles as validation: a replyToId for a message
@@ -87,6 +94,7 @@ export async function getMessageForReplyPreview({
       "messages.id",
       "messages.text",
       "messages.mediaUrl",
+      "messages.command",
       "messages.userId",
       "messages.threadRootId",
       "messages.createdAt",
@@ -106,7 +114,7 @@ export async function getMessageForUser({
   userId: string;
 }) {
   return await pgClient<Message>("messages")
-    .select("id", "text")
+    .select("id", "text", "command")
     .where("id", messageId)
     .where("userId", userId)
     .first();
@@ -134,14 +142,25 @@ export async function getMessageHistoryForTopic({
   limit: number;
 }) {
   // createdAt is only millisecond precision and ties are possible for rapid-fire messages, so break ties with ctid (physical insertion order) for a stable ordering.
-  const rows: { id: string; text: string; mediaUrl: string; name: string }[] =
-    await pgClient("messages")
-      .select("messages.id", "messages.text", "messages.mediaUrl", "users.name")
-      .join("users", "messages.userId", "users.id")
-      .where("messages.topicId", topicId)
-      .orderBy("messages.createdAt", "desc")
-      .orderBy("messages.ctid", "desc")
-      .limit(limit);
+  const rows: {
+    id: string;
+    text: string;
+    mediaUrl: string;
+    command: string | null;
+    name: string;
+  }[] = await pgClient("messages")
+    .select(
+      "messages.id",
+      "messages.text",
+      "messages.mediaUrl",
+      "messages.command",
+      "users.name",
+    )
+    .join("users", "messages.userId", "users.id")
+    .where("messages.topicId", topicId)
+    .orderBy("messages.createdAt", "desc")
+    .orderBy("messages.ctid", "desc")
+    .limit(limit);
 
   return rows.reverse();
 }

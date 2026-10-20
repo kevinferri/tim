@@ -353,6 +353,7 @@ export function TopicMessageBar() {
               senderName={replyingTo.senderName}
               text={replyingTo.text}
               mediaUrl={replyingTo.mediaUrl}
+              command={replyingTo.command}
               onCancel={() => setReplyingTo(undefined)}
               className="flex-1"
             />

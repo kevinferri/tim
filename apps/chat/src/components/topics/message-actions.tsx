@@ -6,8 +6,8 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { DeleteMessageModal } from "@/components/topics/delete-message-modal";
-import { isGiphy, isValidCommand } from "@/components/topics/message-utils";
-import { CommandName, parseCommand } from "@tim/commands";
+import { isGiphy } from "@/components/topics/message-utils";
+import { CommandName } from "@tim/commands";
 import {
   Pencil1Icon,
   StarFilledIcon,
@@ -20,7 +20,7 @@ import { ReplyIcon } from "@/components/icons/reply-icon";
 
 type Props = {
   messageId: string;
-  text: string;
+  command?: CommandName;
   mediaUrl: string;
   onEditMessage?: () => void;
   onShuffleGif?: () => void;
@@ -36,17 +36,19 @@ type Props = {
 const DELAY_DURATION = 100;
 
 // Commands can't be edited; a random gif can be reshuffled instead.
-export function getOwnMessageActions(text: string, mediaUrl?: string | null) {
+export function getOwnMessageActions(
+  command: CommandName | undefined,
+  mediaUrl?: string | null,
+) {
   const isRandomGif =
-    isGiphy(mediaUrl ?? undefined) &&
-    parseCommand(text)?.name === CommandName.Giphy;
-  return { canShuffle: isRandomGif, canEdit: !isValidCommand(text) };
+    isGiphy(mediaUrl ?? undefined) && command === CommandName.Giphy;
+  return { canShuffle: isRandomGif, canEdit: !command };
 }
 
 export function MessageActions(props: Props) {
   const { topicId } = useTopicMetaContext();
   const { canShuffle: isRandomGif, canEdit: showEdit } = getOwnMessageActions(
-    props.text,
+    props.command,
     props.mediaUrl,
   );
 

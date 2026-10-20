@@ -1,5 +1,5 @@
 import { User as DbUser } from "@tim/db-types";
-import { CommandName, parseCommand } from "@tim/commands";
+import { CommandName, parseCommand, toCommandName } from "@tim/commands";
 import { getDisplayName } from "@tim/user-display";
 import { decrypt } from "./encryption";
 import { getMessageHistoryForTopic } from "../db/messages";
@@ -129,25 +129,27 @@ function convertDbRowToMessages(row: {
   id: string;
   text: string;
   mediaUrl: string;
+  command: string | null;
   name: string;
 }): ChatMessage[] {
   const rawText = row.text ? decrypt(row.text, row.id) : "";
   const botResponse = row.mediaUrl;
-  const command = parseCommand(rawText);
+  const commandName = toCommandName(row.command);
+  const prompt = commandName ? (parseCommand(rawText)?.prompt ?? "") : "";
   const speaker = getDisplayName(row.name);
 
-  if (command?.name === CommandName.Tim && botResponse) {
+  if (commandName === CommandName.Tim && botResponse) {
     return [
-      { role: "user", content: `${speaker}: ${command.prompt}` },
+      { role: "user", content: `${speaker}: ${prompt}` },
       { role: "assistant", content: botResponse },
     ];
   }
 
-  if (command && command.name !== CommandName.Tim && botResponse) {
+  if (commandName && commandName !== CommandName.Tim && botResponse) {
     return [
       {
         role: "user",
-        content: `${speaker} ${describeMediaCommand(command.name, command.prompt)}`,
+        content: `${speaker} ${describeMediaCommand(commandName, prompt)}`,
       },
     ];
   }

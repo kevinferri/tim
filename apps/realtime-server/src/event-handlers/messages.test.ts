@@ -434,6 +434,13 @@ describe("handleDeleteMessage", () => {
 });
 
 describe("handleEditMessage", () => {
+  beforeEach(() => {
+    vi.mocked(getMessageForUser).mockResolvedValue({
+      id: "msg-1",
+      command: null,
+    } as any);
+  });
+
   it("edits and emits the message decrypted", async () => {
     vi.mocked(editMessage).mockResolvedValue({
       id: "msg-1",
@@ -494,6 +501,26 @@ describe("handleEditMessage", () => {
 
     expect(server.emit).not.toHaveBeenCalled();
   });
+
+  it("refuses to edit a command message", async () => {
+    vi.mocked(getMessageForUser).mockResolvedValue({
+      id: "msg-1",
+      command: "roll",
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("topic::topic-1");
+    const server = createMockServer();
+    handleEditMessage({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.EditMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+      text: "hello",
+    });
+
+    expect(editMessage).not.toHaveBeenCalled();
+  });
 });
 
 describe("handleShuffleGif", () => {
@@ -501,6 +528,7 @@ describe("handleShuffleGif", () => {
     vi.mocked(getMessageForUser).mockResolvedValue({
       id: "msg-1",
       text: encrypt("/giphy cats", "msg-1"),
+      command: "giphy",
     } as any);
     vi.mocked(getRandomGif).mockResolvedValue("http://gif.example/new.gif");
     vi.mocked(editMessage).mockResolvedValue({
@@ -540,6 +568,27 @@ describe("handleShuffleGif", () => {
 
     expect(getRandomGif).not.toHaveBeenCalled();
     expect(server.emit).not.toHaveBeenCalled();
+  });
+
+  it("does nothing for a message that wasn't sent with /giphy", async () => {
+    vi.mocked(getMessageForUser).mockResolvedValue({
+      id: "msg-1",
+      text: encrypt("just a photo", "msg-1"),
+      command: null,
+    } as any);
+
+    const socket = createMockSocket({ id: "user-1" });
+    socket.rooms.add("topic::topic-1");
+    const server = createMockServer();
+    handleShuffleGif({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.ShuffleGifMessage, {
+      topicId: "topic-1",
+      messageId: "msg-1",
+    });
+
+    expect(getRandomGif).not.toHaveBeenCalled();
+    expect(editMessage).not.toHaveBeenCalled();
   });
 
   it("does nothing when not in the topic room", async () => {

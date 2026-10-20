@@ -16,11 +16,11 @@ export const baseStyles = [
   "after:-z-10",
 ];
 
+// A thin accent on the left edge marks messages you've highlighted.
 export const highlightStyles = [
-  "after:-z-10",
-  "after:w-full",
-  "after:bg-highlight-row",
-  "after:[transition:500ms]",
+  "after:w-[1.5px]",
+  "after:bg-highlight-icon",
+  "after:[transition:300ms]",
 ];
 
 // Marks a row that needs picking out of the transcript -- the message whose

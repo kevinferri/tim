@@ -11,7 +11,7 @@ import { getRandomGif } from "../lib/media-fetchers";
 import { HandlerArgs, SocketEvent } from "./main";
 import { RoomType, registerRoomEvent } from "./rooms";
 import { executeCommand } from "../lib/command-handler";
-import { parseCommand } from "@tim/commands";
+import { CommandName, parseCommand } from "@tim/commands";
 import {
   emitMentionNotifications,
   emitNotification,
@@ -83,6 +83,7 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
             ? decrypt(replyToMessage.text, replyToMessage.id)
             : "",
           mediaUrl: replyToMessage.mediaUrl,
+          command: replyToMessage.command,
           sentBy: { id: replyToMessage.userId, name: replyToMessage.name },
         },
       };
@@ -154,6 +155,13 @@ export function handleEditMessage({ socket, server }: HandlerArgs) {
     handler: async ({ socket, server, payload, roomKey }) => {
       if (!payload.text) return;
 
+      const existing = await getMessageForUser({
+        messageId: payload.messageId,
+        userId: socket.data.user.id,
+      });
+      // Command messages aren't editable; the client only hides the button.
+      if (!existing || existing.command) return;
+
       const editiedMessage = await editMessage({
         userId: socket.data.user.id,
         messageId: payload.messageId,
@@ -183,7 +191,7 @@ export function handleShuffleGif({ socket, server }: HandlerArgs) {
         userId: socket.data.user.id,
       });
 
-      if (!message) return;
+      if (message?.command !== CommandName.Giphy) return;
 
       const text = decrypt(message.text, message.id);
       const newGif = await getRandomGif(parseCommand(text)?.prompt ?? "");

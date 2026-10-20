@@ -53,12 +53,14 @@ describe("getChatGpt", () => {
         id: "m1",
         text: encrypt("hey everyone", "m1"),
         mediaUrl: "",
+        command: null,
         name: "Alice Smith",
       },
       {
         id: "m2",
         text: encrypt("/tim summarize the thread", "m2"),
         mediaUrl: "Tim's earlier reply",
+        command: "tim",
         name: "Bob Jones",
       },
     ] as any);
@@ -94,6 +96,7 @@ describe("getChatGpt", () => {
         id: "m1",
         text: encrypt("shipped the fix", "m1"),
         mediaUrl: "",
+        command: null,
         name: "Alice Smith",
       },
     ] as any);
@@ -120,6 +123,7 @@ describe("getChatGpt", () => {
         id: "m1",
         text: encrypt("/giphy cats", "m1"),
         mediaUrl: "http://gif.example/cats.gif",
+        command: "giphy",
         name: "Alice Smith",
       },
     ] as any);
@@ -147,6 +151,7 @@ describe("getChatGpt", () => {
         id: "m1",
         text: encrypt("/tim summarize", "m1"),
         mediaUrl: "Tim's earlier reply",
+        command: "tim",
         name: "Bob Jones",
       },
     ] as any);
@@ -194,6 +199,7 @@ describe("getChatGpt", () => {
           id: "m1",
           text: encrypt("hey everyone", "m1"),
           mediaUrl: "",
+          command: null,
           name: "Alice Smith",
         },
       ] as any);

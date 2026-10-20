@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { getDisplayName } from "@tim/user-display";
-import { parseCommand } from "@tim/commands";
+import { toCommandName } from "@tim/commands";
 import { isResultCommand } from "@/components/topics/message-attachment";
 import { Button } from "@/components/ui/button";
 import { ReplyIcon } from "@/components/icons/reply-icon";
@@ -15,6 +15,7 @@ type Props = {
   senderName: string | null;
   text: string;
   mediaUrl?: string | null;
+  command?: string | null;
   onCancel?: () => void;
   onClick?: () => void;
   className?: string;
@@ -23,8 +24,11 @@ type Props = {
 // `mediaUrl` is overloaded: for result commands (/tim, /roll, /8ball) it carries
 // the generated result rather than a URL, so there's nothing to show a thumbnail for. Video links (e.g. /yt) point at a page, not
 // an image, so they're mapped to the provider's thumbnail instead.
-export function getThumbnail(text: string, mediaUrl?: string | null) {
-  if (isResultCommand(parseCommand(text ?? "")?.name)) return undefined;
+export function getThumbnail(
+  command?: string | null,
+  mediaUrl?: string | null,
+) {
+  if (isResultCommand(toCommandName(command))) return undefined;
   if (!mediaUrl) return undefined;
 
   const youtube = getYoutubeVideoFromUrl(mediaUrl);
@@ -40,13 +44,14 @@ export function ReplyPreview({
   senderName,
   text,
   mediaUrl,
+  command,
   onCancel,
   onClick,
   className,
 }: Props) {
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const name = getDisplayName(senderName);
-  const thumbnail = getThumbnail(text, mediaUrl);
+  const thumbnail = getThumbnail(command, mediaUrl);
   const showThumbnail = !!thumbnail && !thumbnailFailed;
 
   return (
