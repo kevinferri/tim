@@ -1,10 +1,6 @@
 import { ChangeEvent } from "react";
 import { find } from "linkifyjs";
-import {
-  CommandName,
-  isCommandMessage,
-  parseCommand,
-} from "@tim/commands";
+import { CommandName, isCommandMessage, parseCommand } from "@tim/commands";
 
 export function adjustHeight(
   target: ChangeEvent<HTMLTextAreaElement>["target"],
@@ -229,4 +225,3 @@ export function tokenizeMessage(
 
   return tokens;
 }
-
