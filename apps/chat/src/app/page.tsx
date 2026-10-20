@@ -17,7 +17,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="flex basis-full justify-center items-center">
+    <div className="flex basis-full min-w-0 justify-center items-center">
       Welcome to Tim
     </div>
   );

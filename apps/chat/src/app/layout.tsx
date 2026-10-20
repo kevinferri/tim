@@ -25,6 +25,7 @@ import { cookies, headers } from "next/headers";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Routes } from "@/routes";
 import { DEFAULT_TITLE } from "@/lib/constants";
+import type { Viewport } from "next";
 
 import "@/globals.css";
 
@@ -50,6 +51,13 @@ const getLoggedInUser = cache(async () => {
 
   return user ?? undefined;
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Lets the on-screen keyboard shrink dvh (Android) so the message bar stays visible.
+  interactiveWidget: "resizes-content",
+};
 
 export async function generateMetadata() {
   const user = await getLoggedInUser();
@@ -147,7 +155,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
             <CircleRoomConnect circleIds={circleIds ?? []} />
             <TopicRoomConnect />
             <NotificationSync />
-            <div className="flex flex-col h-screen">
+            <div className="flex flex-col h-dvh">
               <div className="flex overflow-hidden basis-full">
                 <CirclesNav circles={circles} />
                 {children}

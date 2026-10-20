@@ -112,7 +112,7 @@ export default async function TopicPage({ params }: Props) {
     ] as const);
 
   return (
-    <div className="flex flex-col overflow-y-auto basis-full h-full">
+    <div className="flex flex-col overflow-y-auto basis-full min-w-0 h-full">
       {topic ? (
         <CurrentTopicProvider
           topicId={topic.id}
@@ -129,7 +129,7 @@ export default async function TopicPage({ params }: Props) {
         >
           <TopicHeader topic={topic} />
           <div className="flex flex-1 flex-row overflow-y-hidden">
-            <div className="flex flex-1 flex-col overflow-x-hidden">
+            <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
               <MessageModal />
               <ReplyThreadSheet topicId={topic.id} />
               <TopicChat />

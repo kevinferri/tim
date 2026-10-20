@@ -5,11 +5,11 @@ import { TopicMessageBarSkeleton } from "@/components/topics/topic-message-bar-s
 
 export default function TopicLoading() {
   return (
-    <div className="flex flex-col overflow-y-auto basis-full h-full">
+    <div className="flex flex-col overflow-y-auto basis-full min-w-0 h-full">
       <TopicHeaderSkeleton />
 
       <div className="flex flex-1 flex-row overflow-y-hidden">
-        <div className="flex flex-1 flex-col overflow-x-hidden">
+        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
           <div className="flex flex-col basis-full overflow-hidden">
             <MoreMessagesSkeleton count={20} />
           </div>

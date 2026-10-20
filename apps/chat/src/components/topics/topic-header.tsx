@@ -16,8 +16,8 @@ type Props = {
 
 export function TopicHeader(props: Props) {
   return (
-    <div className="flex flex-row justify-left p-3 border-b p-3 items-center gap-1">
-      <div className="font-medium">{props.topic.name}</div>
+    <div className="relative flex flex-row justify-left p-3 border-b items-center gap-1">
+      <div className="font-medium truncate min-w-0">{props.topic.name}</div>
       <div>
         <UpsertTopicForm
           existingTopic={props.topic}
