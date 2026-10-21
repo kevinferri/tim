@@ -2,12 +2,12 @@
 
 import { useState, useRef } from "react";
 import { Socket } from "socket.io-client";
-import { useRouter } from "next/navigation";
+import { useCoalescedRefresh } from "@/lib/hooks/use-coalesced-refresh";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useToast } from "@/components/ui/use-toast";
 
 export function useSocketState(socket: Socket) {
-  const router = useRouter();
+  const refresh = useCoalescedRefresh();
   const { toast } = useToast();
   const [isConnected, setIsConnected] = useState<boolean>();
   const disconnectToastRef = useRef<{ dismiss: () => void } | null>(null);
@@ -70,7 +70,7 @@ export function useSocketState(socket: Socket) {
         });
       }
 
-      router.refresh();
+      refresh();
     }
 
     socket.on("connect", onConnect);

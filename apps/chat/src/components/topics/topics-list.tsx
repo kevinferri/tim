@@ -33,6 +33,7 @@ import {
   ActiveUser,
 } from "@/components/dashboard/active-circle-members-store";
 import { useEffectOnce } from "@/lib/hooks/use-effect-once";
+import { useCoalescedRefresh } from "@/lib/hooks/use-coalesced-refresh";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { UpsertCircleForm } from "@/components/circles/upsert-circle-form";
@@ -279,6 +280,7 @@ export const TopicsList = ({
   const params = useParams();
   const self = useSelf();
   const router = useRouter();
+  const refresh = useCoalescedRefresh();
   const { toast } = useToast();
   const { getActiveMembersInTopic } = useActiveCircleMembers();
   const [showTopics, setShowTopics] = useState(false);
@@ -362,7 +364,7 @@ export const TopicsList = ({
     });
 
     if (success) {
-      router.refresh();
+      refresh();
       return;
     }
 
@@ -572,7 +574,7 @@ export const TopicsList = ({
     });
 
     if (success) {
-      router.refresh();
+      refresh();
       return;
     }
 
@@ -587,7 +589,7 @@ export const TopicsList = ({
   useSocketHandler<NewTopicHandlerProps>(
     SocketEvent.UpsertedTopic,
     (payload) => {
-      router.refresh();
+      refresh();
 
       if (payload.circleId !== circle.id) return;
       if (payload.isEdit) return;
@@ -619,7 +621,7 @@ export const TopicsList = ({
         router.push(`/circles/${payload.circleId}`);
       }
 
-      router.refresh();
+      refresh();
 
       if (payload.circleId !== circle.id) return;
 

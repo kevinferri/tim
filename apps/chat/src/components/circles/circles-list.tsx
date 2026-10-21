@@ -22,6 +22,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 import { Routes } from "@/routes";
+import { useCoalescedRefresh } from "@/lib/hooks/use-coalesced-refresh";
 
 type Props = {
   existingCircles?: Circle[];
@@ -53,6 +54,7 @@ type DeletedCircleHandlerProps = {
 export function CirclesList(props: Props) {
   const self = useSelf();
   const router = useRouter();
+  const refresh = useCoalescedRefresh();
   const params = useParams();
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
@@ -61,7 +63,7 @@ export function CirclesList(props: Props) {
   useSocketHandler<NewCircleHandlerProps>(
     SocketEvent.UpsertedCircle,
     (payload) => {
-      router.refresh();
+      refresh();
 
       const createdBySelf = payload.createdBy.id === self.id;
       const name = createdBySelf ? "You" : payload.createdBy.name;
@@ -114,7 +116,7 @@ export function CirclesList(props: Props) {
         router.push(Routes.Home);
       }
 
-      router.refresh();
+      refresh();
     },
   );
 
