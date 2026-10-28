@@ -38,6 +38,24 @@ describe("getRandomGif", () => {
     expect(result).toBe("live-url");
     expect(fetch).toHaveBeenCalled();
   });
+
+  it("falls back to translate when random has no match for the phrase", async () => {
+    vi.stubEnv("GIPHY_KEY", "real-key");
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { images: { original: { url: "translated-url" } } } }),
+      } as Response);
+
+    const result = await getRandomGif("what are you wearing nate from dsb");
+
+    expect(result).toBe("translated-url");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toContain(
+      "tag=what%20are%20you%20wearing%20nate%20from%20dsb",
+    );
+    expect(vi.mocked(fetch).mock.calls[1][0]).toContain("/gifs/translate?");
+  });
 });
 
 describe("getYoutubeVideo", () => {

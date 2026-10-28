@@ -11,13 +11,21 @@ const LOCAL_DEV_YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 export async function getRandomGif(query: string) {
   if (isLocalDev() && !process.env.GIPHY_KEY) return LOCAL_DEV_GIF_URL;
 
-  const endpoint = `http://api.giphy.com/v1/gifs/random/?key=${process.env.GIPHY_KEY}&tag=${query}`;
+  const key = process.env.GIPHY_KEY;
+  const q = encodeURIComponent(query);
+  // random?tag= only matches short tag-like queries; translate handles full phrases.
+  return (
+    (await fetchGifUrl(`https://api.giphy.com/v1/gifs/random?api_key=${key}&tag=${q}`)) ??
+    (await fetchGifUrl(`https://api.giphy.com/v1/gifs/translate?api_key=${key}&s=${q}`))
+  );
+}
+
+async function fetchGifUrl(endpoint: string): Promise<string | undefined> {
   const resp = await fetch(endpoint);
   if (!resp.ok) return undefined;
   const json = await resp.json();
-  if (!json.data || json.data.length === 0) return undefined;
-
-  return `${json.data.images.original.url}`;
+  // Empty results come back as data: [] rather than an object.
+  return json.data?.images?.original?.url || undefined;
 }
 
 export async function getYoutubeVideo(query: string) {
