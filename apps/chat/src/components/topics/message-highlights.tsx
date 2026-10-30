@@ -184,7 +184,7 @@ export function MessageHighlights(props: Props) {
               {props.highlightedBySelf ? (
                 <StarFilledIcon className="size-3.5 text-highlight-icon" />
               ) : (
-                <StarIcon className="size-3.5 text-foreground" />
+                <StarIcon className="size-3.5" />
               )}
             </span>
             <span
