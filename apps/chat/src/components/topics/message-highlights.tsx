@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import uniqBy from "lodash.uniqby";
-import { StarFilledIcon } from "@radix-ui/react-icons";
+import { StarFilledIcon, StarIcon } from "@radix-ui/react-icons";
 import { getDisplayName } from "@tim/user-display";
 import type { Highlights } from "@/components/topics/message";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -181,7 +181,11 @@ export function MessageHighlights(props: Props) {
                 bursting && "motion-safe:animate-highlight-pop",
               )}
             >
-              <StarFilledIcon className="size-3.5 text-highlight-icon" />
+              {props.highlightedBySelf ? (
+                <StarFilledIcon className="size-3.5 text-highlight-icon" />
+              ) : (
+                <StarIcon className="size-3.5 text-foreground" />
+              )}
             </span>
             <span
               key={`count-${highlights.length}`}
