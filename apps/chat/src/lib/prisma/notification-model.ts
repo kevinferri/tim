@@ -96,7 +96,7 @@ export const notificationModel = {
         readAt: true,
         messageId: true,
         actor: {
-          select: { id: true, name: true, imageUrl: true },
+          select: { id: true, name: true, displayName: true, imageUrl: true },
         },
         // Same shape as the transcript's, so the panel renders a real <Message>.
         message: {

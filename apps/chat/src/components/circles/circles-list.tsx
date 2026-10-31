@@ -36,7 +36,7 @@ type NewCircleHandlerProps = {
   prevMembers: string[];
   members: string[];
   createdBy: {
-    name: string;
+    displayName: string;
     id: string;
   };
 };
@@ -46,7 +46,7 @@ type DeletedCircleHandlerProps = {
   name: string;
   members: string[];
   deletedBy: {
-    name: string;
+    displayName: string;
     id: string;
   };
 };
@@ -66,7 +66,7 @@ export function CirclesList(props: Props) {
       refresh();
 
       const createdBySelf = payload.createdBy.id === self.id;
-      const name = createdBySelf ? "You" : payload.createdBy.name;
+      const name = createdBySelf ? "You" : payload.createdBy.displayName;
       const isInCircle = payload.members.includes(self.id);
       const wasInCircle = payload.prevMembers.includes(self.id);
       const link = `/circles/${payload.id}/topics/${payload.defaultTopicId}`;
@@ -105,7 +105,7 @@ export function CirclesList(props: Props) {
       leaveRoom.emit({ id: payload.id, roomType: RoomType.Circle });
 
       const deletedBySelf = payload.deletedBy.id === self.id;
-      const name = deletedBySelf ? "You" : payload.deletedBy.name;
+      const name = deletedBySelf ? "You" : payload.deletedBy.displayName;
 
       toast({
         title: `Circle deleted`,
@@ -177,6 +177,7 @@ export function CirclesList(props: Props) {
                             key={user.id}
                             id={user.id}
                             name={user.name}
+                            displayName={user.displayName}
                             imageUrl={user.imageUrl}
                             createdAt={user.createdAt}
                             status={user.status}

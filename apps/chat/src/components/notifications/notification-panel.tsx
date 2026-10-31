@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { getDisplayName } from "@tim/user-display";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { InfiniteLoader } from "@/components/ui/infinite-loader";
 import { Spinner } from "@/components/ui/spinner";
@@ -49,7 +48,7 @@ function NotificationRow({ notification }: { notification: NotificationItem }) {
           {/* Plain inline flow, so a wrapped header continues under the icon. */}
           <div className="break-words">
             <span className="mr-1 inline-block align-[-2px]">{copy.icon}</span>
-            {getDisplayName(notification.actor.name)} {copy.text}
+            {notification.actor.displayName} {copy.text}
           </div>
           <div className="flex items-center gap-1 text-xs">
             <span className="truncate">#{topic.name}</span>

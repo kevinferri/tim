@@ -4,7 +4,13 @@ import {
 } from "../lib/user-change-handler";
 import { NotificationType, emitNotification } from "../lib/notifications";
 import { HandlerArgs, SocketEvent } from "./main";
-import { RoomType, getRoomKeyOrFail, registerRoomEvent } from "./rooms";
+import { getUserSummary } from "../db/users";
+import {
+  RoomType,
+  getRoomKeyOrFail,
+  registerRoomEvent,
+  toRoomKey,
+} from "./rooms";
 
 // The local state change must run unconditionally -- a stale/racing room id
 // (e.g. a client mid room-switch) should only skip the broadcast below, not
@@ -136,5 +142,34 @@ export function handleUserUpdatedStatus({ socket, server }: HandlerArgs) {
     // .to() with multiple rooms dedupes recipients in a single emit, so a
     // client in more than one shared circle only gets this once.
     server.to(roomKeys).emit(SocketEvent.UserUpdatedStatus, payload);
+  });
+}
+
+export function handleUserUpdatedProfile({ socket, server }: HandlerArgs) {
+  socket.on(SocketEvent.UserUpdatedProfile, async (payload) => {
+    // Re-read rather than trust the payload; the client only says "it changed".
+    const user = await getUserSummary({ userId: socket.data.user.id });
+    if (!user) return;
+
+    const profile = { displayName: user.displayName, imageUrl: user.imageUrl };
+    const userRoomKey = toRoomKey({ id: user.id, roomType: RoomType.User });
+
+    // Every tab's identity came from a JWT minted before the change, and
+    // it's what new messages/notifications get stamped with.
+    handleActiveUserAttributeChange(socket, profile);
+    const sockets = await server.in(userRoomKey).fetchSockets();
+    for (const s of sockets) {
+      s.data.user = { ...s.data.user, ...profile };
+    }
+
+    const circleRoomKeys = ((payload?.circleIds ?? []) as string[])
+      .map((circleId) =>
+        getRoomKeyOrFail({ socket, id: circleId, roomType: RoomType.Circle }),
+      )
+      .filter((roomKey): roomKey is string => Boolean(roomKey));
+
+    server
+      .to([...circleRoomKeys, userRoomKey])
+      .emit(SocketEvent.UserUpdatedProfile, { user: { id: user.id, ...profile } });
   });
 }

@@ -14,6 +14,7 @@ async function createUser() {
       id: crypto.randomUUID(),
       googleId: `google-${crypto.randomUUID()}`,
       name: "Test User",
+      displayName: "Test",
     })
     .returning(["id"]);
   return user.id as string;
@@ -65,6 +66,7 @@ describe("getCircleMembers", () => {
         id: crypto.randomUUID(),
         googleId: `google-${crypto.randomUUID()}`,
         name: "Other Member",
+        displayName: "Other",
       })
       .returning(["id"]);
     await pgClient("_circleMembershipsForUser").insert({

@@ -17,7 +17,7 @@ function notif(
     createdAt: "2026-01-01T00:00:00.000Z",
     readAt: null,
     messageId: "m1",
-    actor: { id: "u1", name: "Actor", imageUrl: null },
+    actor: { id: "u1", name: "Actor", displayName: "Actor", imageUrl: null },
     message: {
       id: "m1",
       topicId: "t1",

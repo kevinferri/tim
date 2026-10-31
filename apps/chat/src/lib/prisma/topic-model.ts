@@ -137,6 +137,7 @@ export const topicModel = {
         select: {
           id: true,
           name: true,
+          displayName: true,
         },
       },
     } as const;
@@ -258,6 +259,7 @@ export const topicModel = {
           select: {
             id: true,
             name: true,
+            displayName: true,
           },
         },
         parentCircle: {

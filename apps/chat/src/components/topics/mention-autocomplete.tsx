@@ -3,12 +3,12 @@
 import { useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getDisplayName } from "@tim/user-display";
 import { cn } from "@/lib/utils";
 
 export type MentionCandidate = {
   id: string;
   name: string;
+  displayName: string;
   imageUrl: string | null;
   isOnline: boolean;
 };
@@ -77,12 +77,12 @@ export function MentionAutocomplete({
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={member.imageUrl ?? undefined} />
                     <AvatarFallback className="text-xs">
-                      {member.name.charAt(0)}
+                      {member.displayName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   {/* Selecting inserts this same display name -- full name is
                       only ever a hover tooltip, never shown outright. */}
-                  <span title={member.name}>{getDisplayName(member.name)}</span>
+                  <span title={member.name}>{member.displayName}</span>
                 </div>
               </div>
             );

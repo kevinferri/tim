@@ -9,7 +9,6 @@ import {
 } from "@/components/topics/current-topic-provider";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { CommandIcon } from "@/components/topics/command-icon";
-import { getDisplayName } from "@tim/user-display";
 import {
   MessageToken,
   tokenizeMessage,
@@ -63,6 +62,7 @@ function renderTokens(
             id={member.id}
             topicId={topicId}
             name={member.name}
+            displayName={member.displayName}
             imageUrl={member.imageUrl}
             status={member.status}
             lastStatusUpdate={member.lastStatusUpdate}
@@ -138,7 +138,7 @@ export function MessageText(props: Props) {
   const membersByName = useMemo(() => {
     const map = new Map<string, CircleMember>();
     for (const member of circleMembers) {
-      if (member.name) map.set(getDisplayName(member.name), member);
+      if (member.displayName) map.set(member.displayName, member);
     }
     return map;
   }, [circleMembers]);

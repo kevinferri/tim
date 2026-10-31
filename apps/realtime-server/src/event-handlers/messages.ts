@@ -84,7 +84,11 @@ export function handleSendMessage({ socket, server }: HandlerArgs) {
             : "",
           mediaUrl: replyToMessage.mediaUrl,
           command: replyToMessage.command,
-          sentBy: { id: replyToMessage.userId, name: replyToMessage.name },
+          sentBy: {
+            id: replyToMessage.userId,
+            name: replyToMessage.name,
+            displayName: replyToMessage.displayName,
+          },
         },
       };
 

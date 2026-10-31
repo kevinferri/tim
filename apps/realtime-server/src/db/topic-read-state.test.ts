@@ -10,6 +10,7 @@ async function createUser() {
       id: crypto.randomUUID(),
       googleId: `google-${crypto.randomUUID()}`,
       name: "Test User",
+      displayName: "Test",
     })
     .returning(["id"]);
   return user.id as string;

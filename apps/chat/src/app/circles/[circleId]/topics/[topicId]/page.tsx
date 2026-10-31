@@ -89,6 +89,7 @@ export default async function TopicPage({ params }: Props) {
         select: {
           id: true,
           name: true,
+          displayName: true,
           imageUrl: true,
           createdAt: true,
           status: true,

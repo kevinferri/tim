@@ -10,6 +10,7 @@ async function createUser(
     data: {
       googleId: overrides.googleId ?? `google-${crypto.randomUUID()}`,
       name: overrides.name ?? "Test User",
+      displayName: "Test",
       email: overrides.email ?? `${crypto.randomUUID()}@example.com`,
     },
   });

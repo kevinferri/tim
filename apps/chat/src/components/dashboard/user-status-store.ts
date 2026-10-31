@@ -11,7 +11,7 @@ export type UserStatusEntry = {
 export type UserUpdatedStatusPayload = {
   user: {
     id: string;
-    name: string;
+    displayName: string;
     status: string | null;
     lastStatusUpdate: Date | null;
   };

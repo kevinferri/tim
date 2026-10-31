@@ -8,6 +8,7 @@ import { DefaultEventsMap, Server, Socket } from "socket.io";
 export type SocketUserIdentity = {
   id: string;
   name: string | null;
+  displayName: string;
   email: string | null;
   imageUrl: string | null;
   status: string | null;
