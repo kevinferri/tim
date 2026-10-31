@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { prismaClient } from "@/lib/prisma/client";
 import { uploadImage } from "@/lib/cloudinary";
+import { getFirstName } from "@tim/user-display";
 import { Routes } from "@/routes";
 
 export const authOptions: AuthOptions = {
@@ -29,47 +30,27 @@ export const authOptions: AuthOptions = {
 
       if (!email) return false;
 
-      let existingUser = await prismaClient.user.findUnique({
+      const existingUser = await prismaClient.user.findUnique({
         where: { email },
-        select: {
-          id: true,
-          email: true,
-        },
+        select: { id: true },
       });
 
-      if (!existingUser) {
-        existingUser = await prismaClient.user.create({
-          data: {
-            email: email,
-            googleId: user.id,
-            name: user.name,
-          },
-          select: {
-            id: true,
-            email: true,
-            googleId: true,
-            name: true,
-            imageUrl: true,
-          },
-        });
-      }
+      if (existingUser) return true;
 
-      if (user.image) {
-        const avatarImage = await uploadImage(
-          user.image.replace("s96-c", "s384-c"),
-        );
+      // Google profile is only copied at sign-up; after that name/avatar are user-owned.
+      const avatarImage = user.image
+        ? await uploadImage(user.image.replace("s96-c", "s384-c"))
+        : undefined;
 
-        if (avatarImage) {
-          await prismaClient.user.update({
-            where: {
-              id: existingUser.id,
-            },
-            data: {
-              imageUrl: avatarImage.secure_url,
-            },
-          });
-        }
-      }
+      await prismaClient.user.create({
+        data: {
+          email: email,
+          googleId: user.id,
+          name: user.name,
+          displayName: getFirstName(user.name),
+          imageUrl: avatarImage?.secure_url,
+        },
+      });
 
       return true;
     },

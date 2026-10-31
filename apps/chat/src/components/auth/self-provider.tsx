@@ -7,6 +7,7 @@ export type Self = Pick<
   User,
   | "id"
   | "name"
+  | "displayName"
   | "email"
   | "imageUrl"
   | "createdAt"

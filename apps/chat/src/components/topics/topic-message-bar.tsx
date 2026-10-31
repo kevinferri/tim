@@ -46,7 +46,6 @@ import { MessageHighlightOverlay } from "@/components/topics/message-highlight-o
 import { ReplyPreview } from "@/components/topics/reply-preview";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 import { useSelf } from "@/components/auth/self-provider";
-import { getDisplayName } from "@tim/user-display";
 
 type MessagePayload = {
   message: string;
@@ -127,24 +126,25 @@ export function TopicMessageBar() {
     mentionQuery === undefined
       ? []
       : circleMembers
-          .filter((member) => member.id !== self.id && member.name)
+          .filter((member) => member.id !== self.id && member.displayName)
           .filter((member) => {
             if (!mentionQuery) return true;
             const query = mentionQuery.toLowerCase();
-            return member
-              .name!.toLowerCase()
+            return `${member.displayName} ${member.name ?? ""}`
+              .toLowerCase()
               .split(" ")
               .some((part) => part.startsWith(query));
           })
           .map((member) => ({
             id: member.id,
-            name: member.name!,
+            name: member.name ?? member.displayName,
+            displayName: member.displayName,
             imageUrl: member.imageUrl,
             isOnline: onlineMemberIds.has(member.id),
           }))
           .sort((a, b) => {
             if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
-            return a.name.localeCompare(b.name);
+            return a.displayName.localeCompare(b.displayName);
           });
   const showMentionMenu =
     !mentionMenuDismissed && !isGenerating && matchingMembers.length > 0;
@@ -189,10 +189,9 @@ export function TopicMessageBar() {
   const selectMention = (member: MentionCandidate) => {
     if (mentionStart === undefined) return;
 
-    // First name only, matching the display name used everywhere else; the
-    // id is encoded invisibly alongside it so the exact member clicked (not
+    // The id is encoded invisibly alongside it so the exact member clicked (not
     // just whichever shares that name) is who gets notified.
-    const insertion = `${encodeMention(getDisplayName(member.name), member.id)} `;
+    const insertion = `${encodeMention(member.displayName, member.id)} `;
     const newMessage =
       message.slice(0, mentionStart) + insertion + message.slice(caretIndex);
 
@@ -309,8 +308,8 @@ export function TopicMessageBar() {
   const mentionNames = useMemo(
     () =>
       circleMembers
-        .filter((member) => member.name)
-        .map((member) => getDisplayName(member.name!)),
+        .map((member) => member.displayName)
+        .filter(Boolean),
     [circleMembers],
   );
   const topicNames = useMemo(

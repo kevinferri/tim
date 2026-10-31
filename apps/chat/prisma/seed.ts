@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { encrypt } from "@tim/crypto";
 import { parseCommand } from "@tim/commands";
+import { getFirstName } from "@tim/user-display";
 import { TIM_SANDBOX_EMAIL } from "./seed-constants";
 
 const prisma = new PrismaClient();
@@ -279,7 +280,12 @@ async function main() {
       prisma.user.upsert({
         where: { googleId: user.googleId },
         update: {},
-        create: { googleId: user.googleId, name: user.name, email: user.email },
+        create: {
+          googleId: user.googleId,
+          name: user.name,
+          displayName: getFirstName(user.name),
+          email: user.email,
+        },
       }),
     ),
   );

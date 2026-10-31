@@ -17,8 +17,8 @@ import { getCircleMembers } from "../db/circles";
 import { getChatGpt } from "./open-ai";
 
 const activeUsers = [
-  { id: "u1", name: "Alice Smith" },
-  { id: "u2", name: "Bob Jones" },
+  { id: "u1", name: "Alice Smith", displayName: "Alice" },
+  { id: "u2", name: "Bob Jones", displayName: "Bob" },
 ];
 
 function mockOpenAiResponse(content: string) {
@@ -55,6 +55,7 @@ describe("getChatGpt", () => {
         mediaUrl: "",
         command: null,
         name: "Alice Smith",
+        displayName: "Alice",
       },
       {
         id: "m2",
@@ -62,6 +63,7 @@ describe("getChatGpt", () => {
         mediaUrl: "Tim's earlier reply",
         command: "tim",
         name: "Bob Jones",
+        displayName: "Bob",
       },
     ] as any);
     mockOpenAiResponse("the reply");
@@ -98,6 +100,7 @@ describe("getChatGpt", () => {
         mediaUrl: "",
         command: null,
         name: "Alice Smith",
+        displayName: "Alice",
       },
     ] as any);
     mockOpenAiResponse("a recap");
@@ -125,6 +128,7 @@ describe("getChatGpt", () => {
         mediaUrl: "http://gif.example/cats.gif",
         command: "giphy",
         name: "Alice Smith",
+        displayName: "Alice",
       },
     ] as any);
     mockOpenAiResponse("the reply");
@@ -153,6 +157,7 @@ describe("getChatGpt", () => {
         mediaUrl: "Tim's earlier reply",
         command: "tim",
         name: "Bob Jones",
+        displayName: "Bob",
       },
     ] as any);
     mockOpenAiResponse("a recap");
@@ -201,6 +206,7 @@ describe("getChatGpt", () => {
           mediaUrl: "",
           command: null,
           name: "Alice Smith",
+          displayName: "Alice",
         },
       ] as any);
       vi.stubEnv("NODE_ENV", "development");

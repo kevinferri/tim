@@ -5,12 +5,13 @@ import { getUserSummary } from "./users";
 beforeEach(resetDb);
 
 describe("getUserSummary", () => {
-  it("returns the id/imageUrl/name for an existing user", async () => {
+  it("returns the id/imageUrl/name/displayName for an existing user", async () => {
     const [user] = await pgClient("users")
       .insert({
         id: crypto.randomUUID(),
         googleId: `google-${crypto.randomUUID()}`,
         name: "Test User",
+        displayName: "Test",
         imageUrl: "http://example.com/avatar.png",
       })
       .returning(["id"]);
@@ -18,6 +19,7 @@ describe("getUserSummary", () => {
     await expect(getUserSummary({ userId: user.id })).resolves.toEqual({
       id: user.id,
       name: "Test User",
+      displayName: "Test",
       imageUrl: "http://example.com/avatar.png",
     });
   });

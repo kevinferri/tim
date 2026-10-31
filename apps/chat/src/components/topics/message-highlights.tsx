@@ -10,7 +10,6 @@ import {
 import { createPortal } from "react-dom";
 import uniqBy from "lodash.uniqby";
 import { StarFilledIcon, StarIcon } from "@radix-ui/react-icons";
-import { getDisplayName } from "@tim/user-display";
 import type { Highlights } from "@/components/topics/message";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -207,7 +206,7 @@ export function MessageHighlights(props: Props) {
               <Avatar key={h.id} className="size-7">
                 <AvatarImage src={h.createdBy?.imageUrl ?? undefined} />
                 <AvatarFallback className="text-xs">
-                  {getDisplayName(h.createdBy?.name ?? null).slice(0, 1)}
+                  {(h.createdBy?.displayName ?? "").slice(0, 1)}
                 </AvatarFallback>
               </Avatar>
             ))}

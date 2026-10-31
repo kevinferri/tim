@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { ExitIcon, SewingPinFilledIcon } from "@radix-ui/react-icons";
-import { getDisplayName } from "@tim/user-display";
+import {
+  ExitIcon,
+  PersonIcon,
+  SewingPinFilledIcon,
+} from "@radix-ui/react-icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +19,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { useSelf } from "@/components/auth/self-provider";
 import { ConnectionStatus } from "@/components/socket/connection-status";
 import { SetStatusModal } from "@/components/dashboard/set-status-modal";
+import { EditProfileModal } from "@/components/dashboard/edit-profile-modal";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -26,6 +30,7 @@ import {
 export function UserDropDown() {
   const self = useSelf();
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const { status } = useUserStatus(self.id, {
     status: self.status,
     lastStatusUpdate: self.lastStatusUpdate,
@@ -38,9 +43,7 @@ export function UserDropDown() {
 
       if (payload.user.status) {
         toast({
-          description: `${getDisplayName(
-            payload.user.name,
-          )} updated their status to "${payload.user.status}"`,
+          description: `${payload.user.displayName} updated their status to "${payload.user.status}"`,
         });
       }
     },
@@ -51,6 +54,10 @@ export function UserDropDown() {
       <SetStatusModal
         open={statusModalOpen}
         onOpenChange={setStatusModalOpen}
+      />
+      <EditProfileModal
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -64,6 +71,7 @@ export function UserDropDown() {
                 size="sm"
                 id={self.id}
                 name={self.name}
+                displayName={self.displayName}
                 imageUrl={self.imageUrl}
                 showStatus={false}
                 status={self.status}
@@ -76,6 +84,12 @@ export function UserDropDown() {
         <DropdownMenuContent>
           <DropdownMenuItem disabled>{self.email}</DropdownMenuItem>
           <Separator />
+          <DropdownMenuItem
+            className="flex gap-3"
+            onClick={() => setProfileModalOpen(true)}
+          >
+            <PersonIcon /> Edit profile
+          </DropdownMenuItem>
           <DropdownMenuItem
             className="flex gap-3"
             onClick={() => setStatusModalOpen(true)}

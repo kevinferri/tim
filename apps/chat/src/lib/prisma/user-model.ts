@@ -81,10 +81,31 @@ export const userModel = {
         id: true,
         status: true,
         name: true,
+        displayName: true,
         lastStatusUpdate: true,
       },
     });
 
     return { data: updatedUser };
+  },
+
+  async updateProfile({
+    userId,
+    displayName,
+    imageUrl,
+  }: {
+    userId?: string;
+    displayName: string;
+    imageUrl?: string;
+  }) {
+    if (!userId) return false;
+
+    const data = await prismaClient.user.update({
+      where: { id: userId },
+      data: { displayName, imageUrl },
+      select: { id: true, displayName: true, imageUrl: true },
+    });
+
+    return { data };
   },
 };

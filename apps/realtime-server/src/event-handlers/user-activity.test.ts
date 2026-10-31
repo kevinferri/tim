@@ -5,6 +5,9 @@ vi.mock("../lib/user-change-handler", () => ({
   handleActiveUserStateChange: vi.fn(),
   handleActiveUserAttributeChange: vi.fn(),
 }));
+vi.mock("../db/users", () => ({
+  getUserSummary: vi.fn(),
+}));
 vi.mock("../lib/notifications", () => ({
   NotificationType: {
     ExpandedImage: "image:expanded",
@@ -26,7 +29,9 @@ import {
   handleUserExpandedImage,
   handleUserClickedLink,
   handleUserUpdatedStatus,
+  handleUserUpdatedProfile,
 } from "./user-activity";
+import { getUserSummary } from "../db/users";
 import { SocketEvent } from "@tim/socket-types";
 
 beforeEach(() => {
@@ -284,6 +289,50 @@ describe("handleUserUpdatedStatus", () => {
       circleIds: ["circle-1"],
       user: { id: "user-1", status: "afk" },
     });
+
+    expect(server.emit).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleUserUpdatedProfile", () => {
+  const dbUser = {
+    id: "user-1",
+    name: "Kevin Ferri",
+    displayName: "Kev",
+    imageUrl: "new.png",
+  };
+
+  it("patches every socket of the user from the DB and broadcasts to circles + the user room", async () => {
+    vi.mocked(getUserSummary).mockResolvedValue(dbUser as any);
+    const socket = createMockSocket({ id: "user-1", displayName: "Kevin" });
+    socket.rooms.add("circle::circle-1");
+    const otherTab = createMockSocket({ id: "user-1", displayName: "Kevin" });
+    const server = createMockServer({ socketsInRoom: [otherTab] });
+    handleUserUpdatedProfile({ socket: socket as any, server: server as any });
+
+    // Client-supplied profile fields are ignored in favour of the DB row.
+    await socket.trigger(SocketEvent.UserUpdatedProfile, {
+      circleIds: ["circle-1", "circle-not-joined"],
+      displayName: "Spoofed",
+    });
+
+    const profile = { displayName: "Kev", imageUrl: "new.png" };
+    expect(handleActiveUserAttributeChange).toHaveBeenCalledWith(socket, profile);
+    expect(server.in).toHaveBeenCalledWith("user::user-1");
+    expect(otherTab.data.user).toMatchObject(profile);
+    expect(server.to).toHaveBeenCalledWith(["circle::circle-1", "user::user-1"]);
+    expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserUpdatedProfile, {
+      user: { id: "user-1", ...profile },
+    });
+  });
+
+  it("does nothing when the user no longer exists", async () => {
+    vi.mocked(getUserSummary).mockResolvedValue(undefined);
+    const socket = createMockSocket({ id: "user-1" });
+    const server = createMockServer();
+    handleUserUpdatedProfile({ socket: socket as any, server: server as any });
+
+    await socket.trigger(SocketEvent.UserUpdatedProfile, { circleIds: [] });
 
     expect(server.emit).not.toHaveBeenCalled();
   });
