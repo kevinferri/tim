@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { prismaClient } from "@/lib/prisma/client";
 import { uploadImage } from "@/lib/cloudinary";
-import { getFirstName } from "@tim/user-display";
+import { getInitialDisplayName } from "@tim/user-display";
 import { Routes } from "@/routes";
 
 export const authOptions: AuthOptions = {
@@ -47,7 +47,7 @@ export const authOptions: AuthOptions = {
           email: email,
           googleId: user.id,
           name: user.name,
-          displayName: getFirstName(user.name),
+          displayName: getInitialDisplayName(user.name, email),
           imageUrl: avatarImage?.secure_url,
         },
       });

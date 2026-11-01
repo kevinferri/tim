@@ -68,13 +68,17 @@ describe("updateProfile", () => {
     });
   });
 
-  it("rejects an avatar that isn't an image data URL", async () => {
-    await expect(
-      updateProfile({
-        displayName: "Kev",
-        avatar: "https://evil.example.com/a.png",
-      }),
-    ).resolves.toBe(false);
+  it.each([
+    ["a remote URL", "https://evil.example.com/a.png"],
+    ["an SVG", "data:image/svg+xml;base64,PHN2Zz4="],
+    [
+      "an oversized image",
+      `data:image/jpeg;base64,${"x".repeat(3 * 1024 * 1024)}`,
+    ],
+  ])("rejects %s as the avatar", async (_, avatar) => {
+    await expect(updateProfile({ displayName: "Kev", avatar })).resolves.toBe(
+      false,
+    );
     expect(uploadImage).not.toHaveBeenCalled();
   });
 
