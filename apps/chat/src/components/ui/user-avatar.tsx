@@ -263,12 +263,6 @@ export function UserAvatar(props: Props) {
                     )}
                   </div>
 
-                  {props.name && props.name !== props.displayName && (
-                    <div className="truncate text-xs text-muted-foreground">
-                      {props.name}
-                    </div>
-                  )}
-
                   {status && (
                     <div className="text-xs text-muted-foreground">
                       <UserStatus
@@ -429,7 +423,8 @@ export function UserAvatar(props: Props) {
 
           {data?.topHighlights.length === 0 && (
             <div className="px-5 text-center text-sm text-muted-foreground">
-              {props.name} hasn&rsquo;t received any highlights in this topic
+              {props.displayName} hasn&rsquo;t received any highlights in this
+              topic
             </div>
           )}
 
