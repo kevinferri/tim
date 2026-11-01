@@ -148,3 +148,51 @@ export function updateUserStatsTopHighlightsCache(
       prev ? { ...prev, topHighlights: updater(prev.topHighlights) } : prev,
   );
 }
+
+export type UserProfilePatch = { displayName: string; imageUrl: string | null };
+
+// A user's name/avatar is copied into every message they sent, were quoted in, or highlighted.
+export function withUserProfile(userId: string, profile: UserProfilePatch) {
+  return <M extends MessageData>(m: M): M => ({
+    ...m,
+    sentBy: m.sentBy?.id === userId ? { ...m.sentBy, ...profile } : m.sentBy,
+    replyTo:
+      m.replyTo?.sentBy?.id === userId
+        ? {
+            ...m.replyTo,
+            sentBy: { ...m.replyTo.sentBy, displayName: profile.displayName },
+          }
+        : m.replyTo,
+    highlights: m.highlights?.map((h) =>
+      h.userId === userId && h.createdBy
+        ? { ...h, createdBy: { ...h.createdBy, ...profile } }
+        : h,
+    ),
+  });
+}
+
+// Patches in place rather than refetching: top highlights (enabled: false) and
+// media (skipToken) can't refetch, and it spares reloading every scrolled-back page.
+export function updateUserProfileInCaches(
+  queryClient: QueryClient,
+  userId: string,
+  profile: UserProfilePatch,
+) {
+  const patch = withUserProfile(userId, profile);
+  const patchList = (prev?: MessageProps[]) => prev?.map(patch);
+
+  queryClient.setQueriesData<MessagesData>(
+    { queryKey: ["messages"] },
+    (prev) =>
+      prev
+        ? { ...prev, pages: prev.pages.map((page) => page.map(patch)) }
+        : prev,
+  );
+  queryClient.setQueriesData({ queryKey: ["media-messages"] }, patchList);
+  queryClient.setQueriesData({ queryKey: ["top-highlights"] }, patchList);
+  queryClient.setQueriesData({ queryKey: ["thread"] }, patchList);
+  queryClient.setQueriesData<MessageProps>({ queryKey: ["message"] }, (prev) =>
+    prev ? patch(prev) : prev,
+  );
+  updateUserStatsTopHighlightsCache(queryClient, (prev) => prev.map(patch));
+}

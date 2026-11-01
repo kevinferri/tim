@@ -17,6 +17,8 @@ model User {
 
   // Specific
   name             String?
+  // Seeded from the first word of `name` at sign-up; user-editable after that.
+  displayName      String
   email            String? @unique
   imageUrl         String?
   googleId         String  @unique

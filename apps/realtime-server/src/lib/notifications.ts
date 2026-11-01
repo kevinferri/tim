@@ -11,6 +11,7 @@ export { NotificationType };
 type Actor = {
   id: string;
   name: string;
+  displayName: string;
   imageUrl: string;
 };
 

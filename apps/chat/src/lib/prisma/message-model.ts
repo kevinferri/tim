@@ -26,6 +26,7 @@ export const DEFAULT_MESSAGE_SELECT = {
       createdBy: {
         select: {
           name: true,
+          displayName: true,
           imageUrl: true,
         },
       },
@@ -35,6 +36,7 @@ export const DEFAULT_MESSAGE_SELECT = {
     select: {
       id: true,
       name: true,
+      displayName: true,
       imageUrl: true,
       createdAt: true,
       status: true,
@@ -52,6 +54,7 @@ export const DEFAULT_MESSAGE_SELECT = {
         select: {
           id: true,
           name: true,
+          displayName: true,
         },
       },
     },

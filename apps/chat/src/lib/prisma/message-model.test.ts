@@ -10,6 +10,7 @@ async function createUser() {
     data: {
       googleId: `google-${crypto.randomUUID()}`,
       name: "Test User",
+      displayName: "Test",
       email: `${crypto.randomUUID()}@example.com`,
     },
   });

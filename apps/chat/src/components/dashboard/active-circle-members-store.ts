@@ -10,6 +10,10 @@ export type ActiveUser = Self & {
   state: { isIdle: boolean; isTyping: boolean };
 };
 
+export type UserUpdatedProfilePayload = {
+  user: { id: string; displayName: string; imageUrl: string | null };
+};
+
 type TopicPresence = { activeUsers: ActiveUser[]; circleId: string };
 type TopicMap = Record<string, TopicPresence>;
 
@@ -18,6 +22,7 @@ type Store = {
   mergeCircleSnapshot: (topicMap: TopicMap) => void;
   setTopicPresence: (topicId: string, presence: TopicPresence) => void;
   removeTopic: (topicId: string) => void;
+  patchUser: (userId: string, patch: Partial<ActiveUser>) => void;
 };
 
 const useStore = create<Store>((set) => ({
@@ -45,6 +50,21 @@ const useStore = create<Store>((set) => ({
       delete topicMap[topicId];
       return { topicMap };
     }),
+
+  patchUser: (userId, patch) =>
+    set((state) => ({
+      topicMap: Object.fromEntries(
+        Object.entries(state.topicMap).map(([topicId, presence]) => [
+          topicId,
+          {
+            ...presence,
+            activeUsers: presence.activeUsers.map((user) =>
+              user.id === userId ? { ...user, ...patch } : user,
+            ),
+          },
+        ]),
+      ),
+    })),
 }));
 
 // Mount exactly once near the socket root -- per-component subscriptions used to mean redundant listeners, and one mounting after the server's initial snapshot would miss it for good since socket.io doesn't replay past events.
@@ -52,6 +72,7 @@ export function usePresenceSync() {
   const mergeCircleSnapshot = useStore((state) => state.mergeCircleSnapshot);
   const setTopicPresence = useStore((state) => state.setTopicPresence);
   const removeTopic = useStore((state) => state.removeTopic);
+  const patchUser = useStore((state) => state.patchUser);
 
   useSocketHandler<{ topicMap: TopicMap }>(
     SocketEvent.UserJoinedCircle,
@@ -72,6 +93,11 @@ export function usePresenceSync() {
   // mergeCircleSnapshot/setTopicPresence only ever add or overwrite keys, so a deleted topic's stale entry would otherwise never leave topicMap.
   useSocketHandler<{ id: string }>(SocketEvent.DeletedTopic, (payload) =>
     removeTopic(payload.id),
+  );
+
+  useSocketHandler<UserUpdatedProfilePayload>(
+    SocketEvent.UserUpdatedProfile,
+    (payload) => patchUser(payload.user.id, payload.user),
   );
 }
 

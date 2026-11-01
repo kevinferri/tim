@@ -23,6 +23,7 @@ import {
   handleUserTabBlurred,
   handleUserTabFocused,
   handleUserUpdatedStatus,
+  handleUserUpdatedProfile,
 } from "./user-activity";
 
 import { SocketEvent } from "@tim/socket-types";
@@ -74,5 +75,6 @@ export function registerEventHandlers(server: AppServer) {
     handleUserExpandedImage({ socket, server });
     handleUserClickedLink({ socket, server });
     handleUserUpdatedStatus({ socket, server });
+    handleUserUpdatedProfile({ socket, server });
   });
 }

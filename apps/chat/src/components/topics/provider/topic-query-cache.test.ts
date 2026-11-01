@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 import {
   adjustReplyCounts,
+  updateUserProfileInCaches,
   withEditApplied,
   withReferencesCleared,
+  withUserProfile,
 } from "./topic-query-cache";
 import { MessageProps } from "@/components/topics/message";
 
@@ -92,7 +95,11 @@ describe("withEditApplied", () => {
 
   it("updates the quote on other messages that reference it", () => {
     const quoter = msg("m2", {
-      replyTo: { id: "m1", text: "before", sentBy: { id: "u1", name: "A" } },
+      replyTo: {
+        id: "m1",
+        text: "before",
+        sentBy: { id: "u1", name: "A", displayName: "A" },
+      },
     });
 
     const next = withEditApplied("m1", "after")(quoter);
@@ -153,5 +160,87 @@ describe("withReferencesCleared", () => {
     const other = msg("m3", { threadRootId: "other-root" });
 
     expect(withReferencesCleared("m1")(other)).toBe(other);
+  });
+});
+
+describe("withUserProfile", () => {
+  const profile = { displayName: "Kev", imageUrl: "new.png" };
+  const sender = (id: string) =>
+    ({
+      id,
+      name: "Kevin Ferri",
+      displayName: "Kevin",
+      imageUrl: "old.png",
+    }) as any;
+
+  it("patches the sender, a quoted sender, and the user's highlights", () => {
+    const m = msg("m1", {
+      sentBy: sender("u1"),
+      replyTo: {
+        id: "m0",
+        sentBy: { id: "u1", name: "K", displayName: "Kevin" },
+      },
+      highlights: [
+        {
+          id: "h1",
+          userId: "u1",
+          createdBy: { name: "K", displayName: "Kevin", imageUrl: "old.png" },
+        },
+        {
+          id: "h2",
+          userId: "u2",
+          createdBy: { name: "A", displayName: "Al", imageUrl: "a.png" },
+        },
+      ],
+    });
+
+    const next = withUserProfile("u1", profile)(m);
+
+    expect(next.sentBy).toMatchObject(profile);
+    expect(next.replyTo?.sentBy?.displayName).toBe("Kev");
+    expect(next.highlights?.[0].createdBy).toMatchObject(profile);
+    expect(next.highlights?.[1].createdBy?.displayName).toBe("Al");
+  });
+
+  it("leaves other users' messages alone", () => {
+    const m = msg("m1", { sentBy: sender("u2") });
+
+    expect(withUserProfile("u1", profile)(m).sentBy).toBe(m.sentBy);
+  });
+});
+
+describe("updateUserProfileInCaches", () => {
+  it("reaches caches that can't refetch (top highlights, media) as well as paginated messages", () => {
+    const queryClient = new QueryClient();
+    const m = msg("m1", {
+      sentBy: {
+        id: "u1",
+        name: "K",
+        displayName: "Kevin",
+        imageUrl: null,
+      } as any,
+    });
+    queryClient.setQueryData(["messages", "t1"], {
+      pages: [[m]],
+      pageParams: [undefined],
+    });
+    queryClient.setQueryData(["top-highlights", "t1"], [m]);
+    queryClient.setQueryData(["media-messages", "t2"], [m]);
+
+    updateUserProfileInCaches(queryClient, "u1", {
+      displayName: "Kev",
+      imageUrl: "new.png",
+    });
+
+    const name = (data: any) => data[0].sentBy.displayName;
+    expect(
+      name((queryClient.getQueryData(["messages", "t1"]) as any).pages[0]),
+    ).toBe("Kev");
+    expect(name(queryClient.getQueryData(["top-highlights", "t1"]))).toBe(
+      "Kev",
+    );
+    expect(name(queryClient.getQueryData(["media-messages", "t2"]))).toBe(
+      "Kev",
+    );
   });
 });

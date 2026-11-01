@@ -1,13 +1,12 @@
 import { User as DbUser } from "@tim/db-types";
 import { CommandName, parseCommand, toCommandName } from "@tim/commands";
-import { getDisplayName } from "@tim/user-display";
 import { decrypt } from "./encryption";
 import { getMessageHistoryForTopic } from "../db/messages";
 import { getTopicSummary } from "../db/topics";
 import { getCircleMembers } from "../db/circles";
 import { isLocalDev } from "./is-local-dev";
 
-type User = Pick<DbUser, "id" | "name">;
+type User = Pick<DbUser, "id" | "name" | "displayName">;
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -39,7 +38,7 @@ function generatePrompt({
 
   Context:
   Topic="${topicName}"
-  User="${getDisplayName(currentUserName)}"
+  User="${currentUserName}"
   Active=[${inTopic.join(",")}]
   Offline=[${notInTopic.join(",")}]
 
@@ -130,13 +129,13 @@ function convertDbRowToMessages(row: {
   text: string;
   mediaUrl: string;
   command: string | null;
-  name: string;
+  displayName: string;
 }): ChatMessage[] {
   const rawText = row.text ? decrypt(row.text, row.id) : "";
   const botResponse = row.mediaUrl;
   const commandName = toCommandName(row.command);
   const prompt = commandName ? (parseCommand(rawText)?.prompt ?? "") : "";
-  const speaker = getDisplayName(row.name);
+  const speaker = row.displayName;
 
   if (commandName === CommandName.Tim && botResponse) {
     return [
@@ -232,7 +231,7 @@ export async function getChatGpt({
 
   const systemPrompt = generatePrompt({
     topicName: topic.name,
-    currentUserName: currentUser.name,
+    currentUserName: currentUser.displayName,
     inTopic,
     notInTopic,
   });
@@ -259,9 +258,9 @@ function getActiveAndNonActiveUsers({
   const activeIds = new Set(otherActiveUsers.map((u) => u.id));
 
   return {
-    inTopic: otherActiveUsers.map((u) => getDisplayName(u.name)),
+    inTopic: otherActiveUsers.map((u) => u.displayName),
     notInTopic: allUsers
       .filter((u) => u.id !== currentUserId && !activeIds.has(u.id))
-      .map((u) => getDisplayName(u.name)),
+      .map((u) => u.displayName),
   };
 }

@@ -5,6 +5,7 @@ import type { MessageData } from "@/components/topics/message";
 export type NotificationActor = {
   id: string;
   name: string | null;
+  displayName: string;
   imageUrl: string | null;
 };
 
@@ -53,6 +54,32 @@ export function updateNotificationMessages(
               ? { ...n, message: updater(n.message) }
               : n,
           ),
+        ),
+      },
+  );
+}
+
+// Exact key: ["notifications"] is also a prefix of the unread-count key.
+export function updateNotificationActorsAndMessages(
+  queryClient: QueryClient,
+  userId: string,
+  update: {
+    actor: Partial<NotificationActor>;
+    message: (prev: NotificationItem["message"]) => NotificationItem["message"];
+  },
+) {
+  queryClient.setQueryData<InfiniteData<NotificationItem[]>>(
+    notificationsQueryKey,
+    (prev) =>
+      prev && {
+        ...prev,
+        pages: prev.pages.map((page) =>
+          page.map((n) => ({
+            ...n,
+            actor:
+              n.actor.id === userId ? { ...n.actor, ...update.actor } : n.actor,
+            message: update.message(n.message),
+          })),
         ),
       },
   );

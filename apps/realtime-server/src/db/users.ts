@@ -3,7 +3,7 @@ import { pgClient } from "./client";
 
 export async function getUserSummary({ userId }: { userId: string }) {
   return await pgClient<User>("users")
-    .select("id", "imageUrl", "name")
+    .select("id", "imageUrl", "name", "displayName")
     .where("id", userId)
     .first();
 }

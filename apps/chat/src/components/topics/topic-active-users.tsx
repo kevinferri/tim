@@ -78,6 +78,7 @@ export function TopicActiveUsers(props: Props) {
             key={user.id}
             id={user.id}
             name={user.name}
+            displayName={user.displayName}
             imageUrl={user.imageUrl}
             createdAt={user.createdAt}
             variant={variant()}

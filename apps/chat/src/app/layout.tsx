@@ -41,6 +41,7 @@ const getLoggedInUser = cache(async () => {
     select: {
       id: true,
       name: true,
+      displayName: true,
       email: true,
       imageUrl: true,
       createdAt: true,

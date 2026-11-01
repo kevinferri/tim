@@ -9,6 +9,7 @@ const CIRCLE_SELECT = {
     select: {
       id: true,
       name: true,
+      displayName: true,
     },
   },
   members: {
@@ -256,6 +257,7 @@ export const circleModel = {
           select: {
             id: true,
             name: true,
+            displayName: true,
           },
         },
       },

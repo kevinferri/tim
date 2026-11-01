@@ -85,7 +85,7 @@ type NewTopicHandlerProps = {
   isEdit: boolean;
   circleId: string;
   createdBy: {
-    name: string;
+    displayName: string;
     id: string;
   };
 };
@@ -95,7 +95,7 @@ type DeletedTopicHandlerProps = {
   name: string;
   circleId: string;
   deletedBy: {
-    name: string;
+    displayName: string;
     id: string;
   };
 };
@@ -175,6 +175,7 @@ const TopicRow = ({
             key={user.id}
             id={user.id}
             name={user.name}
+            displayName={user.displayName}
             imageUrl={user.imageUrl}
             createdAt={user.createdAt}
             size="xs"
@@ -595,7 +596,7 @@ export const TopicsList = ({
       if (payload.isEdit) return;
 
       const createdBySelf = payload.createdBy.id === self.id;
-      const name = createdBySelf ? "You" : payload.createdBy.name;
+      const name = createdBySelf ? "You" : payload.createdBy.displayName;
 
       toast({
         title: `New topic created in ${circle.name}`,
@@ -626,7 +627,7 @@ export const TopicsList = ({
       if (payload.circleId !== circle.id) return;
 
       const deletedBySelf = payload.deletedBy.id === self.id;
-      const name = deletedBySelf ? "You" : payload.deletedBy.name;
+      const name = deletedBySelf ? "You" : payload.deletedBy.displayName;
 
       toast({
         title: `Topic deleted in ${circle.name}`,
@@ -801,6 +802,7 @@ export const TopicsList = ({
                                   key={user.id}
                                   id={user.id}
                                   name={user.name}
+                                  displayName={user.displayName}
                                   imageUrl={user.imageUrl}
                                   createdAt={user.createdAt}
                                   size="xs"

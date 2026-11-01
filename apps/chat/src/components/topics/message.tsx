@@ -36,7 +36,6 @@ import { MessageSentAt } from "@/components/topics/message-sent-at";
 import { renderCommandResult } from "@/components/topics/message-attachment";
 import { parseCommand, toCommandName } from "@tim/commands";
 import { useCanHover } from "@/lib/hooks/use-can-hover";
-import { getDisplayName } from "@tim/user-display";
 import {
   MessageSurface,
   messageAnchorId,
@@ -48,7 +47,8 @@ export type Highlights = {
   id: Highlight["id"];
   userId: Highlight["userId"];
   createdBy?: {
-    name?: User["name"];
+    name: User["name"];
+    displayName: User["displayName"];
     imageUrl: User["imageUrl"];
   };
   [key: string]: any;
@@ -67,6 +67,7 @@ export type MessageData = {
   sentBy?: {
     id: string;
     name: string | null;
+    displayName: string;
     imageUrl: string | null;
     createdAt: Date;
     status: string | null;
@@ -81,7 +82,7 @@ export type MessageData = {
     text?: string;
     mediaUrl?: string | null;
     command?: string | null;
-    sentBy?: { id: string; name: string | null };
+    sentBy?: { id: string; name: string | null; displayName: string };
   } | null;
   [key: string]: any;
 };
@@ -237,7 +238,7 @@ const MessageComponent = (props: MessageProps) => {
       text: props.text ?? "",
       mediaUrl: props.mediaUrl,
       command: props.command,
-      senderName: props.sentBy.name ?? null,
+      senderName: props.sentBy.displayName,
       senderId: props.sentBy.id,
     });
   };
@@ -307,6 +308,7 @@ const MessageComponent = (props: MessageProps) => {
             <UserAvatar
               id={props.sentBy.id}
               name={props.sentBy.name}
+              displayName={props.sentBy.displayName}
               imageUrl={props.sentBy.imageUrl}
               createdAt={props.sentBy.createdAt}
               topicId={topicId}
@@ -327,6 +329,7 @@ const MessageComponent = (props: MessageProps) => {
                   id={props.sentBy.id}
                   topicId={topicId}
                   name={props.sentBy.name}
+                  displayName={props.sentBy.displayName}
                   imageUrl={props.sentBy.imageUrl}
                   createdAt={props.sentBy.createdAt}
                   disableSheet={props.context === "user-sheet"}
@@ -339,7 +342,7 @@ const MessageComponent = (props: MessageProps) => {
                       props.sentBy.id === self.id && "text-mention",
                     )}
                   >
-                    {getDisplayName(props.sentBy.name)}
+                    {props.sentBy.displayName}
                   </span>
                 </UserAvatar>
               )}
@@ -369,7 +372,7 @@ const MessageComponent = (props: MessageProps) => {
             <div className="flex flex-col gap-1 min-w-0">
               {showReplyPreview && props.replyTo && (
                 <ReplyPreview
-                  senderName={props.replyTo.sentBy?.name ?? null}
+                  senderName={props.replyTo.sentBy?.displayName ?? ""}
                   text={props.replyTo.text ?? ""}
                   mediaUrl={props.replyTo.mediaUrl}
                   command={props.replyTo.command}

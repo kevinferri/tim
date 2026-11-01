@@ -57,6 +57,7 @@ type Props = VariantProps<typeof variants> & {
   id: string;
   topicId?: string | null;
   name?: string | null;
+  displayName: string;
   status: string | null;
   lastStatusUpdate: Date | null;
   imageUrl?: string | null;
@@ -253,7 +254,7 @@ export function UserAvatar(props: Props) {
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-xl font-semibold">
-                      {props.name}
+                      {props.displayName}
                     </span>
                     {since && (
                       <span className="flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px text-[10px] text-muted-foreground">
@@ -261,6 +262,12 @@ export function UserAvatar(props: Props) {
                       </span>
                     )}
                   </div>
+
+                  {props.name && props.name !== props.displayName && (
+                    <div className="truncate text-xs text-muted-foreground">
+                      {props.name}
+                    </div>
+                  )}
 
                   {status && (
                     <div className="text-xs text-muted-foreground">

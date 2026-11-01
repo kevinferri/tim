@@ -147,9 +147,10 @@ async function ensurePostgresRunning() {
   await ensureDatabase();
 }
 
+// --force-reset: rows left by a previous run (tests truncate before, not after) would otherwise block adding a required column.
 function pushSchema() {
   execSync(
-    "npx prisma db push --schema=./prisma/schema.prisma --skip-generate --accept-data-loss",
+    "npx prisma db push --schema=./prisma/schema.prisma --skip-generate --force-reset",
     {
       cwd: CHAT_DIR,
       env: { ...process.env, DATABASE_URL },

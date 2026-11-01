@@ -27,6 +27,7 @@ import { useTopicActivity } from "@/components/topics/provider/use-topic-activit
 export type CircleMember = {
   id: string;
   name: string | null;
+  displayName: string;
   imageUrl: string | null;
   createdAt: Date;
   status: string | null;
@@ -192,7 +193,7 @@ export type ReplyingToMessage = {
   text: string;
   mediaUrl?: string | null;
   command?: string | null;
-  senderName: string | null;
+  senderName: string;
   senderId: string;
 };
 

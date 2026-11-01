@@ -14,6 +14,7 @@ import { formatStatus } from "@/lib/status";
 type MemberProps = {
   id: string;
   name: string;
+  displayName: string;
   isOnline: boolean;
   imageUrl: string;
   isAdmin: boolean;
@@ -40,6 +41,7 @@ function Member(props: MemberProps) {
           id={props.id}
           topicId={topicId}
           name={props.name}
+          displayName={props.displayName}
           imageUrl={props.imageUrl}
           variant={props.isOnline ? "default" : "idle"}
           status={props.status}
@@ -49,7 +51,7 @@ function Member(props: MemberProps) {
         />
       </div>
       <div className="min-w-0">
-        <div>{props.name}</div>
+        <div>{props.displayName}</div>
         {status && (
           <div className="truncate text-xs text-muted-foreground">
             {formatStatus(status)}
@@ -106,6 +108,7 @@ export function CircleMembersList() {
             key={user.id}
             id={user.id}
             name={user.name ?? ""}
+            displayName={user.displayName}
             imageUrl={user.imageUrl ?? ""}
             isOnline
             isAdmin={user.isCreator}
@@ -123,6 +126,7 @@ export function CircleMembersList() {
             key={user.id}
             id={user.id}
             name={user.name ?? ""}
+            displayName={user.displayName}
             imageUrl={user.imageUrl ?? ""}
             isOnline={false}
             isAdmin={user.isCreator}

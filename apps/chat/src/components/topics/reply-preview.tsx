@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { getDisplayName } from "@tim/user-display";
 import { toCommandName } from "@tim/commands";
 import { isResultCommand } from "@/components/topics/message-attachment";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import {
 } from "@/components/topics/message-utils";
 
 type Props = {
-  senderName: string | null;
+  senderName: string;
   text: string;
   mediaUrl?: string | null;
   command?: string | null;
@@ -50,7 +49,6 @@ export function ReplyPreview({
   className,
 }: Props) {
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
-  const name = getDisplayName(senderName);
   const thumbnail = getThumbnail(command, mediaUrl);
   const showThumbnail = !!thumbnail && !thumbnailFailed;
 
@@ -80,7 +78,7 @@ export function ReplyPreview({
 
       <div className="min-w-0 flex-1">
         <span className="font-medium text-foreground/70 group-hover:text-foreground">
-          {name}
+          {senderName}
         </span>
         {text ? (
           <span className="line-clamp-1 break-words text-muted-foreground group-hover:text-foreground">

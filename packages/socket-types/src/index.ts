@@ -38,6 +38,7 @@ export enum SocketEvent {
   UserExpandedImage = "user:expandedImage",
   UserClickedLink = "user:clickedLink",
   UserUpdatedStatus = "user:updatedStatus",
+  UserUpdatedProfile = "user:updatedProfile",
 
   // notifications
   CreateNotification = "notification:create",

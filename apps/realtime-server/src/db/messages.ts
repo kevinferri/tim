@@ -77,7 +77,7 @@ type ReplyPreviewRow = Pick<
   | "userId"
   | "threadRootId"
   | "createdAt"
-> & { name: string | null };
+> & { name: string | null; displayName: string };
 
 // Scoped to topicId so it doubles as validation: a replyToId for a message
 // in another topic (stale, tampered, or the two just don't match) comes
@@ -99,6 +99,7 @@ export async function getMessageForReplyPreview({
       "messages.threadRootId",
       "messages.createdAt",
       "users.name",
+      "users.displayName",
     )
     .join("users", "messages.userId", "users.id")
     .where("messages.id", messageId)
@@ -148,6 +149,7 @@ export async function getMessageHistoryForTopic({
     mediaUrl: string;
     command: string | null;
     name: string;
+    displayName: string;
   }[] = await pgClient("messages")
     .select(
       "messages.id",
@@ -155,6 +157,7 @@ export async function getMessageHistoryForTopic({
       "messages.mediaUrl",
       "messages.command",
       "users.name",
+      "users.displayName",
     )
     .join("users", "messages.userId", "users.id")
     .where("messages.topicId", topicId)
