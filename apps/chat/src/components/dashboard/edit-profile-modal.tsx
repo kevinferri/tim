@@ -124,7 +124,9 @@ export function EditProfileModal(props: Props) {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{cropSource ? "Crop photo" : "Edit profile"}</DialogTitle>
+          <DialogTitle>
+            {cropSource ? "Crop photo" : "Edit profile"}
+          </DialogTitle>
           <DialogDescription>
             {cropSource
               ? "Drag to reposition, scroll or use the slider to zoom."

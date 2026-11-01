@@ -42,10 +42,15 @@ describe("getRandomGif", () => {
   it("falls back to translate when random has no match for the phrase", async () => {
     vi.stubEnv("GIPHY_KEY", "real-key");
     vi.mocked(fetch)
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) } as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: { images: { original: { url: "translated-url" } } } }),
+        json: async () => ({ data: [] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { images: { original: { url: "translated-url" } } },
+        }),
       } as Response);
 
     const result = await getRandomGif("what are you wearing nate from dsb");

@@ -306,10 +306,7 @@ export function TopicMessageBar() {
   // Same display-name/topic-name vocabulary the dropdowns insert, so what
   // highlights while typing matches what becomes a link once sent.
   const mentionNames = useMemo(
-    () =>
-      circleMembers
-        .map((member) => member.displayName)
-        .filter(Boolean),
+    () => circleMembers.map((member) => member.displayName).filter(Boolean),
     [circleMembers],
   );
   const topicNames = useMemo(

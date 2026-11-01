@@ -170,6 +170,8 @@ export function handleUserUpdatedProfile({ socket, server }: HandlerArgs) {
 
     server
       .to([...circleRoomKeys, userRoomKey])
-      .emit(SocketEvent.UserUpdatedProfile, { user: { id: user.id, ...profile } });
+      .emit(SocketEvent.UserUpdatedProfile, {
+        user: { id: user.id, ...profile },
+      });
   });
 }

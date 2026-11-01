@@ -317,10 +317,16 @@ describe("handleUserUpdatedProfile", () => {
     });
 
     const profile = { displayName: "Kev", imageUrl: "new.png" };
-    expect(handleActiveUserAttributeChange).toHaveBeenCalledWith(socket, profile);
+    expect(handleActiveUserAttributeChange).toHaveBeenCalledWith(
+      socket,
+      profile,
+    );
     expect(server.in).toHaveBeenCalledWith("user::user-1");
     expect(otherTab.data.user).toMatchObject(profile);
-    expect(server.to).toHaveBeenCalledWith(["circle::circle-1", "user::user-1"]);
+    expect(server.to).toHaveBeenCalledWith([
+      "circle::circle-1",
+      "user::user-1",
+    ]);
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.UserUpdatedProfile, {
       user: { id: "user-1", ...profile },
     });

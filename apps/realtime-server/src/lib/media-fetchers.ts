@@ -15,8 +15,12 @@ export async function getRandomGif(query: string) {
   const q = encodeURIComponent(query);
   // random?tag= only matches short tag-like queries; translate handles full phrases.
   return (
-    (await fetchGifUrl(`https://api.giphy.com/v1/gifs/random?api_key=${key}&tag=${q}`)) ??
-    (await fetchGifUrl(`https://api.giphy.com/v1/gifs/translate?api_key=${key}&s=${q}`))
+    (await fetchGifUrl(
+      `https://api.giphy.com/v1/gifs/random?api_key=${key}&tag=${q}`,
+    )) ??
+    (await fetchGifUrl(
+      `https://api.giphy.com/v1/gifs/translate?api_key=${key}&s=${q}`,
+    ))
   );
 }
 
