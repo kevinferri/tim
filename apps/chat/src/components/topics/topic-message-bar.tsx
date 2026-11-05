@@ -212,9 +212,12 @@ export function TopicMessageBar() {
     if (emojiQuery === undefined) return;
 
     let cancelled = false;
-    searchEmojis(emojiQuery).then((results) => {
-      if (!cancelled) setEmojiSearch({ query: emojiQuery, results });
-    });
+    searchEmojis(emojiQuery)
+      .then((results) => {
+        if (!cancelled) setEmojiSearch({ query: emojiQuery, results });
+      })
+      // Menu just stays hidden; the next keystroke retries.
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -455,7 +458,12 @@ export function TopicMessageBar() {
                 const caret = e.target.selectionStart ?? value.length;
 
                 // Typing the closing ":" of a known shortcode swaps it in place.
-                const closed = findClosedShortcode(value.slice(0, caret));
+                // Insert-only, so backspacing into ":tada:" doesn't re-convert it.
+                const isInsert = (
+                  e.nativeEvent as InputEvent
+                ).inputType?.startsWith("insert");
+                const closed =
+                  isInsert && findClosedShortcode(value.slice(0, caret));
                 if (closed) {
                   const { native, start } = closed;
                   setMessage(

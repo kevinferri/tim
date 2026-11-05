@@ -89,7 +89,27 @@ export function replaceShortcodes(text: string): string {
   );
 }
 
-let initPromise: Promise<void> | undefined;
+type SearchIndexType = (typeof import("emoji-mart"))["SearchIndex"];
+let searchIndexPromise: Promise<SearchIndexType> | undefined;
+
+// Data is loaded before init: emoji-mart's init never rejects on a failed load,
+// it just hangs. Reset on failure so the next search retries.
+function getSearchIndex(): Promise<SearchIndexType> {
+  searchIndexPromise ??= Promise.all([
+    import("emoji-mart"),
+    loadEmojiData(),
+  ]).then(
+    async ([{ init, SearchIndex }, data]) => {
+      await init({ data });
+      return SearchIndex;
+    },
+    (error) => {
+      searchIndexPromise = undefined;
+      throw error;
+    },
+  );
+  return searchIndexPromise;
+}
 
 // Same search the emoji picker runs: matches id, name words, keywords and emoticons.
 export async function searchEmojis(
@@ -98,10 +118,7 @@ export async function searchEmojis(
 ): Promise<EmojiCandidate[]> {
   if (!query) return [];
 
-  const { init, SearchIndex } = await import("emoji-mart");
-  initPromise ??= init({ data: loadEmojiData });
-  await initPromise;
-
+  const SearchIndex = await getSearchIndex();
   const results: { id: string; skins: { native: string }[] }[] =
     (await SearchIndex.search(query, {
       maxResults: limit,
