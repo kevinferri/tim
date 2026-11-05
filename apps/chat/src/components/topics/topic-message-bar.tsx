@@ -203,22 +203,26 @@ export function TopicMessageBar() {
   const emojiStart = emojiMatch
     ? emojiMatch.index + emojiMatch[1].length
     : undefined;
-  const [matchingEmojis, setMatchingEmojis] = useState<EmojiCandidate[]>([]);
+  // Results are tagged with their query so a pending search never shows stale ones.
+  const [emojiSearch, setEmojiSearch] = useState<{
+    query: string;
+    results: EmojiCandidate[];
+  }>();
+  const matchingEmojis =
+    emojiSearch && emojiSearch.query === emojiQuery ? emojiSearch.results : [];
 
   useEffect(() => {
-    if (emojiQuery === undefined) {
-      setMatchingEmojis([]);
-      return;
-    }
+    if (emojiQuery === undefined) return;
 
     let cancelled = false;
     searchEmojis(emojiQuery).then((results) => {
-      if (!cancelled) setMatchingEmojis(results);
+      if (!cancelled) setEmojiSearch({ query: emojiQuery, results });
     });
     return () => {
       cancelled = true;
     };
   }, [emojiQuery]);
+
   const showEmojiMenu =
     !emojiMenuDismissed && !isGenerating && matchingEmojis.length > 0;
 
