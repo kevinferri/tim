@@ -34,13 +34,24 @@ const EXTRA_ALIASES: Record<string, string> = {
   thumbsdown: "-1",
 };
 
+// Own keys only, so ":constructor:" or ":__proto__:" can't hit Object.prototype.
+function hasOwn(obj: object, key: string) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
 // Returns undefined until loadEmojiData() has resolved.
 export function emojiForShortcode(shortcode: string): string | undefined {
   if (!emojiData) return undefined;
   const { emojis, aliases } = emojiData;
   const key = shortcode.toLowerCase();
-  const id = emojis[key] ? key : (aliases[key] ?? EXTRA_ALIASES[key]);
-  return id ? emojis[id]?.skins[0]?.native : undefined;
+  const id = hasOwn(emojis, key)
+    ? key
+    : hasOwn(aliases, key)
+      ? aliases[key]
+      : hasOwn(EXTRA_ALIASES, key)
+        ? EXTRA_ALIASES[key]
+        : undefined;
+  return id && hasOwn(emojis, id) ? emojis[id].skins[0]?.native : undefined;
 }
 
 // A shortcode can't follow a word char, so "12:30:45" and "re:x:" never match.

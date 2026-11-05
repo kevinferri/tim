@@ -21,6 +21,17 @@ describe("emojiForShortcode", () => {
 
   it("returns undefined for unknown codes", () => {
     expect(emojiForShortcode("not_a_real_emoji")).toBeUndefined();
+    for (const key of [
+      "constructor",
+      "__proto__",
+      "toString",
+      "hasOwnProperty",
+    ]) {
+      expect(emojiForShortcode(key)).toBeUndefined();
+    }
+    expect(replaceShortcodes("hi :constructor: :__proto__:")).toBe(
+      "hi :constructor: :__proto__:",
+    );
   });
 });
 
