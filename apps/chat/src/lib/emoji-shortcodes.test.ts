@@ -1,6 +1,8 @@
 import { beforeAll, describe, it, expect } from "vitest";
 import {
   emojiForShortcode,
+  findClosedShortcode,
+  findOpenShortcode,
   loadEmojiData,
   replaceShortcodes,
   searchEmojis,
@@ -48,5 +50,39 @@ describe("searchEmojis", () => {
 
   it("returns nothing for an empty query", async () => {
     expect(await searchEmojis("")).toEqual([]);
+  });
+});
+
+describe("findOpenShortcode", () => {
+  it("opens after a colon plus 2 chars at a word boundary", () => {
+    expect(findOpenShortcode(":sm")).toEqual({ query: "sm", start: 0 });
+    expect(findOpenShortcode("hey :thu")).toEqual({ query: "thu", start: 4 });
+    expect(findOpenShortcode("🔥:fi")).toEqual({ query: "fi", start: 2 });
+  });
+
+  it("stays closed for short queries, times, emoticons and prose", () => {
+    expect(findOpenShortcode(":")).toBeUndefined();
+    expect(findOpenShortcode(":s")).toBeUndefined();
+    expect(findOpenShortcode("at 12:30")).toBeUndefined();
+    expect(findOpenShortcode("re:xy")).toBeUndefined();
+    expect(findOpenShortcode("re: x")).toBeUndefined();
+    expect(findOpenShortcode("hi :)")).toBeUndefined();
+    expect(findOpenShortcode(":sm done")).toBeUndefined();
+  });
+});
+
+describe("findClosedShortcode", () => {
+  it("finds a just-closed known shortcode", () => {
+    expect(findClosedShortcode("nice :tada:")).toEqual({
+      native: "🎉",
+      start: 5,
+    });
+    expect(findClosedShortcode("::fire:")).toEqual({ native: "🔥", start: 1 });
+  });
+
+  it("ignores unknown codes and word-adjacent colons", () => {
+    expect(findClosedShortcode("hi :nope:")).toBeUndefined();
+    expect(findClosedShortcode("10:100:")).toBeUndefined();
+    expect(findClosedShortcode("a:fire:")).toBeUndefined();
   });
 });

@@ -43,13 +43,38 @@ export function emojiForShortcode(shortcode: string): string | undefined {
   return id ? emojis[id]?.skins[0]?.native : undefined;
 }
 
-// Lookbehind keeps "12:30:45" and "http://x:y:" from matching.
-const SHORTCODE_PATTERN = /(?<![\w]):([a-z0-9_+-]+):/gi;
+// A shortcode can't follow a word char, so "12:30:45" and "re:x:" never match.
+// Captured-prefix rather than lookbehind, which Safari < 16.4 can't parse.
+const BOUNDARY = String.raw`(^|[^\w])`;
+const CODE = "[a-z0-9_+-]";
+const OPEN_PATTERN = new RegExp(`${BOUNDARY}:(${CODE}{2,})$`, "i");
+const CLOSED_PATTERN = new RegExp(`${BOUNDARY}:(${CODE}+):$`, "i");
+const ANY_PATTERN = new RegExp(`:(${CODE}+):`, "gi");
+
+// Slack-style: an in-progress ":xx" (2+ chars) right before the caret.
+export function findOpenShortcode(
+  textBeforeCaret: string,
+): { query: string; start: number } | undefined {
+  const match = OPEN_PATTERN.exec(textBeforeCaret);
+  if (!match) return undefined;
+  return { query: match[2], start: match.index + match[1].length };
+}
+
+// A just-closed ":code:" right before the caret, if it's a known emoji.
+export function findClosedShortcode(
+  textBeforeCaret: string,
+): { native: string; start: number } | undefined {
+  const match = CLOSED_PATTERN.exec(textBeforeCaret);
+  const native = match && emojiForShortcode(match[2]);
+  if (!match || !native) return undefined;
+  return { native, start: match.index + match[1].length };
+}
 
 export function replaceShortcodes(text: string): string {
-  return text.replace(
-    SHORTCODE_PATTERN,
-    (match, code: string) => emojiForShortcode(code) ?? match,
+  return text.replace(ANY_PATTERN, (match, code: string, offset: number) =>
+    offset > 0 && /\w/.test(text[offset - 1])
+      ? match
+      : (emojiForShortcode(code) ?? match),
   );
 }
 

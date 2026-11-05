@@ -45,7 +45,8 @@ import {
 import { EmojiAutocomplete } from "@/components/topics/emoji-autocomplete";
 import {
   EmojiCandidate,
-  emojiForShortcode,
+  findClosedShortcode,
+  findOpenShortcode,
   loadEmojiData,
   replaceShortcodes,
   searchEmojis,
@@ -196,14 +197,9 @@ export function TopicMessageBar() {
     setTopicLinkMenuDismissed(false);
   }, [topicQuery, topicStart]);
 
-  // Matches Slack: opens after ":" plus 2 chars, so "hi :)" or ":D" don't pop it.
-  const emojiMatch = /(^|[^\w:]):([a-z0-9_+-]{2,})$/i.exec(
-    message.slice(0, caretIndex),
-  );
-  const emojiQuery = emojiMatch?.[2];
-  const emojiStart = emojiMatch
-    ? emojiMatch.index + emojiMatch[1].length
-    : undefined;
+  const openShortcode = findOpenShortcode(message.slice(0, caretIndex));
+  const emojiQuery = openShortcode?.query;
+  const emojiStart = openShortcode?.start;
   // Results are tagged with their query so a pending search never shows stale ones.
   const [emojiSearch, setEmojiSearch] = useState<{
     query: string;
@@ -459,12 +455,9 @@ export function TopicMessageBar() {
                 const caret = e.target.selectionStart ?? value.length;
 
                 // Typing the closing ":" of a known shortcode swaps it in place.
-                const closed = /(^|[^\w:]):([a-z0-9_+-]+):$/i.exec(
-                  value.slice(0, caret),
-                );
-                const native = closed && emojiForShortcode(closed[2]);
-                if (closed && native) {
-                  const start = closed.index + closed[1].length;
+                const closed = findClosedShortcode(value.slice(0, caret));
+                if (closed) {
+                  const { native, start } = closed;
                   setMessage(
                     value.slice(0, start) + native + value.slice(caret),
                   );
