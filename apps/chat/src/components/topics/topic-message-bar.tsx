@@ -42,6 +42,15 @@ import {
   TopicLinkAutocomplete,
   TopicLinkCandidate,
 } from "@/components/topics/topic-link-autocomplete";
+import { EmojiAutocomplete } from "@/components/topics/emoji-autocomplete";
+import {
+  EmojiCandidate,
+  findClosedShortcode,
+  findOpenShortcode,
+  loadEmojiData,
+  replaceShortcodes,
+  searchEmojis,
+} from "@/lib/emoji-shortcodes";
 import { MessageHighlightOverlay } from "@/components/topics/message-highlight-overlay";
 import { ReplyPreview } from "@/components/topics/reply-preview";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
@@ -68,6 +77,8 @@ export function TopicMessageBar() {
   const [topicLinkMenuSelectedIndex, setTopicLinkMenuSelectedIndex] =
     useState(0);
   const [topicLinkMenuDismissed, setTopicLinkMenuDismissed] = useState(false);
+  const [emojiMenuSelectedIndex, setEmojiMenuSelectedIndex] = useState(0);
+  const [emojiMenuDismissed, setEmojiMenuDismissed] = useState(false);
   const [caretIndex, setCaretIndex] = useState(0);
   const [pendingCaretPosition, setPendingCaretPosition] = useState<
     number | null
@@ -186,6 +197,50 @@ export function TopicMessageBar() {
     setTopicLinkMenuDismissed(false);
   }, [topicQuery, topicStart]);
 
+  const openShortcode = findOpenShortcode(message.slice(0, caretIndex));
+  const emojiQuery = openShortcode?.query;
+  const emojiStart = openShortcode?.start;
+  // Results are tagged with their query so a pending search never shows stale ones.
+  const [emojiSearch, setEmojiSearch] = useState<{
+    query: string;
+    results: EmojiCandidate[];
+  }>();
+  const matchingEmojis =
+    emojiSearch && emojiSearch.query === emojiQuery ? emojiSearch.results : [];
+
+  useEffect(() => {
+    if (emojiQuery === undefined) return;
+
+    let cancelled = false;
+    searchEmojis(emojiQuery)
+      .then((results) => {
+        if (!cancelled) setEmojiSearch({ query: emojiQuery, results });
+      })
+      // Menu just stays hidden; the next keystroke retries.
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [emojiQuery]);
+
+  const showEmojiMenu =
+    !emojiMenuDismissed && !isGenerating && matchingEmojis.length > 0;
+
+  useEffect(() => {
+    setEmojiMenuSelectedIndex(0);
+    setEmojiMenuDismissed(false);
+  }, [emojiQuery, emojiStart]);
+
+  const selectEmoji = (emoji: EmojiCandidate) => {
+    if (emojiStart === undefined || !emoji) return;
+
+    const newMessage =
+      message.slice(0, emojiStart) + emoji.native + message.slice(caretIndex);
+
+    setMessage(newMessage);
+    setPendingCaretPosition(emojiStart + emoji.native.length);
+  };
+
   const selectMention = (member: MentionCandidate) => {
     if (mentionStart === undefined) return;
 
@@ -245,7 +300,13 @@ export function TopicMessageBar() {
     textAreaRef.current?.focus();
   }, [replyingTo]);
 
-  const emitMessage = async (message: string) => {
+  useEffect(() => {
+    loadEmojiData().catch(() => {});
+  }, []);
+
+  const emitMessage = async (draft: string) => {
+    // Catches pasted shortcodes; left as text if the data hasn't loaded yet.
+    const message = replaceShortcodes(draft);
     if (!image && !message.trim()) return;
     let _media = image ?? extractImageFromMessage(message);
     const youtubeVideo = getYoutubeVideoFromUrl(message);
@@ -341,6 +402,14 @@ export function TopicMessageBar() {
             onSelect={selectTopicLink}
           />
         )}
+        {showEmojiMenu && (
+          <EmojiAutocomplete
+            emojis={matchingEmojis}
+            selectedIndex={emojiMenuSelectedIndex}
+            onHover={setEmojiMenuSelectedIndex}
+            onSelect={selectEmoji}
+          />
+        )}
         {replyingTo && (
           // pr-1 matches the composer's own controls below, so the cancel
           // button lines up with them instead of sitting 8px inboard.
@@ -385,8 +454,27 @@ export function TopicMessageBar() {
               disabled={isGenerating}
               className="relative border-none bg-transparent text-transparent caret-[hsl(var(--foreground))]"
               onChange={(e) => {
-                setMessage(e.target.value);
-                setCaretIndex(e.target.selectionStart ?? e.target.value.length);
+                const value = e.target.value;
+                const caret = e.target.selectionStart ?? value.length;
+
+                // Typing the closing ":" of a known shortcode swaps it in place.
+                // Insert-only, so backspacing into ":tada:" doesn't re-convert it.
+                const isInsert = (
+                  e.nativeEvent as InputEvent
+                ).inputType?.startsWith("insert");
+                const closed =
+                  isInsert && findClosedShortcode(value.slice(0, caret));
+                if (closed) {
+                  const { native, start } = closed;
+                  setMessage(
+                    value.slice(0, start) + native + value.slice(caret),
+                  );
+                  setPendingCaretPosition(start + native.length);
+                  return;
+                }
+
+                setMessage(value);
+                setCaretIndex(caret);
               }}
               onSelect={(e) => {
                 setCaretIndex(e.currentTarget.selectionStart ?? 0);
@@ -450,6 +538,35 @@ export function TopicMessageBar() {
                   if (e.key === "Escape") {
                     e.preventDefault();
                     setMentionMenuDismissed(true);
+                    return;
+                  }
+                } else if (showEmojiMenu) {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setEmojiMenuSelectedIndex(
+                      (i) => (i + 1) % matchingEmojis.length,
+                    );
+                    return;
+                  }
+
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setEmojiMenuSelectedIndex(
+                      (i) =>
+                        (i - 1 + matchingEmojis.length) % matchingEmojis.length,
+                    );
+                    return;
+                  }
+
+                  if (e.key === "Enter" || e.key === "Tab") {
+                    e.preventDefault();
+                    selectEmoji(matchingEmojis[emojiMenuSelectedIndex]);
+                    return;
+                  }
+
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setEmojiMenuDismissed(true);
                     return;
                   }
                 } else if (showTopicLinkMenu) {
