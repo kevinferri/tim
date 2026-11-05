@@ -1,9 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
 import {
   emojiForShortcode,
+  loadEmojiData,
   replaceShortcodes,
   searchEmojis,
 } from "@/lib/emoji-shortcodes";
+
+beforeAll(() => loadEmojiData());
 
 describe("emojiForShortcode", () => {
   it("resolves ids, aliases and Slack-style names", () => {

@@ -1,6 +1,3 @@
-import data from "@emoji-mart/data";
-import { init, SearchIndex } from "emoji-mart";
-
 type EmojiMartData = {
   emojis: Record<
     string,
@@ -14,7 +11,20 @@ type EmojiMartData = {
   aliases: Record<string, string>;
 };
 
-const { emojis, aliases } = data as EmojiMartData;
+let emojiData: EmojiMartData | undefined;
+let dataPromise: Promise<EmojiMartData> | undefined;
+
+// Lazy so the dataset stays out of the initial bundle; shared with the picker.
+export function loadEmojiData(): Promise<EmojiMartData> {
+  dataPromise ??= import("@emoji-mart/data").then(
+    (mod) => (emojiData = mod.default as EmojiMartData),
+    (error) => {
+      dataPromise = undefined;
+      throw error;
+    },
+  );
+  return dataPromise;
+}
 
 export type EmojiCandidate = { shortcode: string; native: string };
 
@@ -24,7 +34,10 @@ const EXTRA_ALIASES: Record<string, string> = {
   thumbsdown: "-1",
 };
 
+// Returns undefined until loadEmojiData() has resolved.
 export function emojiForShortcode(shortcode: string): string | undefined {
+  if (!emojiData) return undefined;
+  const { emojis, aliases } = emojiData;
   const key = shortcode.toLowerCase();
   const id = emojis[key] ? key : (aliases[key] ?? EXTRA_ALIASES[key]);
   return id ? emojis[id]?.skins[0]?.native : undefined;
@@ -49,7 +62,8 @@ export async function searchEmojis(
 ): Promise<EmojiCandidate[]> {
   if (!query) return [];
 
-  initPromise ??= init({ data });
+  const { init, SearchIndex } = await import("emoji-mart");
+  initPromise ??= init({ data: loadEmojiData });
   await initPromise;
 
   const results: { id: string; skins: { native: string }[] }[] =

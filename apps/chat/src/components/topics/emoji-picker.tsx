@@ -1,7 +1,6 @@
 "use client";
 
 import Picker from "@emoji-mart/react";
-import data from "@emoji-mart/data";
 import {
   Popover,
   PopoverContent,
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FaceIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
 import { ReactNode, useState } from "react";
+import { loadEmojiData } from "@/lib/emoji-shortcodes";
 
 type Props = {
   onEmojiSelect: (emoji: string) => void;
@@ -46,7 +46,7 @@ export function EmojiPicker(props: Props) {
         alignOffset={-5}
       >
         <Picker
-          data={data}
+          data={loadEmojiData}
           onEmojiSelect={({ native }: { native: string }) => {
             props.onEmojiSelect(native);
             if (props.closeOnSelect) setOpen(false);

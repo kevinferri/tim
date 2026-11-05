@@ -46,6 +46,7 @@ import { EmojiAutocomplete } from "@/components/topics/emoji-autocomplete";
 import {
   EmojiCandidate,
   emojiForShortcode,
+  loadEmojiData,
   replaceShortcodes,
   searchEmojis,
 } from "@/lib/emoji-shortcodes";
@@ -300,8 +301,12 @@ export function TopicMessageBar() {
     textAreaRef.current?.focus();
   }, [replyingTo]);
 
+  useEffect(() => {
+    loadEmojiData().catch(() => {});
+  }, []);
+
   const emitMessage = async (draft: string) => {
-    // Catches shortcodes that were pasted rather than typed.
+    // Catches pasted shortcodes; left as text if the data hasn't loaded yet.
     const message = replaceShortcodes(draft);
     if (!image && !message.trim()) return;
     let _media = image ?? extractImageFromMessage(message);
