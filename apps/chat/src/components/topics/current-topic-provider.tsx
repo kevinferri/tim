@@ -21,6 +21,7 @@ import { useSocketContext } from "@/components/socket/socket-provider";
 import { useTopicScroll } from "@/components/topics/provider/use-topic-scroll";
 import { useTopicMessages } from "@/components/topics/provider/use-topic-messages";
 import { useTopicHighlights } from "@/components/topics/provider/use-topic-highlights";
+import { HighlightPeriod } from "@/lib/highlight-period";
 import { useTopicMedia } from "@/components/topics/provider/use-topic-media";
 import { useTopicActivity } from "@/components/topics/provider/use-topic-activity";
 
@@ -149,7 +150,12 @@ export function useTopicMediaContext() {
   return context;
 }
 
-type HighlightsContextValue = { topHighlights: MessageProps[] };
+type HighlightsContextValue = {
+  topHighlights: MessageProps[];
+  period: HighlightPeriod;
+  setPeriod: (period: HighlightPeriod) => void;
+  isLoadingPeriod: boolean;
+};
 
 const TopicHighlightsContext = createContext<
   HighlightsContextValue | undefined
@@ -380,7 +386,13 @@ export function CurrentTopicProvider(props: Props) {
     onMediaMessage,
   });
 
-  const { topHighlights, refreshTopHighlights } = useTopicHighlights({
+  const {
+    topHighlights,
+    refreshTopHighlights,
+    period,
+    setPeriod,
+    isLoadingPeriod,
+  } = useTopicHighlights({
     topicId: props.topicId,
     existingTopHighlights: props.existingTopHighlights,
     topHighlightsLimit: props.topHighlightsLimit,
@@ -449,8 +461,8 @@ export function CurrentTopicProvider(props: Props) {
   );
 
   const highlightsValue = useMemo<HighlightsContextValue>(
-    () => ({ topHighlights }),
-    [topHighlights],
+    () => ({ topHighlights, period, setPeriod, isLoadingPeriod }),
+    [topHighlights, period, setPeriod, isLoadingPeriod],
   );
 
   const gifValue = useMemo<GifContextValue>(

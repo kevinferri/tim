@@ -19,8 +19,10 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function makeRequest() {
-  return new NextRequest("http://localhost/api/topics/topic-1/top-highlights");
+function makeRequest(query = "") {
+  return new NextRequest(
+    `http://localhost/api/topics/topic-1/top-highlights${query}`,
+  );
 }
 
 describe("GET /api/topics/[topicId]/top-highlights", () => {
@@ -66,6 +68,50 @@ describe("GET /api/topics/[topicId]/top-highlights", () => {
         topicId: "topic-1",
       }),
     );
+  });
+
+  it("passes a since query param through as a Date", async () => {
+    vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
+    vi.mocked(prismaClient.topic.isUserInTopic).mockResolvedValue(true);
+    vi.mocked(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).mockResolvedValue([]);
+
+    const since = "2026-11-01T04:00:00.000Z";
+    const res = await GET(makeRequest(`?since=${since}`), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).toHaveBeenCalledWith(expect.objectContaining({ since: new Date(since) }));
+  });
+
+  it("omits since when the param is absent (all time)", async () => {
+    vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
+    vi.mocked(prismaClient.topic.isUserInTopic).mockResolvedValue(true);
+    vi.mocked(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).mockResolvedValue([]);
+
+    await GET(makeRequest(), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
+
+    expect(
+      prismaClient.message.getTopHighlightedMessagesForTopic,
+    ).toHaveBeenCalledWith(expect.objectContaining({ since: undefined }));
+  });
+
+  it("returns 400 for an unparseable since", async () => {
+    vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
+
+    const res = await GET(makeRequest("?since=nope"), {
+      params: Promise.resolve({ topicId: "topic-1" }),
+    });
+
+    expect(res.status).toBe(400);
   });
 
   it("returns 400 when the model layer throws", async () => {

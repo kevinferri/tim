@@ -15,6 +15,10 @@ import {
 import { CurrentTopicProvider } from "@/components/topics/current-topic-provider";
 import { MessageModal } from "@/components/topics/message-modal";
 import { DEFAULT_TITLE } from "@/lib/constants";
+import {
+  DEFAULT_HIGHLIGHT_PERIOD,
+  getHighlightPeriodStart,
+} from "@/lib/highlight-period";
 
 type Props = {
   params: Promise<{ topicId: string; circleId: string }>;
@@ -74,7 +78,7 @@ export default async function TopicPage({ params }: Props) {
         requestingUserId: userId,
         topicId: topic?.id,
         select: DEFAULT_MESSAGE_SELECT,
-        since: "month",
+        since: getHighlightPeriodStart(DEFAULT_HIGHLIGHT_PERIOD),
       }),
 
       prismaClient.message.getMediaMessagesForTopic({
