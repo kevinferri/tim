@@ -226,6 +226,57 @@ describe("messageModel.getTopHighlightedMessagesForTopic", () => {
     expect(messages.some((m: any) => m.text === "no highlights")).toBe(false);
   });
 
+  describe("since", () => {
+    const since = new Date("2026-11-01T00:00:00Z");
+
+    async function seed() {
+      const user = await createUser();
+      const topic = await createTopic(user.id);
+      const at = async (text: string, createdAt: Date) => {
+        const m = await createMessage(user.id, topic.id, { text, createdAt });
+        await prismaClient.highlight.create({
+          data: { userId: user.id, messageId: m.id },
+        });
+      };
+      await at("before", new Date("2026-10-31T23:59:59Z"));
+      await at("boundary", since);
+      await at("after", new Date("2026-11-03T12:00:00Z"));
+      return { user, topic };
+    }
+
+    const texts = (ms: any[]) => ms.map((m) => m.text).sort();
+    const select = {
+      id: true,
+      text: true,
+      highlights: { select: { id: true } },
+    };
+
+    it("excludes messages before since and includes the boundary", async () => {
+      const { user, topic } = await seed();
+      const messages =
+        await prismaClient.message.getTopHighlightedMessagesForTopic({
+          requestingUserId: user.id,
+          topicId: topic.id,
+          select,
+          since,
+        });
+
+      expect(texts(messages)).toEqual(["after", "boundary"]);
+    });
+
+    it("returns every period when since is omitted", async () => {
+      const { user, topic } = await seed();
+      const messages =
+        await prismaClient.message.getTopHighlightedMessagesForTopic({
+          requestingUserId: user.id,
+          topicId: topic.id,
+          select,
+        });
+
+      expect(texts(messages)).toEqual(["after", "before", "boundary"]);
+    });
+  });
+
   it("returns an empty list when topicId or requestingUserId is missing", async () => {
     await expect(
       prismaClient.message.getTopHighlightedMessagesForTopic({
