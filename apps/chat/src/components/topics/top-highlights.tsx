@@ -26,7 +26,7 @@ export function TopHighlightsHeader() {
         value={period}
         onValueChange={(v) => setPeriod(v as HighlightPeriod)}
       >
-        <SelectTrigger className="h-7 w-auto gap-1 border-0 pl-1.5 pr-1 text-[length:inherit] text-muted-foreground shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0 focus-visible:ring-1 data-[state=open]:bg-accent">
+        <SelectTrigger className="h-7 w-auto gap-0.5 rounded-sm border-0 px-1 text-[length:inherit] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-1 data-[state=open]:text-foreground">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
