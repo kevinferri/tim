@@ -1,5 +1,6 @@
 import { QueryClient, InfiniteData } from "@tanstack/react-query";
 import { MessageData, MessageProps } from "@/components/topics/message";
+import type { Highlight, User } from "@prisma/client";
 import { UserStatsForTopicResponse } from "@/app/api/topics/[topicId]/user-stats/[userId]/route";
 
 export type MessagesData = InfiniteData<MessageProps[], string | undefined>;
@@ -57,6 +58,51 @@ export function withReferencesCleared(deletedId: string) {
   };
 }
 
+export type HighlightAddedPayload = {
+  highlight: Highlight;
+  createdBy: User;
+  topicId?: string;
+};
+
+export type HighlightRemovedPayload = {
+  messageId: string;
+  userId: string;
+  topicId?: string;
+};
+
+// Idempotent (one highlight per user per message), and returns the same object
+// when nothing changes so untouched messages don't re-render.
+export function withHighlightAdded({
+  highlight,
+  createdBy,
+}: HighlightAddedPayload) {
+  return <M extends MessageData>(m: M): M => {
+    if (m.id !== highlight.messageId) return m;
+    if (m.highlights?.some((h) => h.userId === highlight.userId)) return m;
+    return {
+      ...m,
+      highlights: [
+        ...(m.highlights ?? []),
+        { id: highlight.id, userId: highlight.userId, createdBy },
+      ],
+    };
+  };
+}
+
+export function withHighlightRemoved({
+  messageId,
+  userId,
+}: HighlightRemovedPayload) {
+  return <M extends MessageData>(m: M): M => {
+    if (m.id !== messageId) return m;
+    if (!m.highlights?.some((h) => h.userId === userId)) return m;
+    return {
+      ...m,
+      highlights: m.highlights.filter((h) => h.userId !== userId),
+    };
+  };
+}
+
 export function messagesQueryKey(topicId: string) {
   return ["messages", topicId];
 }
@@ -80,6 +126,26 @@ export function updateThreadCache(
     { queryKey: ["thread", topicId] },
     (prev) => (prev ? updater(prev) : prev),
   );
+}
+
+// Any loaded copy of a message in this topic: transcript, media rail, or an open thread.
+export function findCachedTopicMessage(
+  queryClient: QueryClient,
+  topicId: string,
+  messageId: string,
+): MessageProps | undefined {
+  const lists = [
+    ...(queryClient.getQueryData<MessagesData>(messagesQueryKey(topicId))
+      ?.pages ?? []),
+    queryClient.getQueryData<MessageProps[]>(mediaMessagesQueryKey(topicId)),
+    ...queryClient
+      .getQueriesData<MessageProps[]>({ queryKey: ["thread", topicId] })
+      .map(([, data]) => data),
+  ];
+  for (const list of lists) {
+    const found = list?.find((m) => m.id === messageId);
+    if (found) return found;
+  }
 }
 
 function singleMessageQueryKey(messageId: string) {

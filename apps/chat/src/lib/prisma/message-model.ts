@@ -221,41 +221,20 @@ export const messageModel = {
     topicId,
     userId,
     select,
-    since = "allTime",
+    since,
   }: MessageArgs & {
     requestingUserId?: string;
     userId?: string;
-    since?: "month" | "allTime";
+    since?: Date;
   }) {
     if (!topicId || !requestingUserId) return [];
-
-    let createdAt: { gte: Date } | undefined;
-
-    let daysAgo: number | undefined;
-    switch (since) {
-      case "month":
-        daysAgo = 30;
-        break;
-      case "allTime":
-      default:
-        daysAgo = undefined;
-        break;
-    }
-
-    if (daysAgo !== undefined) {
-      const from = new Date();
-      from.setDate(from.getDate() - daysAgo);
-      createdAt = {
-        gte: from,
-      };
-    }
 
     const messages = await prismaClient.message.findMany({
       select,
       where: {
         topicId,
         userId,
-        createdAt,
+        createdAt: since ? { gte: since } : undefined,
       },
       take: TOP_HIGHLIGHTS_LIMIT,
       orderBy: [

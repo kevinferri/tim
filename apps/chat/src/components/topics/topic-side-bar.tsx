@@ -8,7 +8,10 @@ import {
   StarIcon,
 } from "@radix-ui/react-icons";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TopHighlights } from "@/components/topics/top-highlights";
+import {
+  TopHighlights,
+  TopHighlightsHeader,
+} from "@/components/topics/top-highlights";
 import { MediaList } from "@/components/topics/media-list";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CircleMembersList } from "@/components/topics/circle-members-list";
@@ -68,12 +71,7 @@ export function TopicSideBar() {
       icon: <PersonIcon />,
     },
     highlights: {
-      header: (
-        <div className="flex items-center justify-center gap-1">
-          <span>Top highlights</span>
-          <span className="text-xs text-muted-foreground">(monthly)</span>
-        </div>
-      ),
+      header: <TopHighlightsHeader />,
       node: <TopHighlights />,
       icon: <StarIcon />,
     },

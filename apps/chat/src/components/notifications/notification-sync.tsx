@@ -3,8 +3,13 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { NotificationType } from "@tim/socket-types";
-import { Highlight, User } from "@prisma/client";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import {
+  HighlightAddedPayload,
+  HighlightRemovedPayload,
+  withHighlightAdded,
+  withHighlightRemoved,
+} from "@/components/topics/provider/topic-query-cache";
 import { playHighlightChime } from "@/lib/sounds";
 import { bumpTitleBadge } from "@/lib/title-badges";
 import {
@@ -46,26 +51,25 @@ export function NotificationSync() {
 
   // Only arrives for the topic you're in, or for your own toggles elsewhere --
   // other topics' notifications may lag, which is fine.
-  useSocketHandler<{ highlight: Highlight; createdBy: User }>(
+  useSocketHandler<HighlightAddedPayload>(
     SocketEvent.AddedHighlight,
-    ({ highlight, createdBy }) => {
-      updateNotificationMessages(queryClient, highlight.messageId, (m) => ({
-        ...m,
-        highlights: [
-          ...(m.highlights ?? []),
-          { id: highlight.id, userId: highlight.userId, createdBy },
-        ],
-      }));
+    (payload) => {
+      updateNotificationMessages(
+        queryClient,
+        payload.highlight.messageId,
+        withHighlightAdded(payload),
+      );
     },
   );
 
-  useSocketHandler<{ messageId: string; userId: string }>(
+  useSocketHandler<HighlightRemovedPayload>(
     SocketEvent.RemovedHighlight,
-    ({ messageId, userId }) => {
-      updateNotificationMessages(queryClient, messageId, (m) => ({
-        ...m,
-        highlights: (m.highlights ?? []).filter((h) => h.userId !== userId),
-      }));
+    (payload) => {
+      updateNotificationMessages(
+        queryClient,
+        payload.messageId,
+        withHighlightRemoved(payload),
+      );
     },
   );
 

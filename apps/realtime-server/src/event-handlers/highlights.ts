@@ -53,7 +53,11 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
       if (highlight) {
         const createdBy = await getUserSummary({ userId: highlight.userId });
 
-        broadcast(SocketEvent.AddedHighlight, { highlight, createdBy });
+        broadcast(SocketEvent.AddedHighlight, {
+          highlight,
+          createdBy,
+          topicId: payload.topicId,
+        });
 
         await emitNotification({
           ...notificationPayload,
@@ -66,6 +70,7 @@ export function handleToggleHighlight({ socket, server }: HandlerArgs) {
       broadcast(SocketEvent.RemovedHighlight, {
         messageId: payload.messageId,
         userId: socket.data.user.id,
+        topicId: payload.topicId,
       });
 
       await emitNotification({

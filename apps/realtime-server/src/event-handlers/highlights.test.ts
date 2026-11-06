@@ -64,6 +64,7 @@ describe("handleToggleHighlight", () => {
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.AddedHighlight, {
       highlight: { id: "h1", userId: "user-1", messageId: "msg-1" },
       createdBy: { id: "user-1", imageUrl: "img", name: "Test User" },
+      topicId: "topic-1",
     });
     expect(emitNotification).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -88,6 +89,7 @@ describe("handleToggleHighlight", () => {
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.RemovedHighlight, {
       messageId: "msg-1",
       userId: "user-1",
+      topicId: "topic-1",
     });
     expect(emitNotification).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -137,6 +139,7 @@ describe("handleToggleHighlight", () => {
     const added = {
       highlight: { id: "h1", userId: "user-1", messageId: "msg-1" },
       createdBy: { id: "user-1" },
+      topicId: "topic-1",
     };
     expect(server.to).toHaveBeenCalledWith("topic::topic-1");
     expect(server.emit).toHaveBeenCalledWith(SocketEvent.AddedHighlight, added);
