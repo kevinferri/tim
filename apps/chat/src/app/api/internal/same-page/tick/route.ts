@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { prismaClient } from "@/lib/prisma/client";
 import {
@@ -12,6 +13,13 @@ import {
 } from "@/lib/same-page/same-page-model";
 import type { SamePageAlertPayload } from "@tim/socket-types";
 
+function bearerMatches(token: string, expected: string): boolean {
+  const a = Buffer.from(token);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 /**
  * Called by realtime-server's Same Page scheduler once a minute.
  * Auth: Bearer JWT_SECRET (shared between the two apps).
@@ -20,8 +28,10 @@ import type { SamePageAlertPayload } from "@tim/socket-types";
 export async function POST(request: Request) {
   const auth = request.headers.get("authorization");
   const expected = process.env.JWT_SECRET?.trim();
-  const token = auth?.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : null;
-  if (!expected || !token || token !== expected) {
+  const token = auth?.startsWith("Bearer ")
+    ? auth.slice("Bearer ".length).trim()
+    : null;
+  if (!expected || !token || !bearerMatches(token, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,18 +59,20 @@ export async function POST(request: Request) {
     // Play window: ensure round + one-shot prompt ping (catches late starts).
     if (phase === "play") {
       const round = await ensureTodayRound(circle.id, now);
-      if (round && !round.promptNotifiedAt) {
-        await prismaClient.samePageRound.update({
-          where: { id: round.id },
+      if (round) {
+        const claimed = await prismaClient.samePageRound.updateMany({
+          where: { id: round.id, promptNotifiedAt: null },
           data: { promptNotifiedAt: now },
         });
-        alerts.push({
-          circleId: circle.id,
-          kind: "prompt",
-          gameDate,
-          prompt: round.prompt,
-          userIds: memberIds,
-        });
+        if (claimed.count > 0) {
+          alerts.push({
+            circleId: circle.id,
+            kind: "prompt",
+            gameDate,
+            prompt: round.prompt,
+            userIds: memberIds,
+          });
+        }
       }
     }
 
@@ -72,26 +84,28 @@ export async function POST(request: Request) {
         },
         include: { answers: { select: { userId: true } } },
       });
-      if (round && !round.nudgeNotifiedAt) {
-        await prismaClient.samePageRound.update({
-          where: { id: round.id },
+      if (round) {
+        const claimed = await prismaClient.samePageRound.updateMany({
+          where: { id: round.id, nudgeNotifiedAt: null },
           data: { nudgeNotifiedAt: now },
         });
-        const answered = new Set(round.answers.map((a) => a.userId));
-        const pending = memberIds.filter((id) => !answered.has(id));
-        if (pending.length > 0) {
-          alerts.push({
-            circleId: circle.id,
-            kind: "nudge",
-            gameDate,
-            prompt: round.prompt,
-            userIds: pending,
-          });
+        if (claimed.count > 0) {
+          const answered = new Set(round.answers.map((a) => a.userId));
+          const pending = memberIds.filter((id) => !answered.has(id));
+          if (pending.length > 0) {
+            alerts.push({
+              circleId: circle.id,
+              kind: "nudge",
+              gameDate,
+              prompt: round.prompt,
+              userIds: pending,
+            });
+          }
         }
       }
     }
 
-    // 4pm+: reveal once + notify everyone.
+    // 4pm+: reveal once + notify everyone (only the claimer emits).
     if (hour >= 16) {
       const round = await prismaClient.samePageRound.findUnique({
         where: {
@@ -99,14 +113,16 @@ export async function POST(request: Request) {
         },
       });
       if (round && !round.revealedAt) {
-        await revealRound(round.id, now);
-        alerts.push({
-          circleId: circle.id,
-          kind: "reveal",
-          gameDate,
-          prompt: round.prompt,
-          userIds: memberIds,
-        });
+        const result = await revealRound(round.id, now);
+        if (result?.newlyRevealed) {
+          alerts.push({
+            circleId: circle.id,
+            kind: "reveal",
+            gameDate,
+            prompt: round.prompt,
+            userIds: memberIds,
+          });
+        }
       }
     }
   }

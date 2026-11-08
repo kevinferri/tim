@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@/lib/prisma/client";
 import { getEstGameDate, getSamePagePhase } from "@/lib/same-page/est-day";
 import {
@@ -35,33 +36,28 @@ async function ensureRound(circleId: string, now = new Date()) {
   if (phase === "closed") return null;
 
   const gameDate = getEstGameDate(now);
-  const existing = await prismaClient.samePageRound.findUnique({
+  // Upsert so concurrent 6am openers don't race on @@unique([circleId, gameDate]).
+  const round = await prismaClient.samePageRound.upsert({
     where: { circleId_gameDate: { circleId, gameDate } },
-  });
-  if (existing) {
-    if (phase === "results" && !existing.revealedAt) {
-      return revealRound(existing.id, now);
-    }
-    return existing;
-  }
-
-  const created = await prismaClient.samePageRound.create({
-    data: {
+    create: {
       circleId,
       gameDate,
       prompt: pickPrompt(circleId, gameDate),
       revealedAt: null,
     },
+    update: {},
   });
-  if (phase === "results") {
-    return (await revealRound(created.id, now)) ?? created;
+
+  if (phase === "results" && !round.revealedAt) {
+    const revealed = await revealRound(round.id, now);
+    return revealed?.round ?? round;
   }
-  return created;
+  return round;
 }
 
 /**
  * Apply reveal once: cluster matches, award Sock, update lifetime stats/streaks.
- * Idempotent via revealedAt.
+ * Idempotent via revealedAt. `newlyRevealed` is true only for the caller that claimed it.
  */
 export async function revealRound(roundId: string, now = new Date()) {
   const round = await prismaClient.samePageRound.findUnique({
@@ -72,7 +68,7 @@ export async function revealRound(roundId: string, now = new Date()) {
     },
   });
   if (!round) return null;
-  if (round.revealedAt) return round;
+  if (round.revealedAt) return { round, newlyRevealed: false };
 
   const answers = round.answers as AnswerRow[];
   const byCluster = clusterAnswers(answers);
@@ -86,6 +82,7 @@ export async function revealRound(roundId: string, now = new Date()) {
 
   const memberIds = round.circle.members.map((m) => m.id);
 
+  let newlyRevealed = false;
   await prismaClient.$transaction(async (tx) => {
     // Claim reveal first so concurrent callers don't double-apply stats.
     const claimed = await tx.samePageRound.updateMany({
@@ -93,6 +90,7 @@ export async function revealRound(roundId: string, now = new Date()) {
       data: { revealedAt: now },
     });
     if (claimed.count === 0) return;
+    newlyRevealed = true;
 
     const currentSock = await tx.samePageSock.findUnique({
       where: { circleId: round.circleId },
@@ -220,7 +218,11 @@ export async function revealRound(roundId: string, now = new Date()) {
     }
   });
 
-  return prismaClient.samePageRound.findUnique({ where: { id: roundId } });
+  const updated = await prismaClient.samePageRound.findUnique({
+    where: { id: roundId },
+  });
+  if (!updated) return null;
+  return { round: updated, newlyRevealed };
 }
 
 export async function getGamesBadge({
@@ -476,20 +478,31 @@ export async function submitSamePageAnswer({
     if (!member) throw new Error("Called match must be a circle member");
   }
 
-  return prismaClient.samePageAnswer.create({
-    data: {
-      roundId: round.id,
-      userId,
-      text: text.trim(),
-      matchKey: toMatchKey(text),
-      calledUserId: calledUserId ?? null,
-    },
-    include: {
-      calledUser: {
-        select: { id: true, displayName: true, name: true, imageUrl: true },
+  try {
+    return await prismaClient.samePageAnswer.create({
+      data: {
+        roundId: round.id,
+        userId,
+        text: text.trim(),
+        matchKey: toMatchKey(text),
+        calledUserId: calledUserId ?? null,
       },
-    },
-  });
+      include: {
+        calledUser: {
+          select: { id: true, displayName: true, name: true, imageUrl: true },
+        },
+      },
+    });
+  } catch (err) {
+    // Concurrent double-submit loses the unique race — treat as locked.
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      throw new Error("Answer is locked and cannot be changed");
+    }
+    throw err;
+  }
 }
 
 export async function markResultsViewed({
