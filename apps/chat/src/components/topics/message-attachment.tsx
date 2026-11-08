@@ -60,6 +60,11 @@ const RESULT_RENDERERS: Partial<
   [CommandName.EightBall]: ({ content, createdAt }) => (
     <EightBallResult content={content} createdAt={createdAt} />
   ),
+  [CommandName.SamePage]: ({ content }) => (
+    <AttachmentFrame fit>
+      <div className="px-3 py-2.5 text-sm whitespace-pre-wrap">{content}</div>
+    </AttachmentFrame>
+  ),
 };
 
 export function isResultCommand(name?: CommandName) {

@@ -36,4 +36,16 @@ export const notificationCopyMap: Record<
     text: "replied to your message",
     icon: <ReplyIcon />,
   },
+  [NotificationType.SamePagePrompt]: {
+    text: "Same Page prompt is live",
+    icon: <span aria-hidden>🧦</span>,
+  },
+  [NotificationType.SamePageNudge]: {
+    text: "Same Page locks soon — still time to answer",
+    icon: <span aria-hidden>🧦</span>,
+  },
+  [NotificationType.SamePageReveal]: {
+    text: "Same Page results are in",
+    icon: <span aria-hidden>🧦</span>,
+  },
 };

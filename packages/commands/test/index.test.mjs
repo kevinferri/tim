@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CommandName, toCommandName } from "../dist/index.js";
+import {
+  CommandName,
+  parseCommand,
+  parseSamePageSubcommand,
+  toCommandName,
+} from "../dist/index.js";
 
 test("toCommandName returns the CommandName for every known value", () => {
   for (const name of Object.values(CommandName)) {
@@ -19,4 +24,19 @@ test("toCommandName returns undefined for unknown values", () => {
 test("toCommandName returns undefined for null and undefined", () => {
   assert.equal(toCommandName(null), undefined);
   assert.equal(toCommandName(undefined), undefined);
+});
+
+test("parseCommand recognizes /samepage", () => {
+  const parsed = parseCommand("/samepage play");
+  assert.equal(parsed?.name, CommandName.SamePage);
+  assert.equal(parsed?.prompt, "play");
+});
+
+test("parseSamePageSubcommand maps tokens and default", () => {
+  assert.equal(parseSamePageSubcommand("play"), "play");
+  assert.equal(parseSamePageSubcommand("results extra"), "results");
+  assert.equal(parseSamePageSubcommand("standings"), "standings");
+  assert.equal(parseSamePageSubcommand("sock"), "sock");
+  assert.equal(parseSamePageSubcommand(""), "default");
+  assert.equal(parseSamePageSubcommand("whatever"), "default");
 });

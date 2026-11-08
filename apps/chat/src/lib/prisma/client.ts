@@ -48,7 +48,14 @@ const createClient = () => {
   });
 };
 
-if (!global.prismaClient) {
+// After `prisma generate` adds models, a hot-reloaded Next process can still
+// hold an old client on globalThis. Rebuild if Same Page models are missing.
+const cached = global.prismaClient;
+const cacheIsStale =
+  cached &&
+  typeof (cached as { samePageRound?: unknown }).samePageRound === "undefined";
+
+if (!cached || cacheIsStale) {
   global.prismaClient = createClient();
 }
 
