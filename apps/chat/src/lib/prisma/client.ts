@@ -52,10 +52,10 @@ const createClient = () => {
 // hold an old client on globalThis. Rebuild if Same Page models are missing.
 const cached = global.prismaClient;
 const cacheIsStale =
-  cached &&
+  !!cached &&
   typeof (cached as { samePageRound?: unknown }).samePageRound === "undefined";
 
-if (!cached || cacheIsStale) {
+if (!global.prismaClient || cacheIsStale) {
   global.prismaClient = createClient();
 }
 

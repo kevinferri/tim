@@ -60,7 +60,8 @@ const COMMAND_DESCRIPTIONS: Record<CommandName, string> = {
   [CommandName.Youtube]: "Share a YouTube video",
   [CommandName.Roll]: "Roll a die",
   [CommandName.EightBall]: "Ask the magic 8-ball a question",
-  [CommandName.SamePage]: "Same Page daily game (play, results, standings, sock)",
+  [CommandName.SamePage]:
+    "Same Page daily game (play, results, standings, sock)",
 };
 
 // Kept separate from COMMAND_DESCRIPTIONS so usage examples aren't crammed into descriptive prose.
@@ -74,11 +75,7 @@ const COMMAND_USAGE: Record<CommandName, string> = {
 };
 
 export type SamePageSubcommand =
-  | "play"
-  | "results"
-  | "standings"
-  | "sock"
-  | "default";
+  "play" | "results" | "standings" | "sock" | "default";
 
 export function parseSamePageSubcommand(prompt: string): SamePageSubcommand {
   const token = prompt.trim().split(/\s+/)[0]?.toLowerCase();
