@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 import { SAME_PAGE_PROMPTS, pickPrompt } from "@/lib/same-page/prompts";
 
 describe("pickPrompt", () => {
+  it("has at least a year of weekday prompts", () => {
+    expect(SAME_PAGE_PROMPTS.length).toBeGreaterThanOrEqual(260);
+  });
+
+  it("has no duplicate prompts", () => {
+    expect(new Set(SAME_PAGE_PROMPTS).size).toBe(SAME_PAGE_PROMPTS.length);
+  });
+
   it("is stable for the same circle and date", () => {
     expect(pickPrompt("circle-a", "2026-11-10")).toBe(
       pickPrompt("circle-a", "2026-11-10"),
