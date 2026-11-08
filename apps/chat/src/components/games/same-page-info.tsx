@@ -86,8 +86,8 @@ export function SamePageInfoButton({ className, stopPropagation }: Props) {
               <h3 className="font-medium">Standings</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Lifetime stats never reset: played, streaks, match rate, call
-                accuracy, and how often you’ve worn the Sock. Miss a weekday
-                and your streak resets; weekends don’t count.
+                accuracy, and how often you’ve worn the Sock. Miss a weekday and
+                your streak resets; weekends don’t count.
               </p>
             </section>
           </div>

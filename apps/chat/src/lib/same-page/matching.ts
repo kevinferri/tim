@@ -57,9 +57,7 @@ function levenshtein(a: string, b: string): number {
     let prev = i + 1;
     for (let j = 0; j < b.length; j++) {
       const cur =
-        a[i] === b[j]
-          ? row[j]
-          : 1 + Math.min(row[j], row[j + 1], prev);
+        a[i] === b[j] ? row[j] : 1 + Math.min(row[j], row[j + 1], prev);
       row[j] = prev;
       prev = cur;
     }
@@ -144,10 +142,7 @@ export function clusterMatchKeys(texts: string[]): Map<string, string> {
 }
 
 export function countWords(text: string): number {
-  return text
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
 export function isValidAnswerText(text: string): boolean {

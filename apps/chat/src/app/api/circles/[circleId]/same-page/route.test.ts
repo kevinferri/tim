@@ -17,12 +17,19 @@ vi.mock("@/lib/same-page/same-page-model", () => ({
   getStandings: vi.fn(),
   markResultsViewed: vi.fn(),
   submitSamePageAnswer: vi.fn(),
+  SamePageValidationError: class SamePageValidationError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "SamePageValidationError";
+    }
+  },
 }));
 
 import { getLoggedInUserId } from "@/lib/session";
 import { prismaClient } from "@/lib/prisma/client";
 import {
   getSamePageState,
+  SamePageValidationError,
   submitSamePageAnswer,
 } from "@/lib/same-page/same-page-model";
 import { GET, POST } from "./route";
@@ -118,13 +125,13 @@ describe("POST /api/circles/[circleId]/same-page", () => {
     });
   });
 
-  it("maps model errors to 400", async () => {
+  it("maps validation errors to 400", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
       id: circleId,
     } as any);
     vi.mocked(submitSamePageAnswer).mockRejectedValue(
-      new Error("Answer is locked and cannot be changed"),
+      new SamePageValidationError("Answer is locked and cannot be changed"),
     );
 
     const res = await POST(
@@ -139,5 +146,26 @@ describe("POST /api/circles/[circleId]/same-page", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Answer is locked and cannot be changed",
     });
+  });
+
+  it("maps unexpected errors to a generic 500", async () => {
+    vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
+    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
+      id: circleId,
+    } as any);
+    vi.mocked(submitSamePageAnswer).mockRejectedValue(
+      new Error("prisma exploded: connection refused"),
+    );
+
+    const res = await POST(
+      new Request("http://localhost/api", {
+        method: "POST",
+        body: JSON.stringify({ action: "answer", text: "Survivor" }),
+      }),
+      ctx,
+    );
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: "Request failed" });
   });
 });

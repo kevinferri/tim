@@ -7,10 +7,7 @@ import {
   getSamePagePhase,
   isSamePageActiveDay,
 } from "@/lib/same-page/est-day";
-import {
-  ensureTodayRound,
-  revealRound,
-} from "@/lib/same-page/same-page-model";
+import { ensureTodayRound, revealRound } from "@/lib/same-page/same-page-model";
 import type { SamePageAlertPayload } from "@tim/socket-types";
 
 function bearerMatches(token: string, expected: string): boolean {

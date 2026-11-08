@@ -16,9 +16,9 @@ vi.mock("@/lib/same-page/same-page-model", () => ({
 }));
 
 vi.mock("@/lib/same-page/est-day", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/same-page/est-day")>(
-    "@/lib/same-page/est-day",
-  );
+  const actual = await vi.importActual<
+    typeof import("@/lib/same-page/est-day")
+  >("@/lib/same-page/est-day");
   return {
     ...actual,
     isSamePageActiveDay: vi.fn(),
@@ -29,10 +29,7 @@ vi.mock("@/lib/same-page/est-day", async () => {
 });
 
 import { prismaClient } from "@/lib/prisma/client";
-import {
-  ensureTodayRound,
-  revealRound,
-} from "@/lib/same-page/same-page-model";
+import { ensureTodayRound, revealRound } from "@/lib/same-page/same-page-model";
 import {
   getEstGameDate,
   getEstHour,

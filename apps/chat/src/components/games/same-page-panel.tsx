@@ -206,10 +206,7 @@ export function SamePagePanel({ circleId, view, onViewChange }: Props) {
 }
 
 function countAnswerWords(value: string) {
-  return value
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
+  return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
 function PlayPromptHeader({
@@ -326,11 +323,7 @@ function PlayView({
             e.preventDefault();
             if (!text.trim() || submitting || overWordLimit) return;
             // Enter-to-submit habit: don't lock without a call unless they confirm.
-            if (
-              !calledUserId &&
-              data.members.length > 0 &&
-              !confirmNoCall
-            ) {
+            if (!calledUserId && data.members.length > 0 && !confirmNoCall) {
               onRequestConfirmNoCall();
               return;
             }
@@ -339,18 +332,13 @@ function PlayView({
         >
           <div className="space-y-2">
             <div className="flex items-baseline justify-between gap-2">
-              <label
-                className="text-sm font-medium"
-                htmlFor="same-page-answer"
-              >
+              <label className="text-sm font-medium" htmlFor="same-page-answer">
                 Your answer
               </label>
               <span
                 className={cn(
                   "text-xs tabular-nums",
-                  overWordLimit
-                    ? "text-destructive"
-                    : "text-muted-foreground",
+                  overWordLimit ? "text-destructive" : "text-muted-foreground",
                 )}
               >
                 {words}/3 words
@@ -394,9 +382,7 @@ function PlayView({
                           ? "border-foreground bg-foreground text-background"
                           : "border-border bg-background hover:bg-muted",
                       )}
-                      onClick={() =>
-                        setCalledUserId(selected ? null : m.id)
-                      }
+                      onClick={() => setCalledUserId(selected ? null : m.id)}
                       aria-pressed={selected}
                     >
                       {m.displayName}
@@ -477,8 +463,7 @@ function ResultsView({ data }: { data: SamePageState }) {
     <>
       {!data.myAnswer && (
         <div className="text-sm text-muted-foreground">
-          You missed today’s round — streak ended. Here’s how everyone else
-          did.
+          You missed today’s round — streak ended. Here’s how everyone else did.
         </div>
       )}
 

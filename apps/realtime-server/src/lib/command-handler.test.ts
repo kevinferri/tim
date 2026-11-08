@@ -159,9 +159,9 @@ describe("executeCommand 8ball", () => {
 });
 
 describe("CommandName", () => {
-  it("covers giphy, youtube, tim, roll, and 8ball", () => {
+  it("covers giphy, youtube, tim, roll, 8ball, and samepage", () => {
     expect(Object.values(CommandName).sort()).toEqual(
-      ["8ball", "giphy", "roll", "tim", "youtube"].sort(),
+      ["8ball", "giphy", "roll", "samepage", "tim", "youtube"].sort(),
     );
   });
 });

@@ -7,6 +7,7 @@ import {
   getSockStatus,
   getStandings,
   markResultsViewed,
+  SamePageValidationError,
   submitSamePageAnswer,
 } from "@/lib/same-page/same-page-model";
 import { badRequest, unauthorized } from "@/app/api/error-responses";
@@ -88,7 +89,14 @@ export async function POST(request: Request, context: RouteContext) {
 
     return badRequest;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Request failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+    // Name check so mocked modules still classify validation errors correctly.
+    if (
+      err instanceof SamePageValidationError ||
+      (err instanceof Error && err.name === "SamePageValidationError")
+    ) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    console.error("[same-page] request failed", err);
+    return NextResponse.json({ error: "Request failed" }, { status: 500 });
   }
 }

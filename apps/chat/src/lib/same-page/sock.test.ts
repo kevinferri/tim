@@ -3,9 +3,9 @@ import { pickSockWinner } from "./sock";
 
 describe("pickSockWinner", () => {
   it("awards the Sock when exactly one player is alone and ≥3 answered", () => {
-    expect(
-      pickSockWinner({ answerCount: 5, aloneUserIds: ["alone-1"] }),
-    ).toBe("alone-1");
+    expect(pickSockWinner({ answerCount: 5, aloneUserIds: ["alone-1"] })).toBe(
+      "alone-1",
+    );
   });
 
   it("does not move when 2+ are alone", () => {

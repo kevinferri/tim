@@ -1,10 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  SocketEvent,
-  useSocketHandler,
-} from "@/components/socket/use-socket";
+import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useGamesUiStore } from "@/components/games/games-ui-store";

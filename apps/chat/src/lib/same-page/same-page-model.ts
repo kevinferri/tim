@@ -11,6 +11,14 @@ import { pickSockWinner } from "@/lib/same-page/sock";
 
 export type GamesBadge = "play" | "results" | null;
 
+/** User-facing Same Page errors safe to return as HTTP 400 bodies. */
+export class SamePageValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SamePageValidationError";
+  }
+}
+
 type AnswerRow = {
   id: string;
   userId: string;
@@ -171,8 +179,7 @@ export async function revealRound(roundId: string, now = new Date()) {
       )!;
       const matchedOthers = cluster.length - 1;
       const calledIt = !!(
-        mine.calledUserId &&
-        cluster.some((a) => a.userId === mine.calledUserId)
+        mine.calledUserId && cluster.some((a) => a.userId === mine.calledUserId)
       );
 
       const existing = await tx.samePagePlayerStats.findUnique({
@@ -388,8 +395,7 @@ async function buildResults(roundId: string, userId: string) {
   const othersMatched = myCluster.filter((a) => a.userId !== userId).length;
   const othersTotal = answers.length - (mine ? 1 : 0);
   const calledIt = !!(
-    mine?.calledUserId &&
-    myCluster.some((a) => a.userId === mine.calledUserId)
+    mine?.calledUserId && myCluster.some((a) => a.userId === mine.calledUserId)
   );
   const alone = !!mine && myCluster.length === 1;
   const samePage = answers.length > 0 && byCluster.size === 1;
@@ -448,25 +454,27 @@ export async function submitSamePageAnswer({
   now?: Date;
 }) {
   if (getSamePagePhase(now) !== "play") {
-    throw new Error("Same Page is not open for answers right now");
+    throw new SamePageValidationError(
+      "Same Page is not open for answers right now",
+    );
   }
   if (!isValidAnswerText(text)) {
-    throw new Error("Answer must be 1–3 words");
+    throw new SamePageValidationError("Answer must be 1–3 words");
   }
 
   const round = await ensureRound(circleId, now);
-  if (!round) throw new Error("No round today");
+  if (!round) throw new SamePageValidationError("No round today");
 
   const existing = await prismaClient.samePageAnswer.findUnique({
     where: { roundId_userId: { roundId: round.id, userId } },
   });
   if (existing) {
-    throw new Error("Answer is locked and cannot be changed");
+    throw new SamePageValidationError("Answer is locked and cannot be changed");
   }
 
   if (calledUserId) {
     if (calledUserId === userId) {
-      throw new Error("Cannot call yourself");
+      throw new SamePageValidationError("Cannot call yourself");
     }
     const member = await prismaClient.circle.findFirst({
       where: {
@@ -475,7 +483,9 @@ export async function submitSamePageAnswer({
       },
       select: { id: true },
     });
-    if (!member) throw new Error("Called match must be a circle member");
+    if (!member) {
+      throw new SamePageValidationError("Called match must be a circle member");
+    }
   }
 
   try {
@@ -499,7 +509,9 @@ export async function submitSamePageAnswer({
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      throw new Error("Answer is locked and cannot be changed");
+      throw new SamePageValidationError(
+        "Answer is locked and cannot be changed",
+      );
     }
     throw err;
   }
