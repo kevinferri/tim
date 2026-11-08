@@ -1,9 +1,7 @@
 /**
- * Curated prompt bank. Picked by hashing circleId+gameDate so the same
- * circle gets a stable daily prompt without a writer, and never repeats
- * within the bank length for that circle (simple index walk).
- *
- * Wording: invite a short answer ("Name a…") rather than bare noun phrases.
+ * Curated prompt bank. Each circle walks the bank by calendar day so the
+ * same circle+date always gets the same prompt, consecutive days differ,
+ * and nothing repeats until the bank wraps.
  */
 
 export const SAME_PAGE_PROMPTS = [
@@ -44,7 +42,16 @@ function hashString(input: string): number {
   return h;
 }
 
+/** Absolute day number for a YYYY-MM-DD civil date (UTC noon-safe ordinal). */
+function dayOrdinal(gameDate: string): number {
+  const [y, m, d] = gameDate.split("-").map(Number);
+  return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
+}
+
 export function pickPrompt(circleId: string, gameDate: string): string {
-  const idx = hashString(`${circleId}:${gameDate}`) % SAME_PAGE_PROMPTS.length;
+  const n = SAME_PAGE_PROMPTS.length;
+  // Per-circle phase so circles don't all share the same sequence.
+  const offset = hashString(circleId) % n;
+  const idx = (offset + dayOrdinal(gameDate)) % n;
   return SAME_PAGE_PROMPTS[idx];
 }
