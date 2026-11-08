@@ -7,8 +7,10 @@ import {
 } from "./matching";
 import {
   getEstGameDate,
+  getEstHour,
   getSamePagePhase,
   isEstWeekday,
+  isSamePageActiveDay,
 } from "./est-day";
 
 describe("toMatchKey / answersMatch", () => {
@@ -98,5 +100,19 @@ describe("est-day phase", () => {
     process.env.SAME_PAGE_FORCE_PHASE = "play";
     const sat = new Date("2026-11-07T20:00:00.000Z");
     expect(getSamePagePhase(sat)).toBe("play");
+  });
+
+  it("treats forced play/results as active scheduler days", () => {
+    process.env.SAME_PAGE_FORCE_PHASE = "play";
+    const sat = new Date("2026-11-07T20:00:00.000Z");
+    expect(isSamePageActiveDay(sat)).toBe(true);
+
+    process.env.SAME_PAGE_FORCE_PHASE = "closed";
+    expect(isSamePageActiveDay(sat)).toBe(false);
+  });
+
+  it("honors SAME_PAGE_FORCE_HOUR for scheduler hour checks", () => {
+    process.env.SAME_PAGE_FORCE_HOUR = "14";
+    expect(getEstHour(new Date("2026-11-09T15:00:00.000Z"))).toBe(14);
   });
 });
