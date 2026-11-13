@@ -134,12 +134,11 @@ export function GameRoomSheet({ circleId, games, comingSoon = [] }: Props) {
 
 function SectionSeparator({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 px-1 pt-1" aria-hidden>
-      <div className="h-px flex-1 bg-border" />
-      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      <div className="h-px flex-1 bg-border" />
+    <div
+      className="px-1 pt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
+      aria-hidden
+    >
+      {label}
     </div>
   );
 }
