@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { parseSamePageSubcommand } from "@tim/commands";
+import { fetchSamePage } from "./api";
 import { openSamePage } from "./view-store";
 
 /**
@@ -20,11 +21,10 @@ export function useSamePageCommand(circleId: string) {
       }
 
       // Default: play if still unanswered during the play window; otherwise results.
-      void fetch(`/api/circles/${circleId}/same-page`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((state: { phase?: string; myAnswer?: unknown } | null) =>
+      void fetchSamePage<{ phase?: string; myAnswer?: unknown }>(circleId)
+        .then((state) =>
           openSamePage(
-            state?.phase === "play" && !state.myAnswer ? "play" : "results",
+            state.phase === "play" && !state.myAnswer ? "play" : "results",
           ),
         )
         .catch(() => openSamePage("play"));

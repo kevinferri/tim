@@ -17,6 +17,14 @@ import {
 
 export type GamesBadge = "play" | "results" | null;
 
+// What every Same Page view shows about a person.
+const MEMBER_SELECT = {
+  id: true,
+  displayName: true,
+  name: true,
+  imageUrl: true,
+} as const;
+
 /** User-facing Same Page errors safe to return as HTTP 400 bodies. */
 export class SamePageValidationError extends Error {
   constructor(message: string) {
@@ -332,29 +340,12 @@ export async function getSamePageState({
           },
           include: {
             calledUser: {
-              select: {
-                id: true,
-                displayName: true,
-                name: true,
-                imageUrl: true,
-              },
+              select: MEMBER_SELECT,
             },
           },
         })
       : null,
-    prismaClient.samePageSock.findUnique({
-      where: { circleId },
-      include: {
-        holder: {
-          select: {
-            id: true,
-            displayName: true,
-            name: true,
-            imageUrl: true,
-          },
-        },
-      },
-    }),
+    getSockStatus(circleId),
     prismaClient.samePagePlayerStats.findUnique({
       where: { circleId_userId: { circleId, userId } },
     }),
@@ -379,7 +370,7 @@ export async function getSamePageState({
     where: { id: circleId },
     select: {
       members: {
-        select: { id: true, displayName: true, name: true, imageUrl: true },
+        select: MEMBER_SELECT,
         orderBy: { displayName: "asc" },
       },
     },
@@ -418,10 +409,10 @@ async function buildResults(roundId: string, userId: string) {
     where: { roundId },
     include: {
       user: {
-        select: { id: true, displayName: true, name: true, imageUrl: true },
+        select: MEMBER_SELECT,
       },
       calledUser: {
-        select: { id: true, displayName: true, name: true, imageUrl: true },
+        select: MEMBER_SELECT,
       },
     },
   });
@@ -529,14 +520,11 @@ export async function submitSamePageAnswer({
     if (calledUserId === userId) {
       throw new SamePageValidationError("Cannot call yourself");
     }
-    const member = await prismaClient.circle.findFirst({
-      where: {
-        id: circleId,
-        members: { some: { id: calledUserId } },
-      },
-      select: { id: true },
+    const isMember = await prismaClient.circle.isUserInCircle({
+      circleId,
+      userId: calledUserId,
     });
-    if (!member) {
+    if (!isMember) {
       throw new SamePageValidationError("Called match must be a circle member");
     }
   }
@@ -552,7 +540,7 @@ export async function submitSamePageAnswer({
       },
       include: {
         calledUser: {
-          select: { id: true, displayName: true, name: true, imageUrl: true },
+          select: MEMBER_SELECT,
         },
       },
     });
@@ -593,16 +581,11 @@ export function markResultsViewed(args: ViewedArgs) {
   return markViewed("resultsViewedGameDate", args);
 }
 
-export async function getSockStatus(circleId: string) {
-  const sock = await prismaClient.samePageSock.findUnique({
+export function getSockStatus(circleId: string) {
+  return prismaClient.samePageSock.findUnique({
     where: { circleId },
-    include: {
-      holder: {
-        select: { id: true, displayName: true, name: true, imageUrl: true },
-      },
-    },
+    include: { holder: { select: MEMBER_SELECT } },
   });
-  return sock;
 }
 
 export async function getStandings(circleId: string) {
@@ -610,7 +593,7 @@ export async function getStandings(circleId: string) {
     where: { circleId },
     include: {
       user: {
-        select: { id: true, displayName: true, name: true, imageUrl: true },
+        select: MEMBER_SELECT,
       },
     },
     orderBy: [{ played: "desc" }, { matchedRounds: "desc" }],

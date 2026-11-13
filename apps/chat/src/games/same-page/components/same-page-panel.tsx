@@ -14,6 +14,13 @@ import {
   MoonIcon,
 } from "@radix-ui/react-icons";
 import { gameRoomBadgeQueryKey } from "@/games/game-room";
+import {
+  fetchSamePage,
+  postSamePage,
+  samePageQueryKey,
+  samePageStandingsQueryKey,
+} from "./api";
+import { SAME_PAGE_CLOSE_LABEL, SAME_PAGE_OPEN_LABEL } from "../lib/schedule";
 import { EmptyState } from "./empty-state";
 import { SamePageIcon } from "./same-page-icon";
 import type { SamePageView } from "./view-store";
@@ -82,25 +89,17 @@ type Props = {
   onViewChange: (view: SamePageView) => void;
 };
 
-async function fetchState(circleId: string): Promise<SamePageState> {
-  const res = await fetch(`/api/circles/${circleId}/same-page`);
-  if (!res.ok) throw new Error("Failed to load Same Page");
-  return res.json();
-}
-
 function useSetSamePageEnabled(circleId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (enabled: boolean) => {
-      const res = await fetch(`/api/circles/${circleId}/same-page`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: enabled ? "enable" : "disable" }),
-      });
-      if (!res.ok) throw new Error("Couldn’t update Same Page");
-    },
+    mutationFn: (enabled: boolean) =>
+      postSamePage(circleId, {
+        action: enabled ? "enable" : "disable",
+      }).catch(() => {
+        throw new Error("Couldn’t update Same Page");
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["same-page", circleId] });
+      queryClient.invalidateQueries({ queryKey: samePageQueryKey(circleId) });
       queryClient.invalidateQueries({
         queryKey: gameRoomBadgeQueryKey(circleId),
       });
@@ -124,7 +123,7 @@ function SamePageOff({
         title="Same Page is off for this circle"
         description={
           isAdmin
-            ? "Turning it on sends everyone a prompt each weekday morning, with results at 4pm EST."
+            ? `Turning it on sends everyone a prompt each weekday morning, with results at ${SAME_PAGE_CLOSE_LABEL}.`
             : "The circle’s admin can turn it on."
         }
         action={
@@ -189,8 +188,8 @@ function SettingsView({
 export function SamePagePanel({ circleId, view, onViewChange }: Props) {
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
-    queryKey: ["same-page", circleId],
-    queryFn: () => fetchState(circleId),
+    queryKey: samePageQueryKey(circleId),
+    queryFn: () => fetchSamePage<SamePageState>(circleId),
   });
 
   const [text, setText] = useState("");
@@ -199,23 +198,11 @@ export function SamePagePanel({ circleId, view, onViewChange }: Props) {
   const [confirmNoCall, setConfirmNoCall] = useState(false);
 
   const submit = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/circles/${circleId}/same-page`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "answer",
-          text,
-          calledUserId,
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Submit failed");
-      return body;
-    },
+    mutationFn: () =>
+      postSamePage(circleId, { action: "answer", text, calledUserId }),
     onSuccess: () => {
       setFormError(null);
-      queryClient.invalidateQueries({ queryKey: ["same-page", circleId] });
+      queryClient.invalidateQueries({ queryKey: samePageQueryKey(circleId) });
       queryClient.invalidateQueries({
         queryKey: gameRoomBadgeQueryKey(circleId),
       });
@@ -224,13 +211,8 @@ export function SamePagePanel({ circleId, view, onViewChange }: Props) {
   });
 
   const markViewed = useMutation({
-    mutationFn: async (action: "view-prompt" | "view-results") => {
-      await fetch(`/api/circles/${circleId}/same-page`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-    },
+    mutationFn: (action: "view-prompt" | "view-results") =>
+      postSamePage(circleId, { action }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: gameRoomBadgeQueryKey(circleId),
@@ -362,7 +344,7 @@ function PlayPromptHeader({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>Today’s prompt</span>
-        <span className="tabular-nums">Locks 4pm EST</span>
+        <span className="tabular-nums">Locks {SAME_PAGE_CLOSE_LABEL}</span>
       </div>
       <p className="text-2xl font-semibold leading-snug text-balance">
         {prompt}
@@ -414,7 +396,7 @@ function PlayView({
       <EmptyState
         icon={<MoonIcon />}
         title="Same Page is resting"
-        description="A new prompt drops every weekday at 6am EST."
+        description={`A new prompt drops every weekday at ${SAME_PAGE_OPEN_LABEL}.`}
       />
     );
   }
@@ -461,7 +443,7 @@ function PlayView({
             <p className="text-sm text-muted-foreground">No match called</p>
           )}
           <p className="text-sm text-muted-foreground">
-            Results open at 4pm EST. Hang tight.
+            Results open at {SAME_PAGE_CLOSE_LABEL}. Hang tight.
           </p>
         </div>
       ) : (
@@ -600,7 +582,7 @@ function ResultsView({ data }: { data: EnabledState }) {
     return (
       <EmptyState
         icon={<ClockIcon />}
-        title="Results drop at 4pm EST"
+        title={`Results drop at ${SAME_PAGE_CLOSE_LABEL}`}
         description={`${data.answeredCount} of ${data.memberCount} answered so far.`}
       />
     );
@@ -611,7 +593,7 @@ function ResultsView({ data }: { data: EnabledState }) {
       <EmptyState
         icon={<MoonIcon />}
         title="No round today"
-        description="A new prompt drops every weekday at 6am EST."
+        description={`A new prompt drops every weekday at ${SAME_PAGE_OPEN_LABEL}.`}
       />
     );
   }
@@ -721,13 +703,9 @@ function StandingsView({
   sockHolderId: string | null;
 }) {
   const { data, isLoading } = useQuery({
-    queryKey: ["same-page-standings", circleId],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/circles/${circleId}/same-page?view=standings`,
-      );
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<{
+    queryKey: samePageStandingsQueryKey(circleId),
+    queryFn: () =>
+      fetchSamePage<{
         standings: Array<{
           user: Member;
           played: number;
@@ -739,8 +717,7 @@ function StandingsView({
           socksEarned: number;
           sockDaysHeld: number;
         }>;
-      }>;
-    },
+      }>(circleId, "standings"),
   });
 
   if (isLoading) {

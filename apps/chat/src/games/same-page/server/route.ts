@@ -17,23 +17,28 @@ import { badRequest, unauthorized } from "@/app/api/error-responses";
 
 type RouteContext = { params: Promise<{ circleId: string }> };
 
-async function assertCircleMember(userId: string, circleId: string) {
-  const circle = await prismaClient.circle.findFirst({
-    where: { id: circleId, members: { some: { id: userId } } },
-    select: { id: true },
-  });
-  return !!circle;
+const forbidden = () =>
+  NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+/** The logged-in circle member making the request, or the error response to send. */
+async function authorize(
+  context: RouteContext,
+): Promise<{ userId: string; circleId: string } | { error: Response }> {
+  const userId = await getLoggedInUserId();
+  if (!userId) return { error: unauthorized };
+
+  const { circleId } = await context.params;
+  if (!circleId) return { error: badRequest };
+  if (!(await prismaClient.circle.isUserInCircle({ circleId, userId }))) {
+    return { error: forbidden() };
+  }
+  return { userId, circleId };
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const userId = await getLoggedInUserId();
-  if (!userId) return unauthorized;
-
-  const { circleId } = await context.params;
-  if (!circleId) return badRequest;
-  if (!(await assertCircleMember(userId, circleId))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await authorize(context);
+  if ("error" in auth) return auth.error;
+  const { userId, circleId } = auth;
 
   const url = new URL(request.url);
   const view = url.searchParams.get("view");
@@ -56,14 +61,9 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const userId = await getLoggedInUserId();
-  if (!userId) return unauthorized;
-
-  const { circleId } = await context.params;
-  if (!circleId) return badRequest;
-  if (!(await assertCircleMember(userId, circleId))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await authorize(context);
+  if ("error" in auth) return auth.error;
+  const { userId, circleId } = auth;
 
   const body = (await request.json().catch(() => null)) as {
     action?: string;
@@ -97,7 +97,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (body.action === "enable" || body.action === "disable") {
       if (!(await isCircleAdmin(circleId, userId))) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        return forbidden();
       }
       await setSamePageEnabled(circleId, body.action === "enable");
       return NextResponse.json({ ok: true });

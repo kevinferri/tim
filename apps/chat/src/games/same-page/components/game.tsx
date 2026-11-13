@@ -5,6 +5,7 @@ import { SamePageIcon } from "./same-page-icon";
 import { SamePageInfoButton } from "./same-page-info";
 import { SamePagePanel } from "./same-page-panel";
 import { SAME_PAGE_GAME_ID } from "../lib/game-id";
+import { fetchSamePage } from "./api";
 import { useSamePageViewStore } from "./view-store";
 
 const VIEW_LABELS = {
@@ -27,10 +28,11 @@ function TitleSuffix() {
 }
 
 async function fetchBadge(circleId: string): Promise<GameBadge> {
-  const res = await fetch(`/api/circles/${circleId}/same-page?view=badge`);
-  if (!res.ok) return null;
-  const data = (await res.json()) as { badge: GameBadge };
-  return data.badge;
+  const { badge } = await fetchSamePage<{ badge: GameBadge }>(
+    circleId,
+    "badge",
+  );
+  return badge;
 }
 
 export const samePageGame: GameDefinition = {

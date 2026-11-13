@@ -6,7 +6,7 @@ vi.mock("@/lib/session", () => ({
 
 vi.mock("@/lib/prisma/client", () => ({
   prismaClient: {
-    circle: { findFirst: vi.fn() },
+    circle: { isUserInCircle: vi.fn() },
   },
 }));
 
@@ -55,23 +55,20 @@ describe("GET /api/circles/[circleId]/same-page", () => {
 
   it("returns 403 when the user is not a circle member", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue(null);
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(false);
 
     const res = await GET(new Request("http://localhost/api"), ctx);
 
     expect(res.status).toBe(403);
-    expect(prismaClient.circle.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: circleId, members: { some: { id: "user-1" } } },
-      }),
-    );
+    expect(prismaClient.circle.isUserInCircle).toHaveBeenCalledWith({
+      circleId,
+      userId: "user-1",
+    });
   });
 
   it("returns state for a circle member", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
-      id: circleId,
-    } as any);
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);
     vi.mocked(getSamePageState).mockResolvedValue({
       phase: "play",
     } as any);
@@ -86,7 +83,7 @@ describe("GET /api/circles/[circleId]/same-page", () => {
 describe("POST /api/circles/[circleId]/same-page", () => {
   it("returns 403 for non-members", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue(null);
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(false);
 
     const res = await POST(
       new Request("http://localhost/api", {
@@ -101,9 +98,7 @@ describe("POST /api/circles/[circleId]/same-page", () => {
 
   it("forwards answer action for members", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
-      id: circleId,
-    } as any);
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);
     vi.mocked(submitSamePageAnswer).mockResolvedValue({
       id: "ans-1",
       text: "Survivor",
@@ -132,9 +127,7 @@ describe("POST /api/circles/[circleId]/same-page", () => {
 
   it("maps validation errors to 400", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
-      id: circleId,
-    } as any);
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);
     vi.mocked(submitSamePageAnswer).mockRejectedValue(
       new SamePageValidationError("Answer is locked and cannot be changed"),
     );
@@ -155,9 +148,7 @@ describe("POST /api/circles/[circleId]/same-page", () => {
 
   it("maps unexpected errors to a generic 500", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
-      id: circleId,
-    } as any);
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);
     vi.mocked(submitSamePageAnswer).mockRejectedValue(
       new Error("prisma exploded: connection refused"),
     );
@@ -178,9 +169,7 @@ describe("POST /api/circles/[circleId]/same-page", () => {
     "rejects %s from members who aren't the circle admin",
     async (action) => {
       vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-      vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
-        id: circleId,
-      } as any);
+      vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);
       vi.mocked(isCircleAdmin).mockResolvedValue(false);
 
       const res = await POST(
@@ -201,9 +190,7 @@ describe("POST /api/circles/[circleId]/same-page", () => {
     ["disable", false],
   ] as const)("lets the admin %s Same Page", async (action, enabled) => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
-    vi.mocked(prismaClient.circle.findFirst).mockResolvedValue({
-      id: circleId,
-    } as any);
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);
     vi.mocked(isCircleAdmin).mockResolvedValue(true);
 
     const res = await POST(

@@ -5,6 +5,10 @@ export const SAME_PAGE_OPEN_HOUR = 6;
 export const SAME_PAGE_NUDGE_HOUR = 14;
 export const SAME_PAGE_CLOSE_HOUR = 16;
 
+// Shown to players; keep in sync with the hours above.
+export const SAME_PAGE_OPEN_LABEL = "6am EST";
+export const SAME_PAGE_CLOSE_LABEL = "4pm EST";
+
 export const SAME_PAGE_ALERT_HOURS = [
   SAME_PAGE_OPEN_HOUR,
   SAME_PAGE_NUDGE_HOUR,

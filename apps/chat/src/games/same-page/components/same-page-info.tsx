@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { SAME_PAGE_CLOSE_LABEL, SAME_PAGE_OPEN_LABEL } from "../lib/schedule";
 
 type Props = {
   className?: string;
@@ -48,10 +49,10 @@ export function SamePageInfoButton({ className, stopPropagation }: Props) {
             <section className="space-y-1.5">
               <h3 className="font-medium">How to Play</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Weekdays only. A prompt drops at 6am EST. Answer in 3 words or
-                fewer, optionally call who you think matched you, then lock it
-                in. Answers can’t be changed. Results reveal together at 4pm
-                EST.
+                Weekdays only. A prompt drops at {SAME_PAGE_OPEN_LABEL}. Answer
+                in 3 words or fewer, optionally call who you think matched you,
+                then lock it in. Answers can’t be changed. Results reveal
+                together at {SAME_PAGE_CLOSE_LABEL}.
               </p>
             </section>
 

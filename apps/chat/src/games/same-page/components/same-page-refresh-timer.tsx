@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { notificationsQueryKey } from "@/components/notifications/notification-query-cache";
 import { gameRoomBadgeQueryKey } from "@/games/game-room";
 import { getNextAlertAt } from "../lib/est-day";
+import { samePageQueryKey } from "./api";
 
 // Spread tabs out and give the server's cron run time to finish first.
 const MIN_DELAY_MS = 30_000;
@@ -32,7 +33,7 @@ export function SamePageRefreshTimer() {
         // Prefix match: also refreshes the unread count.
         queryClient.invalidateQueries({ queryKey: notificationsQueryKey });
         queryClient.invalidateQueries({ queryKey: gameRoomBadgeQueryKey() });
-        queryClient.invalidateQueries({ queryKey: ["same-page"] });
+        queryClient.invalidateQueries({ queryKey: samePageQueryKey() });
         schedule();
       }, delay);
     };
