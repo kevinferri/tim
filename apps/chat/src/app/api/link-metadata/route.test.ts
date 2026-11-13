@@ -23,12 +23,12 @@ function makeRequest(url: string) {
 }
 
 describe("GET /api/link-metadata", () => {
-  it("returns 400 when not logged in", async () => {
+  it("returns 401 when not logged in", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue(undefined);
 
     const res = await GET(makeRequest("example.com"));
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     expect(og.fetch).not.toHaveBeenCalled();
   });
 

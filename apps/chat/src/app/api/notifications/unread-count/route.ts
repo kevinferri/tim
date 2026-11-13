@@ -1,18 +1,10 @@
-import { badRequest, unauthorized } from "@/app/api/error-responses";
-import { getLoggedInUserId } from "@/lib/session";
-import { prismaClient } from "@/lib/prisma/client";
 import { NextResponse } from "next/server";
+import { prismaClient } from "@/lib/prisma/client";
+import { apiRoute, requireUserId } from "@/lib/api";
 
-export async function GET() {
-  const userId = await getLoggedInUserId();
+export const GET = apiRoute(async () => {
+  const userId = await requireUserId();
+  const count = await prismaClient.notification.getUnreadCount({ userId });
 
-  if (!userId) return unauthorized;
-
-  try {
-    const count = await prismaClient.notification.getUnreadCount({ userId });
-
-    return NextResponse.json({ count }, { status: 200 });
-  } catch (e) {
-    return badRequest;
-  }
-}
+  return NextResponse.json({ count }, { status: 200 });
+});

@@ -47,7 +47,7 @@ describe("GET /api/notifications", () => {
     });
   });
 
-  it("returns 400 when the model layer throws", async () => {
+  it("returns 500 when the model layer throws", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.notification.getForUser).mockRejectedValue(
       new Error("db down"),
@@ -55,6 +55,6 @@ describe("GET /api/notifications", () => {
 
     const res = await GET(makeRequest());
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
   });
 });

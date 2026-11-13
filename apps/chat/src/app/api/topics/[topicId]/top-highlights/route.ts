@@ -1,41 +1,33 @@
-import { badRequest, notFound, unauthorized } from "@/app/api/error-responses";
-import { getLoggedInUserId } from "@/lib/session";
-import { prismaClient } from "@/lib/prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { prismaClient } from "@/lib/prisma/client";
 import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
+import { ApiError, apiRoute, requireUserId } from "@/lib/api";
 
 type Route = {
   params: Promise<{ topicId: string }>;
 };
 
-export async function GET(req: NextRequest, { params }: Route) {
-  const userId = await getLoggedInUserId();
+export const GET = apiRoute(async (req: NextRequest, { params }: Route) => {
+  const userId = await requireUserId();
   const { topicId } = await params;
-
-  if (!userId) return unauthorized;
 
   const sinceParam = req.nextUrl.searchParams.get("since");
   const since = sinceParam ? new Date(sinceParam) : undefined;
-  if (since && Number.isNaN(since.getTime())) return badRequest;
+  if (since && Number.isNaN(since.getTime())) throw new ApiError(400);
 
-  try {
-    const isInTopic = await prismaClient.topic.isUserInTopic({
-      userId,
+  const isInTopic = await prismaClient.topic.isUserInTopic({
+    userId,
+    topicId,
+  });
+  if (!isInTopic) throw new ApiError(404);
+
+  const highlights =
+    await prismaClient.message.getTopHighlightedMessagesForTopic({
+      requestingUserId: userId,
       topicId,
+      select: DEFAULT_MESSAGE_SELECT,
+      since,
     });
 
-    if (!isInTopic) return notFound;
-
-    const highlights =
-      await prismaClient.message.getTopHighlightedMessagesForTopic({
-        requestingUserId: userId,
-        topicId,
-        select: DEFAULT_MESSAGE_SELECT,
-        since,
-      });
-
-    return NextResponse.json(highlights, { status: 200 });
-  } catch (e) {
-    return badRequest;
-  }
-}
+  return NextResponse.json(highlights, { status: 200 });
+});
