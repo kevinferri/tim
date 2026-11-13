@@ -8,12 +8,9 @@ import {
   type GameDefinition,
 } from "@/games/game-room";
 import { samePageGame, samePageNotificationCopy } from "@/games/same-page";
-import {
-  spellItOutGame,
-  spellItOutNotificationCopy,
-} from "@/games/spell-it-out";
+import { wordsmithGame, wordsmithNotificationCopy } from "@/games/wordsmith";
 
-const GAMES: GameDefinition[] = [samePageGame, spellItOutGame];
+const GAMES: GameDefinition[] = [samePageGame, wordsmithGame];
 
 /** Runs a game's slash command in the browser; false means send it as a normal message. */
 export function runGameCommand(
@@ -27,7 +24,7 @@ export function runGameCommand(
 /** Copy for every game's circle-level notifications, keyed by NotificationType. */
 export const gameNotificationCopy = {
   ...samePageNotificationCopy,
-  ...spellItOutNotificationCopy,
+  ...wordsmithNotificationCopy,
 };
 
 export function GameRoomSheetHost({ circleId }: { circleId: string }) {

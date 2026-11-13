@@ -1,6 +1,6 @@
-// Client calls and cache keys for the Spell It Out API route.
+// Client calls and cache keys for the Wordsmith API route.
 import type { LetterScore } from "../lib/rules";
-import type { SpellItOutStats } from "../lib/stats";
+import type { WordsmithStats } from "../lib/stats";
 
 export type Member = {
   id: string;
@@ -26,7 +26,7 @@ export type CircleResult = {
   rows: GuessRow[] | null;
 };
 
-export type SpellItOutState =
+export type WordsmithState =
   | {
       enabled: true;
       isAdmin: boolean;
@@ -36,29 +36,26 @@ export type SpellItOutState =
       maxGuesses: number;
       myPlay: MyPlay;
       circleResults: CircleResult[];
-      stats: SpellItOutStats;
+      stats: WordsmithStats;
     }
   | { enabled: false; isAdmin: boolean };
 
 const url = (circleId: string, badge?: boolean) =>
-  `/api/circles/${circleId}/spell-it-out${badge ? "?view=badge" : ""}`;
+  `/api/circles/${circleId}/wordsmith${badge ? "?view=badge" : ""}`;
 
-export const spellItOutQueryKey = (circleId: string) => [
-  "spell-it-out",
-  circleId,
-];
+export const wordsmithQueryKey = (circleId: string) => ["wordsmith", circleId];
 
-export async function fetchSpellItOut<T = SpellItOutState>(
+export async function fetchWordsmith<T = WordsmithState>(
   circleId: string,
   badge?: boolean,
 ) {
   const res = await fetch(url(circleId, badge));
-  if (!res.ok) throw new Error("Couldn’t load Spell It Out");
+  if (!res.ok) throw new Error("Couldn’t load Wordsmith");
   return (await res.json()) as T;
 }
 
 /** Throws the route's own error message (e.g. "Not in the word list") when present. */
-export async function postSpellItOut<T = unknown>(
+export async function postWordsmith<T = unknown>(
   circleId: string,
   body: Record<string, unknown>,
 ) {

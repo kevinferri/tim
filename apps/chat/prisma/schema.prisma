@@ -39,7 +39,7 @@ model User {
   samePageCalls         SamePageAnswer[] @relation("samePageCallsByUser")
   samePageSocksHeld     SamePageSock[]   @relation("samePageSockHolder")
   samePagePlayerStats   SamePagePlayerStats[] @relation("samePageStatsForUser")
-  spellItOutPlays       SpellItOutPlay[]      @relation("spellItOutPlaysByUser")
+  wordsmithPlays       WordsmithPlay[]      @relation("wordsmithPlaysByUser")
   gameRoomSeen          GameRoomSeen[]        @relation("gameRoomSeenByUser")
 
   @@map(name: "users")
@@ -359,7 +359,7 @@ model SamePagePlayerStats {
   @@map(name: "same_page_player_stats")
 }
 
-model SpellItOutPlay {
+model WordsmithPlay {
   id         String    @id @default(uuid())
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @default(now()) @updatedAt
@@ -369,8 +369,8 @@ model SpellItOutPlay {
   solved     Boolean   @default(false)
   finishedAt DateTime?
 
-  user User @relation("spellItOutPlaysByUser", fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation("wordsmithPlaysByUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, gameDate])
-  @@map(name: "spell_it_out_plays")
+  @@map(name: "wordsmith_plays")
 }

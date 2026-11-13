@@ -20,7 +20,7 @@ type Props = {
   stopPropagation?: boolean;
 };
 
-export function SpellItOutInfoButton({ className, stopPropagation }: Props) {
+export function WordsmithInfoButton({ className, stopPropagation }: Props) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -29,7 +29,7 @@ export function SpellItOutInfoButton({ className, stopPropagation }: Props) {
           variant="ghost"
           size="iconSm"
           className={cn("text-muted-foreground", className)}
-          aria-label="How Spell It Out works"
+          aria-label="How Wordsmith works"
           onClick={(e) => {
             if (stopPropagation) e.stopPropagation();
           }}
@@ -39,9 +39,9 @@ export function SpellItOutInfoButton({ className, stopPropagation }: Props) {
       </DialogTrigger>
       <DialogContent className="max-w-md gap-0 p-0 sm:max-w-md">
         <DialogHeader className="border-b px-5 py-4 text-left">
-          <DialogTitle>How Spell It Out works</DialogTitle>
+          <DialogTitle>How Wordsmith works</DialogTitle>
           <DialogDescription className="sr-only">
-            Rules for the Spell It Out daily word game
+            Rules for the Wordsmith daily word game
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 px-5 py-4 text-sm">
@@ -51,7 +51,7 @@ export function SpellItOutInfoButton({ className, stopPropagation }: Props) {
               Find the hidden {WORD_LENGTH}-letter word in {MAX_GUESSES}{" "}
               guesses. Everyone on Tim gets the same word, and a new one arrives
               at midnight EST every weekday. You play once a day and your result
-              shows in every circle that has Spell It Out on.
+              shows in every circle that has Wordsmith on.
             </p>
           </section>
 

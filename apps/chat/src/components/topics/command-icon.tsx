@@ -66,7 +66,7 @@ export function CommandIcon({ name, className }: Props) {
       return <EmojiIcon emoji="🧦" className={className} />;
     case CommandName.GameRoom:
       return <EmojiIcon emoji="🎮" className={className} />;
-    case CommandName.SpellItOut:
+    case CommandName.Wordsmith:
       return <EmojiIcon emoji="🔤" className={className} />;
   }
 }

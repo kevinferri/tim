@@ -8,7 +8,7 @@ export type PlaySummary = {
   finished: boolean;
 };
 
-export type SpellItOutStats = {
+export type WordsmithStats = {
   played: number;
   solved: number;
   currentStreak: number;
@@ -24,7 +24,7 @@ export type SpellItOutStats = {
 export function computeStats(
   plays: PlaySummary[],
   today: string,
-): SpellItOutStats {
+): WordsmithStats {
   const finished = plays.filter((p) => p.finished);
   const distribution = Array(MAX_GUESSES).fill(0);
   for (const p of finished) {

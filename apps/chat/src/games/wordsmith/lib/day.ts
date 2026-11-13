@@ -11,7 +11,7 @@ export function dayOrdinal(gameDate: string): number {
   return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
 }
 
-/** Monday to Friday; Spell It Out takes weekends off. */
+/** Monday to Friday; Wordsmith takes weekends off. */
 export function isGameDay(gameDate: string): boolean {
   const weekday = new Date(`${gameDate}T00:00:00Z`).getUTCDay();
   return weekday !== 0 && weekday !== 6;

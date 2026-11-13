@@ -65,5 +65,5 @@ export enum NotificationType {
   SamePageNudge = "samepage:nudge",
   SamePageReveal = "samepage:reveal",
   SamePageAnswered = "samepage:answered",
-  SpellItOutFinished = "spellitout:finished",
+  WordsmithFinished = "wordsmith:finished",
 }

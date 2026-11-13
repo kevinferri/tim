@@ -3,9 +3,9 @@ import { prismaClient } from "@/lib/prisma/client";
 import { ApiError, apiRoute, requireUserId } from "@/lib/api";
 import {
   getGamesBadge,
-  getSpellItOutState,
+  getWordsmithState,
   isCircleAdmin,
-  setSpellItOutEnabled,
+  setWordsmithEnabled,
   submitGuess,
 } from "./model";
 
@@ -28,7 +28,7 @@ export const GET = apiRoute(async (request: Request, context: RouteContext) => {
       badge: await getGamesBadge({ circleId, userId }),
     });
   }
-  return NextResponse.json(await getSpellItOutState({ circleId, userId }));
+  return NextResponse.json(await getWordsmithState({ circleId, userId }));
 });
 
 export const POST = apiRoute(
@@ -47,7 +47,7 @@ export const POST = apiRoute(
 
     if (body?.action === "enable" || body?.action === "disable") {
       if (!(await isCircleAdmin(circleId, userId))) throw new ApiError(403);
-      await setSpellItOutEnabled(circleId, body.action === "enable");
+      await setWordsmithEnabled(circleId, body.action === "enable");
       return NextResponse.json({ ok: true });
     }
 

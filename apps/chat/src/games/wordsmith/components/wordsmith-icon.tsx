@@ -5,8 +5,8 @@ const ROWS = [5.125, 13.375];
 // [row, col] of filled tiles: one on the first guess, two on the second.
 const FILLED = new Set(["0,1", "1,1", "1,2"]);
 
-/** Spell It Out mark — two rows of letter tiles filling in. */
-export function SpellItOutIcon({ className }: { className?: string }) {
+/** Wordsmith mark — two rows of letter tiles filling in. */
+export function WordsmithIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

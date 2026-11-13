@@ -37,7 +37,7 @@ describe("Game room seen badges", () => {
 
     await markBadgesSeen({
       ...ids,
-      badgeKeys: ["same-page:play", "spell-it-out:play"],
+      badgeKeys: ["same-page:play", "wordsmith:play"],
       now: MORNING,
     });
     await markBadgesSeen({
@@ -46,7 +46,7 @@ describe("Game room seen badges", () => {
       now: AFTERNOON,
     });
     await expect(getSeenBadgeKeys({ ...ids, now: AFTERNOON })).resolves.toEqual(
-      ["same-page:play", "spell-it-out:play", "same-page:results"],
+      ["same-page:play", "wordsmith:play", "same-page:results"],
     );
 
     await expect(getSeenBadgeKeys({ ...ids, now: NEXT_DAY })).resolves.toEqual(
@@ -54,11 +54,11 @@ describe("Game room seen badges", () => {
     );
     await markBadgesSeen({
       ...ids,
-      badgeKeys: ["spell-it-out:play"],
+      badgeKeys: ["wordsmith:play"],
       now: NEXT_DAY,
     });
     await expect(getSeenBadgeKeys({ ...ids, now: NEXT_DAY })).resolves.toEqual([
-      "spell-it-out:play",
+      "wordsmith:play",
     ]);
   });
 

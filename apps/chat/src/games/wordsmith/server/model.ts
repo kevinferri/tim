@@ -9,7 +9,7 @@ import {
   setGameEnabled,
 } from "@/games/game-room/server";
 import type { GameBadge } from "@/games/game-room";
-import { SPELL_IT_OUT_GAME_ID } from "../lib/game-id";
+import { WORDSMITH_GAME_ID } from "../lib/game-id";
 import { getGameDate, isGameDay } from "../lib/day";
 import {
   isFinished,
@@ -30,22 +30,22 @@ const MEMBER_SELECT = {
   imageUrl: true,
 } as const;
 
-export class SpellItOutValidationError extends ApiError {
+export class WordsmithValidationError extends ApiError {
   constructor(message: string) {
     super(400, message);
-    this.name = "SpellItOutValidationError";
+    this.name = "WordsmithValidationError";
   }
 }
 
 export { isCircleAdmin };
 
-export function isSpellItOutEnabled(circleId: string) {
-  return isGameEnabled(circleId, SPELL_IT_OUT_GAME_ID);
+export function isWordsmithEnabled(circleId: string) {
+  return isGameEnabled(circleId, WORDSMITH_GAME_ID);
 }
 
 /** Caller must have checked isCircleAdmin. Plays are kept either way. */
-export function setSpellItOutEnabled(circleId: string, enabled: boolean) {
-  return setGameEnabled(circleId, SPELL_IT_OUT_GAME_ID, enabled);
+export function setWordsmithEnabled(circleId: string, enabled: boolean) {
+  return setGameEnabled(circleId, WORDSMITH_GAME_ID, enabled);
 }
 
 type PlayRow = { guesses: string[]; solved: boolean; finishedAt: Date | null };
@@ -67,8 +67,8 @@ function toMyPlay(play: PlayRow | null, answer: string) {
 
 /** Plays are global per user, so the viewer is "in" a circle only if it has the game on. */
 async function requireEnabled(circleId: string) {
-  if (!(await isSpellItOutEnabled(circleId))) {
-    throw new SpellItOutValidationError("Spell It Out is off in this circle");
+  if (!(await isWordsmithEnabled(circleId))) {
+    throw new WordsmithValidationError("Wordsmith is off in this circle");
   }
 }
 
@@ -87,25 +87,25 @@ export async function submitGuess({
 
   const gameDate = getGameDate(now);
   if (!isGameDay(gameDate)) {
-    throw new SpellItOutValidationError(
-      "Spell It Out takes weekends off. Back Monday!",
+    throw new WordsmithValidationError(
+      "Wordsmith takes weekends off. Back Monday!",
     );
   }
 
   const guess = normalizeGuess(rawGuess);
   if (!isWellFormedGuess(guess)) {
-    throw new SpellItOutValidationError(`Guesses are ${WORD_LENGTH} letters`);
+    throw new WordsmithValidationError(`Guesses are ${WORD_LENGTH} letters`);
   }
   if (!isAcceptedWord(guess)) {
-    throw new SpellItOutValidationError("Not in the word list");
+    throw new WordsmithValidationError("Not in the word list");
   }
 
   const answer = getAnswer(gameDate);
   const where = { userId_gameDate: { userId, gameDate } };
-  const existing = await prismaClient.spellItOutPlay.findUnique({ where });
+  const existing = await prismaClient.wordsmithPlay.findUnique({ where });
 
   if (existing?.finishedAt) {
-    throw new SpellItOutValidationError("You’ve already finished today");
+    throw new WordsmithValidationError("You’ve already finished today");
   }
 
   const guesses = [...(existing?.guesses ?? []), guess];
@@ -119,10 +119,10 @@ export async function submitGuess({
   try {
     await prismaClient.$transaction(async (tx) => {
       if (!existing) {
-        await tx.spellItOutPlay.create({ data: { userId, gameDate, ...data } });
+        await tx.wordsmithPlay.create({ data: { userId, gameDate, ...data } });
       } else {
         // updatedAt acts as a version so two tabs can't both append onto the same guess list.
-        const { count } = await tx.spellItOutPlay.updateMany({
+        const { count } = await tx.wordsmithPlay.updateMany({
           where: { id: existing.id, updatedAt: existing.updatedAt },
           data,
         });
@@ -135,7 +135,7 @@ export async function submitGuess({
         await notifyCircleMembers(tx, {
           circleId,
           actorId: userId,
-          type: NotificationType.SpellItOutFinished,
+          type: NotificationType.WordsmithFinished,
         });
       }
     });
@@ -163,8 +163,8 @@ export async function getGamesBadge({
 }): Promise<GameBadge> {
   const gameDate = getGameDate(now);
   if (!isGameDay(gameDate)) return null;
-  if (!(await isSpellItOutEnabled(circleId))) return null;
-  const play = await prismaClient.spellItOutPlay.findUnique({
+  if (!(await isWordsmithEnabled(circleId))) return null;
+  const play = await prismaClient.wordsmithPlay.findUnique({
     where: { userId_gameDate: { userId, gameDate } },
     select: { finishedAt: true },
   });
@@ -196,7 +196,7 @@ async function getCircleResults(
     select: { members: { select: MEMBER_SELECT } },
   });
   const members = circle?.members ?? [];
-  const plays = await prismaClient.spellItOutPlay.findMany({
+  const plays = await prismaClient.wordsmithPlay.findMany({
     where: { gameDate, userId: { in: members.map((m) => m.id) } },
     select: { userId: true, guesses: true, solved: true, finishedAt: true },
   });
@@ -226,7 +226,7 @@ async function getCircleResults(
 }
 
 async function getStats(userId: string, today: string) {
-  const plays = await prismaClient.spellItOutPlay.findMany({
+  const plays = await prismaClient.wordsmithPlay.findMany({
     where: { userId },
     select: { gameDate: true, guesses: true, solved: true, finishedAt: true },
   });
@@ -241,7 +241,7 @@ async function getStats(userId: string, today: string) {
   );
 }
 
-export async function getSpellItOutState({
+export async function getWordsmithState({
   circleId,
   userId,
   now = new Date(),
@@ -251,7 +251,7 @@ export async function getSpellItOutState({
   now?: Date;
 }) {
   const [enabled, isAdmin] = await Promise.all([
-    isSpellItOutEnabled(circleId),
+    isWordsmithEnabled(circleId),
     isCircleAdmin(circleId, userId),
   ]);
   if (!enabled) return { enabled: false as const, isAdmin };
@@ -271,7 +271,7 @@ export async function getSpellItOutState({
   }
 
   const answer = getAnswer(gameDate);
-  const play = await prismaClient.spellItOutPlay.findUnique({
+  const play = await prismaClient.wordsmithPlay.findUnique({
     where: { userId_gameDate: { userId, gameDate } },
     select: { guesses: true, solved: true, finishedAt: true },
   });

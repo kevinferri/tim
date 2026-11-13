@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prismaClient, resetDb } from "@/test/db";
 import {
   getGamesBadge,
-  getSpellItOutState,
-  setSpellItOutEnabled,
+  getWordsmithState,
+  setWordsmithEnabled,
   submitGuess,
 } from "./model";
 import { getAnswer, isAcceptedWord } from "./words";
@@ -44,7 +44,7 @@ async function createCircle(
       members: { connect: memberIds.map((id) => ({ id })) },
     },
   });
-  if (enabled) await setSpellItOutEnabled(circle.id, true);
+  if (enabled) await setWordsmithEnabled(circle.id, true);
   return circle;
 }
 
@@ -58,7 +58,7 @@ async function guess(
 }
 
 async function state(circleId: string, userId: string, now = NOW) {
-  const s = await getSpellItOutState({ circleId, userId, now });
+  const s = await getWordsmithState({ circleId, userId, now });
   if (!s.enabled) throw new Error("expected enabled");
   return s;
 }
@@ -122,11 +122,11 @@ describe("submitGuess", () => {
     const s = await state(c1.id, a.id);
     expect(s.myPlay.rows.map((r) => r.word)).toEqual([WRONG[0], ANSWER]);
     expect(s.myPlay.solved).toBe(true);
-    expect(await prismaClient.spellItOutPlay.count()).toBe(1);
+    expect(await prismaClient.wordsmithPlay.count()).toBe(1);
   });
 });
 
-describe("getSpellItOutState", () => {
+describe("getWordsmithState", () => {
   it("shows circle-mates' letters only after the viewer finishes", async () => {
     const a = await createUser("Ana");
     const b = await createUser("Ben");
@@ -223,7 +223,7 @@ describe("getGamesBadge", () => {
     await guess(circle.id, a.id, ANSWER);
     expect(await badge()).toBeNull();
 
-    await setSpellItOutEnabled(circle.id, false);
+    await setWordsmithEnabled(circle.id, false);
     expect(
       await getGamesBadge({ circleId: circle.id, userId: a.id, now: MONDAY }),
     ).toBeNull();
@@ -273,7 +273,7 @@ describe("finish notifications", () => {
         recipientId: b.id,
         actorId: a.id,
         circleId: circle.id,
-        type: "spellitout:finished",
+        type: "wordsmith:finished",
       },
     ]);
   });

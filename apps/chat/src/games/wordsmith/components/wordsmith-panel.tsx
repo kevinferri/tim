@@ -10,20 +10,20 @@ import { cn } from "@/lib/utils";
 import { gameRoomBadgeQueryKey, useNotifyCircle } from "@/games/game-room";
 import { WORD_LENGTH } from "../lib/rules";
 import {
-  fetchSpellItOut,
-  postSpellItOut,
-  spellItOutQueryKey,
+  fetchWordsmith,
+  postWordsmith,
+  wordsmithQueryKey,
   type CircleResult,
   type MyPlay,
-  type SpellItOutState,
+  type WordsmithState,
 } from "./api";
 import { EmptyState } from "./empty-state";
 import { Keyboard, letterStates } from "./keyboard";
-import { SpellItOutIcon } from "./spell-it-out-icon";
+import { WordsmithIcon } from "./wordsmith-icon";
 import { SmallGrid, Tile } from "./tiles";
-import type { SpellItOutView } from "./view-store";
+import type { WordsmithView } from "./view-store";
 
-type EnabledState = Extract<SpellItOutState, { enabled: true }>;
+type EnabledState = Extract<WordsmithState, { enabled: true }>;
 
 const SOLVED_LINES = [
   "First try!",
@@ -36,21 +36,21 @@ const SOLVED_LINES = [
 
 type Props = {
   circleId: string;
-  view: SpellItOutView;
-  onViewChange: (view: SpellItOutView) => void;
+  view: WordsmithView;
+  onViewChange: (view: WordsmithView) => void;
 };
 
 function useSetEnabled(circleId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (enabled: boolean) =>
-      postSpellItOut(circleId, {
+      postWordsmith(circleId, {
         action: enabled ? "enable" : "disable",
       }).catch(() => {
-        throw new Error("Couldn’t update Spell It Out");
+        throw new Error("Couldn’t update Wordsmith");
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: spellItOutQueryKey(circleId) });
+      queryClient.invalidateQueries({ queryKey: wordsmithQueryKey(circleId) });
       queryClient.invalidateQueries({
         queryKey: gameRoomBadgeQueryKey(circleId),
       });
@@ -58,10 +58,10 @@ function useSetEnabled(circleId: string) {
   });
 }
 
-export function SpellItOutPanel({ circleId, view, onViewChange }: Props) {
+export function WordsmithPanel({ circleId, view, onViewChange }: Props) {
   const { data, isLoading, error } = useQuery({
-    queryKey: spellItOutQueryKey(circleId),
-    queryFn: () => fetchSpellItOut(circleId),
+    queryKey: wordsmithQueryKey(circleId),
+    queryFn: () => fetchWordsmith(circleId),
   });
 
   if (isLoading) {
@@ -74,20 +74,20 @@ export function SpellItOutPanel({ circleId, view, onViewChange }: Props) {
   if (error || !data) {
     return (
       <div className="p-4 text-sm text-muted-foreground">
-        Couldn’t load Spell It Out. Try again.
+        Couldn’t load Wordsmith. Try again.
       </div>
     );
   }
   if (!data.enabled) {
-    return <SpellItOutOff circleId={circleId} isAdmin={data.isAdmin} />;
+    return <WordsmithOff circleId={circleId} isAdmin={data.isAdmin} />;
   }
 
-  const tabs: [SpellItOutView, string][] = [
+  const tabs: [WordsmithView, string][] = [
     ["play", "Play"],
     ["results", "Results"],
     ["stats", "Stats"],
     ...(data.isAdmin
-      ? [["settings", "Settings"] as [SpellItOutView, string]]
+      ? [["settings", "Settings"] as [WordsmithView, string]]
       : []),
   ];
   const activeView = view === "settings" && !data.isAdmin ? "play" : view;
@@ -131,7 +131,7 @@ export function SpellItOutPanel({ circleId, view, onViewChange }: Props) {
   );
 }
 
-function SpellItOutOff({
+function WordsmithOff({
   circleId,
   isAdmin,
 }: {
@@ -142,8 +142,8 @@ function SpellItOutOff({
   return (
     <div className="flex flex-1 flex-col justify-center">
       <EmptyState
-        icon={<SpellItOutIcon />}
-        title="Spell It Out is off for this circle"
+        icon={<WordsmithIcon />}
+        title="Wordsmith is off for this circle"
         description={
           isAdmin
             ? "Turning it on lets everyone here play the daily word and see each other’s results."
@@ -157,7 +157,7 @@ function SpellItOutOff({
                 onClick={() => setEnabled.mutate(true)}
                 disabled={setEnabled.isPending}
               >
-                Turn on Spell It Out
+                Turn on Wordsmith
               </Button>
               {setEnabled.error && (
                 <p className="text-sm text-destructive">
@@ -175,9 +175,9 @@ function SpellItOutOff({
 function WeekendOff() {
   return (
     <EmptyState
-      icon={<SpellItOutIcon />}
+      icon={<WordsmithIcon />}
       title="No word on weekends"
-      description="Spell It Out takes weekends off. The next word arrives Monday."
+      description="Wordsmith takes weekends off. The next word arrives Monday."
     />
   );
 }
@@ -205,18 +205,18 @@ function PlayView({
 
   const submit = useMutation({
     mutationFn: (guess: string) =>
-      postSpellItOut<{ play: MyPlay }>(circleId, { action: "guess", guess }),
+      postWordsmith<{ play: MyPlay }>(circleId, { action: "guess", guess }),
     onSuccess: ({ play }) => {
       setCurrent("");
       setMessage(null);
-      queryClient.setQueryData<SpellItOutState>(
-        spellItOutQueryKey(circleId),
+      queryClient.setQueryData<WordsmithState>(
+        wordsmithQueryKey(circleId),
         (prev) => (prev?.enabled ? { ...prev, myPlay: play } : prev),
       );
       if (play.finished) {
         // Finishing unlocks friends' guesses and changes stats.
         queryClient.invalidateQueries({
-          queryKey: spellItOutQueryKey(circleId),
+          queryKey: wordsmithQueryKey(circleId),
         });
         queryClient.invalidateQueries({
           queryKey: gameRoomBadgeQueryKey(circleId),
@@ -478,7 +478,7 @@ function SettingsView({
   const setEnabled = useSetEnabled(circleId);
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <div className="font-medium">Turn off Spell It Out</div>
+      <div className="font-medium">Turn off Wordsmith</div>
       <p className="text-muted-foreground">
         Removes it from this circle’s Game room. Everyone keeps their stats, and
         you can turn it back on anytime.
@@ -492,7 +492,7 @@ function SettingsView({
         }
         disabled={setEnabled.isPending}
       >
-        Turn off Spell It Out for this circle
+        Turn off Wordsmith for this circle
       </Button>
       {setEnabled.error && (
         <p className="text-destructive">{setEnabled.error.message}</p>
