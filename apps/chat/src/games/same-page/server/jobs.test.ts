@@ -178,6 +178,36 @@ describe("runSamePageJobs", () => {
     ).toBe(1);
   });
 
+  it("abandons a round left open while the game was off", async () => {
+    const { circle, a } = await createCircle({ enabled: true });
+    await runSamePageJobs(MON_10AM);
+    await submitSamePageAnswer({
+      circleId: circle.id,
+      userId: a.id,
+      text: "Pizza",
+      now: MON_10AM,
+    });
+    await setSamePageEnabled(circle.id, false);
+
+    await setSamePageEnabled(circle.id, true, TUE_10AM);
+    await runSamePageJobs(TUE_10AM);
+
+    const monday = await prismaClient.samePageRound.findUniqueOrThrow({
+      where: {
+        circleId_gameDate: { circleId: circle.id, gameDate: "2026-11-09" },
+      },
+    });
+    expect(monday.revealedAt).toBeNull();
+    expect(
+      await notificationsFor(circle.id, NotificationType.SamePageReveal),
+    ).toHaveLength(0);
+    expect(
+      await prismaClient.samePageRound.count({
+        where: { circleId: circle.id, gameDate: "2026-11-10" },
+      }),
+    ).toBe(1);
+  });
+
   it("doesn't reveal today's round before close", async () => {
     const { circle } = await createCircle({ enabled: true });
 

@@ -606,6 +606,16 @@ function ResultsView({ data }: { data: EnabledState }) {
     );
   }
 
+  if (!data.prompt) {
+    return (
+      <EmptyState
+        icon={<MoonIcon />}
+        title="No round today"
+        description="A new prompt drops every weekday at 6am EST."
+      />
+    );
+  }
+
   const s = data.results?.summary;
   const sockAwardedTo = data.results?.sockAwardedTo ?? null;
 

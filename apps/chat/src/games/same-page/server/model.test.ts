@@ -63,9 +63,35 @@ describe("getGamesBadge", () => {
     const circle = await createCircleWithMembers([owner], owner.id);
     const args = { circleId: circle.id, userId: owner.id, now: RESULTS_NOW };
 
-    await markPromptViewed({ ...args, now: PLAY_NOW });
+    // Opening the game during play creates today's round.
+    await getSamePageState({ ...args, now: PLAY_NOW });
     await expect(getGamesBadge(args)).resolves.toBe("results");
     await markResultsViewed(args);
+    await expect(getGamesBadge(args)).resolves.toBeNull();
+  });
+});
+
+describe("opening the game after close with no round today", () => {
+  it("doesn't create or reveal a round, so streaks and the badge are untouched", async () => {
+    const owner = await createUser("Owner");
+    const circle = await createCircleWithMembers([owner], owner.id);
+    await prismaClient.samePagePlayerStats.create({
+      data: { circleId: circle.id, userId: owner.id, currentStreak: 3 },
+    });
+    const args = { circleId: circle.id, userId: owner.id, now: RESULTS_NOW };
+
+    const state = await getSamePageState(args);
+
+    expect(state).toMatchObject({ enabled: true, prompt: null, results: null });
+    expect(
+      await prismaClient.samePageRound.count({
+        where: { circleId: circle.id },
+      }),
+    ).toBe(0);
+    const stats = await prismaClient.samePagePlayerStats.findUniqueOrThrow({
+      where: { circleId_userId: { circleId: circle.id, userId: owner.id } },
+    });
+    expect(stats.currentStreak).toBe(3);
     await expect(getGamesBadge(args)).resolves.toBeNull();
   });
 });

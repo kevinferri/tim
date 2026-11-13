@@ -32,8 +32,24 @@ export function isSamePageEnabled(circleId: string) {
 }
 
 /** Caller must have checked isCircleAdmin. Turning it off keeps all history. */
-export function setSamePageEnabled(circleId: string, enabled: boolean) {
-  return setGameEnabled(circleId, SAME_PAGE_GAME_ID, enabled);
+export async function setSamePageEnabled(
+  circleId: string,
+  enabled: boolean,
+  now = new Date(),
+) {
+  if (enabled && !(await isSamePageEnabled(circleId))) {
+    // Rounds left open on earlier days while the game was off are abandoned:
+    // never scored or announced, so turning it back on can't revive a stale prompt.
+    await prismaClient.samePageRound.updateMany({
+      where: {
+        circleId,
+        revealNotifiedAt: null,
+        gameDate: { lt: getEstGameDate(now) },
+      },
+      data: { revealNotifiedAt: now },
+    });
+  }
+  await setGameEnabled(circleId, SAME_PAGE_GAME_ID, enabled);
 }
 
 type AnswerRow = {
@@ -61,9 +77,20 @@ async function ensureRound(circleId: string, now = new Date()) {
   if (phase === "closed") return null;
 
   const gameDate = getEstGameDate(now);
+  const where = { circleId_gameDate: { circleId, gameDate } };
+
+  // Rounds are only created while answers are open. Creating one after close
+  // would reveal it empty and reset everyone's streak.
+  if (phase === "results") {
+    const round = await prismaClient.samePageRound.findUnique({ where });
+    if (!round || round.revealedAt) return round;
+    const revealed = await revealRound(round.id, now);
+    return revealed?.round ?? round;
+  }
+
   // Upsert so concurrent 6am openers don't race on @@unique([circleId, gameDate]).
-  const round = await prismaClient.samePageRound.upsert({
-    where: { circleId_gameDate: { circleId, gameDate } },
+  return prismaClient.samePageRound.upsert({
+    where,
     create: {
       circleId,
       gameDate,
@@ -72,12 +99,6 @@ async function ensureRound(circleId: string, now = new Date()) {
     },
     update: {},
   });
-
-  if (phase === "results" && !round.revealedAt) {
-    const revealed = await revealRound(round.id, now);
-    return revealed?.round ?? round;
-  }
-  return round;
 }
 
 /**
@@ -271,6 +292,8 @@ export async function getGamesBadge({
   });
 
   if (phase === "play" && round?.answers.length) return null;
+  // No round today (e.g. turned on after close): no results to see.
+  if (phase === "results" && !round) return null;
 
   const stats = await prismaClient.samePagePlayerStats.findUnique({
     where: { circleId_userId: { circleId, userId } },

@@ -1,9 +1,9 @@
+import type { SamePageSock, User } from "@tim/db-types";
 import { pgClient } from "./client";
 
-type SockRow = {
-  holderUserId: string | null;
-  heldSince: Date | null;
-  displayName: string | null;
+type SockRow = Pick<SamePageSock, "holderUserId" | "heldSince"> & {
+  // Left join: null when nobody holds the Sock.
+  displayName: User["displayName"] | null;
 };
 
 export async function getSamePageSockHolder(circleId: string) {
