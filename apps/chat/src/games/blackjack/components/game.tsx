@@ -9,5 +9,6 @@ export const blackjackGame: ComingSoonGame = {
   id: "blackjack",
   name: "Blackjack",
   tagline: "Beat the dealer to 21",
+  category: "casino",
   Icon: BlackjackIcon,
 };

@@ -42,6 +42,7 @@ export const wordsmithGame: GameDefinition = {
   id: WORDSMITH_GAME_ID,
   name: "Wordsmith",
   tagline: "Crack today’s five-letter word",
+  category: "daily",
   Icon: WordsmithIcon,
   Panel,
   TitleSuffix,

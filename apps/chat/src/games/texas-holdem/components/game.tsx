@@ -9,5 +9,6 @@ export const texasHoldemGame: ComingSoonGame = {
   id: "texas-holdem",
   name: "Texas Hold ’em",
   tagline: "Poker night with your circle",
+  category: "casino",
   Icon: TexasHoldemIcon,
 };

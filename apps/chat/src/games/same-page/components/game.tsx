@@ -41,6 +41,7 @@ export const samePageGame: GameDefinition = {
   id: SAME_PAGE_GAME_ID,
   name: "Same Page",
   tagline: "Match your circle on today’s prompt",
+  category: "daily",
   Icon: SamePageIcon,
   Panel,
   TitleSuffix,
