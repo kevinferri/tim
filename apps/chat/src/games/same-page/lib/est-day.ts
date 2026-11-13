@@ -7,6 +7,7 @@
  * Server-only: these env vars aren't exposed to the browser.
  */
 
+import { getEasternDate } from "@/games/game-room";
 import {
   SAME_PAGE_ALERT_HOURS,
   SAME_PAGE_CLOSE_HOUR,
@@ -16,12 +17,6 @@ import {
 
 const TZ = SAME_PAGE_TIME_ZONE;
 
-const dateFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: TZ,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
 const weekdayFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: TZ,
   weekday: "short",
@@ -47,8 +42,7 @@ export function getForcedSamePagePhase(): SamePagePhase | null {
 }
 
 export function getEstGameDate(now = new Date()): string {
-  // en-CA yields YYYY-MM-DD
-  return dateFormat.format(now);
+  return getEasternDate(now);
 }
 
 export function isEstWeekday(now = new Date()): boolean {

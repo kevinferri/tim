@@ -1,11 +1,11 @@
-const dayFormat = new Intl.DateTimeFormat("en-CA", {
+const dateFormat = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/New_York",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
 });
 
-/** Eastern YYYY-MM-DD. Games roll over at midnight Eastern, so the Game room's "today" does too. */
-export function getGameRoomDay(now = new Date()): string {
-  return dayFormat.format(now);
+/** Eastern YYYY-MM-DD. Every game's day, and the Game room's "seen today", roll over on this. */
+export function getEasternDate(now = new Date()): string {
+  return dateFormat.format(now);
 }

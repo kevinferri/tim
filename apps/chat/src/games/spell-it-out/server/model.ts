@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api-error";
 import {
   isCircleAdmin,
   isGameEnabled,
+  notifyCircleMembers,
   setGameEnabled,
 } from "@/games/game-room/server";
 import type { GameBadge } from "@/games/game-room";
@@ -21,8 +22,6 @@ import {
 } from "../lib/rules";
 import { computeStats } from "../lib/stats";
 import { getAnswer, isAcceptedWord } from "./words";
-
-type Tx = Parameters<Parameters<typeof prismaClient.$transaction>[0]>[0];
 
 const MEMBER_SELECT = {
   id: true,
@@ -131,8 +130,13 @@ export async function submitGuess({
           throw new ApiError(409, "Guess already in progress, try again");
         }
       }
+      // Only the circle it was finished from is notified, though the result shows in every enabled circle.
       if (data.finishedAt) {
-        await notifyCircleMates(tx, { userId, circleId });
+        await notifyCircleMembers(tx, {
+          circleId,
+          actorId: userId,
+          type: NotificationType.SpellItOutFinished,
+        });
       }
     });
   } catch (err) {
@@ -146,30 +150,6 @@ export async function submitGuess({
   }
 
   return toMyPlay({ ...data }, answer);
-}
-
-/** Only the circle the game was finished from is notified, even though the result shows in every enabled circle. */
-async function notifyCircleMates(
-  tx: Tx,
-  { userId, circleId }: { userId: string; circleId: string },
-) {
-  const circle = await tx.circle.findUnique({
-    where: { id: circleId },
-    select: { members: { select: { id: true } } },
-  });
-  const recipientIds = (circle?.members ?? [])
-    .map((m) => m.id)
-    .filter((id) => id !== userId);
-  if (recipientIds.length === 0) return;
-
-  await tx.notification.createMany({
-    data: recipientIds.map((recipientId) => ({
-      type: NotificationType.SpellItOutFinished,
-      recipientId,
-      actorId: userId,
-      circleId,
-    })),
-  });
 }
 
 export async function getGamesBadge({

@@ -1,14 +1,8 @@
-// Days roll over at midnight Eastern, for everyone on Tim.
-const dateFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/New_York",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
+import { getEasternDate } from "@/games/game-room";
 
-/** YYYY-MM-DD in Eastern time. */
+/** YYYY-MM-DD in Eastern time; days roll over at midnight Eastern, for everyone on Tim. */
 export function getGameDate(now = new Date()): string {
-  return dateFormat.format(now);
+  return getEasternDate(now);
 }
 
 /** Whole days since 1970-01-01 for a YYYY-MM-DD date. */

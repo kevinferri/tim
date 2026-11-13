@@ -3,6 +3,7 @@ import { prismaClient } from "@/lib/prisma/client";
 
 export { GET, POST } from "./route";
 export { getSeenBadgeKeys, markBadgesSeen } from "./seen";
+export { notifyCircleMembers } from "./notify";
 
 export async function isGameEnabled(circleId: string, gameId: string) {
   const row = await prismaClient.circleGame.findUnique({

@@ -15,6 +15,7 @@ import { SAME_PAGE_GAME_ID } from "../lib/game-id";
 import {
   isCircleAdmin,
   isGameEnabled,
+  notifyCircleMembers,
   setGameEnabled,
 } from "@/games/game-room/server";
 import type { GameBadge } from "@/games/game-room";
@@ -547,23 +548,11 @@ export async function submitSamePageAnswer({
           },
         },
       });
-      const circle = await tx.circle.findUnique({
-        where: { id: circleId },
-        select: { members: { select: { id: true } } },
+      await notifyCircleMembers(tx, {
+        circleId,
+        actorId: userId,
+        type: NotificationType.SamePageAnswered,
       });
-      const recipientIds = (circle?.members ?? [])
-        .map((m) => m.id)
-        .filter((id) => id !== userId);
-      if (recipientIds.length > 0) {
-        await tx.notification.createMany({
-          data: recipientIds.map((recipientId) => ({
-            type: NotificationType.SamePageAnswered,
-            recipientId,
-            actorId: userId,
-            circleId,
-          })),
-        });
-      }
       return answer;
     });
   } catch (err) {

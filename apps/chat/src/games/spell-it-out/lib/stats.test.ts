@@ -68,6 +68,21 @@ describe("computeStats", () => {
     expect(stats.solved).toBe(5);
   });
 
+  it("drops to zero as soon as today is lost", () => {
+    const stats = computeStats(
+      [
+        win("2026-11-09"),
+        win("2026-11-10"),
+        win("2026-11-11"),
+        win("2026-11-12"),
+        loss("2026-11-13"),
+      ],
+      "2026-11-13",
+    );
+    expect(stats.currentStreak).toBe(0);
+    expect(stats.bestStreak).toBe(4);
+  });
+
   it("drops to zero once a day is missed", () => {
     expect(computeStats([win("2026-11-10")], "2026-11-13").currentStreak).toBe(
       0,

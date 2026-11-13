@@ -19,7 +19,7 @@ export type SpellItOutStats = {
 
 /**
  * A streak is consecutive game days (weekdays) solved. Today's unfinished game doesn't break
- * the current streak; it just hasn't added to it yet.
+ * the current streak; it just hasn't added to it yet. Losing today ends it right away.
  */
 export function computeStats(
   plays: PlaySummary[],
@@ -44,7 +44,9 @@ export function computeStats(
   }
 
   const todayOrdinal = gameDayOrdinal(today);
-  let day = solvedDays.has(todayOrdinal) ? todayOrdinal : todayOrdinal - 1;
+  // Once today is finished it counts, win or lose; until then the streak runs to yesterday.
+  const todayFinished = finished.some((p) => p.gameDate === today);
+  let day = todayFinished ? todayOrdinal : todayOrdinal - 1;
   let currentStreak = 0;
   while (solvedDays.has(day)) {
     currentStreak++;
