@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, ready_for_review]
 
+# A newer push supersedes an in-flight review of the same PR.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   review:
     if: github.event.pull_request.draft == false
@@ -15,7 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          # Full history so the reviewer can diff against what it saw last round.
+          fetch-depth: 0
 
       - uses: anthropics/claude-code-action@v1
         with:
@@ -24,96 +30,99 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            This is the "tim" monorepo: apps/chat (Next.js/Prisma) and
-            apps/realtime-server (Socket.IO/Knex) share one Postgres schema,
-            owned by apps/chat's prisma/schema.prisma. packages/socket-types
-            is the wire contract between the two apps -- new socket events
-            belong there first, not hand-added in either app's own hub file.
+            Review this pull request as a senior engineer. Your job is to make
+            sure it's the best technical decision for this codebase, not only
+            that each line is correct. The PR branch is already checked out.
 
-            Before reviewing, run `gh pr view ${{ github.event.pull_request.number }} --json comments` to read every
-            existing comment on this PR (your own prior review rounds and the
-            author's replies to them). This may be a re-review after earlier
-            rounds of feedback -- do not re-raise a finding that a prior
-            comment already made and the author either fixed or explicitly
-            declined with reasoning, even if the line the finding was about
-            still exists unchanged. Only raise it again if the code relevant
-            to that specific finding has materially changed since, in a way
-            that reopens the concern. This applies to whole categories of
-            finding too, not just line-identical repeats -- e.g. if a prior
-            round already established this repo has no DOM test environment
-            and the author isn't going to add component/hook-render tests,
-            don't ask for one again in a later round just because it's a
-            different component.
+            ## Context
+            Read CLAUDE.md, apps/chat/CLAUDE.md and apps/realtime-server/CLAUDE.md
+            first. They describe the architecture and conventions this PR should
+            follow. Then read the whole diff (`gh pr diff ${{ github.event.pull_request.number }}`)
+            and open the surrounding code wherever you need it to judge a change.
 
-            Please review this pull request with a focus on:
-            - Correctness bugs and edge cases
-            - Auth/authorization gaps (every mutation/read should verify
-              room or circle/topic membership via the existing model-extension
-              or db query helpers, not trust client-supplied ids)
-            - Schema/type drift between apps/chat's schema.prisma and any
-              hand-rolled Knex query shapes in apps/realtime-server
-            - Security implications (secrets, injection, unvalidated input)
-            - Real-time lifecycle correctness: socket join/leave/effect
-              cleanup is easy to get subtly wrong -- flag anything that looks
-              like a listener leak, a race on connect/disconnect, or a missed
-              cleanup, but don't suggest rewriting working lifecycle code
-              just for style
-            - Unnecessary complexity, dead code, or duplicated logic
-            - Test coverage: both apps use vitest (apps/chat/src/**/*.test.ts,
-              apps/realtime-server/src/**/*.test.ts). If this PR adds new
-              non-trivial logic (a new action/route/handler, a new branch in
-              existing logic, a new db query/mutation, a new socket event, or
-              anything touching auth/authorization or room
-              membership/join-leave logic) with no corresponding test, call
-              that out specifically as its own comment -- weight
-              auth/access-control and room-membership code especially
-              heavily here, since a missed check there is a security gap, not
-              just a coverage gap. Don't flag trivial changes (config, types,
-              formatting, simple prop threading) for lacking tests. Neither
-              app's vitest config has a DOM environment or
-              @testing-library/react (apps/chat's vitest.config.mts runs
-              `environment: "node"`) -- never ask for a test that requires
-              rendering a React component or otherwise exercising a hook
-              outside one (e.g. a component that only wires a socket
-              handler to react-query cache calls with no pure logic to
-              extract). That's a repo-wide test-infrastructure gap, not
-              something one PR should be asked to fix. If such a component
-              has real branching logic worth covering, suggest extracting it
-              into a plain testable function instead of asking for a
-              component/hook-render test.
+            ## Earlier rounds
+            This may be a re-review. Read the earlier feedback first:
+            - top-level: `gh pr view ${{ github.event.pull_request.number }} --json comments`
+            - inline: `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments`
+            Don't repeat a finding that was fixed, or declined with a reason,
+            unless the relevant code has materially changed since. Review the
+            whole PR every run, not only the latest commit: a design problem
+            can be visible only once several commits are together.
 
-            The list above is what to look for, not something to report on.
-            Never restate, summarize, or checklist these categories in a
-            comment (e.g. "I checked for auth gaps, test coverage, ..."). Only
-            output actual findings -- if a category turned up nothing, say
-            nothing about it.
+            ## What to look for, in priority order
+            1. Approach and architecture. Before reading individual lines, ask
+               whether this is the right way to build the feature at all. For
+               example:
+               - Polling, timers or background loops where an event, a check at
+                 request time, or a fixed schedule would do.
+               - Work that grows with the total number of circles, users or
+                 messages rather than with actual activity, and queries inside
+                 per-item loops.
+               - New services, endpoints, secrets, env vars or cross-app calls
+                 that a simpler design wouldn't need.
+               - Feature-specific logic in shared infrastructure, or dev-only
+                 workarounds on production code paths.
+               - Ignoring an existing pattern or helper, or duplicating logic
+                 that already exists.
+               - Far more code or scope than the feature needs.
+               When you flag one, name the simpler alternative and roughly what
+               it would take to switch.
+            2. Correctness: bugs, races, edge cases, and work that's lost or
+               duplicated when something fails or restarts.
+            3. Security and authorization: every read and mutation checks
+               circle/topic/room membership with the existing helpers, no
+               client-supplied ids are trusted, each secret has one purpose, and
+               input is validated.
+            4. Data: migrations and indexes match the queries, Knex queries in
+               apps/realtime-server match apps/chat's schema.prisma, and new
+               socket events are defined in packages/socket-types first.
+            5. Real-time lifecycle: listener leaks, missed cleanup, and races on
+               connect/disconnect. Don't suggest rewriting working lifecycle code
+               for style.
+            6. Tests: call out new non-trivial logic with no tests, especially
+               auth and membership checks. Both apps use vitest with no DOM
+               environment, so never ask for component or hook render tests;
+               suggest extracting the logic into a plain function instead.
 
-            Note: The PR branch is already checked out in the current working directory.
+            Skip style, naming, formatting and anything a linter or Prettier
+            would catch. Only flag what you can tie to a concrete failure, cost
+            or maintenance burden. When unsure, read more code rather than
+            speculate, and if you're still unsure, leave it out.
 
-            Inline comments (`mcp__github_inline_comment__create_inline_comment`,
-            with `confirmed: true`):
-            - One issue per comment, anchored to the specific line(s) it
-              applies to -- don't post a comment spanning or summarizing a
-              whole file/hunk when the issue is local to one line.
-            - Keep each comment concise and direct: state the problem and,
-              if not obvious, the fix, and stop there. Skip preamble like "In
-              this section..." or restating what the diff already shows.
-            - No praise-only or purely observational comments -- only comment
-              where something should change.
+            ## How to write comments
+            Each comment must make sense to someone who hasn't read the rest of
+            the review: what's wrong, why it matters (a concrete scenario or
+            cost, with rough numbers when you can estimate them), and the fix.
+            Usually one to three sentences. No preamble, no restating the diff,
+            no praise.
 
-            End-of-review summary (required on every review, including
-            re-reviews after new commits): after posting inline comments,
-            post exactly one top-level `gh pr comment` that gives a verdict.
-            Keep it concise, direct, and easy to scan/grep -- a short bullet
-            list (one line each, referencing file:line) rather than prose:
-            - If there are no issues worth addressing, say so plainly, e.g.
-              "Looks good to go."
-            - Otherwise, say review is needed before merging and list the
-              specific items, not a restatement of the full inline comment
-              text.
-            This summary comment is mandatory even if you found zero issues.
+            - Line-level issues: post an inline comment with
+              `mcp__github_inline_comment__create_inline_comment`
+              (`confirmed: true`), one issue per comment, anchored to the exact
+              lines.
+            - Approach and architecture issues rarely belong to one line. Put
+              them in the summary's Design section instead of inline.
 
-            Only post GitHub comments - don't submit review text as messages.
+            ## Summary comment (required every run)
+            Finish with exactly one `gh pr comment`, even when there are no
+            findings, in this shape (omit empty sections):
+
+            **Verdict:** Looks good to go | Changes needed before merging
+
+            **Design**
+            - Concern, why it matters, and the suggested alternative (three lines at most)
+
+            **Must fix**
+            - `file:line`: one line
+
+            **Should fix**
+            - `file:line`: one line
+
+            Use "Changes needed" when there's anything under Must fix, or a
+            Design concern worth reworking before merge. Don't list what you
+            checked or explain your process. Only post GitHub comments; don't
+            put the review in a message.
 
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --model claude-opus-5-5
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*)"

@@ -92,7 +92,8 @@ model Topic {
   readStates       TopicReadState[]  @relation("readStatesForTopic")
   preferences      TopicPreference[] @relation("userPreferencesForTopic")
 
-  @@index([userId, circleId])
+  // circleId first: topics are looked up by circle, alone or with their creator.
+  @@index([circleId, userId])
 
   @@map(name: "topics")
 }
@@ -159,8 +160,8 @@ model Highlight {
   createdBy     User    @relation("highlightsByUser", fields: [userId], references: [id])
   message       Message @relation("highlightsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
 
+  // No separate @@index([userId]): the unique index covers it as its leftmost prefix.
   @@unique([userId, messageId])
-  @@index([userId])
   @@index([messageId])
 
   @@map(name: "highlights")
