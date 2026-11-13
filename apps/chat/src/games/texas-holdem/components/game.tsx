@@ -1,6 +1,6 @@
 import type { ComingSoonGame } from "@/games/game-room";
 
-/** Texas Hold 'em mark — a short stack of poker chips. */
+/** Texas Hold 'em mark — a poker chip with six edge stripes. */
 function TexasHoldemIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -13,10 +13,9 @@ function TexasHoldemIcon({ className }: { className?: string }) {
       className={className}
       aria-hidden
     >
-      <ellipse cx="12" cy="7" rx="8" ry="3" />
-      <path d="M4 7v4c0 1.66 3.58 3 8 3s8-1.34 8-3V7" />
-      <path d="M4 11v4c0 1.66 3.58 3 8 3s8-1.34 8-3v-4" />
-      <path d="M8 9.7v4M16 9.7v4M8 13.7v4M16 13.7v4" opacity="0.55" />
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="12" r="5" />
+      <path d="M12 2.5v3M12 18.5v3M3.77 7.25l2.6 1.5M17.63 15.25l2.6 1.5M3.77 16.75l2.6-1.5M17.63 8.75l2.6-1.5" />
     </svg>
   );
 }
