@@ -23,18 +23,3 @@ export function gameDayOrdinal(gameDate: string): number {
   const shifted = dayOrdinal(gameDate) + 3;
   return Math.floor(shifted / 7) * 5 + Math.min(shifted % 7, 5);
 }
-
-/** The start of the next game day (midnight Eastern, skipping weekends). */
-export function getNextGameDayAt(now = new Date()): Date {
-  // Eastern offsets are whole hours, so midnight Eastern is a UTC top-of-hour.
-  const today = getGameDate(now);
-  const candidate = new Date(now);
-  candidate.setUTCMinutes(0, 0, 0);
-  do {
-    candidate.setTime(candidate.getTime() + 60 * 60 * 1000);
-  } while (
-    getGameDate(candidate) === today ||
-    !isGameDay(getGameDate(candidate))
-  );
-  return candidate;
-}

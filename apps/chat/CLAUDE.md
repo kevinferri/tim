@@ -47,7 +47,7 @@ No test framework is configured in this repo.
 
 ## Environment variables
 
-`FRONTEND_URL`, `JWT_SECRET`, `DATABASE_URL`, `CRYPTO_KEY`, `GOOGLE_CALLBACK_URL`/`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, `NEXTAUTH_URL`/`NEXTAUTH_SECRET`/`NEXTAUTH_COOKIE_KEY`, `WS_SERVER_URL`/`WS_SERVER_PATH`, `CLOUDINARY_URL`. See `.env.example` and the root `CLAUDE.md`'s "Local environment setup" section for which of these `pnpm setup:env` fills in automatically and which are optional locally.
+`FRONTEND_URL`, `JWT_SECRET`, `DATABASE_URL`, `CRYPTO_KEY`, `GOOGLE_CALLBACK_URL`/`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, `NEXTAUTH_URL`/`NEXTAUTH_SECRET`/`NEXTAUTH_COOKIE_KEY`, `WS_SERVER_URL`/`WS_SERVER_PATH`, `CLOUDINARY_URL`, `WORDSMITH_SEED` (secret order of Wordsmith's public answer list; required in production, never change it once set). See `.env.example` and the root `CLAUDE.md`'s "Local environment setup" section for which of these `pnpm setup:env` fills in automatically and which are optional locally.
 
 ## Architecture
 

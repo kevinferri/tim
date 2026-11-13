@@ -1,8 +1,11 @@
 "use client";
 
-import type { GameBadge, GameDefinition } from "@/games/game-room";
+import {
+  getNextEasternMidnight,
+  type GameBadge,
+  type GameDefinition,
+} from "@/games/game-room";
 import { WORDSMITH_GAME_ID } from "../lib/game-id";
-import { getNextGameDayAt } from "../lib/day";
 import { fetchWordsmith } from "./api";
 import { WordsmithIcon } from "./wordsmith-icon";
 import { WordsmithInfoButton } from "./wordsmith-info";
@@ -44,6 +47,7 @@ export const wordsmithGame: GameDefinition = {
   TitleSuffix,
   InfoButton: WordsmithInfoButton,
   fetchBadge,
-  nextBadgeChangeAt: () => getNextGameDayAt(),
+  // Every midnight, weekends too: an unfinished Friday's dot has to clear on Saturday.
+  nextBadgeChangeAt: () => getNextEasternMidnight(),
   command: { name: CommandName.Wordsmith, run: runWordsmithCommand },
 };
