@@ -44,23 +44,20 @@ export function NotificationSync() {
   const socket = useSocketHandler<{
     notificationType: NotificationType;
     topicId: string;
-  }>(
-    SocketEvent.CreateNotification,
-    ({ notificationType, topicId }) => {
-      invalidate();
-      // Tab title/chime are "this circle needs you"; the sidebar list stays global.
-      const inThisCircle =
-        !!currentCircleId && getCircleIdForTopic(topicId) === currentCircleId;
-      if (
-        notificationType === NotificationType.HighlightRecieved &&
-        inThisCircle
-      ) {
-        // Like the new-message sound: only when Tim isn't the window you're looking at.
-        if (!document.hasFocus()) playHighlightChime();
-        bumpTitleBadge("highlights");
-      }
-    },
-  );
+  }>(SocketEvent.CreateNotification, ({ notificationType, topicId }) => {
+    invalidate();
+    // Tab title/chime are "this circle needs you"; the sidebar list stays global.
+    const inThisCircle =
+      !!currentCircleId && getCircleIdForTopic(topicId) === currentCircleId;
+    if (
+      notificationType === NotificationType.HighlightRecieved &&
+      inThisCircle
+    ) {
+      // Like the new-message sound: only when Tim isn't the window you're looking at.
+      if (!document.hasFocus()) playHighlightChime();
+      bumpTitleBadge("highlights");
+    }
+  });
 
   // A circle-mate's browser pings after the chat app saved circle notifications (e.g. a game finish).
   useSocketHandler(SocketEvent.CircleNotificationsChanged, invalidate);
