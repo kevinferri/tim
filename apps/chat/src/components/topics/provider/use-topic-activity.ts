@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import { MessageProps } from "@/components/topics/message";
 import {
   SocketEvent,
@@ -8,14 +7,18 @@ import {
 import { useWindowFocus } from "@/lib/hooks/use-window-focus";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
 import { useMessageSound } from "@/components/dashboard/use-message-sound";
+import { useSelf } from "@/components/auth/self-provider";
+import { isTopicMuted } from "@/components/topics/muted-topics-store";
 import { playMessagePop } from "@/lib/sounds";
 import { bumpTitleBadge } from "@/lib/title-badges";
 
 type UseTopicActivityProps = {
   topicId: string;
+  circleId: string;
 };
 
-export function useTopicActivity({ topicId }: UseTopicActivityProps) {
+export function useTopicActivity({ topicId, circleId }: UseTopicActivityProps) {
+  const self = useSelf();
   const userTabFocused = useSocketEmit(SocketEvent.UserTabFocused);
   const userTabBlurred = useSocketEmit(SocketEvent.UserTabBlurred);
   const { isMessageSoundEnabled } = useMessageSound();
@@ -30,27 +33,30 @@ export function useTopicActivity({ topicId }: UseTopicActivityProps) {
     },
   });
 
-  useSocketHandler<MessageProps>(
+  // Every joined circle's messages arrive here (they're broadcast to circle rooms).
+  useSocketHandler<MessageProps & { circleId?: string }>(
     SocketEvent.SendMessage,
-    (message: MessageProps) => {
+    (message) => {
       if (message.topicId !== topicId) {
         markTopicAsUnread(message.topicId!);
       }
-    },
-  );
 
-  const notifyOnNewMessage = useCallback(() => {
-    if (!windowFocused) {
+      // Tab title/sound mean "this circle needs you": skip other circles,
+      // your own messages, and muted topics (unless it's the one you're in).
+      const isCurrentTopic = message.topicId === topicId;
+      if (
+        windowFocused ||
+        message.circleId !== circleId ||
+        message.sentBy?.id === self.id ||
+        (!isCurrentTopic && isTopicMuted(message.topicId!))
+      ) {
+        return;
+      }
+
       bumpTitleBadge("messages");
-
       if (isMessageSoundEnabled) {
         playMessagePop();
       }
-    }
-  }, [windowFocused, isMessageSoundEnabled]);
-
-  return {
-    notifyOnNewMessage,
-    windowFocused,
-  };
+    },
+  );
 }

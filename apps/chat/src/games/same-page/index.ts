@@ -2,4 +2,3 @@
 export { samePageGame } from "./components/game";
 export { SamePageRefreshTimer } from "./components/same-page-refresh-timer";
 export { samePageNotificationCopy } from "./components/notification-copy";
-export { useSamePageCommand } from "./components/use-same-page-command";

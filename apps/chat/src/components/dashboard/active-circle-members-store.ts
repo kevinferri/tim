@@ -101,6 +101,11 @@ export function usePresenceSync() {
   );
 }
 
+// Non-reactive read for socket handlers; topicMap covers every topic in every joined circle.
+export function getCircleIdForTopic(topicId: string) {
+  return useStore.getState().topicMap[topicId]?.circleId;
+}
+
 export function useActiveCircleMembers() {
   const topicMap = useStore(useShallow((state) => state.topicMap));
 

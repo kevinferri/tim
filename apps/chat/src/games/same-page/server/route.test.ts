@@ -18,7 +18,6 @@ vi.mock("./model", async () => {
     getSamePageState: vi.fn(),
     getSockStatus: vi.fn(),
     getStandings: vi.fn(),
-    markPromptViewed: vi.fn(),
     markResultsViewed: vi.fn(),
     submitSamePageAnswer: vi.fn(),
     isCircleAdmin: vi.fn(),

@@ -5,7 +5,6 @@ import {
   getSamePageState,
   isCircleAdmin,
   revealRound,
-  markPromptViewed,
   markResultsViewed,
   setSamePageEnabled,
   submitSamePageAnswer,
@@ -48,13 +47,14 @@ async function createCircleWithMembers(
 }
 
 describe("getGamesBadge", () => {
-  it("clears the play badge once the game is opened, even without answering", async () => {
+  it("keeps the play badge until you answer, even after opening the game", async () => {
     const owner = await createUser("Owner");
     const circle = await createCircleWithMembers([owner], owner.id);
     const args = { circleId: circle.id, userId: owner.id, now: PLAY_NOW };
 
+    await getSamePageState(args);
     await expect(getGamesBadge(args)).resolves.toBe("play");
-    await markPromptViewed(args);
+    await submitSamePageAnswer({ ...args, text: "Pizza" });
     await expect(getGamesBadge(args)).resolves.toBeNull();
   });
 
@@ -174,6 +174,27 @@ describe("submitSamePageAnswer", () => {
         now: PLAY_NOW,
       }),
     ).rejects.toThrow(/locked/i);
+  });
+
+  it("notifies the rest of the circle that you answered", async () => {
+    const a = await createUser("Alice");
+    const b = await createUser("Bob");
+    const circle = await createCircleWithMembers([a, b], a.id);
+
+    await submitSamePageAnswer({
+      circleId: circle.id,
+      userId: a.id,
+      text: "Survivor",
+      now: PLAY_NOW,
+    });
+
+    const rows = await prismaClient.notification.findMany({
+      where: { type: "samepage:answered" },
+      select: { recipientId: true, actorId: true, circleId: true },
+    });
+    expect(rows).toEqual([
+      { recipientId: b.id, actorId: a.id, circleId: circle.id },
+    ]);
   });
 
   it("rejects calling yourself", async () => {

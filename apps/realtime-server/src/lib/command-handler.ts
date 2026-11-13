@@ -108,6 +108,8 @@ const commandExecutors: Record<CommandName, CommandExecutor> = {
   // Handled in the browser; this only answers a client that sends it anyway.
   [CommandName.GameRoom]: async () =>
     "🎮 Type /gameroom to open the Game room.",
+  [CommandName.SpellItOut]: async () =>
+    "🔤 Type /spellitout to open Spell It Out.",
   [CommandName.Tim]: async (prompt, { socket, server, payload }) => {
     const topicKey = toRoomKey({
       id: payload.topicId,

@@ -1,14 +1,34 @@
 "use client";
 
 // Registers games with the Game room. The only place that knows every game.
+import type { ParsedCommand } from "@tim/commands";
 import {
   GameRoomButton as GameRoomButtonBase,
   GameRoomSheet,
   type GameDefinition,
 } from "@/games/game-room";
-import { samePageGame } from "@/games/same-page";
+import { samePageGame, samePageNotificationCopy } from "@/games/same-page";
+import {
+  spellItOutGame,
+  spellItOutNotificationCopy,
+} from "@/games/spell-it-out";
 
-const GAMES: GameDefinition[] = [samePageGame];
+const GAMES: GameDefinition[] = [samePageGame, spellItOutGame];
+
+/** Runs a game's slash command in the browser; false means send it as a normal message. */
+export function runGameCommand(
+  parsed: ParsedCommand,
+  circleId: string,
+): boolean {
+  const game = GAMES.find((g) => g.command?.name === parsed.name);
+  return game?.command?.run(parsed.prompt, circleId) ?? false;
+}
+
+/** Copy for every game's circle-level notifications, keyed by NotificationType. */
+export const gameNotificationCopy = {
+  ...samePageNotificationCopy,
+  ...spellItOutNotificationCopy,
+};
 
 export function GameRoomSheetHost({ circleId }: { circleId: string }) {
   return <GameRoomSheet circleId={circleId} games={GAMES} />;

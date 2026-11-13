@@ -15,6 +15,7 @@ import { handleOnAny, handleOnAnyOutgoing } from "./any";
 import { handleDeletedTopic, handleUpsertedTopic } from "./topics";
 import { handleToggleHighlight } from "./highlights";
 import { handleDeletedCircle, handleUpsertedCircle } from "./circles";
+import { handleCircleNotificationsChanged } from "./notifications";
 import {
   handleUserClickedLink,
   handleUserExpandedImage,
@@ -67,6 +68,8 @@ export function registerEventHandlers(server: AppServer) {
     handleDeletedTopic({ socket, server });
 
     handleToggleHighlight({ socket, server });
+
+    handleCircleNotificationsChanged({ socket, server });
 
     handleUserTabFocused({ socket, server });
     handleUserTabBlurred({ socket, server });

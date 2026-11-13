@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { BadgeDot, useGameBadges } from "./badges";
+import { useMarkRoomSeen } from "./room-seen";
 import { useGameRoomStore } from "./store";
 import type { GameDefinition } from "./types";
 
@@ -27,6 +28,7 @@ export function GameRoomSheet({ circleId, games }: Props) {
     storeOpen && (targetCircleId === null || targetCircleId === circleId);
   const activeGame = games.find((g) => g.id === activeGameId) ?? null;
   const badges = useGameBadges(circleId, games);
+  useMarkRoomSeen(circleId, open, badges);
 
   return (
     <Sheet

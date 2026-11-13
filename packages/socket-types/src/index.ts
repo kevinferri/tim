@@ -42,6 +42,8 @@ export enum SocketEvent {
 
   // notifications
   CreateNotification = "notification:create",
+  // Content-free "refetch your notifications" ping for a circle's other members, sent by the browser after the chat app saves circle notifications.
+  CircleNotificationsChanged = "notification:circleChanged",
 }
 
 // Carried in JoinRoom/LeaveRoom payloads -- shared here so both sides use the exact same values.
@@ -62,4 +64,6 @@ export enum NotificationType {
   SamePagePrompt = "samepage:prompt",
   SamePageNudge = "samepage:nudge",
   SamePageReveal = "samepage:reveal",
+  SamePageAnswered = "samepage:answered",
+  SpellItOutFinished = "spellitout:finished",
 }

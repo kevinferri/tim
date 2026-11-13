@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { NotificationType } from "@tim/socket-types";
 import { prismaClient } from "@/lib/prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { getEstGameDate, getSamePagePhase } from "../lib/est-day";
@@ -300,17 +301,15 @@ export async function getGamesBadge({
     },
   });
 
-  if (phase === "play" && round?.answers.length) return null;
+  // The play dot stays until you answer; opening the game doesn't clear it.
+  if (phase === "play") return round?.answers.length ? null : "play";
   // No round today (e.g. turned on after close): no results to see.
   if (phase === "results" && !round) return null;
 
   const stats = await prismaClient.samePagePlayerStats.findUnique({
     where: { circleId_userId: { circleId, userId } },
-    select: { promptViewedGameDate: true, resultsViewedGameDate: true },
+    select: { resultsViewedGameDate: true },
   });
-  if (phase === "play") {
-    return stats?.promptViewedGameDate === gameDate ? null : "play";
-  }
   return stats?.resultsViewedGameDate === gameDate ? null : "results";
 }
 
@@ -533,19 +532,39 @@ export async function submitSamePageAnswer({
   }
 
   try {
-    return await prismaClient.samePageAnswer.create({
-      data: {
-        roundId: round.id,
-        userId,
-        text: text.trim(),
-        matchKey: toMatchKey(text),
-        calledUserId: calledUserId ?? null,
-      },
-      include: {
-        calledUser: {
-          select: MEMBER_SELECT,
+    return await prismaClient.$transaction(async (tx) => {
+      const answer = await tx.samePageAnswer.create({
+        data: {
+          roundId: round.id,
+          userId,
+          text: text.trim(),
+          matchKey: toMatchKey(text),
+          calledUserId: calledUserId ?? null,
         },
-      },
+        include: {
+          calledUser: {
+            select: MEMBER_SELECT,
+          },
+        },
+      });
+      const circle = await tx.circle.findUnique({
+        where: { id: circleId },
+        select: { members: { select: { id: true } } },
+      });
+      const recipientIds = (circle?.members ?? [])
+        .map((m) => m.id)
+        .filter((id) => id !== userId);
+      if (recipientIds.length > 0) {
+        await tx.notification.createMany({
+          data: recipientIds.map((recipientId) => ({
+            type: NotificationType.SamePageAnswered,
+            recipientId,
+            actorId: userId,
+            circleId,
+          })),
+        });
+      }
+      return answer;
     });
   } catch (err) {
     // Concurrent double-submit loses the unique race — treat as locked.
@@ -561,27 +580,21 @@ export async function submitSamePageAnswer({
   }
 }
 
-type ViewedArgs = { circleId: string; userId: string; now?: Date };
-
-async function markViewed(
-  field: "promptViewedGameDate" | "resultsViewedGameDate",
-  { circleId, userId, now = new Date() }: ViewedArgs,
-) {
-  const data = { [field]: getEstGameDate(now) };
+export async function markResultsViewed({
+  circleId,
+  userId,
+  now = new Date(),
+}: {
+  circleId: string;
+  userId: string;
+  now?: Date;
+}) {
+  const data = { resultsViewedGameDate: getEstGameDate(now) };
   await prismaClient.samePagePlayerStats.upsert({
     where: { circleId_userId: { circleId, userId } },
     create: { circleId, userId, ...data },
     update: data,
   });
-}
-
-/** Opening the game during play clears the "play" badge, answered or not. */
-export function markPromptViewed(args: ViewedArgs) {
-  return markViewed("promptViewedGameDate", args);
-}
-
-export function markResultsViewed(args: ViewedArgs) {
-  return markViewed("resultsViewedGameDate", args);
 }
 
 export function getSockStatus(circleId: string) {

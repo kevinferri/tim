@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { getCircleIdForTopic } from "@/components/dashboard/active-circle-members-store";
 import { NotificationType } from "@tim/socket-types";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import {
@@ -37,17 +39,31 @@ export function NotificationSync() {
     });
   };
 
-  const socket = useSocketHandler<{ notificationType: NotificationType }>(
+  const { circleId: currentCircleId } = useParams<{ circleId?: string }>();
+
+  const socket = useSocketHandler<{
+    notificationType: NotificationType;
+    topicId: string;
+  }>(
     SocketEvent.CreateNotification,
-    ({ notificationType }) => {
+    ({ notificationType, topicId }) => {
       invalidate();
-      if (notificationType === NotificationType.HighlightRecieved) {
+      // Tab title/chime are "this circle needs you"; the sidebar list stays global.
+      const inThisCircle =
+        !!currentCircleId && getCircleIdForTopic(topicId) === currentCircleId;
+      if (
+        notificationType === NotificationType.HighlightRecieved &&
+        inThisCircle
+      ) {
         // Like the new-message sound: only when Tim isn't the window you're looking at.
         if (!document.hasFocus()) playHighlightChime();
         bumpTitleBadge("highlights");
       }
     },
   );
+
+  // A circle-mate's browser pings after the chat app saved circle notifications (e.g. a game finish).
+  useSocketHandler(SocketEvent.CircleNotificationsChanged, invalidate);
 
   // Only arrives for the topic you're in, or for your own toggles elsewhere --
   // other topics' notifications may lag, which is fine.
@@ -83,8 +99,8 @@ export function NotificationSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
 
-  // Circle notifications (e.g. games) are written by the chat app with no
-  // socket push, so pick them up whenever the tab is looked at again.
+  // Circle notifications are written by the chat app, not the realtime server: scheduled
+  // ones (Same Page alerts) have no live push, and a circle-mate's ping can be missed.
   useEffect(() => {
     let lastRefreshAt = Date.now();
     const onVisible = () => {

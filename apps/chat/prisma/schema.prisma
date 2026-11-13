@@ -39,6 +39,8 @@ model User {
   samePageCalls         SamePageAnswer[] @relation("samePageCallsByUser")
   samePageSocksHeld     SamePageSock[]   @relation("samePageSockHolder")
   samePagePlayerStats   SamePagePlayerStats[] @relation("samePageStatsForUser")
+  spellItOutPlays       SpellItOutPlay[]      @relation("spellItOutPlaysByUser")
+  gameRoomSeen          GameRoomSeen[]        @relation("gameRoomSeenByUser")
 
   @@map(name: "users")
 }
@@ -65,6 +67,7 @@ model Circle {
   samePageSock   SamePageSock?   @relation("samePageSockForCircle")
   samePagePlayerStats SamePagePlayerStats[] @relation("samePageStatsForCircle")
   games               CircleGame[]          @relation("gamesForCircle")
+  gameRoomSeen        GameRoomSeen[]        @relation("gameRoomSeenInCircle")
   notifications       Notification[]        @relation("notificationsForCircle")
 
   @@index([userId])
@@ -280,6 +283,23 @@ model CircleGame {
   @@map(name: "circle_games")
 }
 
+// Badges the Game room button already showed a user today, so it only lights up for new ones.
+model GameRoomSeen {
+  userId    String
+  circleId  String
+  // Eastern YYYY-MM-DD; badgeKeys from an older day count as nothing seen.
+  day       String
+  // "<gameId>:<badge>", e.g. "same-page:results".
+  badgeKeys String[]
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user   User   @relation("gameRoomSeenByUser", fields: [userId], references: [id], onDelete: Cascade)
+  circle Circle @relation("gameRoomSeenInCircle", fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, circleId])
+  @@map(name: "game_room_seen")
+}
+
 model SamePageAnswer {
   id           String   @id @default(uuid())
   createdAt    DateTime @default(now())
@@ -329,8 +349,7 @@ model SamePagePlayerStats {
   matchDist1            Int     @default(0)
   matchDist2            Int     @default(0)
   matchDist3Plus        Int     @default(0)
-  // Last gameDate this user opened the game during play / opened results (badge clears).
-  promptViewedGameDate  String?
+  // Last gameDate this user opened results (clears the results badge).
   resultsViewedGameDate String?
 
   circle Circle @relation("samePageStatsForCircle", fields: [circleId], references: [id], onDelete: Cascade)
@@ -338,4 +357,20 @@ model SamePagePlayerStats {
 
   @@id([circleId, userId])
   @@map(name: "same_page_player_stats")
+}
+
+model SpellItOutPlay {
+  id         String    @id @default(uuid())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
+  userId     String
+  gameDate   String
+  guesses    String[]
+  solved     Boolean   @default(false)
+  finishedAt DateTime?
+
+  user User @relation("spellItOutPlaysByUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameDate])
+  @@map(name: "spell_it_out_plays")
 }

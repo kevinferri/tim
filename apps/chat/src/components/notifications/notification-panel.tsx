@@ -69,7 +69,14 @@ function CircleNotificationRow({
     >
       <span className="mt-0.5 shrink-0">{copy.icon}</span>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <div className="break-words">{copy.text}</div>
+        <div className="break-words">
+          {notification.actor && (
+            <span className="font-medium text-foreground">
+              {notification.actor.displayName}{" "}
+            </span>
+          )}
+          {copy.text}
+        </div>
         <div className="flex items-center gap-1 text-xs">
           <span className="truncate">{circle.name}</span>
           <NotificationTime createdAt={notification.createdAt} />

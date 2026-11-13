@@ -6,7 +6,6 @@ import {
   getSockStatus,
   getStandings,
   isCircleAdmin,
-  markPromptViewed,
   markResultsViewed,
   setSamePageEnabled,
   submitSamePageAnswer,
@@ -71,11 +70,6 @@ export const POST = apiRoute(
         calledUserId: body.calledUserId,
       });
       return NextResponse.json({ answer });
-    }
-
-    if (body.action === "view-prompt") {
-      await markPromptViewed({ circleId, userId });
-      return NextResponse.json({ ok: true });
     }
 
     if (body.action === "view-results") {
