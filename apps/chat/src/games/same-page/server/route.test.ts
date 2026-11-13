@@ -12,7 +12,7 @@ vi.mock("@/lib/prisma/client", () => ({
 
 vi.mock("./model", async () => {
   const { ApiError } =
-    await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+    await vi.importActual<typeof import("@/lib/api-error")>("@/lib/api-error");
   return {
     getGamesBadge: vi.fn(),
     getSamePageState: vi.fn(),

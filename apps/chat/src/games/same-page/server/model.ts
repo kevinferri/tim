@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prismaClient } from "@/lib/prisma/client";
-import { ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
 import { getEstGameDate, getSamePagePhase } from "../lib/est-day";
 import {
   clusterMatchKeys,

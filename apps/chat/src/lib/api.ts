@@ -1,23 +1,8 @@
 import { NextResponse } from "next/server";
 import { getLoggedInUserId } from "@/lib/session";
+import { ApiError } from "@/lib/api-error";
 
-const STATUS_TEXT: Record<number, string> = {
-  400: "Bad request",
-  401: "Unauthorized",
-  403: "Forbidden",
-  404: "Not found",
-};
-
-/** Throw from a route (or anything it calls) to respond with this status. */
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message = STATUS_TEXT[status] ?? "Request failed",
-  ) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
+export { ApiError };
 
 /**
  * Wraps a route handler: an ApiError becomes its status and message; anything
