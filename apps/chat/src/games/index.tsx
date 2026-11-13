@@ -5,12 +5,16 @@ import type { ParsedCommand } from "@tim/commands";
 import {
   GameRoomButton as GameRoomButtonBase,
   GameRoomSheet,
+  type ComingSoonGame,
   type GameDefinition,
 } from "@/games/game-room";
+import { blackjackGame } from "@/games/blackjack";
 import { samePageGame, samePageNotificationCopy } from "@/games/same-page";
+import { texasHoldemGame } from "@/games/texas-holdem";
 import { wordsmithGame, wordsmithNotificationCopy } from "@/games/wordsmith";
 
 const GAMES: GameDefinition[] = [samePageGame, wordsmithGame];
+const COMING_SOON: ComingSoonGame[] = [texasHoldemGame, blackjackGame];
 
 /** Runs a game's slash command in the browser; false means send it as a normal message. */
 export function runGameCommand(
@@ -28,7 +32,9 @@ export const gameNotificationCopy = {
 };
 
 export function GameRoomSheetHost({ circleId }: { circleId: string }) {
-  return <GameRoomSheet circleId={circleId} games={GAMES} />;
+  return (
+    <GameRoomSheet circleId={circleId} games={GAMES} comingSoon={COMING_SOON} />
+  );
 }
 
 export function GameRoomButton(props: {
