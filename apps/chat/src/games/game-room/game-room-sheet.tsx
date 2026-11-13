@@ -94,7 +94,7 @@ export function GameRoomSheet({ circleId, games, comingSoon = [] }: Props) {
           <activeGame.Panel circleId={circleId} />
         ) : (
           <ScrollArea className="flex-1">
-            <div className="flex flex-col gap-8 p-3">
+            <div className="flex flex-col gap-6 p-3">
               {GAME_CATEGORIES.map((category) => {
                 const playable = games.filter(
                   (g) => g.category === category.id,
