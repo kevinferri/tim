@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { gameRoomBadgeQueryKey, useNotifyCircle } from "@/games/game-room";
+import { formatGameDate } from "../lib/day";
 import { WORD_LENGTH } from "../lib/rules";
 import {
   fetchWordsmith,
@@ -112,6 +113,12 @@ export function WordsmithPanel({ circleId, view, onViewChange }: Props) {
         <div className="flex flex-col gap-4 p-4">
           {(activeView === "play" || activeView === "results") &&
             !data.isGameDay && <WeekendOff />}
+          {(activeView === "play" || activeView === "results") &&
+            data.isGameDay && (
+              <p className="text-center text-xs font-medium text-muted-foreground">
+                {formatGameDate(data.gameDate)}
+              </p>
+            )}
           {activeView === "play" && data.isGameDay && (
             <PlayView circleId={circleId} data={data} />
           )}
