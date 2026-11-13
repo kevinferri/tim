@@ -59,4 +59,7 @@ export enum NotificationType {
   ClickedLink = "link:clicked",
   Mentioned = "mention:received",
   Replied = "reply:received",
+  SamePagePrompt = "samepage:prompt",
+  SamePageNudge = "samepage:nudge",
+  SamePageReveal = "samepage:reveal",
 }

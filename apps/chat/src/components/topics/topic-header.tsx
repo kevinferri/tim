@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { GearIcon } from "@radix-ui/react-icons";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { Topic } from "@prisma/client";
 import { TopicActiveUsers } from "@/components/topics/topic-active-users";
@@ -31,8 +31,10 @@ export function TopicHeader(props: Props) {
               variant="ghost"
               size="iconSm"
               className="absolute top-[12px]"
+              aria-label="Topic settings"
+              title="Topic settings"
             >
-              <InfoCircledIcon className="h-4 w-4" />
+              <GearIcon className="h-4 w-4" />
             </Button>
           }
         />

@@ -1,5 +1,10 @@
-import { CommandName, parseCommand } from "@tim/commands";
+import {
+  CommandName,
+  parseCommand,
+  parseSamePageSubcommand,
+} from "@tim/commands";
 import { RoomType, toRoomKey } from "../event-handlers/rooms";
+import { getSamePageSockHolder } from "../db/same-page";
 import { getRandomGif, getYoutubeVideo } from "./media-fetchers";
 import { getChatGpt } from "./open-ai";
 import { AppServer, AppSocket } from "./socket";
@@ -70,11 +75,39 @@ function eightBall(): string {
   return `🎱 ${answer}`;
 }
 
+async function samePageCommand(
+  prompt: string,
+  { payload }: CommandContext,
+): Promise<string | undefined> {
+  const sub = parseSamePageSubcommand(prompt);
+  // play / results / standings / default are opened client-side; sock posts a card.
+  if (sub !== "sock") {
+    return "🧦 Open Same Page from the Game room (or /samepage play).";
+  }
+
+  const sock = await getSamePageSockHolder(payload.circleId);
+  if (!sock?.holderUserId || !sock.displayName) {
+    return "🧦 Nobody holds the Sock right now.";
+  }
+
+  const since = sock.heldSince
+    ? ` since ${new Date(sock.heldSince).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })}`
+    : "";
+  return `🧦 ${sock.displayName} has the Sock${since}.`;
+}
+
 const commandExecutors: Record<CommandName, CommandExecutor> = {
   [CommandName.Giphy]: async (prompt) => getRandomGif(prompt),
   [CommandName.Youtube]: async (prompt) => getYoutubeVideo(prompt),
   [CommandName.Roll]: async (prompt) => rollDice(prompt),
   [CommandName.EightBall]: async () => eightBall(),
+  [CommandName.SamePage]: samePageCommand,
+  // Handled in the browser; this only answers a client that sends it anyway.
+  [CommandName.GameRoom]: async () =>
+    "🎮 Type /gameroom to open the Game room.",
   [CommandName.Tim]: async (prompt, { socket, server, payload }) => {
     const topicKey = toRoomKey({
       id: payload.topicId,

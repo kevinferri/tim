@@ -83,5 +83,22 @@ export function NotificationSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
 
+  // Circle notifications (e.g. games) are written by the chat app with no
+  // socket push, so pick them up whenever the tab is looked at again.
+  useEffect(() => {
+    let lastRefreshAt = Date.now();
+    const onVisible = () => {
+      if (document.hidden) return;
+      if (Date.now() - lastRefreshAt < VISIBLE_REFRESH_MIN_INTERVAL_MS) return;
+      lastRefreshAt = Date.now();
+      invalidate();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return null;
 }
+
+const VISIBLE_REFRESH_MIN_INTERVAL_MS = 30_000;

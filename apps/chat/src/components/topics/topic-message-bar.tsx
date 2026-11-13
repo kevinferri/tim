@@ -33,6 +33,8 @@ import {
   COMMANDS,
   parseCommand,
 } from "@tim/commands";
+import { useGameRoomStore } from "@/games/game-room";
+import { useSamePageCommand } from "@/games/same-page";
 import { CommandAutocomplete } from "@/components/topics/command-autocomplete";
 import {
   MentionAutocomplete,
@@ -304,10 +306,27 @@ export function TopicMessageBar() {
     loadEmojiData().catch(() => {});
   }, []);
 
+  const handleSamePageCommand = useSamePageCommand(circleId);
+
   const emitMessage = async (draft: string) => {
     // Catches pasted shortcodes; left as text if the data hasn't loaded yet.
     const message = replaceShortcodes(draft);
     if (!image && !message.trim()) return;
+
+    const parsed = parseCommand(message);
+    if (parsed?.name === CommandName.GameRoom) {
+      setMessage("");
+      useGameRoomStore.getState().openHub();
+      return;
+    }
+    if (
+      parsed?.name === CommandName.SamePage &&
+      handleSamePageCommand(parsed.prompt)
+    ) {
+      setMessage("");
+      return;
+    }
+
     let _media = image ?? extractImageFromMessage(message);
     const youtubeVideo = getYoutubeVideoFromUrl(message);
     const twitchStream = getTwitchStreamFromUrl(message);

@@ -35,6 +35,10 @@ model User {
   topicPreferences  TopicPreference[] @relation("topicPreferencesForUser")
   notificationsReceived Notification[] @relation("notificationsForUser")
   notificationsSent     Notification[] @relation("notificationsByActor")
+  samePageAnswers       SamePageAnswer[] @relation("samePageAnswersByUser")
+  samePageCalls         SamePageAnswer[] @relation("samePageCallsByUser")
+  samePageSocksHeld     SamePageSock[]   @relation("samePageSockHolder")
+  samePagePlayerStats   SamePagePlayerStats[] @relation("samePageStatsForUser")
 
   @@map(name: "users")
 }
@@ -57,6 +61,11 @@ model Circle {
   members      User[]  @relation("circleMembershipsForUser")
   topics       Topic[] @relation("topicsInCircle")
   defaultTopic Topic?  @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
+  samePageRounds SamePageRound[] @relation("samePageRoundsForCircle")
+  samePageSock   SamePageSock?   @relation("samePageSockForCircle")
+  samePagePlayerStats SamePagePlayerStats[] @relation("samePageStatsForCircle")
+  games               CircleGame[]          @relation("gamesForCircle")
+  notifications       Notification[]        @relation("notificationsForCircle")
 
   @@index([userId])
 
@@ -215,18 +224,118 @@ model Notification {
   // source and adding a type never needs a migration.
   type        String
   recipientId String
-  actorId     String
-  messageId   String
+  // Set for notifications about a message. Circle-level ones (e.g. games)
+  // have no message or actor and set circleId instead.
+  actorId     String?
+  messageId   String?
+  circleId    String?
   readAt      DateTime?
 
   // Relations
-  recipient User    @relation("notificationsForUser", fields: [recipientId], references: [id], onDelete: Cascade)
-  actor     User    @relation("notificationsByActor", fields: [actorId], references: [id])
-  message   Message @relation("notificationsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
+  recipient User     @relation("notificationsForUser", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User?    @relation("notificationsByActor", fields: [actorId], references: [id], onDelete: Restrict)
+  message   Message? @relation("notificationsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
+  circle    Circle?  @relation("notificationsForCircle", fields: [circleId], references: [id], onDelete: Cascade)
 
   @@index([recipientId, readAt, createdAt(sort: Desc)])
   @@index([messageId])
   @@index([actorId])
+  @@index([circleId])
 
   @@map(name: "notifications")
+}
+
+// Weekday Same Page round for a circle. gameDate is America/New_York YYYY-MM-DD.
+model SamePageRound {
+  id         String    @id @default(uuid())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
+  circleId   String
+  gameDate   String
+  prompt     String
+  revealedAt DateTime?
+  // Claimed atomically so each alert is sent once per round.
+  promptNotifiedAt DateTime?
+  nudgeNotifiedAt  DateTime?
+  revealNotifiedAt DateTime?
+
+  circle  Circle           @relation("samePageRoundsForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  answers SamePageAnswer[] @relation("samePageAnswersForRound")
+
+  @@unique([circleId, gameDate])
+  @@map(name: "same_page_rounds")
+}
+
+// Row present = that game is on for the circle (every game is off by default).
+// gameId is each game's own id constant (e.g. "same-page").
+model CircleGame {
+  circleId  String
+  gameId    String
+  enabledAt DateTime @default(now())
+
+  circle Circle @relation("gamesForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@id([circleId, gameId])
+  @@index([gameId])
+  @@map(name: "circle_games")
+}
+
+model SamePageAnswer {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+  roundId      String
+  userId       String
+  text         String
+  // Normalized key used for clustering matches at reveal.
+  matchKey     String
+  calledUserId String?
+
+  round      SamePageRound @relation("samePageAnswersForRound", fields: [roundId], references: [id], onDelete: Cascade)
+  user       User          @relation("samePageAnswersByUser", fields: [userId], references: [id], onDelete: Cascade)
+  calledUser User?         @relation("samePageCallsByUser", fields: [calledUserId], references: [id], onDelete: SetNull)
+
+  @@unique([roundId, userId])
+  @@index([userId])
+  @@map(name: "same_page_answers")
+}
+
+// Current Sock holder for a circle (one row per circle).
+model SamePageSock {
+  circleId     String    @id
+  holderUserId String?
+  heldSince    DateTime?
+
+  circle Circle @relation("samePageSockForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  holder User?  @relation("samePageSockHolder", fields: [holderUserId], references: [id], onDelete: SetNull)
+
+  @@map(name: "same_page_socks")
+}
+
+// Lifetime Same Page stats per user in a circle. Never resets.
+model SamePagePlayerStats {
+  circleId              String
+  userId                String
+  played                Int     @default(0)
+  currentStreak         Int     @default(0)
+  bestStreak            Int     @default(0)
+  matchedRounds         Int     @default(0)
+  correctCalls          Int     @default(0)
+  callAttempts          Int     @default(0)
+  samePageDays          Int     @default(0)
+  socksEarned           Int     @default(0)
+  sockDaysHeld          Int     @default(0)
+  matchDist0            Int     @default(0)
+  matchDist1            Int     @default(0)
+  matchDist2            Int     @default(0)
+  matchDist3Plus        Int     @default(0)
+  // Last gameDate this user opened the game during play / opened results (badge clears).
+  promptViewedGameDate  String?
+  resultsViewedGameDate String?
+
+  circle Circle @relation("samePageStatsForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  user   User   @relation("samePageStatsForUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([circleId, userId])
+  @@map(name: "same_page_player_stats")
 }

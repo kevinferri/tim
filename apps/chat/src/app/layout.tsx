@@ -17,6 +17,7 @@ import { TopicRoomConnect } from "@/components/dashboard/topic-room-connect";
 import { CirclesNav } from "@/components/circles/circles-nav";
 import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
 import { NotificationSync } from "@/components/notifications/notification-sync";
+import { SamePageRefreshTimer } from "@/games/same-page";
 import { NotificationsProvider } from "@/components/notifications/notifications-provider";
 import { NotificationItem } from "@/components/notifications/notification-query-cache";
 import { NotificationType } from "@tim/socket-types";
@@ -156,6 +157,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
             <CircleRoomConnect circleIds={circleIds ?? []} />
             <TopicRoomConnect />
             <NotificationSync />
+            <SamePageRefreshTimer />
             <div className="flex flex-col h-dvh">
               <div className="flex overflow-hidden basis-full">
                 <CirclesNav circles={circles} />

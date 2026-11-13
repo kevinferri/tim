@@ -7,11 +7,16 @@ import {
 } from "@radix-ui/react-icons";
 import { NotificationType } from "@tim/socket-types";
 import { ReplyIcon } from "@/components/icons/reply-icon";
+import { samePageNotificationCopy } from "@/games/same-page";
 
-export const notificationCopyMap: Record<
-  NotificationType,
-  { text: string; icon: React.ReactNode }
-> = {
+export type NotificationCopy = {
+  text: string;
+  icon: React.ReactNode;
+  /** Circle-level notifications: what to open when clicked. */
+  onOpen?: (circleId: string) => void;
+};
+
+export const notificationCopyMap: Record<NotificationType, NotificationCopy> = {
   [NotificationType.HighlightRecieved]: {
     text: "highlighted your message",
     icon: <StarFilledIcon />,
@@ -36,4 +41,5 @@ export const notificationCopyMap: Record<
     text: "replied to your message",
     icon: <ReplyIcon />,
   },
+  ...samePageNotificationCopy,
 };

@@ -62,5 +62,9 @@ export function CommandIcon({ name, className }: Props) {
           className={cn("shrink-0 rounded-full", className)}
         />
       );
+    case CommandName.SamePage:
+      return <EmojiIcon emoji="🧦" className={className} />;
+    case CommandName.GameRoom:
+      return <EmojiIcon emoji="🎮" className={className} />;
   }
 }

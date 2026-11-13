@@ -5,6 +5,8 @@ export enum CommandName {
   Tim = "tim",
   Roll = "roll",
   EightBall = "8ball",
+  SamePage = "samepage",
+  GameRoom = "gameroom",
 }
 
 // Every token a user can type after "/", mapped to the canonical command it resolves to.
@@ -16,6 +18,8 @@ export const COMMAND_ALIASES: Record<string, CommandName> = {
   tim: CommandName.Tim,
   roll: CommandName.Roll,
   "8ball": CommandName.EightBall,
+  samepage: CommandName.SamePage,
+  gameroom: CommandName.GameRoom,
 };
 
 export type ParsedCommand = {
@@ -58,6 +62,9 @@ const COMMAND_DESCRIPTIONS: Record<CommandName, string> = {
   [CommandName.Youtube]: "Share a YouTube video",
   [CommandName.Roll]: "Roll a die",
   [CommandName.EightBall]: "Ask the magic 8-ball a question",
+  [CommandName.SamePage]:
+    "Same Page daily game (play, results, standings, sock)",
+  [CommandName.GameRoom]: "Open the Game room",
 };
 
 // Kept separate from COMMAND_DESCRIPTIONS so usage examples aren't crammed into descriptive prose.
@@ -67,7 +74,21 @@ const COMMAND_USAGE: Record<CommandName, string> = {
   [CommandName.Youtube]: "/youtube never gonna give you up",
   [CommandName.Roll]: "/roll d20",
   [CommandName.EightBall]: "/8ball will it rain tomorrow?",
+  [CommandName.SamePage]: "/samepage play",
+  [CommandName.GameRoom]: "/gameroom",
 };
+
+export type SamePageSubcommand =
+  "play" | "results" | "standings" | "sock" | "default";
+
+export function parseSamePageSubcommand(prompt: string): SamePageSubcommand {
+  const token = prompt.trim().split(/\s+/)[0]?.toLowerCase();
+  if (token === "play") return "play";
+  if (token === "results") return "results";
+  if (token === "standings") return "standings";
+  if (token === "sock") return "sock";
+  return "default";
+}
 
 // Computed (alphabetical), not hand-listed, so a newly added CommandName sorts itself in.
 const COMMAND_ORDER: CommandName[] = Object.values(CommandName).sort();

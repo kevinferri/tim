@@ -64,6 +64,13 @@ export function TopicSideBar() {
     }
   }, [activeTab, isMarkingAllRead, markAllRead]);
 
+  // Refetches (tab visible again, scheduled refresh) raise the count without a socket event.
+  useEffect(() => {
+    if (activeTab === "notifications" && unreadCount > 0 && !isMarkingAllRead) {
+      markAllRead();
+    }
+  }, [activeTab, unreadCount, isMarkingAllRead, markAllRead]);
+
   const tabMap: Record<Tab, Record<string, React.ReactElement | string>> = {
     members: {
       header: "Circle members",

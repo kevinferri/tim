@@ -7,4 +7,5 @@ export type {
   Highlight,
   TopicReadState,
   Notification,
+  SamePageSock,
 } from "@prisma/client";
