@@ -123,8 +123,8 @@ describe("notificationModel.getForUser", () => {
       userId: recipient.id,
     });
 
-    expect(notification.message.text).toBeNull();
-    expect(notification.message.mediaUrl).toBe("https://example.com/cat.gif");
+    expect(notification.message?.text).toBeNull();
+    expect(notification.message?.mediaUrl).toBe("https://example.com/cat.gif");
   });
 
   it("only returns notifications for the requesting recipient", async () => {
@@ -302,6 +302,51 @@ describe("notificationModel.getForUser", () => {
         before: notification.id,
       }),
     ).resolves.toEqual([]);
+  });
+
+  it("returns circle notifications (no message) to members, alongside message ones, until they leave", async () => {
+    const owner = await createUser("Owner");
+    const recipient = await createUser("Recipient");
+    const topic = await createTopic(owner.id, [recipient.id]);
+    const message = await createMessage(owner.id, topic.id);
+    await createNotification({
+      recipientId: recipient.id,
+      actorId: owner.id,
+      messageId: message.id,
+    });
+    await prismaClient.notification.create({
+      data: {
+        type: "samepage:reveal",
+        recipientId: recipient.id,
+        circleId: topic.circleId,
+      },
+    });
+
+    const notifications = await prismaClient.notification.getForUser({
+      userId: recipient.id,
+    });
+    expect(notifications).toHaveLength(2);
+    const circleNotification = notifications.find((n) => n.message === null);
+    expect(circleNotification).toMatchObject({
+      type: "samepage:reveal",
+      actor: null,
+      circle: { id: topic.circleId, name: "Test Circle" },
+    });
+    await expect(
+      prismaClient.notification.getUnreadCount({ userId: recipient.id }),
+    ).resolves.toBe(2);
+
+    await prismaClient.circle.update({
+      where: { id: topic.circleId },
+      data: { members: { disconnect: { id: recipient.id } } },
+    });
+
+    await expect(
+      prismaClient.notification.getForUser({ userId: recipient.id }),
+    ).resolves.toEqual([]);
+    await expect(
+      prismaClient.notification.getUnreadCount({ userId: recipient.id }),
+    ).resolves.toBe(0);
   });
 });
 

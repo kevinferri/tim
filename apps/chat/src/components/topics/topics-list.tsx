@@ -68,6 +68,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
+import { GameRoomButton } from "@/games";
 
 type Props = {
   topics?: Topic[];
@@ -668,13 +669,35 @@ export const TopicsList = ({
     >
       <div
         className={cn(
-          `flex block p-3 border-b whitespace-nowrap text-ellipsis font-medium flex`,
+          `flex items-center p-3 border-b whitespace-nowrap text-ellipsis font-medium`,
           isMinimized ? "justify-center" : "",
         )}
       >
-        {!isMinimized && circle.name}
+        {/* Minimized mode keeps settings as an icon in the bottom actions instead. */}
+        {!isMinimized && (
+          <div className="flex min-w-0 items-center gap-1">
+            <span className="min-w-0 truncate">{circle.name}</span>
+            {/* Fixed width: UpsertCircleForm wraps its trigger in a w-full div. */}
+            <div className="flex w-6 shrink-0 items-center [&>div]:flex">
+              <UpsertCircleForm
+                existingCircle={circle ?? undefined}
+                trigger={
+                  <Button
+                    className="font-normal"
+                    size="iconSm"
+                    variant="ghost"
+                    aria-label="Circle settings"
+                    title="Circle settings"
+                  >
+                    <GearIcon />
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+        )}
         <Button
-          className={cn(`font-normal`, isMinimized ? "" : "flex ml-auto")}
+          className={cn("shrink-0 font-normal", isMinimized ? "" : "ml-auto")}
           size="iconSm"
           variant="ghost"
           onClick={() => setIsMinimized(!isMinimized)}
@@ -912,10 +935,13 @@ export const TopicsList = ({
             ) : undefined
           }
         />
-        <UpsertCircleForm
-          existingCircle={circle ?? undefined}
-          trigger={
-            isMinimized ? (
+        {circle.id && (
+          <GameRoomButton circleId={circle.id} isMinimized={isMinimized} />
+        )}
+        {isMinimized && (
+          <UpsertCircleForm
+            existingCircle={circle ?? undefined}
+            trigger={
               <TooltipProvider>
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger asChild>
@@ -924,6 +950,7 @@ export const TopicsList = ({
                         variant="secondary"
                         size="icon"
                         className="rounded-full"
+                        aria-label="Circle settings"
                       >
                         <GearIcon />
                       </Button>
@@ -932,16 +959,9 @@ export const TopicsList = ({
                   <TooltipContent side="right">Circle settings</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            ) : (
-              <Button variant="ghost" className="flex gap-3 w-full">
-                <span>Circle settings</span>
-                <span>
-                  <GearIcon />
-                </span>
-              </Button>
-            )
-          }
-        />
+            }
+          />
+        )}
       </div>
     </div>
   );

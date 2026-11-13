@@ -82,7 +82,7 @@ async function samePageCommand(
   const sub = parseSamePageSubcommand(prompt);
   // play / results / standings / default are opened client-side; sock posts a card.
   if (sub !== "sock") {
-    return "🧦 Open Same Page from the Games icon (or /samepage play).";
+    return "🧦 Open Same Page from the Game room (or /samepage play).";
   }
 
   const sock = await getSamePageSockHolder(payload.circleId);
@@ -105,6 +105,9 @@ const commandExecutors: Record<CommandName, CommandExecutor> = {
   [CommandName.Roll]: async (prompt) => rollDice(prompt),
   [CommandName.EightBall]: async () => eightBall(),
   [CommandName.SamePage]: samePageCommand,
+  // Handled in the browser; this only answers a client that sends it anyway.
+  [CommandName.GameRoom]: async () =>
+    "🎮 Type /gameroom to open the Game room.",
   [CommandName.Tim]: async (prompt, { socket, server, payload }) => {
     const topicKey = toRoomKey({
       id: payload.topicId,

@@ -9,18 +9,22 @@ export type NotificationActor = {
   imageUrl: string | null;
 };
 
+export type NotificationMessage = MessageData & {
+  id: string;
+  topicId: string;
+  topic: { id: string; name: string; circleId: string };
+};
+
+// Message notifications have a message and actor; circle-level ones (games) have a circle instead.
 export type NotificationItem = {
   id: string;
   type: NotificationType;
   createdAt: string;
   readAt: string | null;
-  messageId: string;
-  actor: NotificationActor;
-  message: MessageData & {
-    id: string;
-    topicId: string;
-    topic: { id: string; name: string; circleId: string };
-  };
+  messageId: string | null;
+  actor: NotificationActor | null;
+  message: NotificationMessage | null;
+  circle: { id: string; name: string } | null;
 };
 
 export const notificationsQueryKey = ["notifications"];
@@ -41,7 +45,7 @@ export function withAllRead(readAt: string) {
 export function updateNotificationMessages(
   queryClient: QueryClient,
   messageId: string,
-  updater: (prev: NotificationItem["message"]) => NotificationItem["message"],
+  updater: (prev: NotificationMessage) => NotificationMessage,
 ) {
   queryClient.setQueryData<InfiniteData<NotificationItem[]>>(
     notificationsQueryKey,
@@ -50,7 +54,7 @@ export function updateNotificationMessages(
         ...prev,
         pages: prev.pages.map((page) =>
           page.map((n) =>
-            n.messageId === messageId
+            n.message && n.messageId === messageId
               ? { ...n, message: updater(n.message) }
               : n,
           ),
@@ -65,7 +69,7 @@ export function updateNotificationActorsAndMessages(
   userId: string,
   update: {
     actor: Partial<NotificationActor>;
-    message: (prev: NotificationItem["message"]) => NotificationItem["message"];
+    message: (prev: NotificationMessage) => NotificationMessage;
   },
 ) {
   queryClient.setQueryData<InfiniteData<NotificationItem[]>>(
@@ -77,8 +81,10 @@ export function updateNotificationActorsAndMessages(
           page.map((n) => ({
             ...n,
             actor:
-              n.actor.id === userId ? { ...n.actor, ...update.actor } : n.actor,
-            message: update.message(n.message),
+              n.actor?.id === userId
+                ? { ...n.actor, ...update.actor }
+                : n.actor,
+            message: n.message && update.message(n.message),
           })),
         ),
       },

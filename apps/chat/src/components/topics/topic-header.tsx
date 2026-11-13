@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { GearIcon } from "@radix-ui/react-icons";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { Topic } from "@prisma/client";
 import { TopicActiveUsers } from "@/components/topics/topic-active-users";
-import { GamesHeaderButton } from "@/components/games/games-header-button";
 
 type Props = {
   topic: Pick<Topic, "id" | "name" | "userId" | "description"> & {
@@ -32,15 +31,16 @@ export function TopicHeader(props: Props) {
               variant="ghost"
               size="iconSm"
               className="absolute top-[12px]"
+              aria-label="Topic settings"
+              title="Topic settings"
             >
-              <InfoCircledIcon className="h-4 w-4" />
+              <GearIcon className="h-4 w-4" />
             </Button>
           }
         />
       </div>
-      <div className="absolute right-3 flex items-center gap-1">
+      <div className="absolute right-3">
         <TopicActiveUsers topicId={props.topic.id} />
-        <GamesHeaderButton circleId={props.topic.parentCircle.id} />
       </div>
     </div>
   );

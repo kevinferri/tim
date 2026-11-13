@@ -25,6 +25,7 @@ function notif(
       mediaUrl: null,
       topic: { id: "t1", name: "Topic", circleId: "c1" },
     },
+    circle: null,
     ...extra,
   };
 }
@@ -76,8 +77,8 @@ describe("updateNotificationMessages", () => {
     const pages = queryClient.getQueryData<InfiniteData<NotificationItem[]>>(
       notificationsQueryKey,
     )!.pages;
-    expect(pages[0][0].message.highlights).toHaveLength(1);
-    expect(pages[0][1].message.highlights).toBeUndefined();
-    expect(pages[1][0].message.highlights).toHaveLength(1);
+    expect(pages[0][0].message?.highlights).toHaveLength(1);
+    expect(pages[0][1].message?.highlights).toBeUndefined();
+    expect(pages[1][0].message?.highlights).toHaveLength(1);
   });
 });

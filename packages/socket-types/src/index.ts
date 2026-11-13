@@ -42,9 +42,6 @@ export enum SocketEvent {
 
   // notifications
   CreateNotification = "notification:create",
-
-  // Same Page game alerts (circle-scoped; not tied to a chat message)
-  SamePageAlert = "samepage:alert",
 }
 
 // Carried in JoinRoom/LeaveRoom payloads -- shared here so both sides use the exact same values.
@@ -66,12 +63,3 @@ export enum NotificationType {
   SamePageNudge = "samepage:nudge",
   SamePageReveal = "samepage:reveal",
 }
-
-export type SamePageAlertKind = "prompt" | "nudge" | "reveal";
-
-export type SamePageAlertPayload = {
-  circleId: string;
-  kind: SamePageAlertKind;
-  gameDate: string;
-  prompt?: string;
-};

@@ -32,10 +32,9 @@ import {
   CommandInfo,
   COMMANDS,
   parseCommand,
-  parseSamePageSubcommand,
-  type SamePageSubcommand,
 } from "@tim/commands";
-import { useGamesUiStore } from "@/components/games/games-ui-store";
+import { useGameRoomStore } from "@/games/game-room";
+import { useSamePageCommand } from "@/games/same-page";
 import { CommandAutocomplete } from "@/components/topics/command-autocomplete";
 import {
   MentionAutocomplete,
@@ -307,41 +306,7 @@ export function TopicMessageBar() {
     loadEmojiData().catch(() => {});
   }, []);
 
-  const openSamePage = useGamesUiStore((s) => s.openSamePage);
-
-  const openSamePageFromCommand = async (sub: SamePageSubcommand) => {
-    if (sub === "play") {
-      openSamePage("play");
-      return;
-    }
-    if (sub === "results") {
-      openSamePage("results");
-      return;
-    }
-    if (sub === "standings") {
-      openSamePage("standings");
-      return;
-    }
-    // Smart default: play if unanswered during play window; otherwise results.
-    try {
-      const res = await fetch(`/api/circles/${circleId}/same-page`);
-      if (!res.ok) {
-        openSamePage("play");
-        return;
-      }
-      const state = (await res.json()) as {
-        phase: string;
-        myAnswer: unknown;
-      };
-      if (state.phase === "play" && !state.myAnswer) {
-        openSamePage("play");
-      } else {
-        openSamePage("results");
-      }
-    } catch {
-      openSamePage("play");
-    }
-  };
+  const handleSamePageCommand = useSamePageCommand(circleId);
 
   const emitMessage = async (draft: string) => {
     // Catches pasted shortcodes; left as text if the data hasn't loaded yet.
@@ -349,13 +314,17 @@ export function TopicMessageBar() {
     if (!image && !message.trim()) return;
 
     const parsed = parseCommand(message);
-    if (parsed?.name === CommandName.SamePage) {
-      const sub = parseSamePageSubcommand(parsed.prompt);
-      if (sub !== "sock") {
-        setMessage("");
-        await openSamePageFromCommand(sub);
-        return;
-      }
+    if (parsed?.name === CommandName.GameRoom) {
+      setMessage("");
+      useGameRoomStore.getState().openHub();
+      return;
+    }
+    if (
+      parsed?.name === CommandName.SamePage &&
+      handleSamePageCommand(parsed.prompt)
+    ) {
+      setMessage("");
+      return;
     }
 
     let _media = image ?? extractImageFromMessage(message);

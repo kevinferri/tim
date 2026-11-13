@@ -1,6 +1,32 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import eslintConfigPrettier from "eslint-config-prettier";
 
+// Games are self-contained folders under src/games/. Anything outside a game
+// imports it only via @/games/<name> or @/games/<name>/server; a game imports
+// its own files with relative paths. No per-game config needed.
+const gameInternals = {
+  regex: "^@/games/[^/]+/(?!server$)",
+  message:
+    "Import a game only via @/games/<name> or @/games/<name>/server (use relative paths inside the game).",
+};
+// The Game room is the shared shell; games register with it in src/games/index.tsx.
+const anyGame = {
+  regex: "^@/games(?!/game-room$)",
+  message:
+    "The Game room can't import a specific game; register games in src/games/index.tsx.",
+};
+const restrictImports = (...patterns) => ({
+  "no-restricted-imports": ["error", { patterns }],
+});
+
+const gameBoundaries = [
+  { files: ["src/**/*.{ts,tsx}"], rules: restrictImports(gameInternals) },
+  {
+    files: ["src/games/game-room/**/*.{ts,tsx}"],
+    rules: restrictImports(gameInternals, anyGame),
+  },
+];
+
 const eslintConfig = [
   ...nextCoreWebVitals,
   {
@@ -19,6 +45,7 @@ const eslintConfig = [
       "react-hooks/immutability": "off",
     },
   },
+  ...gameBoundaries,
   eslintConfigPrettier,
 ];
 

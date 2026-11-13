@@ -32,6 +32,10 @@ test("parseCommand recognizes /samepage", () => {
   assert.equal(parsed?.prompt, "play");
 });
 
+test("parseCommand recognizes /gameroom", () => {
+  assert.equal(parseCommand("/gameroom")?.name, CommandName.GameRoom);
+});
+
 test("parseSamePageSubcommand maps tokens and default", () => {
   assert.equal(parseSamePageSubcommand("play"), "play");
   assert.equal(parseSamePageSubcommand("results extra"), "results");

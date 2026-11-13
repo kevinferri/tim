@@ -1,0 +1,45 @@
+"use client";
+
+import type { GameBadge, GameDefinition } from "@/games/game-room";
+import { SamePageIcon } from "./same-page-icon";
+import { SamePageInfoButton } from "./same-page-info";
+import { SamePagePanel } from "./same-page-panel";
+import { SAME_PAGE_GAME_ID } from "../lib/game-id";
+import { useSamePageViewStore } from "./view-store";
+
+const VIEW_LABELS = {
+  play: "Play",
+  results: "Results",
+  standings: "Standings",
+  settings: "Settings",
+} as const;
+
+function Panel({ circleId }: { circleId: string }) {
+  const { view, setView } = useSamePageViewStore();
+  return (
+    <SamePagePanel circleId={circleId} view={view} onViewChange={setView} />
+  );
+}
+
+function TitleSuffix() {
+  const view = useSamePageViewStore((s) => s.view);
+  return <> · {VIEW_LABELS[view]}</>;
+}
+
+async function fetchBadge(circleId: string): Promise<GameBadge> {
+  const res = await fetch(`/api/circles/${circleId}/same-page?view=badge`);
+  if (!res.ok) return null;
+  const data = (await res.json()) as { badge: GameBadge };
+  return data.badge;
+}
+
+export const samePageGame: GameDefinition = {
+  id: SAME_PAGE_GAME_ID,
+  name: "Same Page",
+  tagline: "Match your circle on today’s prompt",
+  Icon: SamePageIcon,
+  Panel,
+  TitleSuffix,
+  InfoButton: SamePageInfoButton,
+  fetchBadge,
+};

@@ -10,10 +10,13 @@ import { NotificationType } from "@tim/socket-types";
 // surfacing (or counting toward the badge) a dead link -- same pattern as
 // topicReadStateModel.getMostRecentlyReadForUser.
 function forCurrentMember(userId: string) {
+  const isMember = { members: { some: { id: userId } } };
   return {
-    message: {
-      topic: { parentCircle: { members: { some: { id: userId } } } },
-    },
+    OR: [
+      { message: { topic: { parentCircle: isMember } } },
+      // Circle-level notifications (games) have no message.
+      { circle: isMember },
+    ],
   };
 }
 
@@ -84,8 +87,8 @@ export const notificationModel = {
     const notifications = await prismaClient.notification.findMany({
       where: {
         recipientId: userId,
-        ...forCurrentMember(userId),
-        ...cursorWhere,
+        // AND: both the membership filter and the cursor are OR clauses.
+        AND: [forCurrentMember(userId), ...(cursorWhere ? [cursorWhere] : [])],
       },
       take: NOTIFICATION_LIMIT,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -95,6 +98,7 @@ export const notificationModel = {
         createdAt: true,
         readAt: true,
         messageId: true,
+        circle: { select: { id: true, name: true } },
         actor: {
           select: { id: true, name: true, displayName: true, imageUrl: true },
         },
@@ -108,12 +112,17 @@ export const notificationModel = {
       },
     });
 
-    const messages = normalizeMessages(notifications.map((n) => n.message));
+    const withMessage = notifications.filter((n) => n.message !== null);
+    const messages = normalizeMessages(withMessage.map((n) => n.message!));
+    const messageById = new Map(withMessage.map((n, i) => [n.id, messages[i]]));
 
-    return notifications.map((n, i) => ({
-      ...n,
-      message: { ...messages[i], text: messages[i].text ?? null },
-    }));
+    return notifications.map((n) => {
+      const message = messageById.get(n.id);
+      return {
+        ...n,
+        message: message ? { ...message, text: message.text ?? null } : null,
+      };
+    });
   },
 
   async getUnreadCount({ userId }: { userId?: string }) {

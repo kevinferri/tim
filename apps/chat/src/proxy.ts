@@ -8,8 +8,6 @@ export async function proxy(req: NextRequest) {
 
   if (
     pathname.startsWith("/api/auth") ||
-    // Service-to-service routes authenticate with Bearer JWT_SECRET themselves.
-    pathname.startsWith("/api/internal") ||
     (pathname.startsWith("/api/dev") &&
       process.env.NODE_ENV !== "production") ||
     pathname.startsWith("/_next") ||

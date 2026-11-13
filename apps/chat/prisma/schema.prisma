@@ -64,6 +64,8 @@ model Circle {
   samePageRounds SamePageRound[] @relation("samePageRoundsForCircle")
   samePageSock   SamePageSock?   @relation("samePageSockForCircle")
   samePagePlayerStats SamePagePlayerStats[] @relation("samePageStatsForCircle")
+  games               CircleGame[]          @relation("gamesForCircle")
+  notifications       Notification[]        @relation("notificationsForCircle")
 
   @@index([userId])
 
@@ -221,18 +223,23 @@ model Notification {
   // source and adding a type never needs a migration.
   type        String
   recipientId String
-  actorId     String
-  messageId   String
+  // Set for notifications about a message. Circle-level ones (e.g. games)
+  // have no message or actor and set circleId instead.
+  actorId     String?
+  messageId   String?
+  circleId    String?
   readAt      DateTime?
 
   // Relations
-  recipient User    @relation("notificationsForUser", fields: [recipientId], references: [id], onDelete: Cascade)
-  actor     User    @relation("notificationsByActor", fields: [actorId], references: [id])
-  message   Message @relation("notificationsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
+  recipient User     @relation("notificationsForUser", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User?    @relation("notificationsByActor", fields: [actorId], references: [id], onDelete: Restrict)
+  message   Message? @relation("notificationsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
+  circle    Circle?  @relation("notificationsForCircle", fields: [circleId], references: [id], onDelete: Cascade)
 
   @@index([recipientId, readAt, createdAt(sort: Desc)])
   @@index([messageId])
   @@index([actorId])
+  @@index([circleId])
 
   @@map(name: "notifications")
 }
@@ -246,16 +253,30 @@ model SamePageRound {
   gameDate   String
   prompt     String
   revealedAt DateTime?
-  // Scheduler idempotency for 6am / 2pm pings (reveal uses revealedAt).
+  // Claimed atomically so each alert is sent once per round.
   promptNotifiedAt DateTime?
   nudgeNotifiedAt  DateTime?
+  revealNotifiedAt DateTime?
 
   circle  Circle           @relation("samePageRoundsForCircle", fields: [circleId], references: [id], onDelete: Cascade)
   answers SamePageAnswer[] @relation("samePageAnswersForRound")
 
   @@unique([circleId, gameDate])
-  @@index([circleId, gameDate])
   @@map(name: "same_page_rounds")
+}
+
+// Row present = that game is on for the circle (every game is off by default).
+// gameId is each game's own id constant (e.g. "same-page").
+model CircleGame {
+  circleId  String
+  gameId    String
+  enabledAt DateTime @default(now())
+
+  circle Circle @relation("gamesForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@id([circleId, gameId])
+  @@index([gameId])
+  @@map(name: "circle_games")
 }
 
 model SamePageAnswer {
@@ -274,7 +295,6 @@ model SamePageAnswer {
   calledUser User?         @relation("samePageCallsByUser", fields: [calledUserId], references: [id], onDelete: SetNull)
 
   @@unique([roundId, userId])
-  @@index([roundId, matchKey])
   @@index([userId])
   @@map(name: "same_page_answers")
 }
@@ -308,7 +328,8 @@ model SamePagePlayerStats {
   matchDist1            Int     @default(0)
   matchDist2            Int     @default(0)
   matchDist3Plus        Int     @default(0)
-  // Last gameDate whose results this user opened (badge clear).
+  // Last gameDate this user opened the game during play / opened results (badge clears).
+  promptViewedGameDate  String?
   resultsViewedGameDate String?
 
   circle Circle @relation("samePageStatsForCircle", fields: [circleId], references: [id], onDelete: Cascade)

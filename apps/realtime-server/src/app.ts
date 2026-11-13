@@ -7,7 +7,6 @@ import { registerEventHandlers } from "./event-handlers/main";
 import { middleware } from "./middleware";
 import { parse } from "url";
 import { SocketData } from "./lib/socket";
-import { startSamePageScheduler } from "./lib/same-page-scheduler";
 
 const port = process.env.WS_PORT;
 const httpServer = createServer((req, res) => {
@@ -33,7 +32,6 @@ const wsServer = new Server<
 
 wsServer.use(middleware);
 registerEventHandlers(wsServer);
-startSamePageScheduler(wsServer);
 
 httpServer.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
