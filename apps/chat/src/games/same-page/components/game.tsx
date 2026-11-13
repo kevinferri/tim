@@ -7,6 +7,8 @@ import { SamePagePanel } from "./same-page-panel";
 import { SAME_PAGE_GAME_ID } from "../lib/game-id";
 import { fetchSamePage } from "./api";
 import { useSamePageViewStore } from "./view-store";
+import { runSamePageCommand } from "./same-page-command";
+import { CommandName } from "@tim/commands";
 
 const VIEW_LABELS = {
   play: "Play",
@@ -44,4 +46,5 @@ export const samePageGame: GameDefinition = {
   TitleSuffix,
   InfoButton: SamePageInfoButton,
   fetchBadge,
+  command: { name: CommandName.SamePage, run: runSamePageCommand },
 };

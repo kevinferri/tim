@@ -18,6 +18,11 @@ export const samePageNotificationCopy = {
     icon,
     onOpen: open("play"),
   },
+  [NotificationType.SamePageAnswered]: {
+    text: "answered today’s Same Page",
+    icon,
+    onOpen: open("play"),
+  },
   [NotificationType.SamePageReveal]: {
     text: "Same Page results are in",
     icon,

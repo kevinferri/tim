@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { gameRoomBadgeQueryKey } from "./store";
 import type { GameBadge, GameDefinition } from "./types";
@@ -24,9 +25,13 @@ export function BadgeDot({
   );
 }
 
+// Spreads open tabs' refetches out after a shared rollover time.
+const BADGE_REFRESH_JITTER_MS = 30_000;
+
 /** Each game's badge for a circle, keyed by game id. One query shared by the sidebar button and the sheet. */
 export function useGameBadges(circleId: string, games: GameDefinition[]) {
-  const { data = {} } = useQuery({
+  const queryClient = useQueryClient();
+  const { data = {}, dataUpdatedAt } = useQuery({
     queryKey: gameRoomBadgeQueryKey(circleId),
     queryFn: async (): Promise<Record<string, GameBadge>> =>
       Object.fromEntries(
@@ -37,8 +42,27 @@ export function useGameBadges(circleId: string, games: GameDefinition[]) {
           ]),
         ),
       ),
-    // No polling: games invalidate this key when their badge may change.
+    // No polling: games invalidate this key when their badge may change, or schedule it via nextBadgeChangeAt.
   });
+
+  // Re-armed after every fetch, so it always targets the next change.
+  useEffect(() => {
+    const times = games
+      .map((g) => g.nextBadgeChangeAt?.().getTime())
+      .filter((t): t is number => t !== undefined);
+    if (times.length === 0) return;
+    const delay =
+      Math.min(...times) - Date.now() + BADGE_REFRESH_JITTER_MS * Math.random();
+    const timer = setTimeout(
+      () =>
+        queryClient.invalidateQueries({
+          queryKey: gameRoomBadgeQueryKey(circleId),
+        }),
+      Math.max(delay, 0),
+    );
+    return () => clearTimeout(timer);
+  }, [circleId, games, dataUpdatedAt, queryClient]);
+
   return data;
 }
 

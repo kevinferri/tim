@@ -13,7 +13,7 @@ import {
   LockClosedIcon,
   MoonIcon,
 } from "@radix-ui/react-icons";
-import { gameRoomBadgeQueryKey } from "@/games/game-room";
+import { gameRoomBadgeQueryKey, useNotifyCircle } from "@/games/game-room";
 import {
   fetchSamePage,
   postSamePage,
@@ -197,6 +197,7 @@ export function SamePagePanel({ circleId, view, onViewChange }: Props) {
   const [calledUserId, setCalledUserId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmNoCall, setConfirmNoCall] = useState(false);
+  const notifyCircle = useNotifyCircle();
 
   const submit = useMutation({
     mutationFn: () =>
@@ -207,13 +208,13 @@ export function SamePagePanel({ circleId, view, onViewChange }: Props) {
       queryClient.invalidateQueries({
         queryKey: gameRoomBadgeQueryKey(circleId),
       });
+      notifyCircle(circleId);
     },
     onError: (err: Error) => setFormError(err.message),
   });
 
   const markViewed = useMutation({
-    mutationFn: (action: "view-prompt" | "view-results") =>
-      postSamePage(circleId, { action }),
+    mutationFn: () => postSamePage(circleId, { action: "view-results" }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: gameRoomBadgeQueryKey(circleId),
@@ -222,15 +223,9 @@ export function SamePagePanel({ circleId, view, onViewChange }: Props) {
   });
 
   const phase = data?.enabled ? data.phase : null;
-  // Opening the game during play counts as seeing today's prompt.
-  useEffect(() => {
-    if (phase === "play") markViewed.mutate("view-prompt");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
   useEffect(() => {
     if (view === "results" && phase === "results") {
-      markViewed.mutate("view-results");
+      markViewed.mutate();
     }
     // intentionally once when landing on results
     // eslint-disable-next-line react-hooks/exhaustive-deps

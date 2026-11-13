@@ -1,5 +1,10 @@
-// Game room server entry point: which games are on in which circles.
+// Game room server entry point: which games are on in which circles, and what the button has shown you today.
 import { prismaClient } from "@/lib/prisma/client";
+
+export { GET, POST } from "./route";
+export { getSeenBadgeKeys, markBadgesSeen } from "./seen";
+export { notifyCircleMembers } from "./notify";
+export { requireCircleMember, type CircleRouteContext } from "./auth";
 
 export async function isGameEnabled(circleId: string, gameId: string) {
   const row = await prismaClient.circleGame.findUnique({

@@ -7,7 +7,7 @@ import {
 } from "@radix-ui/react-icons";
 import { NotificationType } from "@tim/socket-types";
 import { ReplyIcon } from "@/components/icons/reply-icon";
-import { samePageNotificationCopy } from "@/games/same-page";
+import { gameNotificationCopy } from "@/games";
 
 export type NotificationCopy = {
   text: string;
@@ -41,5 +41,5 @@ export const notificationCopyMap: Record<NotificationType, NotificationCopy> = {
     text: "replied to your message",
     icon: <ReplyIcon />,
   },
-  ...samePageNotificationCopy,
+  ...gameNotificationCopy,
 };

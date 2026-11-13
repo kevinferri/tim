@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { CommandName } from "@tim/commands";
 
 /** "play" = something to do now; "results" = something new to see. */
 export type GameBadge = "play" | "results" | null;
@@ -15,4 +16,11 @@ export type GameDefinition = {
   TitleSuffix?: ComponentType;
   InfoButton?: ComponentType<{ stopPropagation?: boolean }>;
   fetchBadge?: (circleId: string) => Promise<GameBadge>;
+  /** When the badge may change on its own (e.g. a new day), so open tabs refetch it then. */
+  nextBadgeChangeAt?: () => Date;
+  /** A slash command handled in the browser. `run` returns false to send it as a normal message instead. */
+  command?: {
+    name: CommandName;
+    run: (prompt: string, circleId: string) => boolean;
+  };
 };

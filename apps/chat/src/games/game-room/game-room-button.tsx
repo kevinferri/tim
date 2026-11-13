@@ -4,6 +4,7 @@ import { Tooltip, TooltipProvider } from "@radix-ui/react-tooltip";
 import { Button } from "@/components/ui/button";
 import { TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BadgeDot, combineBadges, useGameBadges } from "./badges";
+import { useUnseenBadges } from "./room-seen";
 import { useGameRoomStore } from "./store";
 import type { GameDefinition } from "./types";
 
@@ -37,7 +38,10 @@ function GamesGlyph({ className }: { className?: string }) {
 /** Circle sidebar entry point to the Game room, styled like its other circle actions. */
 export function GameRoomButton({ circleId, games, isMinimized }: Props) {
   const openHub = useGameRoomStore((s) => s.openHub);
-  const badge = combineBadges(useGameBadges(circleId, games));
+  // Once you've opened the room today, only badges that appeared since then light the button.
+  const badge = combineBadges(
+    useUnseenBadges(circleId, useGameBadges(circleId, games)),
+  );
 
   if (isMinimized) {
     return (

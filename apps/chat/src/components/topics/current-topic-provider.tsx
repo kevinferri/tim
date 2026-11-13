@@ -324,8 +324,9 @@ export function CurrentTopicProvider(props: Props) {
     setHighlightedMessageId(undefined);
   }, [props.topicId]);
 
-  const { notifyOnNewMessage } = useTopicActivity({
+  useTopicActivity({
     topicId: props.topicId,
+    circleId: props.circleId,
   });
 
   useEffect(() => {
@@ -334,8 +335,6 @@ export function CurrentTopicProvider(props: Props) {
 
   const onNewMessage = useCallback(
     (message: MessageProps) => {
-      notifyOnNewMessage();
-
       if (message.sentBy?.id === self.id) {
         // Always land on your own messages, regardless of where you were
         // scrolled to when you sent it.
@@ -347,7 +346,6 @@ export function CurrentTopicProvider(props: Props) {
       if (generatingCommand) setGeneratingCommand(undefined);
     },
     [
-      notifyOnNewMessage,
       scrollToBottom,
       self.id,
       isAtBottom,

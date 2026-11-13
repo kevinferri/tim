@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Topic } from "@prisma/client";
@@ -59,6 +59,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipProvider } from "@radix-ui/react-tooltip";
 import { TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
+import { useMutedTopics } from "@/components/topics/muted-topics-store";
 import { Badge } from "@/components/ui/badge";
 import {
   ContextMenu,
@@ -305,9 +306,16 @@ export const TopicsList = ({
   // correct) and a background router.refresh() eventually folds it into
   // fresh props for the next mount/navigation.
   const [dragOverrideIds, setDragOverrideIds] = useState<string[] | null>(null);
-  const [muteOverrides, setMuteOverrides] = useState<Record<string, boolean>>(
-    {},
-  );
+  const {
+    overrides: muteOverrides,
+    hydrateMutedTopics,
+    setMuteOverride,
+    clearMuteOverride,
+  } = useMutedTopics();
+
+  useEffect(() => {
+    hydrateMutedTopics(mutedTopicIds);
+  }, [mutedTopicIds, hydrateMutedTopics]);
 
   // The row currently being dragged, and briefly after it's dropped, renders
   // without a Link (see isDragLocked on TopicRow) -- set on drag start and
@@ -357,7 +365,7 @@ export const TopicsList = ({
 
   async function handleToggleMute(topic: TopicWithMeta) {
     const nextMuted = !isMutedFor(topic.id);
-    setMuteOverrides((prev) => ({ ...prev, [topic.id]: nextMuted }));
+    setMuteOverride(topic.id, nextMuted);
 
     const success = await setTopicMuted({
       topicId: topic.id,
@@ -370,11 +378,7 @@ export const TopicsList = ({
       return;
     }
 
-    setMuteOverrides((prev) => {
-      const next = { ...prev };
-      delete next[topic.id];
-      return next;
-    });
+    clearMuteOverride(topic.id);
     toast({
       variant: "destructive",
       title: "Couldn't update mute status",
