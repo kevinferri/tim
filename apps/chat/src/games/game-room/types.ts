@@ -24,3 +24,9 @@ export type GameDefinition = {
     run: (prompt: string, circleId: string) => boolean;
   };
 };
+
+/** A game listed in the Game room but not playable yet: shown disabled with a "Coming soon" badge. */
+export type ComingSoonGame = Pick<
+  GameDefinition,
+  "id" | "name" | "tagline" | "Icon"
+>;

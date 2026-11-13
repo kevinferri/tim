@@ -2,20 +2,22 @@
 
 import { Cross2Icon, ChevronLeftIcon } from "@radix-ui/react-icons";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { BadgeDot, useGameBadges } from "./badges";
 import { useMarkRoomSeen } from "./room-seen";
 import { useGameRoomStore } from "./store";
-import type { GameDefinition } from "./types";
+import type { ComingSoonGame, GameDefinition } from "./types";
 
 type Props = {
   circleId: string;
   games: GameDefinition[];
+  comingSoon?: ComingSoonGame[];
 };
 
-export function GameRoomSheet({ circleId, games }: Props) {
+export function GameRoomSheet({ circleId, games, comingSoon = [] }: Props) {
   const {
     open: storeOpen,
     circleId: targetCircleId,
@@ -88,9 +90,6 @@ export function GameRoomSheet({ circleId, games }: Props) {
         ) : (
           <ScrollArea className="flex-1">
             <div className="flex flex-col gap-2 p-3">
-              <p className="text-sm text-muted-foreground px-1 pb-1">
-                More coming soon.
-              </p>
               {games.map((game) => (
                 <div
                   key={game.id}
@@ -132,6 +131,33 @@ export function GameRoomSheet({ circleId, games }: Props) {
                       <game.InfoButton stopPropagation />
                     </div>
                   )}
+                </div>
+              ))}
+              {comingSoon.map((game) => (
+                <div
+                  key={game.id}
+                  className="flex items-start gap-3 rounded-lg border bg-card px-3 py-3"
+                  aria-disabled
+                >
+                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
+                    <game.Icon className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-muted-foreground">
+                        {game.name}
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className="px-1.5 py-0 text-[10px]"
+                      >
+                        Coming soon
+                      </Badge>
+                    </div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {game.tagline}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
