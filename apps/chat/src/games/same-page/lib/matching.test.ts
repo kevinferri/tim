@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   answersMatch,
   clusterMatchKeys,
@@ -123,5 +123,19 @@ describe("est-day phase", () => {
   it("honors SAME_PAGE_FORCE_HOUR for scheduler hour checks", () => {
     process.env.SAME_PAGE_FORCE_HOUR = "14";
     expect(getEstHour(new Date("2026-11-09T15:00:00.000Z"))).toBe(14);
+  });
+
+  it("ignores both overrides in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      process.env.SAME_PAGE_FORCE_PHASE = "results";
+      process.env.SAME_PAGE_FORCE_HOUR = "16";
+      // Monday Nov 9, 2026 10:00 EST = 15:00 UTC
+      const morning = new Date("2026-11-09T15:00:00.000Z");
+      expect(getSamePagePhase(morning)).toBe("play");
+      expect(getEstHour(morning)).toBe(10);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

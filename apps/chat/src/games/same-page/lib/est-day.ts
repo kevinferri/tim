@@ -34,8 +34,14 @@ const hourFormat = new Intl.DateTimeFormat("en-US", {
 
 export type SamePagePhase = "closed" | "play" | "results";
 
+// The SAME_PAGE_FORCE_* overrides are for local testing; never honor them in production.
+function forceOverride(name: string): string | undefined {
+  if (process.env.NODE_ENV === "production") return undefined;
+  return process.env[name]?.trim() || undefined;
+}
+
 export function getForcedSamePagePhase(): SamePagePhase | null {
-  const raw = process.env.SAME_PAGE_FORCE_PHASE?.trim().toLowerCase();
+  const raw = forceOverride("SAME_PAGE_FORCE_PHASE")?.toLowerCase();
   if (raw === "play" || raw === "results" || raw === "closed") return raw;
   return null;
 }
@@ -57,8 +63,8 @@ function clockEstHour(now: Date): number {
 }
 
 export function getEstHour(now = new Date()): number {
-  const forcedHour = process.env.SAME_PAGE_FORCE_HOUR?.trim();
-  if (forcedHour !== undefined && forcedHour !== "") {
+  const forcedHour = forceOverride("SAME_PAGE_FORCE_HOUR");
+  if (forcedHour !== undefined) {
     const n = Number(forcedHour);
     if (Number.isInteger(n) && n >= 0 && n <= 23) return n;
   }
