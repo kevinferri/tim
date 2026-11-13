@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { prismaClient } from "@/lib/prisma/client";
+import {
+  requireCircleMember,
+  type CircleRouteContext,
+} from "@/games/game-room/server";
 import {
   getGamesBadge,
   getSamePageState,
@@ -10,45 +13,35 @@ import {
   setSamePageEnabled,
   submitSamePageAnswer,
 } from "./model";
-import { ApiError, apiRoute, requireUserId } from "@/lib/api";
-
-type RouteContext = { params: Promise<{ circleId: string }> };
+import { ApiError, apiRoute } from "@/lib/api";
 
 /** The logged-in circle member making the request. */
-async function requireCircleMember(context: RouteContext) {
-  const userId = await requireUserId();
-  const { circleId } = await context.params;
-  if (!circleId) throw new ApiError(400);
-  if (!(await prismaClient.circle.isUserInCircle({ circleId, userId }))) {
-    throw new ApiError(403);
-  }
-  return { userId, circleId };
-}
+export const GET = apiRoute(
+  async (request: Request, context: CircleRouteContext) => {
+    const { userId, circleId } = await requireCircleMember(context);
+    const view = new URL(request.url).searchParams.get("view");
 
-export const GET = apiRoute(async (request: Request, context: RouteContext) => {
-  const { userId, circleId } = await requireCircleMember(context);
-  const view = new URL(request.url).searchParams.get("view");
+    if (view === "badge") {
+      const badge = await getGamesBadge({ circleId, userId });
+      return NextResponse.json({ badge });
+    }
+    if (view === "standings") {
+      const standings = await getStandings(circleId);
+      return NextResponse.json({ standings });
+    }
+    if (view === "sock") {
+      const sock = await getSockStatus(circleId);
+      return NextResponse.json({ sock });
+    }
 
-  if (view === "badge") {
-    const badge = await getGamesBadge({ circleId, userId });
-    return NextResponse.json({ badge });
-  }
-  if (view === "standings") {
-    const standings = await getStandings(circleId);
-    return NextResponse.json({ standings });
-  }
-  if (view === "sock") {
-    const sock = await getSockStatus(circleId);
-    return NextResponse.json({ sock });
-  }
-
-  const state = await getSamePageState({ circleId, userId });
-  return NextResponse.json(state);
-});
+    const state = await getSamePageState({ circleId, userId });
+    return NextResponse.json(state);
+  },
+);
 
 // Validation failures from the model are thrown as ApiError(400) (SamePageValidationError).
 export const POST = apiRoute(
-  async (request: Request, context: RouteContext) => {
+  async (request: Request, context: CircleRouteContext) => {
     const { userId, circleId } = await requireCircleMember(context);
 
     const body = (await request.json().catch(() => null)) as {

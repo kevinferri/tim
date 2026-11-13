@@ -349,6 +349,8 @@ model SamePagePlayerStats {
   matchDist1            Int     @default(0)
   matchDist2            Int     @default(0)
   matchDist3Plus        Int     @default(0)
+  // Unused; drop in a follow-up deploy once no running code reads it.
+  promptViewedGameDate  String?
   // Last gameDate this user opened results (clears the results badge).
   resultsViewedGameDate String?
 

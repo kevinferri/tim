@@ -1,25 +1,13 @@
 import { NextResponse } from "next/server";
-import { prismaClient } from "@/lib/prisma/client";
-import { ApiError, apiRoute, requireUserId } from "@/lib/api";
+import { requireCircleMember, type CircleRouteContext } from "./auth";
+import { ApiError, apiRoute } from "@/lib/api";
 import { getSeenBadgeKeys, markBadgesSeen } from "./seen";
-
-type RouteContext = { params: Promise<{ circleId: string }> };
 
 const BADGE_KEY = /^[a-z0-9-]{1,64}:(play|results)$/;
 const MAX_KEYS = 50;
 
-async function requireCircleMember(context: RouteContext) {
-  const userId = await requireUserId();
-  const { circleId } = await context.params;
-  if (!circleId) throw new ApiError(400);
-  if (!(await prismaClient.circle.isUserInCircle({ circleId, userId }))) {
-    throw new ApiError(403);
-  }
-  return { userId, circleId };
-}
-
 export const GET = apiRoute(
-  async (_request: Request, context: RouteContext) => {
+  async (_request: Request, context: CircleRouteContext) => {
     const { userId, circleId } = await requireCircleMember(context);
     return NextResponse.json({
       badgeKeys: await getSeenBadgeKeys({ userId, circleId }),
@@ -28,7 +16,7 @@ export const GET = apiRoute(
 );
 
 export const POST = apiRoute(
-  async (request: Request, context: RouteContext) => {
+  async (request: Request, context: CircleRouteContext) => {
     const { userId, circleId } = await requireCircleMember(context);
     const body = (await request.json().catch(() => null)) as {
       badgeKeys?: unknown;
