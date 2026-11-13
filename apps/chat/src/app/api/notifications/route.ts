@@ -1,24 +1,15 @@
-import { badRequest, unauthorized } from "@/app/api/error-responses";
-import { getLoggedInUserId } from "@/lib/session";
-import { prismaClient } from "@/lib/prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { prismaClient } from "@/lib/prisma/client";
+import { apiRoute, requireUserId } from "@/lib/api";
 
-export async function GET(req: NextRequest) {
-  const userId = await getLoggedInUserId();
+export const GET = apiRoute(async (req: NextRequest) => {
+  const userId = await requireUserId();
+  const before = new URL(req.url).searchParams.get("before") ?? undefined;
 
-  if (!userId) return unauthorized;
+  const notifications = await prismaClient.notification.getForUser({
+    userId,
+    before,
+  });
 
-  const url = new URL(req.url);
-  const before = url.searchParams.get("before") ?? undefined;
-
-  try {
-    const notifications = await prismaClient.notification.getForUser({
-      userId,
-      before,
-    });
-
-    return NextResponse.json(notifications, { status: 200 });
-  } catch (e) {
-    return badRequest;
-  }
-}
+  return NextResponse.json(notifications, { status: 200 });
+});

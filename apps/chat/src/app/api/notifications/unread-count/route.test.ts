@@ -39,7 +39,7 @@ describe("GET /api/notifications/unread-count", () => {
     });
   });
 
-  it("returns 400 when the model layer throws", async () => {
+  it("returns 500 when the model layer throws", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.notification.getUnreadCount).mockRejectedValue(
       new Error("db down"),
@@ -47,6 +47,6 @@ describe("GET /api/notifications/unread-count", () => {
 
     const res = await GET();
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
   });
 });

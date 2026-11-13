@@ -1,7 +1,6 @@
-import { badRequest, unauthorized, notFound } from "@/app/api/error-responses";
-import { getLoggedInUserId } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { prismaClient } from "@/lib/prisma/client";
+import { ApiError, apiRoute, requireUserId } from "@/lib/api";
 import { DEFAULT_MESSAGE_SELECT } from "@/lib/prisma/message-model";
 import { MessageData } from "@/components/topics/message";
 import {
@@ -37,103 +36,97 @@ type Route = {
   }>;
 };
 
-export async function GET(req: NextRequest, { params }: Route) {
-  const loggedInUserId = await getLoggedInUserId();
-  if (!loggedInUserId) return unauthorized;
-
+export const GET = apiRoute(async (_req: NextRequest, { params }: Route) => {
+  const loggedInUserId = await requireUserId();
   const { topicId, userId } = await params;
 
-  try {
-    const timings: string[] = [];
-    // Server-Timing entries per query group, visible in DevTools' Network > Timing tab.
-    const timed = async <T>(label: string, run: () => Promise<T>) => {
-      const start = performance.now();
-      const result = await run();
-      timings.push(`${label};dur=${(performance.now() - start).toFixed(1)}`);
-      return result;
-    };
+  const timings: string[] = [];
+  // Server-Timing entries per query group, visible in DevTools' Network > Timing tab.
+  const timed = async <T>(label: string, run: () => Promise<T>) => {
+    const start = performance.now();
+    const result = await run();
+    timings.push(`${label};dur=${(performance.now() - start).toFixed(1)}`);
+    return result;
+  };
 
-    const topic = await timed("topic", () =>
-      prismaClient.topic.getNameWithMemberIds({ topicId }),
-    );
+  const topic = await timed("topic", () =>
+    prismaClient.topic.getNameWithMemberIds({ topicId }),
+  );
 
-    if (!topic) return badRequest;
-    if (!topic.memberIds.includes(loggedInUserId)) return notFound;
-    if (!topic.memberIds.includes(userId)) return notFound;
+  if (!topic) throw new ApiError(400);
+  if (!topic.memberIds.includes(loggedInUserId)) throw new ApiError(404);
+  if (!topic.memberIds.includes(userId)) throw new ApiError(404);
 
-    const [topHighlights, activity, mentionsReceived, mentionsSent] =
-      await Promise.all([
-        timed("highlights", () =>
-          prismaClient.message.getTopHighlightedMessagesForTopic({
-            requestingUserId: loggedInUserId,
-            topicId,
-            userId,
-            select: DEFAULT_MESSAGE_SELECT,
-          }),
-        ),
-        timed("member", () =>
-          getMemberStats({ circleId: topic.circleId, userId }),
-        ),
-        timed("mentions-in", () =>
-          prismaClient.notification.countMentionsReceivedByUser({
-            userId,
-            circleId: topic.circleId,
-          }),
-        ),
-        timed("mentions-out", () =>
-          prismaClient.notification.countMentionsSentByUser({
-            userId,
-            circleId: topic.circleId,
-          }),
-        ),
-      ]);
-    const counts = {
-      messages: activity.messages,
-      received: activity.highlightsReceived,
-      given: activity.highlightsGiven,
-    };
-    const highlightScore = computeHighlightScore(counts);
+  const [topHighlights, activity, mentionsReceived, mentionsSent] =
+    await Promise.all([
+      timed("highlights", () =>
+        prismaClient.message.getTopHighlightedMessagesForTopic({
+          requestingUserId: loggedInUserId,
+          topicId,
+          userId,
+          select: DEFAULT_MESSAGE_SELECT,
+        }),
+      ),
+      timed("member", () =>
+        getMemberStats({ circleId: topic.circleId, userId }),
+      ),
+      timed("mentions-in", () =>
+        prismaClient.notification.countMentionsReceivedByUser({
+          userId,
+          circleId: topic.circleId,
+        }),
+      ),
+      timed("mentions-out", () =>
+        prismaClient.notification.countMentionsSentByUser({
+          userId,
+          circleId: topic.circleId,
+        }),
+      ),
+    ]);
+  const counts = {
+    messages: activity.messages,
+    received: activity.highlightsReceived,
+    given: activity.highlightsGiven,
+  };
+  const highlightScore = computeHighlightScore(counts);
 
-    // Everything is scoped to this circle: the viewer only shares this circle with them.
-    const stats = {
-      messages: activity.messages,
-      activeDays: activity.activeDaysTotal,
-      highlightsReceived: activity.highlightsReceived,
-      highlightsGiven: activity.highlightsGiven,
-      repliesReceived: activity.repliesReceived,
-      repliesGiven: activity.repliesGiven,
+  // Everything is scoped to this circle: the viewer only shares this circle with them.
+  const stats = {
+    messages: activity.messages,
+    activeDays: activity.activeDaysTotal,
+    highlightsReceived: activity.highlightsReceived,
+    highlightsGiven: activity.highlightsGiven,
+    repliesReceived: activity.repliesReceived,
+    repliesGiven: activity.repliesGiven,
+    mentionsReceived,
+    mentionsSent,
+  };
+
+  return NextResponse.json(
+    {
+      topicName: topic.name,
+      circleName: topic.circleName,
+      highlightScore,
+      badges: computeProfileBadges({
+        userId,
+        circleName: topic.circleName,
+        circleCreatorId: topic.circleCreatorId,
+        score: highlightScore,
+        givingTag: computeGivingTag(counts),
+        activity,
+        stats,
+        now: new Date(),
+      }),
+      messagesSent: stats.messages,
+      highlightsGiven: stats.highlightsGiven,
+      highlightsReceived: stats.highlightsReceived,
+      topHighlights,
+      repliesReceived: stats.repliesReceived,
+      repliesGiven: stats.repliesGiven,
+      activeDays: stats.activeDays,
       mentionsReceived,
       mentionsSent,
-    };
-
-    return NextResponse.json(
-      {
-        topicName: topic.name,
-        circleName: topic.circleName,
-        highlightScore,
-        badges: computeProfileBadges({
-          userId,
-          circleName: topic.circleName,
-          circleCreatorId: topic.circleCreatorId,
-          score: highlightScore,
-          givingTag: computeGivingTag(counts),
-          activity,
-          stats,
-          now: new Date(),
-        }),
-        messagesSent: stats.messages,
-        highlightsGiven: stats.highlightsGiven,
-        highlightsReceived: stats.highlightsReceived,
-        topHighlights,
-        repliesReceived: stats.repliesReceived,
-        repliesGiven: stats.repliesGiven,
-        activeDays: stats.activeDays,
-        mentionsReceived,
-        mentionsSent,
-      } as unknown as UserStatsForTopicResponse,
-      { status: 200, headers: { "Server-Timing": timings.join(", ") } },
-    );
-  } catch (e) {
-    return badRequest;
-  }
-}
+    } as unknown as UserStatsForTopicResponse,
+    { status: 200, headers: { "Server-Timing": timings.join(", ") } },
+  );
+});

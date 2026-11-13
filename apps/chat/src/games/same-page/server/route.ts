@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getLoggedInUserId } from "@/lib/session";
 import { prismaClient } from "@/lib/prisma/client";
 import {
   getGamesBadge,
@@ -9,39 +8,27 @@ import {
   isCircleAdmin,
   markPromptViewed,
   markResultsViewed,
-  SamePageValidationError,
   setSamePageEnabled,
   submitSamePageAnswer,
 } from "./model";
-import { badRequest, unauthorized } from "@/app/api/error-responses";
+import { ApiError, apiRoute, requireUserId } from "@/lib/api";
 
 type RouteContext = { params: Promise<{ circleId: string }> };
 
-const forbidden = () =>
-  NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-/** The logged-in circle member making the request, or the error response to send. */
-async function authorize(
-  context: RouteContext,
-): Promise<{ userId: string; circleId: string } | { error: Response }> {
-  const userId = await getLoggedInUserId();
-  if (!userId) return { error: unauthorized };
-
+/** The logged-in circle member making the request. */
+async function requireCircleMember(context: RouteContext) {
+  const userId = await requireUserId();
   const { circleId } = await context.params;
-  if (!circleId) return { error: badRequest };
+  if (!circleId) throw new ApiError(400);
   if (!(await prismaClient.circle.isUserInCircle({ circleId, userId }))) {
-    return { error: forbidden() };
+    throw new ApiError(403);
   }
   return { userId, circleId };
 }
 
-export async function GET(request: Request, context: RouteContext) {
-  const auth = await authorize(context);
-  if ("error" in auth) return auth.error;
-  const { userId, circleId } = auth;
-
-  const url = new URL(request.url);
-  const view = url.searchParams.get("view");
+export const GET = apiRoute(async (request: Request, context: RouteContext) => {
+  const { userId, circleId } = await requireCircleMember(context);
+  const view = new URL(request.url).searchParams.get("view");
 
   if (view === "badge") {
     const badge = await getGamesBadge({ circleId, userId });
@@ -58,26 +45,24 @@ export async function GET(request: Request, context: RouteContext) {
 
   const state = await getSamePageState({ circleId, userId });
   return NextResponse.json(state);
-}
+});
 
-export async function POST(request: Request, context: RouteContext) {
-  const auth = await authorize(context);
-  if ("error" in auth) return auth.error;
-  const { userId, circleId } = auth;
+// Validation failures from the model are thrown as ApiError(400) (SamePageValidationError).
+export const POST = apiRoute(
+  async (request: Request, context: RouteContext) => {
+    const { userId, circleId } = await requireCircleMember(context);
 
-  const body = (await request.json().catch(() => null)) as {
-    action?: string;
-    text?: string;
-    calledUserId?: string | null;
-  } | null;
+    const body = (await request.json().catch(() => null)) as {
+      action?: string;
+      text?: string;
+      calledUserId?: string | null;
+    } | null;
+    if (!body?.action) throw new ApiError(400);
 
-  if (!body?.action) return badRequest;
-
-  try {
     if (body.action === "answer") {
-      if (typeof body.text !== "string") return badRequest;
+      if (typeof body.text !== "string") throw new ApiError(400);
       if (body.calledUserId != null && typeof body.calledUserId !== "string") {
-        return badRequest;
+        throw new ApiError(400);
       }
       const answer = await submitSamePageAnswer({
         circleId,
@@ -99,23 +84,11 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     if (body.action === "enable" || body.action === "disable") {
-      if (!(await isCircleAdmin(circleId, userId))) {
-        return forbidden();
-      }
+      if (!(await isCircleAdmin(circleId, userId))) throw new ApiError(403);
       await setSamePageEnabled(circleId, body.action === "enable");
       return NextResponse.json({ ok: true });
     }
 
-    return badRequest;
-  } catch (err) {
-    // Name check so mocked modules still classify validation errors correctly.
-    if (
-      err instanceof SamePageValidationError ||
-      (err instanceof Error && err.name === "SamePageValidationError")
-    ) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    console.error("[same-page] request failed", err);
-    return NextResponse.json({ error: "Request failed" }, { status: 500 });
-  }
-}
+    throw new ApiError(400);
+  },
+);

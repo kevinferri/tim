@@ -10,23 +10,27 @@ vi.mock("@/lib/prisma/client", () => ({
   },
 }));
 
-vi.mock("./model", () => ({
-  getGamesBadge: vi.fn(),
-  getSamePageState: vi.fn(),
-  getSockStatus: vi.fn(),
-  getStandings: vi.fn(),
-  markPromptViewed: vi.fn(),
-  markResultsViewed: vi.fn(),
-  submitSamePageAnswer: vi.fn(),
-  isCircleAdmin: vi.fn(),
-  setSamePageEnabled: vi.fn(),
-  SamePageValidationError: class SamePageValidationError extends Error {
-    constructor(message: string) {
-      super(message);
-      this.name = "SamePageValidationError";
-    }
-  },
-}));
+vi.mock("./model", async () => {
+  const { ApiError } =
+    await vi.importActual<typeof import("@/lib/api-error")>("@/lib/api-error");
+  return {
+    getGamesBadge: vi.fn(),
+    getSamePageState: vi.fn(),
+    getSockStatus: vi.fn(),
+    getStandings: vi.fn(),
+    markPromptViewed: vi.fn(),
+    markResultsViewed: vi.fn(),
+    submitSamePageAnswer: vi.fn(),
+    isCircleAdmin: vi.fn(),
+    setSamePageEnabled: vi.fn(),
+    SamePageValidationError: class SamePageValidationError extends ApiError {
+      constructor(message: string) {
+        super(400, message);
+        this.name = "SamePageValidationError";
+      }
+    },
+  };
+});
 
 import { getLoggedInUserId } from "@/lib/session";
 import { prismaClient } from "@/lib/prisma/client";

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prismaClient } from "@/lib/prisma/client";
+import { ApiError } from "@/lib/api-error";
 import { getEstGameDate, getSamePagePhase } from "../lib/est-day";
 import {
   clusterMatchKeys,
@@ -26,9 +27,9 @@ const MEMBER_SELECT = {
 } as const;
 
 /** User-facing Same Page errors safe to return as HTTP 400 bodies. */
-export class SamePageValidationError extends Error {
+export class SamePageValidationError extends ApiError {
   constructor(message: string) {
-    super(message);
+    super(400, message);
     this.name = "SamePageValidationError";
   }
 }

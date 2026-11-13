@@ -71,7 +71,7 @@ The Socket.io server is a separately-deployed service (`apps/realtime-server` in
 
 ### Server actions vs. API routes
 
-Mutations triggered from forms/UI generally go through `"use server"` actions in `src/actions/` (`circles.ts`, `topics.ts`, `media.ts`, `user-status.ts`), validated with `zod` schemas defined inline above each action. Data fetched by REST-style consumers (e.g. paginated message history, link previews) lives under `src/app/api/**/route.ts`. Both layers rely on `getLoggedInUserId()` plus a Prisma model-extension membership check (e.g. `isUserInCirle`) before allowing a mutation/read — follow that same auth-then-authorize pattern for new actions/routes rather than trusting client-supplied ids.
+Mutations triggered from forms/UI generally go through `"use server"` actions in `src/actions/` (`circles.ts`, `topics.ts`, `media.ts`, `user-status.ts`), validated with `zod` schemas defined inline above each action. Data fetched by REST-style consumers (e.g. paginated message history, link previews) lives under `src/app/api/**/route.ts`. Both layers rely on `getLoggedInUserId()` plus a Prisma model-extension membership check (e.g. `isUserInCirle`) before allowing a mutation/read — follow that same auth-then-authorize pattern for new actions/routes rather than trusting client-supplied ids. Route handlers are wrapped in `apiRoute()` from `src/lib/api.ts`: call `requireUserId()` and throw `ApiError(status)` for expected failures (400/401/403/404); anything else thrown is logged and returned as a generic 500, so internals never leak and each request gets a fresh `Response`.
 
 ### Client-side data fetching
 

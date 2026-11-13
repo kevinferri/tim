@@ -195,7 +195,7 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     });
   });
 
-  it("returns 400 when the model layer throws", async () => {
+  it("returns 500 when the model layer throws", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.topic.getNameWithMemberIds).mockRejectedValue(
       new Error("db down"),
@@ -203,6 +203,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
 
     const res = await GET(makeRequest(), makeParams());
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
   });
 });
