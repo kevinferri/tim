@@ -125,6 +125,26 @@ describe("POST /api/circles/[circleId]/same-page", () => {
     });
   });
 
+  it("rejects a non-string calledUserId before it reaches the model", async () => {
+    vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
+    vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);
+
+    const res = await POST(
+      new Request("http://localhost/api", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "answer",
+          text: "Pizza",
+          calledUserId: 42,
+        }),
+      }),
+      ctx,
+    );
+
+    expect(res.status).toBe(400);
+    expect(submitSamePageAnswer).not.toHaveBeenCalled();
+  });
+
   it("maps validation errors to 400", async () => {
     vi.mocked(getLoggedInUserId).mockResolvedValue("user-1");
     vi.mocked(prismaClient.circle.isUserInCircle).mockResolvedValue(true);

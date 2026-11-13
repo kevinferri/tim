@@ -3,6 +3,7 @@ import {
   answersMatch,
   clusterMatchKeys,
   isValidAnswerText,
+  MAX_ANSWER_LENGTH,
   toMatchKey,
 } from "./matching";
 import {
@@ -57,6 +58,11 @@ describe("isValidAnswerText", () => {
     expect(isValidAnswerText("one two three")).toBe(true);
     expect(isValidAnswerText("one two three four")).toBe(false);
     expect(isValidAnswerText("   ")).toBe(false);
+  });
+
+  it("rejects answers over the length limit, even as one word", () => {
+    expect(isValidAnswerText("a".repeat(MAX_ANSWER_LENGTH))).toBe(true);
+    expect(isValidAnswerText("a".repeat(MAX_ANSWER_LENGTH + 1))).toBe(false);
   });
 });
 

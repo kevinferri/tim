@@ -76,6 +76,9 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     if (body.action === "answer") {
       if (typeof body.text !== "string") return badRequest;
+      if (body.calledUserId != null && typeof body.calledUserId !== "string") {
+        return badRequest;
+      }
       const answer = await submitSamePageAnswer({
         circleId,
         userId,

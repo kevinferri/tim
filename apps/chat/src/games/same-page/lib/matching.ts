@@ -239,8 +239,11 @@ export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+// Matches the input's maxLength. Also bounds the pairwise edit-distance work at reveal.
+export const MAX_ANSWER_LENGTH = 60;
+
 export function isValidAnswerText(text: string): boolean {
   const trimmed = text.trim();
-  if (!trimmed) return false;
+  if (!trimmed || trimmed.length > MAX_ANSWER_LENGTH) return false;
   return countWords(trimmed) <= 3;
 }

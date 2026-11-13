@@ -21,6 +21,7 @@ import {
   samePageStandingsQueryKey,
 } from "./api";
 import { SAME_PAGE_CLOSE_LABEL, SAME_PAGE_OPEN_LABEL } from "../lib/schedule";
+import { MAX_ANSWER_LENGTH } from "../lib/matching";
 import { EmptyState } from "./empty-state";
 import { SamePageIcon } from "./same-page-icon";
 import type { SamePageView } from "./view-store";
@@ -480,7 +481,7 @@ function PlayView({
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="3 words or fewer"
-              maxLength={60}
+              maxLength={MAX_ANSWER_LENGTH}
               autoComplete="off"
               autoFocus
             />

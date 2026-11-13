@@ -4,6 +4,7 @@ import { getEstGameDate, getSamePagePhase } from "../lib/est-day";
 import {
   clusterMatchKeys,
   isValidAnswerText,
+  MAX_ANSWER_LENGTH,
   toMatchKey,
 } from "../lib/matching";
 import { pickPrompt } from "../lib/prompts";
@@ -14,8 +15,7 @@ import {
   isGameEnabled,
   setGameEnabled,
 } from "@/games/game-room/server";
-
-export type GamesBadge = "play" | "results" | null;
+import type { GameBadge } from "@/games/game-room";
 
 // What every Same Page view shows about a person.
 const MEMBER_SELECT = {
@@ -286,7 +286,7 @@ export async function getGamesBadge({
   circleId: string;
   userId: string;
   now?: Date;
-}): Promise<GamesBadge> {
+}): Promise<GameBadge> {
   const phase = getSamePagePhase(now);
   if (phase === "closed") return null;
   if (!(await isSamePageEnabled(circleId))) return null;
@@ -498,7 +498,9 @@ export async function submitSamePageAnswer({
     );
   }
   if (!isValidAnswerText(text)) {
-    throw new SamePageValidationError("Answer must be 1–3 words");
+    throw new SamePageValidationError(
+      `Answer must be 1–3 words and at most ${MAX_ANSWER_LENGTH} characters`,
+    );
   }
   if (!(await isSamePageEnabled(circleId))) {
     throw new SamePageValidationError(
