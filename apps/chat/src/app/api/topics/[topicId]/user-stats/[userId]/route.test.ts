@@ -119,9 +119,6 @@ describe("GET /api/topics/[topicId]/user-stats/[userId]", () => {
     ).length;
     // 20 messages, 18 got, 1 given, 2 active days: under every stat milestone.
     expect(statBadgeCount).toBe(0);
-    expect(res.headers.get("Server-Timing")).toMatch(
-      /topic;dur=[\d.]+.*member;dur=[\d.]+/,
-    );
     expect(
       prismaClient.notification.countMentionsReceivedByUser,
     ).toHaveBeenCalledWith({ userId: "user-2", circleId: "circle-1" });

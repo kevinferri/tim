@@ -40,18 +40,7 @@ export const GET = apiRoute(async (_req: NextRequest, { params }: Route) => {
   const loggedInUserId = await requireUserId();
   const { topicId, userId } = await params;
 
-  const timings: string[] = [];
-  // Server-Timing entries per query group, visible in DevTools' Network > Timing tab.
-  const timed = async <T>(label: string, run: () => Promise<T>) => {
-    const start = performance.now();
-    const result = await run();
-    timings.push(`${label};dur=${(performance.now() - start).toFixed(1)}`);
-    return result;
-  };
-
-  const topic = await timed("topic", () =>
-    prismaClient.topic.getNameWithMemberIds({ topicId }),
-  );
+  const topic = await prismaClient.topic.getNameWithMemberIds({ topicId });
 
   if (!topic) throw new ApiError(400);
   if (!topic.memberIds.includes(loggedInUserId)) throw new ApiError(404);
@@ -59,29 +48,21 @@ export const GET = apiRoute(async (_req: NextRequest, { params }: Route) => {
 
   const [topHighlights, activity, mentionsReceived, mentionsSent] =
     await Promise.all([
-      timed("highlights", () =>
-        prismaClient.message.getTopHighlightedMessagesForTopic({
-          requestingUserId: loggedInUserId,
-          topicId,
-          userId,
-          select: DEFAULT_MESSAGE_SELECT,
-        }),
-      ),
-      timed("member", () =>
-        getMemberStats({ circleId: topic.circleId, userId }),
-      ),
-      timed("mentions-in", () =>
-        prismaClient.notification.countMentionsReceivedByUser({
-          userId,
-          circleId: topic.circleId,
-        }),
-      ),
-      timed("mentions-out", () =>
-        prismaClient.notification.countMentionsSentByUser({
-          userId,
-          circleId: topic.circleId,
-        }),
-      ),
+      prismaClient.message.getTopHighlightedMessagesForTopic({
+        requestingUserId: loggedInUserId,
+        topicId,
+        userId,
+        select: DEFAULT_MESSAGE_SELECT,
+      }),
+      getMemberStats({ circleId: topic.circleId, userId }),
+      prismaClient.notification.countMentionsReceivedByUser({
+        userId,
+        circleId: topic.circleId,
+      }),
+      prismaClient.notification.countMentionsSentByUser({
+        userId,
+        circleId: topic.circleId,
+      }),
     ]);
   const counts = {
     messages: activity.messages,
@@ -127,6 +108,6 @@ export const GET = apiRoute(async (_req: NextRequest, { params }: Route) => {
       mentionsReceived,
       mentionsSent,
     } as unknown as UserStatsForTopicResponse,
-    { status: 200, headers: { "Server-Timing": timings.join(", ") } },
+    { status: 200 },
   );
 });
