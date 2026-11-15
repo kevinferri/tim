@@ -15,6 +15,7 @@ export function createMockSocket(
 
   const socket = {
     id: socketId,
+    connected: true,
     data: { user },
     rooms,
     on: vi.fn((event: string, cb: (...args: any[]) => any) => {

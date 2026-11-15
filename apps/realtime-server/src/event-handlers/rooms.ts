@@ -147,7 +147,7 @@ async function canJoinRoom({
 const roomOpQueues = new WeakMap<AppSocket, Promise<void>>();
 
 // Join awaits an auth check, so without this a leave sent right after it would be handled first and briefly drop the user from presence.
-function enqueueRoomOp(socket: AppSocket, op: () => Promise<void>) {
+export function enqueueRoomOp(socket: AppSocket, op: () => Promise<void>) {
   const next = (roomOpQueues.get(socket) ?? Promise.resolve())
     .then(op)
     .catch((err) => console.error("Room op failed", err));

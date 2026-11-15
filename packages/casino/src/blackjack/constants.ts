@@ -7,3 +7,8 @@ export const TURN_MS = 20_000;
 export const SHOE_DECKS = 6;
 /** Reshuffle before a round when fewer than 25% of the shoe remains. */
 export const RESHUFFLE_BELOW = (SHOE_DECKS * 52) / 4;
+
+/** Pause between dealer cards. */
+export const DEALER_DRAW_MS = 800;
+/** How long round outcomes stay up before the next betting phase. */
+export const RESULTS_MS = 4_000;
