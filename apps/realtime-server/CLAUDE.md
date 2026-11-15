@@ -37,6 +37,10 @@ Presence: joining/leaving a topic room re-broadcasts that topic's active users t
 
 `src/event-handlers/user-activity.ts` updates `socket.data.user.state` (idle/typing/status) via `src/lib/user-change-handler.ts` and re-emits presence. Image-expand, link-click, and mention activity create notifications through `src/lib/notifications.ts` (`emitNotification`, `emitMentionNotifications`).
 
+### Casino tables
+
+`src/casino/` runs live game tables (blackjack today, one per circle) in memory. `table.ts` is the game-agnostic base (seats, watchers, one phase timer, broadcast); `blackjack-table.ts` drives the `@tim/casino` engine through betting → players → dealer → results; `registry.ts` creates tables on first watch and drops them when nobody is watching or seated; `chip-store.ts` is the only place chips are read or written (only when a round settles). Handlers are in `src/event-handlers/casino.ts`: `TableWatch` checks circle membership, and sit/stand/act require the socket to already be watching. Watchers are tracked on the table, not in Socket.IO rooms. When a user's last watching socket goes away, they stand up. `src/shutdown.ts` is the only `SIGTERM` handler: it cancels every round (watchers get `TableClosing`), waits up to 5 s for settle writes already in flight, then closes the DB pool and exits.
+
 ### Data flow pattern
 
 Validate the payload → authorize via room membership (above) → run the DB query/mutation in `src/db/` → emit the result to the room with `server.to(roomKey).emit(...)`.

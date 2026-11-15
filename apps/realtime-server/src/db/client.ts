@@ -46,10 +46,3 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export { pgClient };
-
-process.on("SIGTERM", async () => {
-  if (pgClient) {
-    await pgClient.destroy();
-  }
-  process.exit(0);
-});

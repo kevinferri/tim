@@ -7,6 +7,7 @@ import { registerEventHandlers } from "./event-handlers/main";
 import { middleware } from "./middleware";
 import { parse } from "url";
 import { SocketData } from "./lib/socket";
+import { registerShutdown } from "./shutdown";
 
 const port = process.env.WS_PORT;
 const httpServer = createServer((req, res) => {
@@ -32,6 +33,7 @@ const wsServer = new Server<
 
 wsServer.use(middleware);
 registerEventHandlers(wsServer);
+registerShutdown();
 
 httpServer.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

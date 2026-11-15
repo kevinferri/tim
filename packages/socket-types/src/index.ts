@@ -44,6 +44,16 @@ export enum SocketEvent {
   CreateNotification = "notification:create",
   // Content-free "refetch your notifications" ping for a circle's other members, sent by the browser after the chat app saves circle notifications.
   CircleNotificationsChanged = "notification:circleChanged",
+
+  // casino (payload types live in @tim/casino)
+  TableWatch = "table:watch",
+  TableUnwatch = "table:unwatch",
+  TableSit = "table:sit",
+  TableStand = "table:stand",
+  TableAction = "table:action",
+  TableState = "table:state",
+  TableError = "table:error",
+  TableClosing = "table:closing",
 }
 
 // Carried in JoinRoom/LeaveRoom payloads -- shared here so both sides use the exact same values.
