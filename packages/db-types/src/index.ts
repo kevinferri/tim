@@ -8,4 +8,5 @@ export type {
   TopicReadState,
   Notification,
   SamePageSock,
+  CircleGame,
 } from "@prisma/client";

@@ -17,9 +17,11 @@ import { registerCasinoHandlers } from "./casino";
 import { CasinoRegistry } from "../casino/registry";
 import { ChipStore, InMemoryChipStore } from "../casino/chip-store";
 import { isUserInCircle } from "../db/circles";
+import { isGameEnabled } from "../db/circle-games";
 import { shutdown } from "../shutdown";
 
 vi.mock("../db/circles", () => ({ isUserInCircle: vi.fn() }));
+vi.mock("../db/circle-games", () => ({ isGameEnabled: vi.fn() }));
 // Pass-through spies so a test can make the engine throw once.
 vi.mock("@tim/casino", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tim/casino")>();
@@ -92,6 +94,7 @@ const ranks = (cards: (Card | null)[]) => cards.map((c) => c?.rank ?? null);
 beforeEach(() => {
   vi.useFakeTimers();
   vi.mocked(isUserInCircle).mockResolvedValue(true);
+  vi.mocked(isGameEnabled).mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -165,6 +168,33 @@ describe("watching", () => {
 
     await tab1.trigger(SocketEvent.Disconnecting);
     expect(registry.tableCount()).toBe(0);
+  });
+
+  it("rejects a circle that hasn't turned blackjack on", async () => {
+    vi.mocked(isGameEnabled).mockResolvedValue(false);
+    const { connect, registry } = setup();
+    const a = connect("a");
+    await watch(a);
+    expect(isGameEnabled).toHaveBeenCalledWith({
+      circleId: "c1",
+      gameId: "blackjack",
+    });
+    expect(lastError(a)).toBe("This game isn't on in this circle");
+    expect(registry.tableCount()).toBe(0);
+  });
+
+  it("sends a TableError when the watch checks fail", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(isUserInCircle).mockRejectedValueOnce(new Error("db down"));
+    const { connect, registry } = setup();
+    const a = connect("a");
+    await watch(a);
+    expect(lastError(a)).toBe("Something went wrong. Try again.");
+    expect(registry.tableCount()).toBe(0);
+    vi.mocked(console.error).mockRestore();
+
+    await watch(a);
+    expect(state(a).phase).toBe("waiting");
   });
 
   it("rejects non-members without creating a table", async () => {

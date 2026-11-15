@@ -5,6 +5,7 @@ import {
   TableRef,
 } from "@tim/casino";
 import { isUserInCircle } from "../db/circles";
+import { isGameEnabled } from "../db/circle-games";
 import { CasinoRegistry, casinoRegistry } from "../casino/registry";
 import { AppSocket } from "../lib/socket";
 import { HandlerArgs, SocketEvent } from "./main";
@@ -51,16 +52,29 @@ export function registerCasinoHandlers(
   const user = () => socket.data.user;
 
   // A throw in a listener would crash the whole server, taking chat down with it.
+  const reportingErrors = async (
+    event: SocketEvent,
+    payload: unknown,
+    fn: (payload: any) => unknown,
+  ) => {
+    try {
+      await fn(payload);
+    } catch (err) {
+      console.error(`casino: ${event} failed`, err);
+      const ref = parseRef(payload);
+      if (ref) emitError(socket, ref, "Something went wrong. Try again.");
+    }
+  };
+
   const on = (event: SocketEvent, fn: (payload: any) => unknown) =>
-    socket.on(event, async (payload: unknown) => {
-      try {
-        await fn(payload);
-      } catch (err) {
-        console.error(`casino: ${event} failed`, err);
-        const ref = parseRef(payload);
-        if (ref) emitError(socket, ref, "Something went wrong. Try again.");
-      }
-    });
+    socket.on(event, (payload: unknown) => reportingErrors(event, payload, fn));
+
+  // Shares rooms.ts's per-socket queue so an unwatch can't overtake a watch still awaiting its checks.
+  // Errors are reported inside the op because enqueueRoomOp only logs them.
+  const queued = (event: SocketEvent, fn: (payload: any) => unknown) =>
+    socket.on(event, (payload: unknown) =>
+      enqueueRoomOp(socket, () => reportingErrors(event, payload, fn)),
+    );
 
   // Sit/stand/act are only for sockets already watching (authorized at watch).
   const watchedTable = (ref: TableRef) => {
@@ -72,33 +86,29 @@ export function registerCasinoHandlers(
     return table;
   };
 
-  // Queued with room ops so an unwatch can't overtake a watch still awaiting its membership check.
-  on(SocketEvent.TableWatch, (payload: unknown) =>
-    enqueueRoomOp(socket, async () => {
-      const ref = parseRef(payload);
-      if (!ref) return;
-      if (registry.closing) return emitError(socket, ref, "Table is closing");
-      const isMember = await isUserInCircle({
-        userId: user().id,
-        circleId: ref.circleId,
-      });
-      // Disconnected mid-check: adding it now would leave a watcher nothing removes.
-      if (!socket.connected) return;
-      if (!isMember) {
-        return emitError(socket, ref, "Not a member of this circle");
-      }
-      if (registry.closing) return emitError(socket, ref, "Table is closing");
-      registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket);
-    }),
-  );
+  queued(SocketEvent.TableWatch, async (payload: unknown) => {
+    const ref = parseRef(payload);
+    if (!ref) return;
+    if (registry.closing) return emitError(socket, ref, "Table is closing");
+    const [isMember, enabled] = await Promise.all([
+      isUserInCircle({ userId: user().id, circleId: ref.circleId }),
+      isGameEnabled({ circleId: ref.circleId, gameId: ref.game }),
+    ]);
+    // Disconnected mid-check: adding it now would leave a watcher nothing removes.
+    if (!socket.connected) return;
+    if (!isMember) return emitError(socket, ref, "Not a member of this circle");
+    if (!enabled) {
+      return emitError(socket, ref, "This game isn't on in this circle");
+    }
+    if (registry.closing) return emitError(socket, ref, "Table is closing");
+    registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket);
+  });
 
-  on(SocketEvent.TableUnwatch, (payload: unknown) =>
-    enqueueRoomOp(socket, async () => {
-      const ref = parseRef(payload);
-      if (!ref) return;
-      registry.get(ref.circleId, ref.game)?.removeWatcher(socket.id);
-    }),
-  );
+  queued(SocketEvent.TableUnwatch, (payload: unknown) => {
+    const ref = parseRef(payload);
+    if (!ref) return;
+    registry.get(ref.circleId, ref.game)?.removeWatcher(socket.id);
+  });
 
   on(SocketEvent.TableSit, async (payload: any) => {
     const ref = parseRef(payload);
