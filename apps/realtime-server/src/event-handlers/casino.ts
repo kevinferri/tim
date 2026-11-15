@@ -8,6 +8,7 @@ import { isUserInCircle } from "../db/circles";
 import { CasinoRegistry, casinoRegistry } from "../casino/registry";
 import { AppSocket } from "../lib/socket";
 import { HandlerArgs, SocketEvent } from "./main";
+import { enqueueRoomOp } from "./rooms";
 
 const ACTION_TYPES = ["bet", "hit", "stand", "double", "split"];
 
@@ -59,24 +60,33 @@ export function registerCasinoHandlers(
     return table;
   };
 
-  socket.on(SocketEvent.TableWatch, async (payload: unknown) => {
-    const ref = parseRef(payload);
-    if (!ref) return;
-    if (registry.closing) return emitError(socket, ref, "Table is closing");
-    const isMember = await isUserInCircle({
-      userId: user().id,
-      circleId: ref.circleId,
-    });
-    if (!isMember) return emitError(socket, ref, "Not a member of this circle");
-    if (registry.closing) return emitError(socket, ref, "Table is closing");
-    registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket);
-  });
+  // Queued with room ops so an unwatch can't overtake a watch still awaiting its membership check.
+  socket.on(SocketEvent.TableWatch, (payload: unknown) =>
+    enqueueRoomOp(socket, async () => {
+      const ref = parseRef(payload);
+      if (!ref) return;
+      if (registry.closing) return emitError(socket, ref, "Table is closing");
+      const isMember = await isUserInCircle({
+        userId: user().id,
+        circleId: ref.circleId,
+      });
+      // Disconnected mid-check: adding it now would leave a watcher nothing removes.
+      if (!socket.connected) return;
+      if (!isMember) {
+        return emitError(socket, ref, "Not a member of this circle");
+      }
+      if (registry.closing) return emitError(socket, ref, "Table is closing");
+      registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket);
+    }),
+  );
 
-  socket.on(SocketEvent.TableUnwatch, (payload: unknown) => {
-    const ref = parseRef(payload);
-    if (!ref) return;
-    registry.get(ref.circleId, ref.game)?.removeWatcher(socket.id);
-  });
+  socket.on(SocketEvent.TableUnwatch, (payload: unknown) =>
+    enqueueRoomOp(socket, async () => {
+      const ref = parseRef(payload);
+      if (!ref) return;
+      registry.get(ref.circleId, ref.game)?.removeWatcher(socket.id);
+    }),
+  );
 
   socket.on(SocketEvent.TableSit, async (payload: any) => {
     const ref = parseRef(payload);

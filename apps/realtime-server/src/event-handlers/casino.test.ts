@@ -103,6 +103,59 @@ describe("watching", () => {
     expect(registry.tableCount()).toBe(1);
   });
 
+  function pendingMembership() {
+    let resolve!: (isMember: boolean) => void;
+    vi.mocked(isUserInCircle).mockReturnValueOnce(
+      new Promise((r) => (resolve = r)),
+    );
+    return resolve;
+  }
+
+  it("drops a watch whose socket disconnected during the membership check", async () => {
+    const { connect, registry } = setup();
+    const a = connect("a");
+    const resolve = pendingMembership();
+    const watching = watch(a);
+    await a.trigger(SocketEvent.Disconnecting);
+    a.connected = false;
+    resolve(true);
+    await watching;
+
+    expect(registry.tableCount()).toBe(0);
+    expect(a.emit).not.toHaveBeenCalled();
+  });
+
+  it("applies an unwatch sent while a watch is still pending after the watch", async () => {
+    const { connect, registry } = setup();
+    const a = connect("a");
+    const resolve = pendingMembership();
+    const watching = watch(a);
+    const unwatching = a.trigger(SocketEvent.TableUnwatch, REF);
+    resolve(true);
+    await Promise.all([watching, unwatching]);
+
+    expect(registry.tableCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("stands a seated user whose other tab's watch was dropped mid-check", async () => {
+    const { connect, registry } = setup();
+    const tab1 = connect("a");
+    const tab2 = connect("a");
+    await watch(tab1);
+    await sit(tab1, 0);
+
+    const resolve = pendingMembership();
+    const watching = watch(tab2);
+    await tab2.trigger(SocketEvent.Disconnecting);
+    tab2.connected = false;
+    resolve(true);
+    await watching;
+
+    await tab1.trigger(SocketEvent.Disconnecting);
+    expect(registry.tableCount()).toBe(0);
+  });
+
   it("rejects non-members without creating a table", async () => {
     vi.mocked(isUserInCircle).mockResolvedValue(false);
     const { connect, registry } = setup();
