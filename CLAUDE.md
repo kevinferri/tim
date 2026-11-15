@@ -38,7 +38,7 @@ Per-app commands (Prisma, tests, lint) are in each app's `CLAUDE.md`. `./tim` at
 
 To typecheck an app, run `npx tsc --noEmit` from its directory. It touches neither `.next` nor `node_modules`, so it's safe anytime, including alongside `pnpm dev`.
 
-CI (`.github/workflows/ci.yml`) runs on every PR: `pnpm format:check`, `pnpm test:scripts`, and for each app: build the shared packages, `tsc --noEmit`, lint, tests, then its `build` (chat also runs `prisma validate`). Run the same checks before opening a PR, except the build scripts (see below).
+CI (`.github/workflows/ci.yml`) runs on every PR: `pnpm format:check`, `pnpm test:scripts`, `pnpm --filter "./packages/*" test`, and for each app: build the shared packages, `tsc --noEmit`, lint, tests, then its `build` (chat also runs `prisma validate`). Run the same checks before opening a PR, except the build scripts (see below).
 
 ### Don't run the apps' `build` scripts during local development
 
