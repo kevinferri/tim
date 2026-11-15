@@ -44,6 +44,9 @@ export type BlackjackTableDeps = {
   onIdle: () => void;
 };
 
+const ROUND_FAILED =
+  "Something went wrong. This round was cancelled and bets were returned.";
+
 const PLAY_ACTIONS: readonly string[] = ["hit", "stand", "double", "split"];
 
 export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
@@ -61,6 +64,22 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
   }
 
   sit(occupant: SeatOccupant, seat: number, stack: number): string | null {
+    return this.guard(null, () => this.trySit(occupant, seat, stack));
+  }
+
+  stand(userId: string): string | null {
+    return this.guard(null, () => this.tryStand(userId));
+  }
+
+  act(userId: string, action: BlackjackTableAction): string | null {
+    return this.guard(null, () => this.tryAct(userId, action));
+  }
+
+  private trySit(
+    occupant: SeatOccupant,
+    seat: number,
+    stack: number,
+  ): string | null {
     if (this.closed) return "Table is closing";
     if (!Number.isInteger(seat) || seat < 0 || seat >= SEAT_COUNT) {
       return "Invalid seat";
@@ -83,7 +102,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     return null;
   }
 
-  stand(userId: string): string | null {
+  private tryStand(userId: string): string | null {
     if (this.closed) return "Table is closing";
     const index = this.seatIndexOf(userId);
     if (index === null) return "You don't have a seat";
@@ -106,12 +125,32 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     return null;
   }
 
-  act(userId: string, action: BlackjackTableAction): string | null {
+  private tryAct(userId: string, action: BlackjackTableAction): string | null {
     if (this.closed) return "Table is closing";
     const index = this.seatIndexOf(userId);
     if (index === null) return "You don't have a seat";
     if (action.type === "bet") return this.bet(index, action.amount);
     return this.play(index, action.type);
+  }
+
+  /** Cancels the round like a deploy would: chips at risk go back, nothing is written. */
+  protected recover() {
+    this.clearTimer();
+    // In results, payouts are already on the stacks.
+    if (this.phase !== "results") {
+      for (const [i, seat] of this.occupiedSeats()) {
+        const player = this.round?.players.find((p) => p.seat === i);
+        seat.stack += player
+          ? player.hands.reduce((sum, h) => sum + h.bet, 0)
+          : (seat.bet ?? 0);
+      }
+    }
+    for (const [i, seat] of this.occupiedSeats()) {
+      if (seat.leaving) this.seats[i] = null;
+    }
+    this.emitErrorToAll(ROUND_FAILED);
+    if (this.occupiedSeats().length > 0) this.enterBetting();
+    else this.enterWaiting();
   }
 
   protected viewFor(): BlackjackTableView {
@@ -300,20 +339,26 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       const seat = this.seats[result.seat]!;
       seat.stack += result.payout;
       seat.lastNet = result.net;
-      const write = this.deps.chipStore
-        .settle({
-          circleId: this.circleId,
-          userId: result.userId,
-          game: "blackjack",
-          net: result.net,
-        })
-        .catch((err) => console.error("casino: chip settle failed", err));
-      this.deps.trackSettle(write);
+      this.deps.trackSettle(
+        this.writeSettlement(result.userId, result.net).catch((err) =>
+          console.error("casino: chip settle failed", err),
+        ),
+      );
     }
 
     this.phase = "results";
     this.broadcast();
     this.setTimer(RESULTS_MS, () => this.endResults());
+  }
+
+  // A synchronous throw becomes a rejection so it can't stop the payout loop halfway.
+  private async writeSettlement(userId: string, net: number) {
+    await this.deps.chipStore.settle({
+      circleId: this.circleId,
+      userId,
+      game: "blackjack",
+      net,
+    });
   }
 
   private endResults() {

@@ -8,6 +8,8 @@ import {
   Rank,
   STARTING_CHIPS,
   TURN_MS,
+  applyAction,
+  dealerDraw,
 } from "@tim/casino";
 import { SocketEvent } from "@tim/socket-types";
 import { createMockSocket } from "../test/socket-mocks";
@@ -18,6 +20,15 @@ import { isUserInCircle } from "../db/circles";
 import { shutdown } from "../shutdown";
 
 vi.mock("../db/circles", () => ({ isUserInCircle: vi.fn() }));
+// Pass-through spies so a test can make the engine throw once.
+vi.mock("@tim/casino", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tim/casino")>();
+  return {
+    ...actual,
+    applyAction: vi.fn(actual.applyAction),
+    dealerDraw: vi.fn(actual.dealerDraw),
+  };
+});
 
 const REF = { circleId: "c1", game: "blackjack" } as const;
 
@@ -695,5 +706,115 @@ describe("shutdown", () => {
     await vi.advanceTimersByTimeAsync(5_000);
     await done;
     expect(exit).toHaveBeenCalledWith(0);
+  });
+});
+
+describe("unexpected errors", () => {
+  const boom = () => {
+    throw new Error("boom");
+  };
+
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.mocked(console.error).mockRestore();
+  });
+
+  it("cancels the round and returns bets when a timer step throws", async () => {
+    const { connect, stackShoe } = setup();
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    // a1 b1 up a2 b2 hole: a 18, b 17, dealer 9 + 7 = 16, so the dealer draws
+    stackShoe("10", "10", "9", "8", "7", "7");
+    await sit(a, 0);
+    await sit(b, 1);
+    await bet(a, 100);
+    await bet(b, 50);
+    await act(a, { type: "stand" });
+    await act(b, { type: "stand" });
+    expect(state(a).phase).toBe("dealer");
+
+    vi.mocked(dealerDraw).mockImplementationOnce(boom);
+    expect(() => vi.advanceTimersByTime(DEALER_DRAW_MS)).not.toThrow();
+
+    const view = state(a);
+    expect(view.phase).toBe("betting");
+    expect(view.seats[0]).toMatchObject({ stack: 1000, bet: null, hands: [] });
+    expect(view.seats[1]).toMatchObject({ stack: 1000, bet: null, hands: [] });
+    expect(lastError(a)).toMatch(/cancelled and bets were returned/);
+    expect(lastError(b)).toMatch(/cancelled and bets were returned/);
+    expect(console.error).toHaveBeenCalled();
+
+    // The table keeps working afterwards.
+    await bet(a, 10);
+    expect(state(a).seats[0]).toMatchObject({ bet: 10, stack: 990 });
+  });
+
+  it("returns split and double chips when an action throws mid-round", async () => {
+    const { connect, stackShoe } = setup();
+    const a = connect("a");
+    const leaver = connect("l");
+    await watch(a);
+    await watch(leaver);
+    // a1 l1 up a2 l2 hole: a 8 8, l 20, dealer 9 + 7
+    stackShoe("8", "10", "9", "8", "10", "7", "3", "2");
+    await sit(a, 0);
+    await sit(leaver, 1);
+    await bet(a, 100);
+    await bet(leaver, 100);
+    await act(a, { type: "split" });
+    expect(state(a).seats[0]!.stack).toBe(800);
+    await leaver.trigger(SocketEvent.Disconnecting);
+    expect(state(a).seats[1]).toMatchObject({ leaving: true });
+
+    vi.mocked(applyAction).mockImplementationOnce(boom);
+    await act(a, { type: "double" });
+
+    const view = state(a);
+    expect(view.phase).toBe("betting");
+    expect(view.seats[0]).toMatchObject({ stack: 1000, bet: null, hands: [] });
+    // A leaving seat is freed rather than kept for the next round.
+    expect(view.seats[1]).toBeNull();
+    expect(emitted(a, SocketEvent.TableError)).toHaveLength(1);
+  });
+
+  it("tells the player when loading their chips fails, without seating them", async () => {
+    const chipStore = new InMemoryChipStore();
+    vi.spyOn(chipStore, "load").mockRejectedValueOnce(new Error("db down"));
+    const { connect } = setup(chipStore);
+    const a = connect("a");
+    await watch(a);
+    await expect(sit(a, 0)).resolves.toBeUndefined();
+    expect(lastError(a)).toBe("Couldn't load your chips. Try again.");
+    expect(state(a).seats[0]).toBeNull();
+
+    await sit(a, 0);
+    expect(state(a).seats[0]).toMatchObject({ stack: STARTING_CHIPS });
+  });
+
+  it("still settles when the chip store throws synchronously", async () => {
+    const chipStore = new InMemoryChipStore();
+    vi.spyOn(chipStore, "settle").mockImplementation(boom);
+    const { connect, stackShoe } = setup(chipStore);
+    const a = connect("a");
+    await watch(a);
+    stackShoe("10", "9", "8", "8");
+    await sit(a, 0);
+    await bet(a, 100);
+    await act(a, { type: "stand" });
+    vi.advanceTimersByTime(DEALER_DRAW_MS);
+
+    expect(state(a).phase).toBe("results");
+    expect(state(a).seats[0]).toMatchObject({ stack: 1100, lastNet: 100 });
+    await vi.waitFor(() =>
+      expect(console.error).toHaveBeenCalledWith(
+        "casino: chip settle failed",
+        expect.any(Error),
+      ),
+    );
   });
 });

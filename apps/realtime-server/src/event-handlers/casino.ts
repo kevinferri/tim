@@ -50,6 +50,18 @@ export function registerCasinoHandlers(
 ) {
   const user = () => socket.data.user;
 
+  // A throw in a listener would crash the whole server, taking chat down with it.
+  const on = (event: SocketEvent, fn: (payload: any) => unknown) =>
+    socket.on(event, async (payload: unknown) => {
+      try {
+        await fn(payload);
+      } catch (err) {
+        console.error(`casino: ${event} failed`, err);
+        const ref = parseRef(payload);
+        if (ref) emitError(socket, ref, "Something went wrong. Try again.");
+      }
+    });
+
   // Sit/stand/act are only for sockets already watching (authorized at watch).
   const watchedTable = (ref: TableRef) => {
     const table = registry.get(ref.circleId, ref.game);
@@ -61,7 +73,7 @@ export function registerCasinoHandlers(
   };
 
   // Queued with room ops so an unwatch can't overtake a watch still awaiting its membership check.
-  socket.on(SocketEvent.TableWatch, (payload: unknown) =>
+  on(SocketEvent.TableWatch, (payload: unknown) =>
     enqueueRoomOp(socket, async () => {
       const ref = parseRef(payload);
       if (!ref) return;
@@ -80,7 +92,7 @@ export function registerCasinoHandlers(
     }),
   );
 
-  socket.on(SocketEvent.TableUnwatch, (payload: unknown) =>
+  on(SocketEvent.TableUnwatch, (payload: unknown) =>
     enqueueRoomOp(socket, async () => {
       const ref = parseRef(payload);
       if (!ref) return;
@@ -88,7 +100,7 @@ export function registerCasinoHandlers(
     }),
   );
 
-  socket.on(SocketEvent.TableSit, async (payload: any) => {
+  on(SocketEvent.TableSit, async (payload: any) => {
     const ref = parseRef(payload);
     if (!ref) return;
     const seat = payload.seat;
@@ -103,7 +115,13 @@ export function registerCasinoHandlers(
     }
     if (!table.isSeatFree(seat)) return emitError(socket, ref, "Seat is taken");
 
-    const stack = await registry.deps.chipStore.load(ref.circleId, id);
+    let stack: number;
+    try {
+      stack = await registry.deps.chipStore.load(ref.circleId, id);
+    } catch (err) {
+      console.error("casino: chip load failed", err);
+      return emitError(socket, ref, "Couldn't load your chips. Try again.");
+    }
     // Re-checked after the await: the socket may have left or the table closed.
     if (registry.closing) return emitError(socket, ref, "Table is closing");
     const current = watchedTable(ref);
@@ -119,14 +137,14 @@ export function registerCasinoHandlers(
     );
   });
 
-  socket.on(SocketEvent.TableStand, (payload: unknown) => {
+  on(SocketEvent.TableStand, (payload: unknown) => {
     const ref = parseRef(payload);
     if (!ref) return;
     const table = watchedTable(ref);
     if (table) emitError(socket, ref, table.stand(user().id));
   });
 
-  socket.on(SocketEvent.TableAction, (payload: any) => {
+  on(SocketEvent.TableAction, (payload: any) => {
     const ref = parseRef(payload);
     if (!ref) return;
     const action = parseAction(payload.action);
@@ -135,7 +153,7 @@ export function registerCasinoHandlers(
     if (table) emitError(socket, ref, table.act(user().id, action));
   });
 
-  socket.on(SocketEvent.Disconnecting, () => {
+  on(SocketEvent.Disconnecting, () => {
     registry.removeSocket(socket.id);
   });
 }

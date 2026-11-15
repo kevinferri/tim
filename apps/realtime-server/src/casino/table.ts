@@ -2,6 +2,7 @@ import {
   SEAT_COUNT,
   SeatOccupant,
   TableClosingPayload,
+  TableErrorPayload,
   TableGame,
 } from "@tim/casino";
 import { SocketEvent } from "@tim/socket-types";
@@ -33,6 +34,8 @@ export abstract class Table<Seat extends BaseSeat, View> {
   protected abstract viewFor(userId: string): View;
   /** Stands the user up; called when their last watching socket goes away. */
   abstract stand(userId: string): string | null;
+  /** Puts the table back in a safe state after an unexpected error. */
+  protected abstract recover(): void;
 
   addWatcher(socket: AppSocket) {
     this.watchers.set(socket.id, { socket, userId: socket.data.user.id });
@@ -102,9 +105,36 @@ export abstract class Table<Seat extends BaseSeat, View> {
     if (this.closed) return;
     const handle = setTimeout(() => {
       this.timer = null;
-      fn();
+      this.guard(undefined, fn);
     }, ms);
     this.timer = { handle, deadline: Date.now() + ms };
+  }
+
+  // A throw here would otherwise reach the timer or socket and crash the whole server.
+  protected guard<T>(fallback: T, fn: () => T): T {
+    try {
+      return fn();
+    } catch (err) {
+      console.error(`casino: ${this.game} table ${this.circleId} failed`, err);
+      try {
+        this.recover();
+      } catch (recoverErr) {
+        console.error("casino: table recovery failed", recoverErr);
+        this.clearTimer();
+      }
+      return fallback;
+    }
+  }
+
+  protected emitErrorToAll(message: string) {
+    const payload: TableErrorPayload = {
+      circleId: this.circleId,
+      game: this.game,
+      message,
+    };
+    for (const { socket } of this.watchers.values()) {
+      socket.emit(SocketEvent.TableError, payload);
+    }
   }
 
   protected clearTimer() {
