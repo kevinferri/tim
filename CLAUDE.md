@@ -4,43 +4,67 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`tim` is a pnpm workspaces monorepo for the "Tim" chat/community app, holding two independently-deployed services plus one shared package:
+`tim` is a pnpm workspaces monorepo for Tim, a chat/community app. Two independently deployed services share one Postgres database:
 
-- **`apps/chat`** — the Next.js 14 (App Router) app: UI, auth, Prisma/Postgres (owns the DB schema), server actions. See `apps/chat/CLAUDE.md` for its architecture in detail.
-- **`apps/realtime-server`** — a standalone Node/TypeScript Socket.IO server: messaging, rooms, presence, highlights, notifications. Uses Knex against the same Postgres database as `apps/chat`, but owns no schema/migrations of its own — `apps/chat`'s Prisma schema is the single source of truth. See `apps/realtime-server/CLAUDE.md`.
-- **`packages/socket-types`** — the canonical `SocketEvent` enum (`packages/socket-types/src/index.ts`), consumed by both apps. This is the wire contract between them: **add new socket events here first**, not in either app. Both apps' own "hub" files (`apps/chat/src/components/socket/use-socket.ts`, `apps/realtime-server/src/event-handlers/main.ts`) just re-export it.
-- **`packages/db-types`** — re-exports Prisma's generated model types (`User`, `Circle`, `Topic`, `Message`, `Highlight`, `TopicReadState`) from `apps/chat`'s schema. One-directional (`apps/chat`'s `schema.prisma` is still the single source of truth — nothing is added here first): `apps/realtime-server` imports these types to type its Knex queries against the real schema instead of hand-rolling row/arg shapes. Types only — no runtime DB client or query code is shared, since the two apps' data-access needs (a full ORM with transactions/relations vs. a lean low-latency query builder) are different enough that unifying the engine isn't worth it. See `apps/realtime-server/CLAUDE.md`.
+- **`apps/chat`** (package name `chat`) — the Next.js 16 / React 19 App Router app: UI, auth, server actions, API routes, games, and the Prisma schema, which is the single source of truth for the database. See `apps/chat/CLAUDE.md`.
+- **`apps/realtime-server`** (package name `tim-chat-server`) — a standalone Node/TypeScript Socket.IO server: messaging, rooms, presence, highlights, notifications, slash commands. Reads and writes the same database with Knex but owns no schema or migrations. See `apps/realtime-server/CLAUDE.md`.
+
+Shared packages live in `packages/`. Each is `@tim/<name>`, builds with `tsc` to `dist/`, and is consumed through `"workspace:*"`:
+
+- **`@tim/socket-types`** — `SocketEvent`, `RoomType`, `NotificationType` — the wire contract between the two apps. **Add new socket events here first**, not in either app; each app's hub (`apps/chat/src/components/socket/use-socket.ts`, `apps/realtime-server/src/event-handlers/main.ts`) re-exports it.
+- **`@tim/db-types`** — Re-exports Prisma's generated model types from `apps/chat`'s schema so the realtime server can type its Knex queries against the real tables. Types only and one-directional: add a model to `schema.prisma` first, then export it here if the realtime server needs it.
+- **`@tim/commands`** — Slash command names, aliases, and parsing (`CommandName`, `COMMAND_ALIASES`, `parseCommand`), used by both apps.
+- **`@tim/crypto`** — AES-256-GCM `encrypt`/`decrypt` for message text at rest (keyed by `CRYPTO_KEY`).
+- **`@tim/user-display`** — Display-name rules (`getInitialDisplayName`, `DISPLAY_NAME_MAX_LENGTH`).
+
+Only types are shared for data access, not a DB client: the apps' needs (a full ORM with relations and transactions vs. a lean query builder) differ enough that one engine isn't worth it.
 
 ## Commands
 
 ```bash
-pnpm dev                              # Run both apps concurrently (chat on :3000, realtime-server on :2428)
-pnpm --filter chat <script>                       # Run a script in apps/chat (see its package.json name)
-pnpm --filter tim-chat-server <script>            # Run a script in apps/realtime-server (see its package.json name)
-pnpm --filter @tim/socket-types build              # Rebuild after changing packages/socket-types/src/index.ts
-pnpm --filter @tim/db-types build                 # Rebuild after changing apps/chat/prisma/schema.prisma
-pnpm setup:env                         # Fill in .env.local for both apps (see "Local environment setup" below)
-pnpm test:scripts                      # Run scripts/*.test.mjs (node:test) -- covers scripts/setup-env.mjs's parsing/reconciliation logic
+pnpm install && pnpm setup:env         # Fresh checkout: install, then fill in both apps' .env.local
+pnpm dev                               # Run both apps (chat on :3000, realtime-server on :2428)
+pnpm --filter chat <script>            # Run a script in apps/chat
+pnpm --filter tim-chat-server <script> # Run a script in apps/realtime-server
+pnpm --filter "./packages/*" build     # Rebuild the shared packages; needed after editing any packages/*/src
+pnpm --filter @tim/db-types build      # Also needed after changing apps/chat/prisma/schema.prisma
+pnpm format                            # Prettier over the whole repo (CI runs `pnpm format:check`)
+pnpm test:scripts                      # node:test suite for scripts/ (setup-env parsing)
 ```
 
-Each app keeps its own `package.json` name (`chat`, `tim-chat-server`) — `pnpm --filter <name> ...` is how you target one of them from the root. Per-app commands (Prisma db scripts, etc.) are documented in each app's own `CLAUDE.md`.
+Per-app commands (Prisma, tests, lint) are in each app's `CLAUDE.md`. `./tim` at the root is just a shim for `pnpm "$@"`.
 
-**Don't run either app's `build` script while `pnpm dev` is running.** `pnpm --filter chat build` runs `next build`, which writes into the same `apps/chat/.next` directory the dev server is using live — this corrupts its webpack cache (e.g. `Resolving './vendor-chunks/...' doesn't lead to expected result` errors) and forces a manual `.next` wipe + restart. (Under the old Yarn v1 setup, `apps/realtime-server`'s `build` script also used to `rm -rf node_modules && yarn install`, which — because Yarn v1 hoists all workspaces into one shared root `node_modules` — could bleed into and corrupt `chat`'s install/dev cache too. pnpm's per-package symlinked `node_modules` doesn't hoist that way, and the script no longer does a destructive reinstall, so that specific cross-app failure mode is gone; the `next build`-vs-`next dev` cache conflict above is unrelated to the package manager and still applies.) To typecheck either app without any of that, run `npx tsc --noEmit` from the app's directory (uses its own `tsconfig.json`, touches neither `.next` nor `node_modules`) — safe to run anytime, including alongside a live `pnpm dev`.
+To typecheck an app, run `npx tsc --noEmit` from its directory. It touches neither `.next` nor `node_modules`, so it's safe anytime, including alongside `pnpm dev`.
+
+CI (`.github/workflows/ci.yml`) runs on every PR: `pnpm format:check`, `pnpm test:scripts`, and for each app: build the shared packages, `tsc --noEmit`, lint, tests, then its `build` (chat also runs `prisma validate`). Run the same checks before opening a PR, except the build scripts (see below).
+
+### Don't run the apps' `build` scripts during local development
+
+- `pnpm --filter chat build` runs `next build`, which writes into the same `apps/chat/.next` directory a running `next dev` uses and corrupts its cache (e.g. `Resolving './vendor-chunks/...' doesn't lead to expected result`). Recovery: stop dev, delete `apps/chat/.next`, restart.
+- `pnpm --filter tim-chat-server build` ends with `pnpm install --prod`, which strips devDependencies (TypeScript, vitest, eslint, …) **across the whole workspace**. Only CI runs it, as the last step of its job; the Dockerfile compiles with `npx tsc` instead. If you ran it by accident, `pnpm install` restores everything.
 
 ## Structure & conventions
 
-- Code comments: concise and direct, only when the WHY isn't obvious from the code itself (a hidden constraint, subtle invariant, workaround, or surprising behavior). Don't narrate what the code does, and don't write multi-paragraph rationale in-source — that belongs in the commit/PR description, not the file.
-- Single root `pnpm-lock.yaml` and `pnpm-workspace.yaml`; each app also keeps its own `tsconfig.json` unchanged (`apps/chat` is strict/ESM/DOM-lib since Next handles its own TS compilation and emits nothing; `apps/realtime-server` is non-strict/CommonJS and emits a real `dist/` build) — these are deliberate, real differences and not something to unify.
-- `packages/socket-types` and `packages/db-types` both build via `tsc` to `dist/` + `.d.ts`; both apps resolve them through the pnpm workspace symlink (`"workspace:*"` in each app's `package.json`), so rebuild the relevant one (`pnpm --filter @tim/socket-types build` / `pnpm --filter @tim/db-types build`) after editing its source before relying on the change from either app.
-- Deployment: both apps run as components (`tim-fe`, `tim-ws`) of a single DigitalOcean App Platform App, sharing one domain — one push produces one coordinated deployment across both services. Each component builds from its own `Dockerfile` (`apps/chat/Dockerfile`, `apps/realtime-server/Dockerfile`) rather than DO's buildpack auto-detection, since buildpacks can't see a monorepo's root `pnpm-lock.yaml` from inside a component's subdirectory. Both Dockerfiles install pnpm globally via `npm install -g pnpm@<version>` pinned to the root `package.json`'s `"packageManager"` field, rather than `corepack enable` — corepack's signature verification has had stale-keyid failures against recently-published pnpm releases.
-- `.env.local` files are per-app (`apps/chat/.env.local`, `apps/realtime-server/.env.local`), gitignored, and not shared at the root.
+- Code comments: concise and direct, one line where possible, and only when the WHY isn't obvious from the code (a hidden constraint, subtle invariant, workaround, or surprising behavior). Don't narrate what the code does or write multi-paragraph rationale in source; that belongs in the PR description.
+- Formatting is Prettier (`.prettierrc.json`) across the repo; CI fails on unformatted files.
+- One root `pnpm-lock.yaml` and `pnpm-workspace.yaml`. Node version is in `.nvmrc`; the pnpm version is pinned by the root `package.json`'s `"packageManager"`.
+- The tsconfigs differ on purpose and shouldn't be unified: `apps/chat` is strict ESM with DOM libs (Next compiles it and emits nothing), `apps/realtime-server` is non-strict CommonJS and emits `dist/`, and each package has its own.
+- `.env.local` files are per app (`apps/chat/.env.local`, `apps/realtime-server/.env.local`) and gitignored.
+
+## Deployment
+
+Both apps are components (`tim-fe`, `tim-ws`) of one DigitalOcean App Platform app on one domain, so a push to `main` produces one coordinated deployment of both. Each component builds from its own Dockerfile (`apps/chat/Dockerfile`, `apps/realtime-server/Dockerfile`) with the repo root as build context, since buildpacks can't see the root lockfile from an app subdirectory.
+
+- **Adding a shared package:** add its `RUN pnpm --filter @tim/<name> build` line to each Dockerfile whose app depends on it.
+- The Dockerfiles install pnpm with `npm install -g pnpm@<version>` (matching `"packageManager"`) instead of `corepack enable`, because corepack's signature checks fail against recently published pnpm releases.
+- `apps/chat` applies pending Prisma migrations when its container starts (`pnpm start` runs `prisma migrate deploy`), not at image build time, because DO only provides `DATABASE_URL` at runtime.
 
 ## Local environment setup
 
-Each app has a committed `apps/*/.env.example` listing every var it reads, split into three tiers:
+Each app's committed `.env.example` lists every variable it reads, in three tiers:
 
-1. **`# auto`-tagged** — pure-random secrets (`JWT_SECRET`, `CRYPTO_KEY`, `NEXTAUTH_SECRET`, `WORDSMITH_SEED`). `pnpm setup:env` (root `scripts/setup-env.mjs`) generates these into `.env.local` if missing, and is safe to rerun (never overwrites an existing value). `JWT_SECRET` and `CRYPTO_KEY` are shared between the two apps (JWT verification + message encryption) — the script generates them once and writes the identical value into both apps' `.env.local`.
-2. **Known-safe local defaults** — ports, `localhost` URLs, the local Postgres connection string (`apps/chat/scripts/db.js` spins up a matching embedded instance). Already filled in in `.env.example`; `pnpm setup:env` copies them into `.env.local` on first run.
-3. **Real third-party credentials** — Google OAuth is still required locally on this branch (no dev-auth bypass yet). Cloudinary/Giphy/YouTube/OpenAI keys are optional: when one is missing outside production, the corresponding call site returns a real-shaped canned response instead of failing, so local dev works without acquiring them. See `apps/chat/src/lib/cloudinary.ts:uploadImage` and `apps/realtime-server/src/lib/media-fetchers.ts` / `open-ai.ts:callOpenAI` — if you see a fixed gif/video/reply/image locally instead of a live one, that's this fallback, not a bug.
-
-Run `pnpm install && pnpm setup:env` before `pnpm dev` on a fresh checkout.
+1. **`# auto`-tagged** random secrets (`JWT_SECRET`, `CRYPTO_KEY`, `NEXTAUTH_SECRET`, `WORDSMITH_SEED`). `pnpm setup:env` (`scripts/setup-env.mjs`) generates missing ones into `.env.local` and never overwrites an existing value, so it's safe to rerun. `JWT_SECRET` and `CRYPTO_KEY` must match across both apps (JWT verification, message encryption); the script writes the same value into both.
+2. **Known-safe local defaults**: ports, `localhost` URLs, and the connection string for the embedded Postgres that `apps/chat/scripts/db.js` runs. `pnpm setup:env` copies them as-is.
+3. **Third-party credentials**, all optional locally:
+   - **Google OAuth** isn't needed. Seed the database (`pnpm --filter chat db:seed`), then use **Sign into test sandbox** on `/signin`, or open `/api/dev/login?email=<seeded email>` to sign in as any seeded user (e.g. `tim.sandbox@example.com`, `socrates@example.com`; see `apps/chat/prisma/seed.ts`). The route is dev-only and only accepts seeded accounts. Two browser profiles signed in as two members of the seeded Sandbox circle give you two live users for testing real-time features.
+   - **Cloudinary, Giphy, YouTube, OpenAI**: when a key is missing outside production and test, the call returns a real-shaped canned response instead of failing (`apps/chat/src/lib/cloudinary.ts` `uploadImage`; `apps/realtime-server/src/lib/media-fetchers.ts` and `open-ai.ts` `callOpenAI`). A fixed gif, video, reply, or image locally is this fallback, not a bug.
