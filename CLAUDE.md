@@ -16,6 +16,7 @@ Shared packages live in `packages/`. Each is `@tim/<name>`, builds with `tsc` to
 - **`@tim/commands`** — Slash command names, aliases, and parsing (`CommandName`, `COMMAND_ALIASES`, `parseCommand`), used by both apps.
 - **`@tim/crypto`** — AES-256-GCM `encrypt`/`decrypt` for message text at rest (keyed by `CRYPTO_KEY`).
 - **`@tim/user-display`** — Display-name rules (`getInitialDisplayName`, `DISPLAY_NAME_MAX_LENGTH`).
+- **`@tim/casino`** — Cards, shared table shapes (`SEAT_COUNT`, `SeatOccupant`), and the blackjack rules as a pure state machine (`dealRound`, `applyAction`, `dealerDraw`, `settle`) plus the view types the realtime server broadcasts and the chat app renders. No sockets or DB.
 
 Only types are shared for data access, not a DB client: the apps' needs (a full ORM with relations and transactions vs. a lean query builder) differ enough that one engine isn't worth it.
 
@@ -28,6 +29,7 @@ pnpm --filter chat <script>            # Run a script in apps/chat
 pnpm --filter tim-chat-server <script> # Run a script in apps/realtime-server
 pnpm --filter "./packages/*" build     # Rebuild the shared packages; needed after editing any packages/*/src
 pnpm --filter @tim/db-types build      # Also needed after changing apps/chat/prisma/schema.prisma
+pnpm --filter @tim/casino test         # Blackjack engine tests (node:test against dist/)
 pnpm format                            # Prettier over the whole repo (CI runs `pnpm format:check`)
 pnpm test:scripts                      # node:test suite for scripts/ (setup-env parsing)
 ```

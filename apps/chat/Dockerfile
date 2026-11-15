@@ -43,6 +43,7 @@ RUN pnpm --filter @tim/socket-types build
 RUN pnpm --filter @tim/commands build
 RUN pnpm --filter @tim/user-display build
 RUN pnpm --filter @tim/crypto build
+RUN pnpm --filter @tim/casino build
 
 WORKDIR /app/apps/chat
 RUN pnpm build

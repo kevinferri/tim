@@ -31,6 +31,7 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
+    "@tim/casino": "workspace:*",
     "@tim/commands": "workspace:*",
     "@tim/crypto": "workspace:*",
     "@tim/db-types": "workspace:*",

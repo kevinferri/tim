@@ -38,6 +38,7 @@ RUN pnpm --filter @tim/db-types build
 RUN pnpm --filter @tim/commands build
 RUN pnpm --filter @tim/user-display build
 RUN pnpm --filter @tim/crypto build
+RUN pnpm --filter @tim/casino build
 
 WORKDIR /app/apps/realtime-server
 RUN npx tsc
