@@ -46,7 +46,7 @@ export function StatusLine({
           className={cn(
             "whitespace-nowrap text-[15px] font-semibold uppercase tracking-[0.22em]",
             highlight
-              ? "text-amber-300 [text-shadow:0_0_6px_rgba(252,211,77,0.4)]"
+              ? "text-highlight-icon [text-shadow:0_0_6px_hsl(var(--highlight-icon)/0.5)]"
               : "text-white/85 [text-shadow:0_0_6px_rgba(255,255,255,0.2)]",
           )}
           aria-live="polite"
@@ -64,7 +64,7 @@ export function StatusLine({
           className={cn(
             "h-full origin-center rounded-full transition-transform duration-100 ease-linear",
             highlight
-              ? "bg-amber-300 shadow-[0_0_5px_rgba(252,211,77,0.4)]"
+              ? "bg-highlight-icon shadow-[0_0_5px_hsl(var(--highlight-icon)/0.5)]"
               : "bg-white/80 shadow-[0_0_5px_rgba(255,255,255,0.35)]",
           )}
           style={{ transform: `scaleX(${fraction ?? 0})` }}

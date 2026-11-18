@@ -64,7 +64,7 @@ export function PlayerAvatar({
             {/* On the bottom edge; your round result takes its place while it shows. */}
             {isYou && !result && (
               <span className="absolute inset-x-0 -bottom-2.5 flex justify-center">
-                <span className="rounded-full bg-amber-300 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow">
+                <span className="rounded-full bg-highlight-icon px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow">
                   You
                 </span>
               </span>
