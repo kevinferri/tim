@@ -143,9 +143,9 @@ function ReservedCards({
   );
 }
 
-// The chat's glow in the message-highlight gold.
+// The chat's glow in the table's gold (amber-300, like "Your turn" and the YOU tag).
 const TURN_GLOW =
-  "shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_hsl(var(--highlight-icon)),0_0_5px_hsl(var(--highlight-icon)),0_0_10px_hsl(var(--highlight-icon))]";
+  "shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#fcd34d,0_0_5px_#fcd34d,0_0_10px_#fcd34d]";
 
 // Room between the cards and the glow around them.
 const GLOW_PAD_PX = 4;
