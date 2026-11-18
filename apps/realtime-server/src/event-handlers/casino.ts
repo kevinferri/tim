@@ -1,6 +1,7 @@
 import {
   BlackjackTableAction,
   SEAT_COUNT,
+  TableErrorCode,
   TableErrorPayload,
   TableRef,
 } from "@tim/casino";
@@ -35,9 +36,14 @@ function parseAction(action: any): BlackjackTableAction | null {
   return { type: action.type };
 }
 
-function emitError(socket: AppSocket, ref: TableRef, message: string | null) {
+function emitError(
+  socket: AppSocket,
+  ref: TableRef,
+  message: string | null,
+  code?: TableErrorCode,
+) {
   if (!message) return;
-  const payload: TableErrorPayload = { ...ref, message };
+  const payload: TableErrorPayload = { ...ref, message, code };
   socket.emit(SocketEvent.TableError, payload);
 }
 
@@ -98,7 +104,12 @@ export function registerCasinoHandlers(
     if (!socket.connected) return;
     if (!isMember) return emitError(socket, ref, "Not a member of this circle");
     if (!enabled) {
-      return emitError(socket, ref, "This game isn't on in this circle");
+      return emitError(
+        socket,
+        ref,
+        "This game isn't on in this circle",
+        "game_off",
+      );
     }
     if (registry.closing) return emitError(socket, ref, "Table is closing");
     registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket);

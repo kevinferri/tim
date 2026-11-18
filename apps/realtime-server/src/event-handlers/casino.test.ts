@@ -118,6 +118,23 @@ describe("watching", () => {
     expect(registry.tableCount()).toBe(1);
   });
 
+  it("keeps a table's id across updates and gives a new table a new id", async () => {
+    const { connect, registry } = setup();
+    const a = connect("a");
+    await watch(a);
+    const first = state(a).tableId;
+    expect(first).toEqual(expect.any(String));
+    await sit(a, 0);
+    expect(state(a).tableId).toBe(first);
+
+    // Last watcher gone: the table is dropped, and the next one is new.
+    await a.trigger(SocketEvent.TableUnwatch, REF);
+    expect(registry.tableCount()).toBe(0);
+    const b = connect("b");
+    await watch(b);
+    expect(state(b).tableId).not.toBe(first);
+  });
+
   function pendingMembership() {
     let resolve!: (isMember: boolean) => void;
     vi.mocked(isUserInCircle).mockReturnValueOnce(
@@ -181,6 +198,10 @@ describe("watching", () => {
       gameId: "blackjack",
     });
     expect(lastError(a)).toBe("This game isn't on in this circle");
+    // The page checks the code, not the wording.
+    expect(emitted(a, SocketEvent.TableError).at(-1)).toMatchObject({
+      code: "game_off",
+    });
     expect(registry.tableCount()).toBe(0);
   });
 

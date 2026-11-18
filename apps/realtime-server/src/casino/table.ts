@@ -5,6 +5,7 @@ import {
   TableErrorPayload,
   TableGame,
 } from "@tim/casino";
+import { randomUUID } from "node:crypto";
 import { SocketEvent } from "@tim/socket-types";
 import { AppSocket } from "../lib/socket";
 
@@ -23,6 +24,9 @@ type Watcher = { socket: AppSocket; userId: string };
 
 /** Game-agnostic table: seats, watchers, one phase timer, and broadcast. */
 export abstract class Table<Seat extends BaseSeat, View> {
+  /** Identifies this instance in views; a restarted server builds new tables with new ids. */
+  readonly tableId = randomUUID();
+
   protected seats: (Seat | null)[] = Array(SEAT_COUNT).fill(null);
   protected closed = false;
   private watchers = new Map<string, Watcher>();
