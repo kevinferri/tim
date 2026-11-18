@@ -20,6 +20,9 @@ import {
   type PresenceState,
 } from "./table-presence";
 
+// Fallback for an action the server never answered, so the controls can't stay locked.
+const ACTION_TIMEOUT_MS = 3000;
+
 const NOTICES = {
   restarted:
     "The table restarted. Your bet was returned. Join the table to keep playing.",
@@ -48,6 +51,14 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   // performance.now() deadline for view.msLeft, so countdowns don't depend on clock skew.
   const [deadline, setDeadline] = useState<number | null>(null);
 
+  // One action in flight at a time: a double tap or a bet racing the auto-bet sends only once.
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settle = useCallback(() => {
+    if (pending.current) clearTimeout(pending.current);
+    pending.current = null;
+  }, []);
+  useEffect(() => settle, [settle]);
+
   const presence = useRef<PresenceState>(initialPresence);
   // Stable (toast is), so the watch effect below doesn't re-run because of it.
   const onPresence = useCallback(
@@ -67,6 +78,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
       socket.emit(SocketEvent.TableWatch, { circleId, game } as TableRef);
     const onConnect = () => watch();
     const onDisconnect = () => {
+      settle();
       onPresence({ type: "disconnect" });
       setStatus((s) => (s === "off" ? s : "reconnecting"));
     };
@@ -80,10 +92,11 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
       socket.off("disconnect", onDisconnect);
       socket.emit(SocketEvent.TableUnwatch, { circleId, game } as TableRef);
     };
-  }, [socket, circleId, game, onPresence]);
+  }, [socket, circleId, game, onPresence, settle]);
 
   useSocketHandler<View>(SocketEvent.TableState, (next) => {
     if (!isThisTable(next)) return;
+    settle();
     const mine = next.seats.find((s) => s?.occupant.userId === self.id);
     onPresence({
       type: "state",
@@ -99,6 +112,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
 
   useSocketHandler<TableErrorPayload>(SocketEvent.TableError, (payload) => {
     if (!isThisTable(payload)) return;
+    settle();
     if (payload.code === "game_off") return setStatus("off");
     toast({ title: payload.message, variant: "quiet-destructive" });
   });
@@ -120,15 +134,18 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
     [socket, circleId, game],
   );
 
-  const stand = useCallback(
-    () => socket.emit(SocketEvent.TableStand, { circleId, game } as TableRef),
-    [socket, circleId, game],
-  );
+  const stand = useCallback(() => {
+    onPresence({ type: "stand" });
+    socket.emit(SocketEvent.TableStand, { circleId, game } as TableRef);
+  }, [socket, circleId, game, onPresence]);
 
   const act = useCallback(
-    (action: Action) =>
-      socket.emit(SocketEvent.TableAction, { circleId, game, action }),
-    [socket, circleId, game],
+    (action: Action) => {
+      if (pending.current) return;
+      pending.current = setTimeout(settle, ACTION_TIMEOUT_MS);
+      socket.emit(SocketEvent.TableAction, { circleId, game, action });
+    },
+    [socket, circleId, game, settle],
   );
 
   const mySeat = view

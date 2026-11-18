@@ -84,31 +84,33 @@ export function useDealFlight(ref: RefObject<HTMLElement | null>, delayMs = 0) {
     const shoe = ctx?.shoe.current;
     if (!el || !shoe || !ctx?.enabled.current || reducedMotion()) return;
 
-    const from = shoe.getBoundingClientRect();
-    const to = el.getBoundingClientRect();
-    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
-    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
     // Web Animations, not a CSS class, so it can't collide with layout transforms.
-    const flight = el.animate(
+    const timing: KeyframeAnimationOptions = {
+      duration: DEAL_MS,
+      delay: delayMs,
+      easing: "cubic-bezier(0.2, 0.7, 0.3, 1)",
+      fill: "backwards",
+    };
+    // Hidden until the hand has re-centered around this card (a parent re-renders after this effect).
+    const flight = el.animate([{ opacity: 0 }, { opacity: 0 }], timing);
+    const frame = requestAnimationFrame(() => {
+      const from = shoe.getBoundingClientRect();
+      const to = el.getBoundingClientRect();
+      const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+      const dy = from.top + from.height / 2 - (to.top + to.height / 2);
       // Hidden while it waits its turn, then fades in as it leaves, so no face shows on the shoe.
-      [
-        {
-          // A pure slide: the shoe matches the cards' size (its box is wider only because it's angled).
-          transform: `translate(${dx}px, ${dy}px)`,
-          opacity: 0,
-        },
+      (flight.effect as KeyframeEffect).setKeyframes([
+        // A pure slide: the shoe matches the cards' size (its box is wider only because it's angled).
+        { transform: `translate(${dx}px, ${dy}px)`, opacity: 0 },
         { opacity: 1, offset: 0.3 },
         { transform: "none", opacity: 1 },
-      ],
-      {
-        duration: DEAL_MS,
-        delay: delayMs,
-        easing: "cubic-bezier(0.2, 0.7, 0.3, 1)",
-        fill: "backwards",
-      },
-    );
+      ]);
+    });
     // Dev's double mount runs this twice; cancel so only one flight plays.
-    return () => flight.cancel();
+    return () => {
+      cancelAnimationFrame(frame);
+      flight.cancel();
+    };
     // Mount only: a card flies once, when it's dealt.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

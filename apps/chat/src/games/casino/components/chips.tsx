@@ -75,11 +75,7 @@ const colorsOf = (value: number): ChipColors =>
 const SPOT_RING_R = 15.1;
 const SPOT_DASH = (2 * Math.PI * SPOT_RING_R) / 16;
 
-/**
- * A real-looking casino chip, drawn top-down at a slight angle: the face with its edge spots, a
- * dashed inner ring and lighter inlay, a soft sheen, and below it a thin band of the chip's edge for
- * thickness. 36px wide; the edge band hangs 2.5px below.
- */
+/** A casino chip drawn top-down at a slight angle; 36px wide, with a 2.5px edge band below. */
 function ChipArt({ colors }: { colors: ChipColors }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
@@ -284,7 +280,10 @@ export function ChipStack({
 }) {
   // Drop in only when the stack first appears: placing a picked bet mustn't replay it.
   const [dropIn] = useState(!flyIn);
-  const shown = (chips ?? breakdown(amount)).slice(-MAX_SHOWN);
+  const all = chips ?? breakdown(amount);
+  const shown = all.slice(-MAX_SHOWN);
+  // Keyed by position in the full stack, so a pick past MAX_SHOWN mounts (and flies in) a new chip.
+  const hidden = all.length - shown.length;
   const top = shown.length - 1;
 
   return (
@@ -298,7 +297,7 @@ export function ChipStack({
     >
       {shown.map((value, i) => (
         <StackedChip
-          key={i}
+          key={hidden + i}
           index={i}
           value={value}
           flyIn={flyIn}

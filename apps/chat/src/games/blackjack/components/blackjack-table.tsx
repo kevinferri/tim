@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  BETTING_WINDOW_MS,
-  TURN_MS,
   type BlackjackPlayAction,
   type BlackjackSeatView,
   type BlackjackTableAction,
@@ -57,13 +55,26 @@ type Act = (action: BlackjackTableAction) => void;
 function useCardSize(view: BlackjackTableView | null): CardSize {
   const count = view ? view.seats.filter(Boolean).length : 0;
   const target: CardSize = count <= 3 ? "2xl" : count <= 6 ? "xl" : "lg";
-  const betweenRounds =
-    !view || view.phase === "waiting" || view.phase === "betting";
-  const [size, setSize] = useState(target);
-  useEffect(() => {
-    if (betweenRounds) setSize(target);
-  }, [betweenRounds, target]);
-  return size;
+  const betweenRounds = view?.phase === "waiting" || view?.phase === "betting";
+  // Unset until the first snapshot, so loading mid-round still sizes for that table.
+  const [size, setSize] = useState<CardSize | null>(null);
+  if (view && size !== target && (size === null || betweenRounds)) {
+    setSize(target);
+  }
+  return size ?? target;
+}
+
+/** Modified keys, typing in a field, and Enter on a focused control (which it activates) aren't table commands. */
+function ignoreKey(e: KeyboardEvent) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return true;
+  const target = e.target as HTMLElement | null;
+  const tag = target?.tagName ?? "";
+  if (
+    target?.isContentEditable ||
+    ["INPUT", "TEXTAREA", "SELECT"].includes(tag)
+  )
+    return true;
+  return e.key === "Enter" && (tag === "BUTTON" || tag === "A");
 }
 
 // The hand's padding (p-1 on both sides), part of a two-card hand's size.
@@ -161,14 +172,6 @@ export function BlackjackTable({
 
   const live = status === "live";
   const isMyTurn = view.phase === "players" && view.turn?.seat === mySeat;
-  // Matches what Dock renders, so the bar (and the avatar on it) only shows when there's something to do.
-  const hasControls =
-    live &&
-    (!me ||
-      isMyTurn ||
-      (view.phase === "betting" &&
-        me.bet === null &&
-        me.stack >= view.limits.minBet));
   const playing = view.phase !== "waiting" && view.phase !== "betting";
 
   // Opening deal order: one card to each player from first base, one to the dealer, then again.
@@ -526,16 +529,7 @@ function JoinKey({ full, join }: { full: boolean; join: () => void }) {
   useEffect(() => {
     if (full) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Enter" || e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (
-        target?.isContentEditable ||
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.tagName === "BUTTON"
-      ) {
-        return;
-      }
+      if (e.key !== "Enter" || ignoreKey(e)) return;
       e.preventDefault();
       join();
     };
@@ -565,15 +559,7 @@ function BetBuilder({
   // 1–4 add a chip, Enter places the bet, Backspace takes the last chip back.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (
-        target?.isContentEditable ||
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA"
-      ) {
-        return;
-      }
+      if (ignoreKey(e)) return;
       const n = Number(e.key) - 1;
       const chip = CHIPS[n];
       if (chip && total + chip <= cap) {
@@ -605,7 +591,11 @@ function BetBuilder({
               value={value}
               aria-label={`Add ${value}`}
               disabled={total + value > cap}
-              onClick={() => setChips((c) => [...c, value])}
+              onClick={(e) => {
+                // A mouse pick drops focus, so Enter next places the bet instead of re-clicking the chip.
+                if (e.detail > 0) e.currentTarget.blur();
+                setChips((c) => [...c, value]);
+              }}
             />
             {/* Its key, tappable too: clicks the chip so it flies the same way. */}
             <button
@@ -651,15 +641,7 @@ function PlayLegend({
 }) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-      const target = e.target as HTMLElement | null;
-      if (
-        target?.isContentEditable ||
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA"
-      ) {
-        return;
-      }
+      if (e.repeat || ignoreKey(e)) return;
       const button = PLAY_BUTTONS.find((b) => b.key === e.key.toLowerCase());
       if (button && actions.includes(button.action)) {
         e.preventDefault();

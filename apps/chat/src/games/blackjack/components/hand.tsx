@@ -115,10 +115,7 @@ type Props = {
   dealDelayMs?: (cardIndex: number) => number;
 };
 
-/**
- * Where the first two cards land, sized like a dealt pair so nothing moves at the deal, with a
- * dashed card outline printed on the felt. It stays under the cards once they're dealt.
- */
+/** A dealt pair's footprint with a dashed outline, so nothing moves at the deal. */
 function ReservedCards({
   size,
   className,

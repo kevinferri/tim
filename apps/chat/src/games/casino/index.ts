@@ -10,7 +10,6 @@ export {
   BetSpot,
   ChipButton,
   ChipLaunchProvider,
-  ChipStack,
   breakdown,
   type BetStack,
 } from "./components/chips";
@@ -23,6 +22,5 @@ export {
   type CardSize,
 } from "./components/playing-card";
 export { useTable, type TableStatus } from "./use-table";
-export { useCountdown } from "./use-countdown";
 export { DealProvider, DealShoe } from "./deal";
 export { ChipRack } from "./components/table-dressing";

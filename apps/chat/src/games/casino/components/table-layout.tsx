@@ -108,10 +108,7 @@ const DEALER_MIDDLE_PX = 110;
 type Size = { w: number; h: number };
 type Vec = { x: number; y: number };
 
-/**
- * A seat's line toward the dealer, in px within the felt: the avatar's center and the unit vector
- * from it to the dealer's cards. Cards and bet sit along it: the player, their cards, then the bet.
- */
+/** A seat's avatar center and unit vector toward the dealer's cards, in px within the felt. */
 function seatLine(seat: number, felt: Size) {
   const { p, n } = railPoint(seat);
   const avatar = {
@@ -129,10 +126,7 @@ function seatLine(seat: number, felt: Size) {
 const extent = (size: Size, u: Vec) =>
   Math.abs(u.x) * size.w + Math.abs(u.y) * size.h;
 
-/**
- * The fixed point a seat's cards reach toward the dealer: the far edge of a two-card hand
- * (`spot`). Pinned there, so extra cards grow back toward the player and the bet beyond never moves.
- */
+/** How far a two-card hand reaches toward the dealer; extra cards grow back toward the player. */
 function cardsFarReach(u: Vec, spot: Size) {
   return AVATAR_RADIUS_PX + AVATAR_TO_CARDS_PX + extent(spot, u);
 }
@@ -168,24 +162,28 @@ function SeatBet({ seat, children }: { seat: number; children: ReactNode }) {
 // Between the rack, the dealer's cards and the status area, top to bottom.
 const STATUS_GAP_PX = 20;
 
-/**
- * A seat's cards, between the player and their bet, centered on the line to the dealer. The edge
- * toward the dealer stays put, so a growing hand spreads back toward the player, not over the bet.
- */
+/** A seat's cards on the line to the dealer, with the dealer-side edge pinned. */
 function SeatSpot({ seat, children }: { seat: number; children: ReactNode }) {
   const { felt, spot } = useContext(FeltSizeContext);
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<Size>({ w: 0, h: 0 });
 
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    setSize((s) => (s.w === w && s.h === h ? s : { w, h }));
+  }, []);
+  // Every render, so a new card re-centers the hand before paint (a ResizeObserver lags a frame).
+  useLayoutEffect(measure);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const observer = new ResizeObserver(() =>
-      setSize({ w: el.offsetWidth, h: el.offsetHeight }),
-    );
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [measure]);
 
   const { avatar, toDealer: u } = seatLine(seat, felt);
   // The far edge sits at the fixed reach; the center is half the box back from it.

@@ -38,6 +38,7 @@ const standing = (serverId: string): PresenceEvent => ({
 });
 const disconnect: PresenceEvent = { type: "disconnect" };
 const closing: PresenceEvent = { type: "closing" };
+const stand: PresenceEvent = { type: "stand" };
 
 describe("table presence notices", () => {
   it("says the table restarted after a crash (new server, no closing)", () => {
@@ -79,6 +80,32 @@ describe("table presence notices", () => {
 
   it("stays quiet when you stand up yourself", () => {
     expect(run(seated("s1"), standing("s1"))).toEqual([null, null]);
+  });
+
+  it("stays quiet when you left mid-hand and then dropped", () => {
+    expect(
+      run(
+        seated("s1"),
+        stand,
+        leaving("s1"),
+        disconnect,
+        leaving("s1"),
+        standing("s1"),
+      ).at(-1),
+    ).toBeNull();
+  });
+
+  it("still tells you about a drop after you left and sat back down", () => {
+    expect(
+      run(
+        seated("s1"),
+        stand,
+        standing("s1"),
+        seated("s1"),
+        disconnect,
+        standing("s1"),
+      ).at(-1),
+    ).toBe("disconnected");
   });
 
   it("stays quiet when you weren't seated when the connection dropped", () => {

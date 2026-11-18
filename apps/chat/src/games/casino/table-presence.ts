@@ -8,11 +8,14 @@ export type PresenceState = {
   droppedFrom: string | null;
   /** The server announced it was closing (it told players itself). */
   closing: boolean;
+  /** We asked to leave, so losing the seat is expected. */
+  stood: boolean;
 };
 
 export type PresenceEvent =
   | { type: "disconnect" }
   | { type: "closing" }
+  | { type: "stand" }
   | {
       type: "state";
       serverId: string;
@@ -29,6 +32,7 @@ export const initialPresence: PresenceState = {
   seated: false,
   droppedFrom: null,
   closing: false,
+  stood: false,
 };
 
 export function nextPresence(
@@ -43,6 +47,8 @@ export function nextPresence(
       };
     case "closing":
       return { state: { ...prev, closing: true }, notice: null };
+    case "stand":
+      return { state: { ...prev, stood: prev.seated }, notice: null };
     case "state": {
       const sameServer = event.serverId === prev.droppedFrom;
       // Back before the hand ended: the server keeps the seat (leaving) until results, so keep waiting.
@@ -59,7 +65,12 @@ export function nextPresence(
         };
       }
       let notice: PresenceNotice = null;
-      if (prev.droppedFrom !== null && !event.seated && !prev.closing) {
+      if (
+        prev.droppedFrom !== null &&
+        !event.seated &&
+        !prev.closing &&
+        !prev.stood
+      ) {
         notice = sameServer ? "disconnected" : "restarted";
       }
       return {
@@ -68,6 +79,7 @@ export function nextPresence(
           seated: event.seated,
           droppedFrom: null,
           closing: false,
+          stood: prev.stood && event.seated,
         },
         notice,
       };
