@@ -1,5 +1,9 @@
+import { useEffect, useRef } from "react";
 import type { BlackjackHandView, BlackjackOutcome, Card } from "@tim/casino";
 import {
+  CARD_PX,
+  DEAL_EASING,
+  DEAL_MS,
   cardBox,
   PlayingCard,
   cardOverlap,
@@ -112,6 +116,8 @@ type Props = {
   size?: CardSize;
   /** Highlights the hand being played (after a split). */
   active?: boolean;
+  /** The current player's hand: glows gold. */
+  glow?: boolean;
   dealDelayMs?: (cardIndex: number) => number;
 };
 
@@ -139,7 +145,59 @@ function ReservedCards({
   );
 }
 
-export function Hand({ hand, size = "sm", active, dealDelayMs }: Props) {
+// The chat's glow in the "Your turn" gold.
+const TURN_GLOW =
+  "shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#fcd34d,0_0_5px_#fcd34d,0_0_10px_#fcd34d]";
+
+// Room between the cards and the glow around them.
+const GLOW_PAD_PX = 4;
+
+/** Whose turn it is, around their cards. Place inside the cards' box. */
+export function TurnGlow({ count, size }: { count: number; size: CardSize }) {
+  const px = CARD_PX[size];
+  const cardsW = px.w + (count - 1) * (px.w - px.overlap);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // A turn can start while its cards are still flying in (the opening deal), so fade in once they've all landed.
+  // A passive effect, so it runs after the cards' layout effects have started their flights.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el?.parentElement) return;
+    const landing = el.parentElement
+      .getAnimations({ subtree: true })
+      .filter((a) => (a.effect as KeyframeEffect | null)?.target !== el)
+      .map((a) => {
+        const end = Number(a.effect?.getComputedTiming().endTime ?? 0);
+        return end - Number(a.currentTime ?? 0);
+      });
+    const fade = el.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 200,
+      delay: Math.max(0, ...landing.filter(Number.isFinite)),
+      fill: "forwards",
+    });
+    return () => fade.cancel();
+  }, []);
+
+  return (
+    // Its own width transition, not the layout's, so it grows with a dealt card's flight instead of ahead of it.
+    <div
+      ref={ref}
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute -left-1 -top-1 rounded-lg opacity-0 transition-[width]",
+        TURN_GLOW,
+      )}
+      style={{
+        width: cardsW + 2 * GLOW_PAD_PX,
+        height: px.h + 2 * GLOW_PAD_PX,
+        transitionDuration: `${DEAL_MS}ms`,
+        transitionTimingFunction: DEAL_EASING,
+      }}
+    />
+  );
+}
+
+export function Hand({ hand, size = "sm", active, glow, dealDelayMs }: Props) {
   const outcome = hand?.outcome ? OUTCOME[hand.outcome] : null;
   const net = hand?.payout != null ? hand.payout - hand.bet : 0;
 
@@ -151,6 +209,7 @@ export function Hand({ hand, size = "sm", active, dealDelayMs }: Props) {
       )}
     >
       <div className="relative">
+        {glow && hand && <TurnGlow count={hand.cards.length} size={size} />}
         {/* Hidden under a busted hand, whose faded cards would show it through. */}
         {hand?.outcome !== "bust" && (
           <ReservedCards

@@ -12,7 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 import { cardBox, type CardSize } from "./components/playing-card";
 
-const DEAL_MS = 600;
+export const DEAL_MS = 600;
+export const DEAL_EASING = "cubic-bezier(0.2, 0.7, 0.3, 1)";
 
 type DealContextValue = {
   shoe: RefObject<HTMLDivElement | null>;
@@ -88,7 +89,7 @@ export function useDealFlight(ref: RefObject<HTMLElement | null>, delayMs = 0) {
     const timing: KeyframeAnimationOptions = {
       duration: DEAL_MS,
       delay: delayMs,
-      easing: "cubic-bezier(0.2, 0.7, 0.3, 1)",
+      easing: DEAL_EASING,
       fill: "backwards",
     };
     // Hidden until the hand has re-centered around this card (a parent re-renders after this effect).

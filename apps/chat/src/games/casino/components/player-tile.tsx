@@ -13,13 +13,22 @@ import { cn } from "@/lib/utils";
 type AvatarProps = {
   occupant: SeatOccupant;
   isYou?: boolean;
-  /** Their turn. */
+  /** Their turn: the ring brightens. */
   active?: boolean;
   /** Pinned under the avatar, e.g. the round's net. */
   result?: ReactNode;
   /** Sitting this round out or leaving; explained in a tooltip. */
   dimmedReason?: string | null;
+  /** Still in the round but someone else is playing: dimmed less than sitting out. */
+  waiting?: boolean;
 };
+
+/** A thin outline so avatars stand off the rail, the same on every avatar; brighter on their turn. */
+export const avatarRing = (active?: boolean) =>
+  cn(
+    "ring-[1.5px] transition-shadow duration-300",
+    active ? "ring-white/85" : "ring-white/30",
+  );
 
 /** A seated player's avatar on the rail (name on hover). */
 export function PlayerAvatar({
@@ -28,24 +37,22 @@ export function PlayerAvatar({
   active,
   result,
   dimmedReason,
+  waiting,
 }: AvatarProps) {
   const name = isYou ? "You" : occupant.displayName;
 
   return (
-    <div className={cn("transition-opacity", dimmedReason && "opacity-50")}>
+    <div
+      className={cn(
+        "transition-opacity",
+        dimmedReason ? "opacity-50" : waiting && "opacity-75",
+      )}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <span
             aria-label={dimmedReason ? `${name}, ${dimmedReason}` : name}
-            className={cn(
-              "relative flex rounded-full",
-              // A thin outline so avatars stand off the rail; yours is amber.
-              isYou
-                ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-zinc-900"
-                : "ring-2 ring-white/30",
-              // The chat's typing pulse and glow, on this wrapper so the outline pulses with the avatar.
-              active && "animate-typing shadow-glow",
-            )}
+            className={cn("relative flex rounded-full", avatarRing(active))}
           >
             <OccupantAvatar occupant={occupant} size="2xl" />
             {/* On the bottom edge; your round result takes its place while it shows. */}
@@ -80,16 +87,19 @@ export function PlayerAvatar({
 /** A seated player's spot on the felt: bet and cards. */
 export function PlayerSpot({
   dimmed,
+  waiting,
   children,
 }: {
   dimmed?: boolean;
+  /** See PlayerAvatar's `waiting`. */
+  waiting?: boolean;
   children?: ReactNode;
 }) {
   return (
     <div
       className={cn(
         "flex w-full flex-col items-center gap-2 transition-opacity",
-        dimmed && "opacity-50",
+        dimmed ? "opacity-50" : waiting && "opacity-75",
       )}
     >
       {children}

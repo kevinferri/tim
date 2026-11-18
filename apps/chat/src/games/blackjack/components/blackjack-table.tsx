@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  BETTING_WINDOW_MS,
+  TURN_MS,
   type BlackjackPlayAction,
   type BlackjackSeatView,
   type BlackjackTableAction,
@@ -34,7 +36,7 @@ import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { blackjackGame } from "./game";
-import { Hand, ScoredCards } from "./hand";
+import { Hand, ScoredCards, TurnGlow } from "./hand";
 
 const CHIPS = [10, 25, 50, 100];
 
@@ -236,6 +238,9 @@ export function BlackjackTable({
                     "absolute left-1/2 top-0 -translate-x-1/2 rounded-md border-2 border-dashed border-white/20",
                   )}
                 />
+                {view.phase === "dealer" && (
+                  <TurnGlow count={view.dealer.cards.length} size={cardSize} />
+                )}
                 {view.dealer.cards.length > 0 ? (
                   <ScoredCards
                     cards={view.dealer.cards}
@@ -268,6 +273,14 @@ export function BlackjackTable({
                 )
               }
               deadline={live ? deadline : null}
+              highlight={live && isMyTurn}
+              duration={
+                view.phase === "betting"
+                  ? BETTING_WINDOW_MS
+                  : view.phase === "players"
+                    ? TURN_MS
+                    : null
+              }
             >
               {statusText(view, me, live)}
             </StatusLine>
@@ -284,12 +297,17 @@ export function BlackjackTable({
                 : busted
                   ? "Busted"
                   : null;
+            // Everyone but the current turn fades a little, you included.
+            const waiting = view.phase === "players" && view.turn?.seat !== i;
             return [
               {
                 key: seat.occupant.userId,
                 seat: i,
                 node: (
-                  <PlayerSpot dimmed={!!dimmedReason && !busted}>
+                  <PlayerSpot
+                    dimmed={!!dimmedReason && !busted}
+                    waiting={waiting}
+                  >
                     <SeatHands
                       seat={seat}
                       view={view}
@@ -306,7 +324,10 @@ export function BlackjackTable({
                   </PlayerSpot>
                 ),
                 bet: (
-                  <PlayerSpot dimmed={!!dimmedReason && !busted}>
+                  <PlayerSpot
+                    dimmed={!!dimmedReason && !busted}
+                    waiting={waiting}
+                  >
                     <SeatBet
                       seat={seat}
                       view={view}
@@ -333,6 +354,7 @@ export function BlackjackTable({
                       seat.lastNet !== null && <NetAmount net={seat.lastNet} />
                     }
                     dimmedReason={dimmedReason}
+                    waiting={waiting}
                   />
                 ),
               },
@@ -413,6 +435,10 @@ function SeatHands({
 }) {
   const playing = view.phase !== "waiting" && view.phase !== "betting";
   if (playing && !seat.inRound) return null;
+  const playingHand =
+    view.phase === "players" && view.turn?.seat === seat.seat
+      ? view.turn.hand
+      : null;
   return (
     <div className="relative flex flex-wrap justify-center gap-2">
       {(seat.hands.length ? seat.hands : [null]).map((hand, h) => (
@@ -421,12 +447,8 @@ function SeatHands({
           hand={hand}
           size={size}
           dealDelayMs={dealDelayMs}
-          active={
-            seat.hands.length > 1 &&
-            view.phase === "players" &&
-            view.turn?.seat === seat.seat &&
-            view.turn.hand === h
-          }
+          active={seat.hands.length > 1 && playingHand === h}
+          glow={playingHand === h}
         />
       ))}
     </div>
@@ -515,10 +537,12 @@ function Dock({
   ) {
     return <BetBuilder act={act} {...bet} />;
   }
-  const legend = (
-    <PlayLegend actions={isMyTurn ? view.turnActions : []} act={act} />
-  );
-  if (me) return legend;
+  // Only on your turn, so their arrival is the cue; nothing below the status otherwise.
+  if (me) {
+    return isMyTurn ? (
+      <PlayLegend actions={view.turnActions} act={act} />
+    ) : null;
+  }
   const full = view.seats.every(Boolean);
   // Not seated: just Join table; the play keys come once you're in.
   return <JoinKey full={full} join={join} />;
@@ -605,9 +629,9 @@ function BetBuilder({
               disabled={total + value > cap}
               onClick={() => chipRefs.current[n]?.click()}
               // Lit like the other keys while you can add that chip.
-              className="text-white/85 transition-[color,text-shadow] duration-300 [text-shadow:0_0_8px_rgba(255,255,255,0.3)] hover:text-white disabled:cursor-default disabled:text-white/20 disabled:[text-shadow:none]"
+              className="text-white/85 transition-[color,text-shadow] duration-300 [text-shadow:0_0_5px_rgba(255,255,255,0.14)] hover:text-white disabled:cursor-default disabled:text-white/20 disabled:[text-shadow:none]"
             >
-              <kbd className="flex size-5 items-center justify-center rounded-[3px] border border-current font-sans text-[11px] font-bold shadow-[0_0_8px_rgba(255,255,255,0.2)] transition-shadow duration-300 [:disabled>&]:shadow-none">
+              <kbd className="flex size-5 items-center justify-center rounded-[3px] border border-current font-sans text-[11px] font-bold shadow-[0_0_5px_rgba(255,255,255,0.08)] transition-shadow duration-300 [:disabled>&]:shadow-none">
                 {n + 1}
               </kbd>
             </button>
@@ -652,10 +676,10 @@ function PlayLegend({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [actions, act]);
 
-  // Printed on the felt like the table's markings, always; the moves you can make light up on your turn.
+  // Printed on the felt like the table's markings; moves you can't make this turn stay dim.
   // Each is still tappable, for phones without a keyboard.
   return (
-    <div className="flex items-center gap-5 whitespace-nowrap">
+    <div className="flex items-center gap-5 whitespace-nowrap duration-300 animate-in fade-in">
       {PLAY_BUTTONS.map((b) => (
         <PrintedKey
           key={b.action}
@@ -687,16 +711,16 @@ function PrintedKey({
       disabled={!on}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold uppercase tracking-[0.25em] transition-[color,text-shadow] duration-300",
+        "flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold uppercase tracking-[0.18em] transition-[color,text-shadow] duration-300",
         on
-          ? "text-white/85 [text-shadow:0_0_8px_rgba(255,255,255,0.3)] hover:text-white"
+          ? "text-white/85 [text-shadow:0_0_5px_rgba(255,255,255,0.14)] hover:text-white"
           : "cursor-default text-white/20",
       )}
     >
       <kbd
         className={cn(
           "flex h-6 min-w-6 items-center justify-center rounded-[3px] border border-current px-1 font-sans text-[13px] font-bold tracking-normal transition-shadow duration-300",
-          on && "shadow-[0_0_8px_rgba(255,255,255,0.2)]",
+          on && "shadow-[0_0_5px_rgba(255,255,255,0.08)]",
         )}
       >
         {keyLabel}

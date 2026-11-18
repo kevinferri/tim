@@ -31,6 +31,7 @@ type Props = {
   /** Replaces the felt, e.g. while joining or when the game is off. */
   notice?: ReactNode;
   dealer?: ReactNode;
+  /** Just above the dock: what's happening, over what you can do about it. */
   status?: ReactNode;
   /** Seated players only; `seat` fixes where each sits. `node` goes on the felt (bet, cards), `rail` on the armrest (avatar). */
   players?: {
@@ -55,7 +56,7 @@ type Props = {
 const U = { cx: 50, cy: 22, rx: 40, ry: 56 };
 
 // Half the rail's width, so an avatar centers on the armrest rather than its inner edge.
-const RAIL_HALF_PX = 16;
+const RAIL_HALF_PX = 18;
 
 /** Where a seat meets the rail (felt-relative 0–1) and the rail's outward direction there. */
 function railPoint(seat: number) {
@@ -159,8 +160,10 @@ function SeatBet({ seat, children }: { seat: number; children: ReactNode }) {
   );
 }
 
-// Between the rack, the dealer's cards and the status area, top to bottom.
-const STATUS_GAP_PX = 20;
+// Between the rack and the dealer's cards, and below the dealer's cards.
+const DEALER_GAP_PX = 20;
+// Between the status and the dock.
+const STATUS_DOCK_GAP_PX = 16;
 
 /** A seat's cards on the line to the dealer, with the dealer-side edge pinned. */
 function SeatSpot({ seat, children }: { seat: number; children: ReactNode }) {
@@ -215,7 +218,7 @@ export function TableLayout(props: Props) {
     return () => observer.disconnect();
   }, [props.notice]);
 
-  // The dealer's lower edge: the status area sits just under it, like the dealer speaking.
+  // The dealer's lower edge, where the open middle of the felt starts.
   const dealerRef = useRef<HTMLDivElement>(null);
   const [dealerBottom, setDealerBottom] = useState(0);
   useLayoutEffect(() => {
@@ -228,23 +231,13 @@ export function TableLayout(props: Props) {
     return () => observer.disconnect();
   }, [felt.h]);
   const spot = props.spotSize ?? { w: 0, h: 0 };
-  const statusTop =
-    felt.h && dealerBottom ? dealerBottom + STATUS_GAP_PX : null;
-
-  // The dock sits midway between the status area and the players (the bottom-middle seat's bet circle).
-  const [statusH, setStatusH] = useState(0);
-  // A ref callback, so it measures whenever the status area mounts (it's absent behind a notice).
-  const statusRef = useCallback((el: HTMLDivElement | null) => {
-    if (!el) return;
-    const observer = new ResizeObserver(() => setStatusH(el.offsetHeight));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
   const playersTop =
     betCenter(Math.floor(SEAT_COUNT / 2), felt, spot).y - BET_RADIUS_PX;
-  const dockMiddle =
-    statusTop !== null && statusH
-      ? (statusTop + statusH + playersTop) / 2
+  // The open middle's midline, between the dealer and the players (the bottom-middle seat's bet circle):
+  // the status sits just above it and the dock hangs below, so the status never moves when the dock changes height.
+  const midline =
+    felt.h && dealerBottom
+      ? (dealerBottom + DEALER_GAP_PX + playersTop) / 2
       : null;
 
   return (
@@ -284,15 +277,24 @@ export function TableLayout(props: Props) {
               {/* On wide screens the border is the padded armrest: thick and black on the sides and curve, thin along the dealer's edge. */}
               <div
                 ref={feltRef}
-                className="relative flex-1 overflow-y-auto rounded-3xl border-4 border-amber-900/70 bg-emerald-800 shadow-inner dark:border-amber-950 dark:bg-[#123a2f] md:overflow-visible md:rounded-b-[50%] md:border-[32px] md:border-neutral-950 md:border-t-[10px] md:border-t-amber-950 md:shadow-[inset_0_0_24px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.5)] dark:md:border-zinc-900"
+                className="relative flex-1 overflow-y-auto rounded-3xl border-4 border-amber-900/70 bg-emerald-800 shadow-inner dark:border-amber-950 dark:bg-[#123a2f] md:overflow-visible md:rounded-b-[50%] md:border-[36px] md:border-neutral-950 md:border-t-[10px] md:border-t-amber-950 md:shadow-[inset_0_0_24px_rgba(0,0,0,0.45),inset_0_0_6px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.5)] dark:md:border-zinc-900"
               >
+                {/* Shading over the armrest so it reads as padded: dark at its outer edge, a soft highlight along its crown. Matches the border box. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-[36px] -left-[36px] -right-[36px] -top-[10px] hidden rounded-t-3xl rounded-b-[50%] shadow-[inset_0_0_10px_2px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)] md:block"
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-[19px] -left-[19px] -right-[19px] -top-[5px] hidden rounded-t-[20px] rounded-b-[50%] border-[5px] border-t-0 border-white/[0.11] blur-[5px] md:block"
+                />
                 <FeltSizeContext.Provider value={{ felt, spot }}>
                   {/* The felt is dark in both themes, so its contents use dark tokens. */}
                   <div className="dark flex min-h-full w-full flex-col items-center gap-6 p-4 text-emerald-50 md:block md:h-full md:p-0">
-                    {/* Rack, dealer, then status (below), each STATUS_GAP_PX apart. */}
+                    {/* Rack, then dealer, DEALER_GAP_PX apart. */}
                     <div
                       className="flex flex-col items-center md:absolute md:inset-x-0 md:top-0"
-                      style={{ gap: STATUS_GAP_PX }}
+                      style={{ gap: DEALER_GAP_PX }}
                     >
                       {props.rack && (
                         <div className="hidden md:block">{props.rack}</div>
@@ -303,16 +305,6 @@ export function TableLayout(props: Props) {
                       >
                         {props.dealer}
                       </div>
-                    </div>
-                    <div
-                      ref={statusRef}
-                      className={cn(
-                        "flex justify-center md:absolute md:inset-x-0",
-                        statusTop === null && "md:invisible",
-                      )}
-                      style={{ top: statusTop ?? undefined }}
-                    >
-                      {props.status}
                     </div>
                     <div className="flex w-full flex-wrap justify-center gap-2 md:contents">
                       {props.players?.map(({ key, seat, node, bet, rail }) => (
@@ -334,14 +326,36 @@ export function TableLayout(props: Props) {
                         </div>
                       ))}
                     </div>
-                    {/* Your controls, in the open middle of the felt between the dealer and the players. */}
+                    {/* Phones: after the players, over the controls. */}
+                    {props.status && (
+                      <div
+                        className={cn(
+                          "flex justify-center md:absolute md:inset-x-0 md:-translate-y-full",
+                          midline === null && "md:invisible",
+                        )}
+                        style={{
+                          top:
+                            midline === null
+                              ? undefined
+                              : midline - STATUS_DOCK_GAP_PX / 2,
+                        }}
+                      >
+                        {props.status}
+                      </div>
+                    )}
+                    {/* Your controls, hanging below the status in the open middle of the felt. */}
                     {props.dock && (
                       <div
                         className={cn(
-                          "flex justify-center md:absolute md:inset-x-0 md:z-40 md:-translate-y-1/2",
-                          dockMiddle === null && "md:invisible",
+                          "flex justify-center md:absolute md:inset-x-0 md:z-40",
+                          midline === null && "md:invisible",
                         )}
-                        style={{ top: dockMiddle ?? undefined }}
+                        style={{
+                          top:
+                            midline === null
+                              ? undefined
+                              : midline + STATUS_DOCK_GAP_PX / 2,
+                        }}
                       >
                         {props.dock}
                       </div>

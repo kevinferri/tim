@@ -326,7 +326,7 @@ type BetSpotProps = {
   className?: string;
 };
 
-/** The gold ring around a locked-in bet: quiet at rest; `draw` traces it clockwise from the top with a brief glow. */
+/** The glowing white ring around a locked-in bet, like the felt's printed text; `draw` traces it clockwise from the top with a brief glow. */
 function LockRing({ draw }: { draw: boolean }) {
   const ring = {
     cx: 28,
@@ -343,18 +343,21 @@ function LockRing({ draw }: { draw: boolean }) {
       viewBox="0 0 56 56"
       className="pointer-events-none absolute -inset-0.5 -rotate-90 overflow-visible motion-reduce:hidden"
     >
-      {/* At rest: a quiet gold line. */}
+      {/* At rest: lit like the printed text. */}
       <circle
         {...ring}
         strokeWidth="1.25"
-        className={cn("stroke-amber-300/40", draw && "animate-bet-lock")}
+        className={cn(
+          "stroke-white/85 [filter:drop-shadow(0_0_3px_rgba(255,255,255,0.2))]",
+          draw && "animate-bet-lock",
+        )}
       />
       {/* On lock: a bright, glowing pass traced over it that fades away. */}
       {draw && (
         <circle
           {...ring}
           strokeWidth="1.5"
-          className="animate-bet-lock-flare stroke-amber-300 [filter:drop-shadow(0_0_4px_rgba(252,211,77,0.6))]"
+          className="animate-bet-lock-flare stroke-white [filter:drop-shadow(0_0_6px_rgba(255,255,255,0.7))]"
         />
       )}
     </svg>
