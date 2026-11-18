@@ -90,12 +90,14 @@ type CircleSpec = {
   ownerEmail: string;
   memberEmails: string[];
   topics: TopicSpec[]; // first topic becomes the circle's default topic
+  games?: string[]; // circle_games rows to turn on
 };
 
 const CIRCLES: CircleSpec[] = [
   {
     name: "Sandbox",
     ownerEmail: TIM_SANDBOX_EMAIL,
+    games: ["blackjack"],
     memberEmails: [
       TIM_SANDBOX_EMAIL,
       "socrates@example.com",
@@ -185,6 +187,18 @@ const CIRCLES: CircleSpec[] = [
   },
 ];
 
+async function enableGames(
+  tx: Prisma.TransactionClient,
+  circleId: string,
+  gameIds: string[] = [],
+) {
+  if (!gameIds.length) return;
+  await tx.circleGame.createMany({
+    data: gameIds.map((gameId) => ({ circleId, gameId })),
+    skipDuplicates: true,
+  });
+}
+
 async function seedCircle(
   tx: Prisma.TransactionClient,
   spec: CircleSpec,
@@ -214,6 +228,7 @@ async function seedCircle(
       where: { id: existing.id },
       data: { members: { connect: memberIds }, createdAt },
     });
+    await enableGames(tx, existing.id, spec.games);
     return;
   }
 
@@ -227,6 +242,7 @@ async function seedCircle(
       createdAt,
     },
   });
+  await enableGames(tx, circle.id, spec.games);
 
   for (const [index, topicSpec] of spec.topics.entries()) {
     const topic = await tx.topic.create({

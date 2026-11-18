@@ -208,8 +208,29 @@ module.exports = {
             transform: "translateY(0) scale(1) rotate(0)",
           },
         },
+        // Casino chips landing in a bet circle.
+        "chip-drop": {
+          "0%": { opacity: "0", transform: "translateY(-14px)" },
+          "60%": { opacity: "1", transform: "translateY(2px)" },
+          "80%": { transform: "translateY(-1px)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        // The bright pass over a bet circle's ring as it locks: traces, then fades.
+        "bet-lock-flare": {
+          "0%": { strokeDashoffset: "100", opacity: "1" },
+          "40%": { strokeDashoffset: "0", opacity: "1" },
+          "100%": { strokeDashoffset: "0", opacity: "0" },
+        },
+        // A bet circle's ring tracing itself clockwise.
+        "bet-lock": {
+          "0%": { strokeDashoffset: "100" },
+          "100%": { strokeDashoffset: "0" },
+        },
       },
       animation: {
+        "chip-drop": "chip-drop 0.35s ease-out both",
+        "bet-lock": "bet-lock 0.45s ease-out both",
+        "bet-lock-flare": "bet-lock-flare 1.1s ease-out both",
         // Light travelling around the score badge's border.
         "badge-edge": "spin 2.8s linear infinite",
         // Both match ROLL_DURATION_MS in roll-result.tsx.

@@ -14,6 +14,7 @@ import { UserStatsHighlightSync } from "@/components/dashboard/user-stats-highli
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { TopicRoomConnect } from "@/components/dashboard/topic-room-connect";
+import { HideOnFullScreenRoutes } from "@/components/dashboard/hide-on-full-screen-routes";
 import { CirclesNav } from "@/components/circles/circles-nav";
 import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
 import { NotificationSync } from "@/components/notifications/notification-sync";
@@ -160,7 +161,9 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
             <SamePageRefreshTimer />
             <div className="flex flex-col h-dvh">
               <div className="flex overflow-hidden basis-full">
-                <CirclesNav circles={circles} />
+                <HideOnFullScreenRoutes>
+                  <CirclesNav circles={circles} />
+                </HideOnFullScreenRoutes>
                 {children}
               </div>
             </div>
