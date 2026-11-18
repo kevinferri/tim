@@ -35,6 +35,8 @@ type TableViewBase = {
   game: TableGame;
   serverId: string;
   msLeft: number | null;
+  phase: string;
+  turn: unknown;
   seats: ({ occupant: SeatOccupant; leaving: boolean } | null)[];
 };
 
@@ -53,6 +55,8 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
 
   // One action in flight at a time: a double tap or a bet racing the auto-bet sends only once.
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // What my last action can change; another player's move leaves it alone, so it doesn't unlock.
+  const actedOn = useRef<string | null>(null);
   const settle = useCallback(() => {
     if (pending.current) clearTimeout(pending.current);
     pending.current = null;
@@ -96,8 +100,10 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
 
   useSocketHandler<View>(SocketEvent.TableState, (next) => {
     if (!isThisTable(next)) return;
-    settle();
     const mine = next.seats.find((s) => s?.occupant.userId === self.id);
+    const key = JSON.stringify([mine, next.phase, next.turn]);
+    if (key !== actedOn.current) settle();
+    actedOn.current = key;
     onPresence({
       type: "state",
       serverId: next.serverId,
