@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 type AvatarProps = {
   occupant: SeatOccupant;
   isYou?: boolean;
-  /** Their turn: the ring brightens. */
+  /** Their turn: a pulsing purple glow replaces the white ring. */
   active?: boolean;
   /** Pinned under the avatar, e.g. the round's net. */
   result?: ReactNode;
@@ -23,10 +23,10 @@ type AvatarProps = {
   waiting?: boolean;
 };
 
-/** A thin outline so avatars stand off the rail, the same on every avatar; brighter on their turn. */
+/** A thin outline so avatars stand off the rail, the same on every avatar; brighter for whoever's turn it is. */
 export const avatarRing = (active?: boolean) =>
   cn(
-    "ring-[1.5px] transition-shadow duration-300",
+    "ring-[1.5px] transition-shadow",
     active ? "ring-white/85" : "ring-white/30",
   );
 
@@ -52,7 +52,13 @@ export function PlayerAvatar({
         <TooltipTrigger asChild>
           <span
             aria-label={dimmedReason ? `${name}, ${dimmedReason}` : name}
-            className={cn("relative flex rounded-full", avatarRing(active))}
+            className={cn(
+              "relative flex rounded-full",
+              // On their turn the purple glow is the border, pulsing a little less than typing's.
+              active
+                ? "animate-turn-pulse ring-[1.5px] ring-purple-600 shadow-[0_0_4px_#9333ea,0_0_10px_#9333ea]"
+                : avatarRing(false),
+            )}
           >
             <OccupantAvatar occupant={occupant} size="2xl" />
             {/* On the bottom edge; your round result takes its place while it shows. */}

@@ -23,4 +23,4 @@ export {
 } from "./components/playing-card";
 export { useTable, type TableStatus } from "./use-table";
 export { DealProvider, DealShoe, DEAL_EASING, DEAL_MS } from "./deal";
-export { ChipRack } from "./components/table-dressing";
+export { ChipRack, FeltLogo } from "./components/table-dressing";

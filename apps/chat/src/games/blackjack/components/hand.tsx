@@ -114,9 +114,7 @@ type Props = {
   /** null before the deal: an outline where the cards will land. */
   hand: BlackjackHandView | null;
   size?: CardSize;
-  /** Highlights the hand being played (after a split). */
-  active?: boolean;
-  /** The current player's hand: glows gold. */
+  /** The hand being played (just one after a split): glows like the player's avatar. */
   glow?: boolean;
   dealDelayMs?: (cardIndex: number) => number;
 };
@@ -145,9 +143,9 @@ function ReservedCards({
   );
 }
 
-// The chat's glow in the "Your turn" gold.
+// The same purple border and glow as the avatar whose turn it is (steady here; only the avatar pulses).
 const TURN_GLOW =
-  "shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_#fcd34d,0_0_5px_#fcd34d,0_0_10px_#fcd34d]";
+  "ring-[1.5px] ring-purple-600 shadow-[0_0_4px_#9333ea,0_0_10px_#9333ea]";
 
 // Room between the cards and the glow around them.
 const GLOW_PAD_PX = 4;
@@ -197,17 +195,12 @@ export function TurnGlow({ count, size }: { count: number; size: CardSize }) {
   );
 }
 
-export function Hand({ hand, size = "sm", active, glow, dealDelayMs }: Props) {
+export function Hand({ hand, size = "sm", glow, dealDelayMs }: Props) {
   const outcome = hand?.outcome ? OUTCOME[hand.outcome] : null;
   const net = hand?.payout != null ? hand.payout - hand.bet : 0;
 
   return (
-    <div
-      className={cn(
-        "relative flex flex-col items-center rounded-lg p-1",
-        active && "bg-amber-300/15 ring-1 ring-amber-300",
-      )}
-    >
+    <div className="relative flex flex-col items-center rounded-lg p-1">
       <div className="relative">
         {glow && hand && <TurnGlow count={hand.cards.length} size={size} />}
         {/* Hidden under a busted hand, whose faded cards would show it through. */}

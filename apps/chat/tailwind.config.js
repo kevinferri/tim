@@ -115,6 +115,11 @@ module.exports = {
             opacity: "0.9",
           },
         },
+        // The typing pulse, grown and shrunk less: for a casino seat whose turn it is.
+        "turn-pulse": {
+          "0%, 100%": { transform: "scale(0.92)", opacity: "0.9" },
+          "50%": { transform: "scale(1)", opacity: "1" },
+        },
         // Ease-in falling, ease-out rising, so each hop reads as gravity.
         "die-bounce": {
           "0%": {
@@ -249,6 +254,7 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         typing: "typing 1s ease-in-out infinite",
+        "turn-pulse": "turn-pulse 1s ease-in-out infinite",
       },
     },
   },

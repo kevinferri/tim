@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { StackDirectionContext } from "./chips";
+import { FeltLogo } from "./table-dressing";
 
 type Props = {
   backHref: string;
@@ -203,33 +204,54 @@ function SeatSpot({ seat, children }: { seat: number; children: ReactNode }) {
   );
 }
 
+// The dealer's cards plus the shoe beside them, from the felt's middle (px past a two-card hand's half-width).
+const DEALER_SIDE_REACH_PX = 96;
+const LOGO_MAX_W_PX = 224;
+const LOGO_MIN_W_PX = 96;
+const LOGO_MARGIN_PX = 24;
+
+/** The right-hand logo's center x and width: midway between the dealer (and shoe) and first base's bet circle, shrinking to fit. */
+function logoSpot(felt: Size, spot: Size) {
+  if (!felt.w) return null;
+  const start = felt.w / 2 + spot.w / 2 + DEALER_SIDE_REACH_PX + spot.h;
+  const end = betCenter(0, felt, spot).x - BET_RADIUS_PX;
+  const w = Math.min(LOGO_MAX_W_PX, end - start - 2 * LOGO_MARGIN_PX);
+  return w < LOGO_MIN_W_PX ? null : { x: (start + end) / 2, w };
+}
+
 /** Full-screen, game-agnostic table: header, a U-shaped felt (a grid on phones), and a control dock. */
 export function TableLayout(props: Props) {
-  const feltRef = useRef<HTMLDivElement>(null);
+  // Elements in state, not refs, so measuring re-attaches whenever one is replaced (after a notice, or a remount).
+  const [feltEl, setFeltEl] = useState<HTMLDivElement | null>(null);
   const [felt, setFelt] = useState<Size>({ w: 0, h: 0 });
   useLayoutEffect(() => {
-    const el = feltRef.current;
-    if (!el) return;
+    if (!feltEl) return;
     // The inside of the rail, which is what seat positions are measured against.
-    const measure = () => setFelt({ w: el.clientWidth, h: el.clientHeight });
+    const measure = () => {
+      // A removed element reads as 0; ignore it.
+      if (feltEl.isConnected)
+        setFelt({ w: feltEl.clientWidth, h: feltEl.clientHeight });
+    };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
+    observer.observe(feltEl);
     return () => observer.disconnect();
-  }, [props.notice]);
+  }, [feltEl]);
 
   // The dealer's lower edge, where the open middle of the felt starts.
-  const dealerRef = useRef<HTMLDivElement>(null);
+  const [dealerEl, setDealerEl] = useState<HTMLDivElement | null>(null);
   const [dealerBottom, setDealerBottom] = useState(0);
   useLayoutEffect(() => {
-    const el = dealerRef.current;
-    if (!el) return;
-    const measure = () => setDealerBottom(el.offsetTop + el.offsetHeight);
+    if (!dealerEl) return;
+    const measure = () => {
+      if (dealerEl.isConnected)
+        setDealerBottom(dealerEl.offsetTop + dealerEl.offsetHeight);
+    };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
+    observer.observe(dealerEl);
     return () => observer.disconnect();
-  }, [felt.h]);
+  }, [dealerEl, felt.h]);
   const spot = props.spotSize ?? { w: 0, h: 0 };
   const playersTop =
     betCenter(Math.floor(SEAT_COUNT / 2), felt, spot).y - BET_RADIUS_PX;
@@ -239,6 +261,8 @@ export function TableLayout(props: Props) {
     felt.h && dealerBottom
       ? (dealerBottom + DEALER_GAP_PX + playersTop) / 2
       : null;
+
+  const logo = logoSpot(felt, spot);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -276,7 +300,7 @@ export function TableLayout(props: Props) {
             <div className="flex min-h-0 flex-1 px-2 pt-2 sm:px-6 sm:pt-6 md:px-24 md:pt-10">
               {/* On wide screens the border is the padded armrest: thick and black on the sides and curve, thin along the dealer's edge. */}
               <div
-                ref={feltRef}
+                ref={setFeltEl}
                 className="relative flex-1 overflow-y-auto rounded-3xl border-4 border-amber-900/70 bg-emerald-800 shadow-inner dark:border-amber-950 dark:bg-[#123a2f] md:overflow-visible md:rounded-b-[50%] md:border-[36px] md:border-neutral-950 md:border-t-[10px] md:border-t-amber-950 md:shadow-[inset_0_0_24px_rgba(0,0,0,0.45),inset_0_0_6px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.5)] dark:md:border-zinc-900"
               >
                 {/* Shading over the armrest so it reads as padded: dark at its outer edge, a soft highlight along its crown. Matches the border box. */}
@@ -291,6 +315,19 @@ export function TableLayout(props: Props) {
                 <FeltSizeContext.Provider value={{ felt, spot }}>
                   {/* The felt is dark in both themes, so its contents use dark tokens. */}
                   <div className="dark flex min-h-full w-full flex-col items-center gap-6 p-4 text-emerald-50 md:block md:h-full md:p-0">
+                    {/* The house logo, embroidered into the open felt on either side of the dealer. */}
+                    {logo &&
+                      [logo.x, felt.w - logo.x].map((x) => (
+                        <FeltLogo
+                          key={x}
+                          className="pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 opacity-25 md:block"
+                          style={{
+                            left: x,
+                            top: DEALER_MIDDLE_PX,
+                            width: logo.w,
+                          }}
+                        />
+                      ))}
                     {/* Rack, then dealer, DEALER_GAP_PX apart. */}
                     <div
                       className="flex flex-col items-center md:absolute md:inset-x-0 md:top-0"
@@ -300,7 +337,7 @@ export function TableLayout(props: Props) {
                         <div className="hidden md:block">{props.rack}</div>
                       )}
                       <div
-                        ref={dealerRef}
+                        ref={setDealerEl}
                         className="flex min-h-16 items-center justify-center"
                       >
                         {props.dealer}
