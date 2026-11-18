@@ -136,6 +136,7 @@ export function BlackjackTable({
   const shell = {
     backHref: `/circles/${circleId}`,
     backLabel: circleName,
+    logoName: circleName,
     // Same look as the circle in the circles rail.
     backAvatar: (
       <Avatar className="size-5">

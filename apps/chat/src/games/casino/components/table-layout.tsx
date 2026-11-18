@@ -26,6 +26,8 @@ type Props = {
   /** Shown between the chevron and the label, e.g. the circle's avatar. */
   backAvatar?: ReactNode;
   title: string;
+  /** Embroidered into the felt beside the dealer, e.g. the circle's name. */
+  logoName?: string;
   /** Shown before the title, e.g. the game's icon. */
   titleIcon?: ReactNode;
   headerRight?: ReactNode;
@@ -262,7 +264,8 @@ export function TableLayout(props: Props) {
       ? (dealerBottom + DEALER_GAP_PX + playersTop) / 2
       : null;
 
-  const logo = logoSpot(felt, spot);
+  const logoName = props.logoName;
+  const logo = logoName ? logoSpot(felt, spot) : null;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -315,10 +318,12 @@ export function TableLayout(props: Props) {
                 <FeltSizeContext.Provider value={{ felt, spot }}>
                   {/* The felt is dark in both themes, so its contents use dark tokens. */}
                   <div className="dark flex min-h-full w-full flex-col items-center gap-6 p-4 text-emerald-50 md:block md:h-full md:p-0">
-                    {/* The house logo, embroidered into the open felt on either side of the dealer. */}
+                    {/* The house name, embroidered into the open felt on either side of the dealer. */}
                     {logo &&
+                      logoName &&
                       [logo.x, felt.w - logo.x].map((x) => (
                         <FeltLogo
+                          name={logoName}
                           key={x}
                           className="pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 opacity-25 md:block"
                           style={{
