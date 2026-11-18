@@ -7,6 +7,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { SocketProvider } from "@/components/socket/socket-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { prismaClient } from "@/lib/prisma/client";
+import { getUserCircles } from "@/lib/user-circles";
 import { getLoggedInUserId } from "@/lib/session";
 import { SelfProvider } from "@/components/auth/self-provider";
 import { PresenceSync } from "@/components/dashboard/presence-sync";
@@ -14,8 +15,6 @@ import { UserStatsHighlightSync } from "@/components/dashboard/user-stats-highli
 import { UserRoomConnect } from "@/components/dashboard/user-room-connect";
 import { CircleRoomConnect } from "@/components/dashboard/circle-room-connect";
 import { TopicRoomConnect } from "@/components/dashboard/topic-room-connect";
-import { HideOnFullScreenRoutes } from "@/components/dashboard/hide-on-full-screen-routes";
-import { CirclesNav } from "@/components/circles/circles-nav";
 import { GlobalVideoPlayer } from "@/components/topics/global-video-player";
 import { NotificationSync } from "@/components/notifications/notification-sync";
 import { SamePageRefreshTimer } from "@/games/same-page";
@@ -117,18 +116,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
   const socketConfig = await getSocketConfig(user);
 
   const [circles, rawNotifications, initialUnreadCount] = await Promise.all([
-    prismaClient.circle.getForUser({
-      userId: user?.id,
-      select: {
-        id: true,
-        name: true,
-        defaultTopicId: true,
-        imageUrl: true,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-    }),
+    getUserCircles(user?.id),
     prismaClient.notification.getForUser({ userId: user?.id }),
     prismaClient.notification.getUnreadCount({ userId: user?.id }),
   ]);
@@ -161,9 +149,7 @@ async function LoggedInLayout({ children }: { children: React.ReactNode }) {
             <SamePageRefreshTimer />
             <div className="flex flex-col h-dvh">
               <div className="flex overflow-hidden basis-full">
-                <HideOnFullScreenRoutes>
-                  <CirclesNav circles={circles} />
-                </HideOnFullScreenRoutes>
+                {/* The circles nav comes from (app)/layout.tsx, so (full-screen) pages don't get it. */}
                 {children}
               </div>
             </div>
