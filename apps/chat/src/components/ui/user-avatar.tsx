@@ -82,6 +82,9 @@ const variants = cva("", {
       md: "h-10 w-10",
       sm: "h-8 w-8",
       xs: "h-6 w-6",
+      lg: "h-12 w-12",
+      xl: "h-16 w-16",
+      "2xl": "h-[4.5rem] w-[4.5rem]",
     },
   },
   defaultVariants: {
