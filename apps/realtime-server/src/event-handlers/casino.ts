@@ -113,8 +113,12 @@ export function registerCasinoHandlers(
   on(SocketEvent.TableSit, async (payload: any) => {
     const ref = parseRef(payload);
     if (!ref) return;
+    const anySeat = payload.seat === undefined;
     const seat = payload.seat;
-    if (!Number.isInteger(seat) || seat < 0 || seat >= SEAT_COUNT) {
+    if (
+      !anySeat &&
+      (!Number.isInteger(seat) || seat < 0 || seat >= SEAT_COUNT)
+    ) {
       return emitError(socket, ref, "Invalid seat");
     }
     const table = watchedTable(ref);
@@ -123,7 +127,13 @@ export function registerCasinoHandlers(
     if (table.seatIndexOf(id) !== null) {
       return emitError(socket, ref, "You already have a seat");
     }
-    if (!table.isSeatFree(seat)) return emitError(socket, ref, "Seat is taken");
+    if (anySeat ? table.nextFreeSeat() === null : !table.isSeatFree(seat)) {
+      return emitError(
+        socket,
+        ref,
+        anySeat ? "Table is full" : "Seat is taken",
+      );
+    }
 
     let stack: number;
     try {
@@ -136,12 +146,15 @@ export function registerCasinoHandlers(
     if (registry.closing) return emitError(socket, ref, "Table is closing");
     const current = watchedTable(ref);
     if (!current) return;
+    // Picked after the await so two joins at once don't race for one seat.
+    const target = anySeat ? current.nextFreeSeat() : seat;
+    if (target === null) return emitError(socket, ref, "Table is full");
     emitError(
       socket,
       ref,
       current.sit(
         { userId: id, name, displayName, imageUrl, createdAt },
-        seat,
+        target,
         stack,
       ),
     );
