@@ -13,14 +13,24 @@ import { useSocketContext } from "@/components/socket/socket-provider";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useSelf } from "@/components/auth/self-provider";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  initialPresence,
+  nextPresence,
+  type PresenceEvent,
+  type PresenceState,
+} from "./table-presence";
 
-export const GAME_OFF_MESSAGE = "This game isn't on in this circle";
-const RESTARTED_MESSAGE =
-  "The table restarted. Your bet was returned. Join the table to keep playing.";
+const NOTICES = {
+  restarted:
+    "The table restarted. Your bet was returned. Join the table to keep playing.",
+  disconnected:
+    "You were disconnected and left the table. Join the table to keep playing.",
+};
 
 type TableViewBase = {
   circleId: string;
   game: TableGame;
+  tableId: string;
   msLeft: number | null;
   seats: ({ occupant: SeatOccupant } | null)[];
 };
@@ -38,9 +48,16 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   // performance.now() deadline for view.msLeft, so countdowns don't depend on clock skew.
   const [deadline, setDeadline] = useState<number | null>(null);
 
-  const wasSeated = useRef(false);
-  const droppedWhileSeated = useRef(false);
-  const closingNotified = useRef(false);
+  const presence = useRef<PresenceState>(initialPresence);
+  // Stable (toast is), so the watch effect below doesn't re-run because of it.
+  const onPresence = useCallback(
+    (event: PresenceEvent) => {
+      const { state, notice } = nextPresence(presence.current, event);
+      presence.current = state;
+      if (notice) toast({ title: NOTICES[notice] });
+    },
+    [toast],
+  );
 
   const isThisTable = (p: { circleId: string; game: string }) =>
     p.circleId === circleId && p.game === game;
@@ -50,7 +67,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
       socket.emit(SocketEvent.TableWatch, { circleId, game } as TableRef);
     const onConnect = () => watch();
     const onDisconnect = () => {
-      droppedWhileSeated.current = wasSeated.current;
+      onPresence({ type: "disconnect" });
       setStatus((s) => (s === "off" ? s : "reconnecting"));
     };
 
@@ -63,19 +80,12 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
       socket.off("disconnect", onDisconnect);
       socket.emit(SocketEvent.TableUnwatch, { circleId, game } as TableRef);
     };
-  }, [socket, circleId, game]);
+  }, [socket, circleId, game, onPresence]);
 
   useSocketHandler<View>(SocketEvent.TableState, (next) => {
     if (!isThisTable(next)) return;
     const seated = next.seats.some((s) => s?.occupant.userId === self.id);
-
-    // Restarted without a TableClosing (e.g. a crash): tell a dropped player once.
-    if (droppedWhileSeated.current && !seated && !closingNotified.current) {
-      toast({ title: RESTARTED_MESSAGE });
-    }
-    droppedWhileSeated.current = false;
-    closingNotified.current = false;
-    wasSeated.current = seated;
+    onPresence({ type: "state", tableId: next.tableId, seated });
 
     setView(next);
     setDeadline(next.msLeft === null ? null : performance.now() + next.msLeft);
@@ -84,13 +94,13 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
 
   useSocketHandler<TableErrorPayload>(SocketEvent.TableError, (payload) => {
     if (!isThisTable(payload)) return;
-    if (payload.message === GAME_OFF_MESSAGE) return setStatus("off");
+    if (payload.code === "game_off") return setStatus("off");
     toast({ title: payload.message, variant: "quiet-destructive" });
   });
 
   useSocketHandler<TableClosingPayload>(SocketEvent.TableClosing, (payload) => {
     if (!isThisTable(payload)) return;
-    closingNotified.current = true;
+    onPresence({ type: "closing" });
     toast({ title: payload.message });
   });
 
