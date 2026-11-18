@@ -21,11 +21,20 @@ const seated = (serverId: string): PresenceEvent => ({
   type: "state",
   serverId,
   seated: true,
+  leaving: false,
+});
+// Still seated, but the server stood you up mid-hand: the seat goes at results.
+const leaving = (serverId: string): PresenceEvent => ({
+  type: "state",
+  serverId,
+  seated: true,
+  leaving: true,
 });
 const standing = (serverId: string): PresenceEvent => ({
   type: "state",
   serverId,
   seated: false,
+  leaving: false,
 });
 const disconnect: PresenceEvent = { type: "disconnect" };
 const closing: PresenceEvent = { type: "closing" };
@@ -52,8 +61,20 @@ describe("table presence notices", () => {
   it("says you were disconnected once your seat is freed, after reconnecting mid-hand", () => {
     // Back while the hand is still on: the seat stays (leaving) until results free it.
     expect(
-      run(seated("s1"), disconnect, seated("s1"), seated("s1"), standing("s1")),
+      run(
+        seated("s1"),
+        disconnect,
+        leaving("s1"),
+        leaving("s1"),
+        standing("s1"),
+      ),
     ).toEqual([null, null, null, null, "disconnected"]);
+  });
+
+  it("forgets the drop when it never stood you up (another tab, or a fast reconnect)", () => {
+    expect(
+      run(seated("s1"), disconnect, seated("s1"), standing("s1")).at(-1),
+    ).toBeNull();
   });
 
   it("stays quiet when you stand up yourself", () => {

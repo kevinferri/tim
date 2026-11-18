@@ -32,7 +32,7 @@ type TableViewBase = {
   game: TableGame;
   serverId: string;
   msLeft: number | null;
-  seats: ({ occupant: SeatOccupant } | null)[];
+  seats: ({ occupant: SeatOccupant; leaving: boolean } | null)[];
 };
 
 export type TableStatus = "joining" | "live" | "reconnecting" | "off";
@@ -84,8 +84,13 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
 
   useSocketHandler<View>(SocketEvent.TableState, (next) => {
     if (!isThisTable(next)) return;
-    const seated = next.seats.some((s) => s?.occupant.userId === self.id);
-    onPresence({ type: "state", serverId: next.serverId, seated });
+    const mine = next.seats.find((s) => s?.occupant.userId === self.id);
+    onPresence({
+      type: "state",
+      serverId: next.serverId,
+      seated: !!mine,
+      leaving: !!mine?.leaving,
+    });
 
     setView(next);
     setDeadline(next.msLeft === null ? null : performance.now() + next.msLeft);
