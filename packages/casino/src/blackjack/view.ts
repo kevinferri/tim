@@ -43,8 +43,8 @@ export type BlackjackDealerView = {
 export type BlackjackTableView = {
   circleId: string;
   game: "blackjack";
-  /** New each time the server creates the table, so a client can tell a restart from its own disconnect. */
-  tableId: string;
+  /** The server process: changes only when the server restarts, so a client can tell a restart from its own disconnect. */
+  serverId: string;
   phase: BlackjackTablePhase;
   /** Relative countdown for the betting window or current turn, to avoid clock skew. */
   msLeft: number | null;

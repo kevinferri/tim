@@ -168,7 +168,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     return {
       circleId: this.circleId,
       game: "blackjack",
-      tableId: this.tableId,
+      serverId: this.serverId,
       phase: this.phase,
       msLeft:
         this.phase === "betting" || this.phase === "players"

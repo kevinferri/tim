@@ -118,21 +118,21 @@ describe("watching", () => {
     expect(registry.tableCount()).toBe(1);
   });
 
-  it("keeps a table's id across updates and gives a new table a new id", async () => {
+  it("sends the same server id across updates and a table being recreated", async () => {
     const { connect, registry } = setup();
     const a = connect("a");
     await watch(a);
-    const first = state(a).tableId;
+    const first = state(a).serverId;
     expect(first).toEqual(expect.any(String));
     await sit(a, 0);
-    expect(state(a).tableId).toBe(first);
+    expect(state(a).serverId).toBe(first);
 
-    // Last watcher gone: the table is dropped, and the next one is new.
+    // Last watcher gone: the table is dropped. A new one is a new table, not a restart.
     await a.trigger(SocketEvent.TableUnwatch, REF);
     expect(registry.tableCount()).toBe(0);
     const b = connect("b");
     await watch(b);
-    expect(state(b).tableId).not.toBe(first);
+    expect(state(b).serverId).toBe(first);
   });
 
   function pendingMembership() {

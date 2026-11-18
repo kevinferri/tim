@@ -23,9 +23,11 @@ export const TABLE_RESTARTING_REFUNDED =
 type Watcher = { socket: AppSocket; userId: string };
 
 /** Game-agnostic table: seats, watchers, one phase timer, and broadcast. */
+// One per server process, sent in views: it changes only on a restart (tables are dropped and recreated whenever they go idle).
+const SERVER_ID = randomUUID();
+
 export abstract class Table<Seat extends BaseSeat, View> {
-  /** Identifies this instance in views; a restarted server builds new tables with new ids. */
-  readonly tableId = randomUUID();
+  readonly serverId = SERVER_ID;
 
   protected seats: (Seat | null)[] = Array(SEAT_COUNT).fill(null);
   protected closed = false;

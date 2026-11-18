@@ -2,6 +2,7 @@ import { randomInt } from "crypto";
 import { Rng, TableGame } from "@tim/casino";
 import { BlackjackTable } from "./blackjack-table";
 import { ChipStore, InMemoryChipStore } from "./chip-store";
+import { isLocalDev } from "../lib/is-local-dev";
 
 export const cryptoRng: Rng = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
@@ -68,8 +69,6 @@ export class CasinoRegistry {
 
 export const casinoRegistry = new CasinoRegistry({
   // A deep stack locally, so testing never runs dry.
-  chipStore: new InMemoryChipStore(
-    process.env.NODE_ENV === "production" ? undefined : 100_000,
-  ),
+  chipStore: new InMemoryChipStore(isLocalDev() ? 100_000 : undefined),
   rng: cryptoRng,
 });
