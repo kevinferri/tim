@@ -114,7 +114,7 @@ type Props = {
   /** null before the deal: an outline where the cards will land. */
   hand: BlackjackHandView | null;
   size?: CardSize;
-  /** The hand being played (just one after a split): glows like the player's avatar. */
+  /** The hand being played (just one after a split): glows gold. */
   glow?: boolean;
   dealDelayMs?: (cardIndex: number) => number;
 };
@@ -143,9 +143,9 @@ function ReservedCards({
   );
 }
 
-// The same purple border and glow as the avatar whose turn it is (steady here; only the avatar pulses).
+// The chat's glow in the message-highlight gold.
 const TURN_GLOW =
-  "ring-[1.5px] ring-purple-600 shadow-[0_0_4px_#9333ea,0_0_10px_#9333ea]";
+  "shadow-[0_0_1px_white,inset_0_0_1px_white,0_0_2px_hsl(var(--highlight-icon)),0_0_5px_hsl(var(--highlight-icon)),0_0_10px_hsl(var(--highlight-icon))]";
 
 // Room between the cards and the glow around them.
 const GLOW_PAD_PX = 4;
