@@ -2,9 +2,7 @@ import { randomInt } from "crypto";
 import { Rng, TableGame } from "@tim/casino";
 import { BlackjackTable } from "./blackjack-table";
 import { ChipStore, InMemoryChipStore } from "./chip-store";
-
-export const TABLE_CLOSING_MESSAGE =
-  "Table restarting for an update. This round was cancelled and bets were returned.";
+import { isLocalDev } from "../lib/is-local-dev";
 
 export const cryptoRng: Rng = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
@@ -55,9 +53,9 @@ export class CasinoRegistry {
   }
 
   /** Cancels every round in progress and waits (capped) for settle writes already started. */
-  async shutdown(message = TABLE_CLOSING_MESSAGE, capMs = 5_000) {
+  async shutdown(capMs = 5_000) {
     this.closing = true;
-    for (const table of this.tables.values()) table.close(message);
+    for (const table of this.tables.values()) table.close();
     let cap: NodeJS.Timeout | undefined;
     await Promise.race([
       Promise.allSettled([...this.pendingSettles]),
@@ -70,6 +68,7 @@ export class CasinoRegistry {
 }
 
 export const casinoRegistry = new CasinoRegistry({
-  chipStore: new InMemoryChipStore(),
+  // A deep stack locally, so testing never runs dry.
+  chipStore: new InMemoryChipStore(isLocalDev() ? 100_000 : undefined),
   rng: cryptoRng,
 });

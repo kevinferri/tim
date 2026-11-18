@@ -15,9 +15,15 @@ export type TableRef = { circleId: string; game: TableGame };
 
 export type TableWatchPayload = TableRef;
 export type TableUnwatchPayload = TableRef;
-export type TableSitPayload = TableRef & { seat: number };
+/** Omit `seat` to take the free seat closest to the middle of the table. */
+export type TableSitPayload = TableRef & { seat?: number };
 export type TableStandPayload = TableRef;
+/** Errors the page handles itself instead of showing the message. */
+export type TableErrorCode = "game_off";
 /** Sent to one socket when its request was rejected. */
-export type TableErrorPayload = TableRef & { message: string };
+export type TableErrorPayload = TableRef & {
+  message: string;
+  code?: TableErrorCode;
+};
 /** Sent to every watcher when the server shuts down mid-game. */
 export type TableClosingPayload = TableRef & { message: string };

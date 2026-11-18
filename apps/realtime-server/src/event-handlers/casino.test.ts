@@ -16,6 +16,7 @@ import { createMockSocket } from "../test/socket-mocks";
 import { registerCasinoHandlers } from "./casino";
 import { CasinoRegistry } from "../casino/registry";
 import { ChipStore, InMemoryChipStore } from "../casino/chip-store";
+import { TABLE_RESTARTING, TABLE_RESTARTING_REFUNDED } from "../casino/table";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
 import { shutdown } from "../shutdown";
@@ -117,6 +118,23 @@ describe("watching", () => {
     expect(registry.tableCount()).toBe(1);
   });
 
+  it("sends the same server id across updates and a table being recreated", async () => {
+    const { connect, registry } = setup();
+    const a = connect("a");
+    await watch(a);
+    const first = state(a).serverId;
+    expect(first).toEqual(expect.any(String));
+    await sit(a, 0);
+    expect(state(a).serverId).toBe(first);
+
+    // Last watcher gone: the table is dropped. A new one is a new table, not a restart.
+    await a.trigger(SocketEvent.TableUnwatch, REF);
+    expect(registry.tableCount()).toBe(0);
+    const b = connect("b");
+    await watch(b);
+    expect(state(b).serverId).toBe(first);
+  });
+
   function pendingMembership() {
     let resolve!: (isMember: boolean) => void;
     vi.mocked(isUserInCircle).mockReturnValueOnce(
@@ -180,6 +198,10 @@ describe("watching", () => {
       gameId: "blackjack",
     });
     expect(lastError(a)).toBe("This game isn't on in this circle");
+    // The page checks the code, not the wording.
+    expect(emitted(a, SocketEvent.TableError).at(-1)).toMatchObject({
+      code: "game_off",
+    });
     expect(registry.tableCount()).toBe(0);
   });
 
@@ -252,6 +274,27 @@ describe("seats", () => {
       expect(lastError(b)).toBe("Invalid seat");
     }
     expect(state(b).seats.filter(Boolean)).toHaveLength(1);
+  });
+
+  it("seats players from the middle out when no seat is given, and says when the table is full", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    await watch(a);
+    const order: number[] = [];
+    for (let i = 0; i < 9; i++) {
+      const s = i === 0 ? a : connect(`p${i}`);
+      if (i > 0) await watch(s);
+      await sit(s, undefined);
+      order.push(
+        state(s).seats.findIndex((x) => x?.occupant.userId === s.data.user.id),
+      );
+    }
+    expect(order).toEqual([4, 3, 5, 2, 6, 1, 7, 0, 8]);
+    expect(state(a).seats.every(Boolean)).toBe(true);
+    const late = connect("late");
+    await watch(late);
+    await sit(late, undefined);
+    expect(lastError(late)).toBe("Table is full");
   });
 
   it("seats a player with their chip balance", async () => {
@@ -425,7 +468,7 @@ describe("a round", () => {
 });
 
 describe("turn timer", () => {
-  it("auto-stands on timeout and restarts only when the turn moves", async () => {
+  it("auto-stands on timeout and restarts after every action", async () => {
     const { connect, stackShoe } = setup();
     const a = connect("a");
     const b = connect("b");
@@ -441,9 +484,13 @@ describe("turn timer", () => {
     vi.advanceTimersByTime(15_000);
     await act(a, { type: "hit" });
     expect(state(a).turn).toEqual({ seat: 0, hand: 0 });
-    expect(state(a).msLeft).toBe(TURN_MS - 15_000);
+    expect(state(a).msLeft).toBe(TURN_MS);
 
-    vi.advanceTimersByTime(TURN_MS - 15_000);
+    // Nothing times out until the fresh clock runs out.
+    const statesAfterHit = emitted(a, SocketEvent.TableState).length;
+    vi.advanceTimersByTime(TURN_MS - 1);
+    expect(emitted(a, SocketEvent.TableState)).toHaveLength(statesAfterHit);
+    vi.advanceTimersByTime(1);
     const view = state(a);
     expect(view.turn).toEqual({ seat: 1, hand: 0 });
     expect(view.msLeft).toBe(TURN_MS);
@@ -679,13 +726,10 @@ describe("shutdown", () => {
       },
     });
 
+    // Results: payouts are already on the stacks, so nothing was cancelled.
     for (const s of [a, watcher]) {
       expect(emitted(s, SocketEvent.TableClosing)).toEqual([
-        {
-          circleId: "c1",
-          game: "blackjack",
-          message: expect.stringMatching(/cancelled and bets were returned/),
-        },
+        { circleId: "c1", game: "blackjack", message: TABLE_RESTARTING },
       ]);
     }
     await Promise.resolve();
@@ -695,6 +739,52 @@ describe("shutdown", () => {
     release();
     await done;
     expect(order).toEqual(["settled", "destroyDb", "exit:0"]);
+  });
+
+  async function closingMessageAfter(
+    prepare: (ctx: ReturnType<typeof setup>, a: MockSocket) => Promise<void>,
+  ) {
+    const ctx = setup();
+    const a = ctx.connect("a");
+    await watch(a);
+    await prepare(ctx, a);
+    await shutdown({
+      registry: ctx.registry,
+      destroyDb: async () => {},
+      exit: () => {},
+    });
+    return (emitted(a, SocketEvent.TableClosing)[0] as any)?.message;
+  }
+
+  it("says bets were returned only when chips were in play", async () => {
+    expect(await closingMessageAfter(async () => {})).toBe(TABLE_RESTARTING);
+    expect(await closingMessageAfter((_, a) => sit(a, 0))).toBe(
+      TABLE_RESTARTING,
+    );
+    expect(
+      await closingMessageAfter(async ({ connect }, a) => {
+        const b = connect("b");
+        await watch(b);
+        await sit(a, 0);
+        await sit(b, 1);
+        await bet(a, 10);
+      }),
+    ).toBe(TABLE_RESTARTING_REFUNDED);
+    expect(
+      await closingMessageAfter(async ({ stackShoe }, a) => {
+        stackShoe("10", "9", "8", "8");
+        await sit(a, 0);
+        await bet(a, 10);
+      }),
+    ).toBe(TABLE_RESTARTING_REFUNDED);
+    expect(
+      await closingMessageAfter(async ({ stackShoe }, a) => {
+        stackShoe("10", "9", "8", "8");
+        await sit(a, 0);
+        await bet(a, 10);
+        await act(a, { type: "stand" });
+      }),
+    ).toBe(TABLE_RESTARTING_REFUNDED);
   });
 
   it("starts no new round and rejects requests after shutdown begins", async () => {

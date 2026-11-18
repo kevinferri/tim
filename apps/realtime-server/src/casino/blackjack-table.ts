@@ -153,6 +153,14 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     else this.enterWaiting();
   }
 
+  protected hasChipsInPlay() {
+    if (this.phase === "players" || this.phase === "dealer") return true;
+    return (
+      this.phase === "betting" &&
+      this.occupiedSeats().some(([, seat]) => seat.bet !== null)
+    );
+  }
+
   protected viewFor(): BlackjackTableView {
     const round = this.round;
     const turn = round?.turn ?? null;
@@ -160,6 +168,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     return {
       circleId: this.circleId,
       game: "blackjack",
+      serverId: this.serverId,
       phase: this.phase,
       msLeft:
         this.phase === "betting" || this.phase === "players"
@@ -229,6 +238,8 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     }
     const result = applyAction(round, index, playAction, seat.stack);
     seat.stack -= result.wagered;
+    // Every decision gets a fresh turn clock, not just a new hand.
+    this.turnKey = null;
     this.updateRound(result.round);
     return null;
   }

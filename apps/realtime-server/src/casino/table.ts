@@ -5,6 +5,7 @@ import {
   TableErrorPayload,
   TableGame,
 } from "@tim/casino";
+import { randomUUID } from "node:crypto";
 import { SocketEvent } from "@tim/socket-types";
 import { AppSocket } from "../lib/socket";
 
@@ -15,10 +16,19 @@ export type BaseSeat = {
   leaving: boolean;
 };
 
+export const TABLE_RESTARTING = "Table restarting for an update.";
+export const TABLE_RESTARTING_REFUNDED =
+  "Table restarting for an update. This round was cancelled and bets were returned.";
+
 type Watcher = { socket: AppSocket; userId: string };
 
 /** Game-agnostic table: seats, watchers, one phase timer, and broadcast. */
+// One per server process, sent in views: it changes only on a restart (tables are dropped and recreated whenever they go idle).
+const SERVER_ID = randomUUID();
+
 export abstract class Table<Seat extends BaseSeat, View> {
+  readonly serverId = SERVER_ID;
+
   protected seats: (Seat | null)[] = Array(SEAT_COUNT).fill(null);
   protected closed = false;
   private watchers = new Map<string, Watcher>();
@@ -36,6 +46,8 @@ export abstract class Table<Seat extends BaseSeat, View> {
   abstract stand(userId: string): string | null;
   /** Puts the table back in a safe state after an unexpected error. */
   protected abstract recover(): void;
+  /** Whether closing now would cancel bets that need returning. */
+  protected abstract hasChipsInPlay(): boolean;
 
   addWatcher(socket: AppSocket) {
     this.watchers.set(socket.id, { socket, userId: socket.data.user.id });
@@ -64,6 +76,17 @@ export abstract class Table<Seat extends BaseSeat, View> {
     return i === -1 ? null : i;
   }
 
+  /** Free seat closest to the middle of the table, alternating sides: 4, 3, 5, 2, 6, … for 9 seats. */
+  nextFreeSeat(): number | null {
+    const middle = Math.floor(this.seats.length / 2);
+    for (let k = 0; k < this.seats.length; k++) {
+      const offset = Math.ceil(k / 2) * (k % 2 ? -1 : 1);
+      const i = middle + offset;
+      if (i >= 0 && i < this.seats.length && this.seats[i] === null) return i;
+    }
+    return null;
+  }
+
   isSeatFree(seat: number) {
     return this.seats[seat] === null;
   }
@@ -73,7 +96,10 @@ export abstract class Table<Seat extends BaseSeat, View> {
   }
 
   /** Clears timers and tells every watcher the table is going away. */
-  close(message: string) {
+  close() {
+    const message = this.hasChipsInPlay()
+      ? TABLE_RESTARTING_REFUNDED
+      : TABLE_RESTARTING;
     this.closed = true;
     this.clearTimer();
     const payload: TableClosingPayload = {
