@@ -30,87 +30,84 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Review this pull request as a senior engineer. Your job is to make
-            sure it's the best technical decision for this codebase, not only
-            that each line is correct. The PR branch is already checked out.
+            Review this pull request for bugs. Your main job is to find the
+            ways this change breaks: wrong behavior, races, bad state, lost or
+            duplicated work. The PR branch is already checked out.
 
             ## Context
             Read CLAUDE.md, apps/chat/CLAUDE.md and apps/realtime-server/CLAUDE.md
-            first. They describe the architecture and conventions this PR should
-            follow. Then read the whole diff (`gh pr diff ${{ github.event.pull_request.number }}`)
-            and open the surrounding code wherever you need it to judge a change.
+            first. Then read the whole diff (`gh pr diff ${{ github.event.pull_request.number }}`).
+            Open every changed file in full, not only the hunks, and follow
+            the code it calls and the code that calls it.
 
-            ## Earlier rounds
-            This may be a re-review. Read the earlier feedback first:
+            ## Review the whole PR every run
+            This may be a re-review. Review the full PR from scratch each time,
+            as if no one had looked at it before: bugs often survive several
+            rounds because each round only looked at the latest commit. Use
+            earlier feedback only to avoid repeating yourself:
             - top-level: `gh pr view ${{ github.event.pull_request.number }} --json comments`
             - inline: `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments`
             Don't repeat a finding that was fixed, or declined with a reason,
-            unless the relevant code has materially changed since. Review the
-            whole PR every run, not only the latest commit: a design problem
-            can be visible only once several commits are together.
+            unless the relevant code has materially changed since.
 
-            ## What to look for, in priority order
-            1. Approach and architecture. Before reading individual lines, ask
-               whether this is the right way to build the feature at all. For
-               example:
-               - Polling, timers or background loops where an event, a check at
-                 request time, or a fixed schedule would do.
-               - Work that grows with the total number of circles, users or
-                 messages rather than with actual activity, and queries inside
-                 per-item loops.
-               - New services, endpoints, secrets, env vars or cross-app calls
-                 that a simpler design wouldn't need.
-               - Feature-specific logic in shared infrastructure, or dev-only
-                 workarounds on production code paths.
-               - Ignoring an existing pattern or helper, or duplicating logic
-                 that already exists.
-               - Far more code or scope than the feature needs.
-               When you flag one, name the simpler alternative and roughly what
-               it would take to switch.
-            2. Correctness: bugs, races, edge cases, and work that's lost or
-               duplicated when something fails or restarts.
-            3. Security and authorization: every read and mutation checks
-               circle/topic/room membership with the existing helpers, no
-               client-supplied ids are trusted, each secret has one purpose, and
-               input is validated.
-            4. Data: migrations and indexes match the queries, Knex queries in
-               apps/realtime-server match apps/chat's schema.prisma, and new
-               socket events are defined in packages/socket-types first.
-            5. Real-time lifecycle: listener leaks, missed cleanup, and races on
-               connect/disconnect. Don't suggest rewriting working lifecycle code
-               for style.
-            6. Tests: call out new non-trivial logic with no tests, especially
-               auth and membership checks. Both apps use vitest with no DOM
-               environment, so never ask for component or hook render tests;
-               suggest extracting the logic into a plain function instead.
+            ## Step 1: collect candidates broadly
+            Go through the change and write down every way it could go wrong.
+            Don't filter yet. In particular, trace:
+            - State over time: what each value is before, during and after
+              every transition, including values that keep their old content
+              when something else changes (same length, same index, same key).
+            - Ordering: effects vs. paint, timers vs. server updates, async
+              writes still in flight when the next request arrives.
+            - Entry points other than the happy path: a page load or reconnect
+              mid-flow, reduced motion, a second tab, a user leaving and
+              returning, a restart or deploy mid-operation, a failed write.
+            - Each fix the PR makes: does it hold in every case, or only the
+              one it was written for?
+            - Authorization: every read and mutation checks circle/topic/room
+              membership with the existing helpers; no client-supplied ids are
+              trusted.
+            - Data: Knex queries in apps/realtime-server match apps/chat's
+              schema.prisma, migrations and indexes match the queries, and new
+              socket events are defined in packages/socket-types first.
+
+            ## Step 2: verify each candidate
+            For each candidate, read the code needed to confirm or disprove
+            it: the concrete inputs and sequence of events that trigger it,
+            and what the user or the data ends up with. Drop a candidate only
+            when the code shows it can't happen. Keep the ones that hold up,
+            even if they're subtle or only happen under timing.
+
+            ## Also worth flagging
+            - Design: when the approach itself causes problems (polling where
+              an event would do, work that grows with all circles or users
+              instead of activity, logic in the wrong layer, duplicating an
+              existing helper), say so briefly with the simpler alternative.
+            - Tests: new non-trivial logic with no tests, especially auth and
+              server state. Both apps use vitest with no DOM environment, so
+              never ask for component or hook render tests; suggest extracting
+              the logic into a plain function instead.
 
             Skip style, naming, formatting and anything a linter or Prettier
-            would catch. Only flag what you can tie to a concrete failure, cost
-            or maintenance burden. When unsure, read more code rather than
-            speculate, and if you're still unsure, leave it out.
+            would catch.
 
             ## How to write comments
-            Each comment must make sense to someone who hasn't read the rest of
-            the review: what's wrong, why it matters (a concrete scenario or
-            cost, with rough numbers when you can estimate them), and the fix.
-            Usually one to three sentences. No preamble, no restating the diff,
+            Each comment must make sense on its own: what's wrong, the
+            concrete scenario that triggers it and what happens, and the fix.
+            Usually two to four sentences. No preamble, no restating the diff,
             no praise.
 
-            - Line-level issues: post an inline comment with
+            - Bugs: post an inline comment with
               `mcp__github_inline_comment__create_inline_comment`
               (`confirmed: true`), one issue per comment, anchored to the exact
               lines.
-            - Approach and architecture issues rarely belong to one line. Put
-              them in the summary's Design section instead of inline.
+            - Design concerns rarely belong to one line. Put them in the
+              summary's Design section instead of inline.
 
             ## Summary comment (required every run)
             Finish with exactly one `gh pr comment`, even when there are no
             findings, in this shape (omit empty sections):
 
-            **Verdict:** Looks good to go | Changes needed before merging
-
-            **Design**
-            - Concern, why it matters, and the suggested alternative (three lines at most)
+            **Verdict:** No bugs found | Changes needed before merging
 
             **Must fix**
             - `file:line`: one line
@@ -118,11 +115,13 @@ jobs:
             **Should fix**
             - `file:line`: one line
 
-            Use "Changes needed" when there's anything under Must fix, or a
-            Design concern worth reworking before merge. Don't list what you
-            checked or explain your process. Only post GitHub comments; don't
-            put the review in a message.
+            **Design**
+            - Concern and the suggested alternative (three lines at most)
+
+            Use "Changes needed" when anything is under Must fix. Don't list
+            what you checked or explain your process. Only post GitHub
+            comments; don't put the review in a message.
 
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*)"
+            --allowedTools "Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*)"
