@@ -34,7 +34,7 @@ export function StatusLine({
       {/* Keyed on the message so each new state fades in. */}
       <div
         key={typeof children === "string" ? children : undefined}
-        className="flex items-center gap-3 duration-300 animate-in fade-in"
+        className="flex max-w-full items-center gap-3 duration-300 animate-in fade-in"
       >
         {leading && (
           // The same outline as at the seat; it's always whoever's turn it is.
@@ -44,7 +44,8 @@ export function StatusLine({
         )}
         <p
           className={cn(
-            "whitespace-nowrap text-[15px] font-semibold uppercase tracking-[0.22em]",
+            // Truncates rather than running off the felt, as a backstop for anything long.
+            "min-w-0 truncate text-[15px] font-semibold uppercase tracking-[0.22em]",
             highlight
               ? "text-amber-300 [text-shadow:0_0_6px_rgba(252,211,77,0.4)]"
               : "text-white/85 [text-shadow:0_0_6px_rgba(255,255,255,0.2)]",
