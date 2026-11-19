@@ -214,10 +214,13 @@ export function BlackjackTable({
   const phase = view?.phase;
   // The chips I've put in my circle this round: picked locally, then sent with "Place bet".
   const [chips, setChips] = useState<number[]>([]);
-  const chipsTotal = chips.reduce((a, b) => a + b, 0);
-  useEffect(() => {
+  // Cleared during render, not in an effect, so last round's chips never light Place bet and Clear for a frame.
+  const [chipsPhase, setChipsPhase] = useState(phase);
+  if (phase !== chipsPhase) {
+    setChipsPhase(phase);
     if (phase === "betting") setChips([]);
-  }, [phase]);
+  }
+  const chipsTotal = chips.reduce((a, b) => a + b, 0);
 
   const minBet = view?.limits.minBet ?? 0;
   const cap = me && view ? Math.min(view.limits.maxBet, me.stack) : 0;
