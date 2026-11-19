@@ -17,6 +17,7 @@ Shared packages live in `packages/`. Each is `@tim/<name>`, builds with `tsc` to
 - **`@tim/crypto`** — AES-256-GCM `encrypt`/`decrypt` for message text at rest (keyed by `CRYPTO_KEY`).
 - **`@tim/user-display`** — Display-name rules (`getInitialDisplayName`, `DISPLAY_NAME_MAX_LENGTH`).
 - **`@tim/casino`** — Cards, shared table shapes (`SEAT_COUNT`, `SeatOccupant`), and the blackjack rules as a pure state machine (`dealRound`, `applyAction`, `dealerDraw`, `settle`) plus the view types the realtime server broadcasts and the chat app renders. No sockets or DB.
+- **`@tim/news`** — RSS/Atom fetching and parsing for circle news feeds: `resolveFeed` (turns a pasted site or feed URL into a feed), `fetchFeed` (conditional re-fetch), the public-hosts-only `safeFetch`, poll scheduling (`nextFetchDelayMinutes`), and the `NewsItemDto` wire shape. Node-only (DNS checks), so the chat app's client code imports only its types.
 
 Only types are shared for data access, not a DB client: the apps' needs (a full ORM with relations and transactions vs. a lean query builder) differ enough that one engine isn't worth it.
 

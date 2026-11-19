@@ -41,6 +41,10 @@ Presence: joining/leaving a topic room re-broadcasts that topic's active users t
 
 `src/casino/` runs live game tables (blackjack today, one per circle) in memory. `table.ts` is the game-agnostic base (seats, watchers, one phase timer, broadcast); `blackjack-table.ts` drives the `@tim/casino` engine through betting → players → dealer → results; `registry.ts` creates tables on first watch and drops them when nobody is watching or seated; `chip-store.ts` is the only place chips are read or written: `settle` when a round settles (a hand's result), and `refill` when a short stack sits down or goes broke (never counted as winnings). Handlers are in `src/event-handlers/casino.ts`: `TableWatch` checks circle membership and that the game is on for the circle (`circle_games`), and sit/stand/act require the socket to already be watching. Watchers are tracked on the table, not in Socket.IO rooms. When a user's last watching socket goes away, they stand up. `src/shutdown.ts` is the only `SIGTERM` handler: it cancels every round (watchers get `TableClosing`), waits up to 5 s for settle writes already in flight, then closes the DB pool and exits.
 
+### News feeds
+
+`src/news/poller.ts` runs on a 30 s timer started in `src/app.ts`: it claims due feeds (`news_feeds.nextFetchAt`, only ones some circle follows; `FOR UPDATE SKIP LOCKED` so two instances never fetch the same feed), re-fetches them with `@tim/news`, stores new items once per feed (`news_items`, unique on feed + guid), and emits `NewsItemsCreated` to each following circle's room. It honors a feed's `<ttl>`, backs off on failures, and hourly prunes items older than 14 days and feeds no circle follows. `src/shutdown.ts` stops it and waits for an in-flight tick. Adding and removing sources happens in the chat app; `NewsSourcesChanged` is only a refetch ping relayed between a circle's sockets.
+
 ### Data flow pattern
 
 Validate the payload → authorize via room membership (above) → run the DB query/mutation in `src/db/` → emit the result to the room with `server.to(roomKey).emit(...)`.
