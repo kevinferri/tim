@@ -341,7 +341,9 @@ export function BlackjackTable({
           onFeltSize={setFelt}
           dealer={
             <div className="flex flex-col items-center" aria-label="Dealer">
-              <div className="relative">
+              {/* Its own stacking context, so the deck can sit under the dealer's cards without dropping under the
+                  felt, and nothing here rises over seat cards flying past. */}
+              <div className="relative isolate">
                 {/* Printed on the felt; the dealt cards cover it. */}
                 <div
                   aria-hidden
@@ -354,23 +356,21 @@ export function BlackjackTable({
                   <TurnGlow count={view.dealer.cards.length} size={cardSize} />
                 )}
                 {view.dealer.cards.length > 0 ? (
-                  // Above the deck, which a long hand (5+ cards) reaches.
-                  <div className="relative z-10">
-                    <ScoredCards
-                      cards={view.dealer.cards}
-                      total={view.dealer.total}
-                      size={cardSize}
-                      dealDelayMs={dealerDelay}
-                    />
-                  </div>
+                  <ScoredCards
+                    cards={view.dealer.cards}
+                    total={view.dealer.total}
+                    size={cardSize}
+                    dealDelayMs={dealerDelay}
+                  />
                 ) : (
                   <div className={cardBox(cardSize)} />
                 )}
                 {/* Well off to the dealer's left, angled like a real shoe, so it doesn't read as a second card.
-                    Anchored to the dealer's center, past a two-card hand, so it stays put as cards are dealt. */}
+                    Anchored to the dealer's center, past a two-card hand, so it stays put as cards are dealt;
+                    beneath the dealer's cards, which a long hand (5+ cards) brings over it. */}
                 <DealShoe
                   size={cardSize}
-                  className="absolute left-1/2 -top-3 rotate-[18deg]"
+                  className="absolute left-1/2 -top-3 -z-10 rotate-[18deg]"
                   style={{ marginLeft: shoeOffset(cardSize) }}
                 />
               </div>
