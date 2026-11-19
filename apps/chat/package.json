@@ -51,6 +51,7 @@
     "@tim/casino": "workspace:*",
     "@tim/commands": "workspace:*",
     "@tim/crypto": "workspace:*",
+    "@tim/news": "workspace:*",
     "@tim/socket-types": "workspace:*",
     "@tim/user-display": "workspace:*",
     "@types/lodash.keyby": "^4.6.9",

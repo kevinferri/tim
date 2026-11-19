@@ -45,3 +45,22 @@ export function isEmojiOnly(str: string) {
     /^(?:(?:\p{RI}\p{RI}|\p{Emoji}(?:\p{Emoji_Modifier}|\u{FE0F}\u{20E3}?|[\u{E0020}-\u{E007E}]+\u{E007F})?(?:\u{200D}\p{Emoji}(?:\p{Emoji_Modifier}|\u{FE0F}\u{20E3}?|[\u{E0020}-\u{E007E}]+\u{E007F})?)*)|[\u{1f900}-\u{1f9ff}\u{2600}-\u{26ff}\u{2700}-\u{27bf}])+$/u;
   return emojiRegex.test(stringToTest) && Number.isNaN(Number(stringToTest));
 }
+
+/**
+ * Readable label for a link in a message: no scheme, "www.", query or fragment,
+ * cut to `max` characters. The full URL stays the link's href.
+ */
+export function shortUrlLabel(url: string, max = 40) {
+  let parsed: URL;
+  try {
+    parsed = new URL(
+      /^[a-z][a-z0-9+.-]*:\/\//i.test(url) ? url : `https://${url}`,
+    );
+  } catch {
+    return url;
+  }
+  const host = parsed.hostname.replace(/^www\./, "");
+  const path = decodeURIComponent(parsed.pathname).replace(/\/+$/, "");
+  const label = `${host}${path}`;
+  return label.length > max ? `${label.slice(0, max - 1)}…` : label;
+}

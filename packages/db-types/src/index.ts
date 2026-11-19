@@ -9,4 +9,7 @@ export type {
   Notification,
   SamePageSock,
   CircleGame,
+  NewsFeed,
+  NewsItem,
+  CircleNewsSource,
 } from "@prisma/client";

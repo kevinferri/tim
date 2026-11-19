@@ -70,6 +70,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { GameRoomButton } from "@/games";
+import { NewsButton } from "@/components/news/news-button";
 
 type Props = {
   topics?: Topic[];
@@ -941,6 +942,9 @@ export const TopicsList = ({
         />
         {circle.id && (
           <GameRoomButton circleId={circle.id} isMinimized={isMinimized} />
+        )}
+        {circle.id && (
+          <NewsButton circleId={circle.id} isMinimized={isMinimized} />
         )}
         {isMinimized && (
           <UpsertCircleForm

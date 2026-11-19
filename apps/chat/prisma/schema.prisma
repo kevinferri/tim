@@ -41,6 +41,7 @@ model User {
   samePagePlayerStats   SamePagePlayerStats[] @relation("samePageStatsForUser")
   wordsmithPlays       WordsmithPlay[]      @relation("wordsmithPlaysByUser")
   gameRoomSeen          GameRoomSeen[]        @relation("gameRoomSeenByUser")
+  newsSourcesAdded      CircleNewsSource[]    @relation("newsSourcesAddedByUser")
 
   @@map(name: "users")
 }
@@ -69,6 +70,7 @@ model Circle {
   games               CircleGame[]          @relation("gamesForCircle")
   gameRoomSeen        GameRoomSeen[]        @relation("gameRoomSeenInCircle")
   notifications       Notification[]        @relation("notificationsForCircle")
+  newsSources         CircleNewsSource[]    @relation("newsSourcesForCircle")
 
   @@index([userId])
 
@@ -373,4 +375,67 @@ model WordsmithPlay {
 
   @@unique([userId, gameDate])
   @@map(name: "wordsmith_plays")
+}
+
+// One row per distinct feed URL, shared by every circle that follows it, so a
+// feed is fetched once no matter how many circles have it. Polled by
+// apps/realtime-server (src/news/).
+model NewsFeed {
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now())
+  url           String    @unique
+  title         String
+  siteUrl       String?
+  imageUrl      String?
+  ttlMinutes    Int?
+  // HTTP validators from the last response, sent back so unchanged feeds return 304.
+  etag          String?
+  lastModified  String?
+  lastFetchedAt DateTime?
+  nextFetchAt   DateTime  @default(now())
+  failureCount  Int       @default(0)
+
+  sources CircleNewsSource[] @relation("sourcesForFeed")
+  items   NewsItem[]         @relation("itemsInFeed")
+
+  @@index([nextFetchAt])
+  @@map(name: "news_feeds")
+}
+
+model CircleNewsSource {
+  circleId  String
+  feedId    String
+  addedById String?
+  createdAt DateTime @default(now())
+
+  circle  Circle   @relation("newsSourcesForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  feed    NewsFeed @relation("sourcesForFeed", fields: [feedId], references: [id], onDelete: Cascade)
+  addedBy User?    @relation("newsSourcesAddedByUser", fields: [addedById], references: [id], onDelete: SetNull)
+
+  @@id([circleId, feedId])
+  @@index([feedId])
+  @@index([addedById])
+  @@map(name: "circle_news_sources")
+}
+
+model NewsItem {
+  id          String   @id @default(uuid())
+  // When we first saw it, which is what "new" means in the feed; publishedAt is the feed's own claim.
+  createdAt   DateTime @default(now())
+  feedId      String
+  guid        String
+  title       String
+  link        String
+  summary     String?
+  imageUrl    String?
+  publishedAt DateTime
+
+  feed NewsFeed @relation("itemsInFeed", fields: [feedId], references: [id], onDelete: Cascade)
+
+  @@unique([feedId, guid])
+  @@index([feedId, publishedAt(sort: Desc)])
+  @@index([createdAt])
+  // Link previews in chat look stories up by URL.
+  @@index([link])
+  @@map(name: "news_items")
 }
