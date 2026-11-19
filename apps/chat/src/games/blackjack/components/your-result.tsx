@@ -6,10 +6,13 @@ import { cn } from "@/lib/utils";
 
 // Bigger wins count up longer and knock more, climbing higher; capped so even the last seat's tally
 // finishes well inside the results phase (RESULTS_MS).
+/** The longest count-up, for a big win. */
+export const TALLY_MAX_MS = 1800;
+
 const tally = (amount: number) => {
   const size = Math.log2(Math.max(amount, 10) / 10); // 0 at 10 chips, about 6.6 at 1,000
   return {
-    ms: Math.min(1800, 700 + size * 170),
+    ms: Math.min(TALLY_MAX_MS, 700 + size * 170),
     knocks: Math.min(28, amount, Math.round(8 + size * 3)),
   };
 };

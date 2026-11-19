@@ -587,6 +587,7 @@ describe("chips", () => {
       net: 500,
     });
     const settleSpy = vi.spyOn(chipStore, "settle");
+    const refillSpy = vi.spyOn(chipStore, "refill");
     const { connect } = setup(chipStore);
     const a = connect("a");
     const b = connect("b");
@@ -596,12 +597,13 @@ describe("chips", () => {
     await sit(b, 1);
     expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
     expect(state(a).seats[1]!.stack).toBe(STARTING_CHIPS + 500);
-    expect(settleSpy).toHaveBeenCalledTimes(1);
-    expect(settleSpy).toHaveBeenCalledWith({
+    // A refill, not a settlement, so it never counts as a hand won.
+    expect(settleSpy).not.toHaveBeenCalled();
+    expect(refillSpy).toHaveBeenCalledTimes(1);
+    expect(refillSpy).toHaveBeenCalledWith({
       circleId: "c1",
       userId: "a",
-      game: "blackjack",
-      net: 850,
+      amount: 850,
     });
     await vi.waitFor(async () =>
       expect(await chipStore.load("c1", "a")).toBe(STARTING_CHIPS),

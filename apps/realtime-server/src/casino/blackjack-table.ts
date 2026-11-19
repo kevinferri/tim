@@ -271,7 +271,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     if (add <= 0) return;
     seat.stack += add;
     this.deps.trackSettle(
-      this.writeSettlement(seat.occupant.userId, add).catch((err) =>
+      this.writeRefill(seat.occupant.userId, add).catch((err) =>
         console.error("casino: refill write failed", err),
       ),
     );
@@ -385,6 +385,15 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       userId,
       game: "blackjack",
       net,
+    });
+  }
+
+  // Kept apart from settlements, so a refill never reads as a won hand.
+  private async writeRefill(userId: string, amount: number) {
+    await this.deps.chipStore.refill({
+      circleId: this.circleId,
+      userId,
+      amount,
     });
   }
 

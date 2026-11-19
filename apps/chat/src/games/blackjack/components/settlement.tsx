@@ -2,17 +2,22 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { BlackjackTableView } from "@tim/casino";
+import { RESULTS_MS, type BlackjackTableView } from "@tim/casino";
 import { ChipStack, breakdown, playTableSound } from "@/games/casino";
+import { TALLY_MAX_MS } from "./your-result";
 
 // The dealer settles one seat at a time from first base, like a real table.
-// Seven seats still finish within the 4s results phase (6 × stagger + pay + hold + collect).
 const SEAT_STAGGER_MS = 340;
 const SWEEP_MS = 800;
 const PAY_MS = 650;
 // The winnings sit on the bet a moment before the whole stack goes to the player.
 const PAY_HOLD_MS = 350;
 const COLLECT_MS = 800;
+// The last seat must start early enough for its chips, and your count-up, to finish within the results phase.
+const LAST_SEAT_START_MS =
+  RESULTS_MS -
+  Math.max(PAY_MS + PAY_HOLD_MS + COLLECT_MS, PAY_MS + TALLY_MAX_MS) -
+  150;
 // A bust is taken just after the busting card lands (a hit waits a beat before it flies; see HIT_PAUSE_MS).
 const BUST_SWEEP_DELAY_MS = 970;
 // A natural is paid a beat after its second card lands, once its 21 has slammed in.
@@ -342,11 +347,20 @@ export function useSettlement(
       !movedRef.current.has(handKey(seat, h)) &&
       !claimed.current.has(handKey(seat, h)) &&
       (hand.payout ?? 0) !== hand.bet;
+    const isBusy = (seat: (typeof view.seats)[number]) =>
+      !!seat?.inRound &&
+      seat.hands.some((hand, h) => pending(seat.seat, hand, h));
+    // Tighter with more seats to settle, so the last one still finishes in time.
+    const busyCount = view.seats.filter(isBusy).length;
+    const stagger =
+      busyCount > 1
+        ? Math.min(SEAT_STAGGER_MS, LAST_SEAT_START_MS / (busyCount - 1))
+        : SEAT_STAGGER_MS;
     let k = 0;
     for (const seat of view.seats) {
       if (!seat?.inRound || !seat.hands.length) continue;
-      const busy = seat.hands.some((hand, h) => pending(seat.seat, hand, h));
-      const start = busy ? k++ * SEAT_STAGGER_MS : 0;
+      const busy = isBusy(seat);
+      const start = busy ? k++ * stagger : 0;
       let shown = start;
       // A win stamps as its winnings land on the bet; anything else as the dealer reaches the seat.
       let stamped = start;
