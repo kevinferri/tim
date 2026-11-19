@@ -43,7 +43,7 @@ Presence: joining/leaving a topic room re-broadcasts that topic's active users t
 
 ### News feeds
 
-`src/news/poller.ts` runs on a 30 s timer started in `src/app.ts`: it claims due feeds (`news_feeds.nextFetchAt`, only ones some circle follows; `FOR UPDATE SKIP LOCKED` so two instances never fetch the same feed), re-fetches them with `@tim/news`, stores new items once per feed (`news_items`, unique on feed + guid), and emits `NewsItemsCreated` to each following circle's room. It honors a feed's `<ttl>`, backs off on failures, and hourly prunes items older than 14 days and feeds no circle follows. `src/shutdown.ts` stops it and waits for an in-flight tick. Adding and removing sources happens in the chat app; `NewsSourcesChanged` is only a refetch ping relayed between a circle's sockets.
+`src/news/poller.ts` runs on a 30 s timer started in `src/app.ts`: it claims due feeds (`news_feeds.nextFetchAt`, only ones some circle follows; `FOR UPDATE SKIP LOCKED` so two instances never fetch the same feed), re-fetches them with `@tim/news`, stores new items once per feed (`news_items`, unique on feed + guid), and emits `NewsItemsCreated` to each following circle's room. It honors a feed's `<ttl>`, backs off on failures, and hourly prunes stories the feed stopped listing over 14 days ago (`news_items.lastSeenAt`, refreshed on every fetch, so a still-listed story is never re-pushed as new) and feeds no circle follows. `src/shutdown.ts` stops it: the tick finishes its current batch, claims no more, and shutdown waits for it. Adding and removing sources happens in the chat app; `NewsSourcesChanged` is only a refetch ping relayed between a circle's sockets.
 
 ### Data flow pattern
 

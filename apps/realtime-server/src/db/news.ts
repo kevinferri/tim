@@ -37,8 +37,8 @@ export async function claimDueFeeds({
 
 /**
  * Inserts items not seen before (by feed + guid) and returns only the new rows.
- * Items older than the retention window are skipped, so one that was pruned
- * can't come back as "new" while the feed still lists it.
+ * Stories dated before the retention window are skipped: they're old news,
+ * and one pruned long ago shouldn't come back as "new".
  */
 export async function insertNewItems({
   feedId,
@@ -66,11 +66,30 @@ export async function insertNewItems({
         publishedAt:
           item.publishedAt && item.publishedAt < now ? item.publishedAt : now,
         createdAt: now,
+        lastSeenAt: now,
       })),
     )
     .onConflict(["feedId", "guid"])
     .ignore()
     .returning("*");
+}
+
+/** Records that the feed still lists these stories (all of them when `guids` is omitted, i.e. a 304). */
+export async function markItemsSeen({
+  feedId,
+  guids,
+  now,
+}: {
+  feedId: string;
+  guids?: string[];
+  now: Date;
+}) {
+  const query = pgClient<NewsItem>("news_items").where({ feedId });
+  if (guids) {
+    if (guids.length === 0) return;
+    query.whereIn("guid", guids);
+  }
+  await query.update({ lastSeenAt: now });
 }
 
 export async function updateFeedAfterFetch(
@@ -100,11 +119,13 @@ export async function getCircleIdsForFeed(feedId: string): Promise<string[]> {
   return rows.map((r: { circleId: string }) => r.circleId);
 }
 
-/** Drops items published before `before`, and feeds no circle follows anymore. */
+/**
+ * Drops stories the feed stopped listing before `before`, and feeds no circle
+ * follows anymore. A story the feed still lists is kept, however old, so it
+ * can't be re-inserted and pushed again as new.
+ */
 export async function pruneNews({ before }: { before: Date }) {
-  await pgClient<NewsItem>("news_items")
-    .where("publishedAt", "<", before)
-    .del();
+  await pgClient<NewsItem>("news_items").where("lastSeenAt", "<", before).del();
   await pgClient("news_feeds")
     .whereNotExists(
       pgClient("circle_news_sources")

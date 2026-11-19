@@ -150,6 +150,27 @@ describe("news poller", () => {
     expect(fetchFeed).toHaveBeenCalledTimes(45);
   });
 
+  it("claims no more batches once stopped", async () => {
+    const circleId = await createCircle();
+    for (let i = 0; i < 45; i++) await createFeed({ circleIds: [circleId] });
+    let poller: ReturnType<typeof createNewsPoller> | null = null;
+    let stopped: Promise<void> | null = null;
+    const fetchFeed = vi.fn(async () => {
+      stopped ??= poller!.stop();
+      return { status: "not-modified" } as const;
+    });
+    poller = createNewsPoller({
+      server: mockServer().server,
+      fetchFeed,
+      now: () => T0,
+    });
+
+    await poller.tick();
+    await stopped;
+
+    expect(fetchFeed).toHaveBeenCalledTimes(20);
+  });
+
   it("skips feeds that aren't due or that no circle follows", async () => {
     const circleId = await createCircle();
     await createFeed({
@@ -210,6 +231,29 @@ describe("news poller", () => {
     expect(emit.mock.calls[0][1].items).toHaveLength(1);
   });
 
+  it("never re-pushes an undated story the feed keeps listing", async () => {
+    const circleId = await createCircle();
+    await createFeed({ circleIds: [circleId] });
+    const { server, emit } = mockServer();
+    const undated = { ...item(1), publishedAt: null };
+    let now = T0;
+    const fetchFeed = vi
+      .fn()
+      .mockResolvedValueOnce(ok([undated]))
+      .mockResolvedValueOnce({ status: "not-modified" })
+      .mockResolvedValueOnce(ok([undated]));
+    const poller = createNewsPoller({ server, fetchFeed, now: () => now });
+
+    await poller.tick();
+    now = new Date(T0.getTime() + 10 * 86_400_000);
+    await poller.tick();
+    now = new Date(T0.getTime() + 20 * 86_400_000);
+    await poller.tick();
+
+    expect(fetchFeed).toHaveBeenCalledTimes(3);
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
   it("prunes old items and feeds nobody follows", async () => {
     const circleId = await createCircle();
     const followed = await createFeed({
@@ -224,9 +268,10 @@ describe("news poller", () => {
         guid: "old",
         title: "Old",
         link: "https://e.com/o",
-        // Seen recently but published long ago: pruned by publish date.
-        publishedAt: new Date(T0.getTime() - 15 * 86_400_000),
+        // The feed stopped listing it more than 14 days ago.
+        publishedAt: T0,
         createdAt: T0,
+        lastSeenAt: new Date(T0.getTime() - 15 * 86_400_000),
       },
       {
         id: crypto.randomUUID(),
@@ -236,6 +281,7 @@ describe("news poller", () => {
         link: "https://e.com/n",
         publishedAt: T0,
         createdAt: T0,
+        lastSeenAt: T0,
       },
     ]);
 

@@ -14,12 +14,15 @@ export type LinkMetadataResponse = {
 };
 
 export const GET = apiRoute(async (request: NextRequest) => {
-  await requireUserId();
+  const userId = await requireUserId();
 
   const url = hydrateUrl(request.nextUrl.searchParams.get("url") ?? "");
   if (!isValidUrl(url)) throw new ApiError(400);
 
-  const stored = await getNewsLinkPreview(url);
+  const topicId = request.nextUrl.searchParams.get("topicId");
+  const stored = topicId
+    ? await getNewsLinkPreview({ url, topicId, userId })
+    : null;
   if (stored) return NextResponse.json(stored satisfies LinkMetadataResponse);
 
   // An unreachable or unparseable page is bad input from the caller, not a server error.

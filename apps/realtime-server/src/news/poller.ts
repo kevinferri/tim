@@ -15,6 +15,7 @@ import {
   claimDueFeeds,
   getCircleIdsForFeed,
   insertNewItems,
+  markItemsSeen,
   pruneNews,
   updateFeedAfterFetch,
 } from "../db/news";
@@ -41,6 +42,8 @@ export function createNewsPoller({
   let timer: NodeJS.Timeout | null = null;
   let running: Promise<void> | null = null;
   let lastPruneAt = 0;
+  // Set by stop(): the claim loop finishes its current batch and claims no more.
+  let stopping = false;
 
   async function pollFeed(feed: NewsFeed) {
     const startedAt = now();
@@ -51,6 +54,7 @@ export function createNewsPoller({
       });
 
       if (result.status === "not-modified") {
+        await markItemsSeen({ feedId: feed.id, now: startedAt });
         await updateFeedAfterFetch(feed.id, {
           lastFetchedAt: startedAt,
           failureCount: 0,
@@ -69,6 +73,11 @@ export function createNewsPoller({
       const created = await insertNewItems({
         feedId: feed.id,
         items: parsed.items.slice(0, MAX_ITEMS_PER_FETCH),
+        now: startedAt,
+      });
+      await markItemsSeen({
+        feedId: feed.id,
+        guids: parsed.items.map((i) => i.guid),
         now: startedAt,
       });
       await updateFeedAfterFetch(feed.id, {
@@ -121,7 +130,7 @@ export function createNewsPoller({
       await pruneNews({ before: retentionCutoff(at) });
     }
     const startedAt = Date.now();
-    for (;;) {
+    while (!stopping) {
       const feeds = await claimDueFeeds({ now: at, limit: CLAIM_BATCH });
       for (let i = 0; i < feeds.length; i += CONCURRENCY) {
         await Promise.all(feeds.slice(i, i + CONCURRENCY).map(pollFeed));
@@ -145,11 +154,13 @@ export function createNewsPoller({
     tick: runTick,
     start() {
       if (timer) return;
+      stopping = false;
       void runTick();
       timer = setInterval(() => void runTick(), TICK_MS);
     },
     /** Stops the timer and waits for a tick already in flight, so its writes land before the pool closes. */
     async stop() {
+      stopping = true;
       if (timer) clearInterval(timer);
       timer = null;
       await running;

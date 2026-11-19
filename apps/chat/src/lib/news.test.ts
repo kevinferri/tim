@@ -100,6 +100,32 @@ describe("addCircleNewsSource", () => {
     expect(await prismaClient.newsItem.count()).toBe(2);
   });
 
+  it("clears an existing feed's failure backoff when a circle follows it", async () => {
+    const user = await createUser("Ann");
+    const [a, b] = [await createCircle(user.id), await createCircle(user.id)];
+    resolveFeed.mockResolvedValue(feed("https://example.com/rss", 1));
+    const source = await addCircleNewsSource({
+      circleId: a.id,
+      userId: user.id,
+      url: "x",
+    });
+    await prismaClient.newsFeed.update({
+      where: { id: source.feedId },
+      data: {
+        failureCount: 6,
+        nextFetchAt: new Date(Date.now() + 6 * 3_600_000),
+      },
+    });
+
+    await addCircleNewsSource({ circleId: b.id, userId: user.id, url: "x" });
+
+    const updated = await prismaClient.newsFeed.findUniqueOrThrow({
+      where: { id: source.feedId },
+    });
+    expect(updated.failureCount).toBe(0);
+    expect(updated.nextFetchAt.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
   it("skips stories older than the retention window and duplicate guids", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
@@ -267,39 +293,97 @@ describe("removeCircleNewsSource", () => {
 });
 
 describe("getNewsLinkPreview", () => {
-  it("previews a stored story's link from its own fields", async () => {
+  async function createTopic(circleId: string, userId: string) {
+    return prismaClient.topic.create({
+      data: { name: "General", circleId, userId },
+    });
+  }
+
+  it("previews a story from a feed the topic's circle follows", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
+    const topic = await createTopic(circle.id, user.id);
     resolveFeed.mockResolvedValue(
       feed("https://feeds.example.com/rss", 2, "A"),
     );
     await addCircleNewsSource({
       circleId: circle.id,
       userId: user.id,
-      url: "example.com",
+      url: "x",
     });
 
-    expect(await getNewsLinkPreview("https://example.com/1")).toEqual({
+    const preview = (url: string) =>
+      getNewsLinkPreview({ url, topicId: topic.id, userId: user.id });
+    expect(await preview("https://example.com/1")).toEqual({
       ogSiteName: "A",
       ogTitle: "Story 1",
       ogDescription: undefined,
       ogImage: undefined,
     });
-    expect(await getNewsLinkPreview("https://example.com/nope")).toBeNull();
+    expect(await preview("https://example.com/nope")).toBeNull();
+  });
+
+  it("ignores stories from feeds the circle doesn't follow", async () => {
+    const user = await createUser("Ann");
+    const following = await createCircle(user.id);
+    const other = await createCircle(user.id);
+    const topic = await createTopic(other.id, user.id);
+    resolveFeed.mockResolvedValue(feed("https://feeds.example.com/rss", 2));
+    await addCircleNewsSource({
+      circleId: following.id,
+      userId: user.id,
+      url: "x",
+    });
+
+    expect(
+      await getNewsLinkPreview({
+        url: "https://example.com/1",
+        topicId: topic.id,
+        userId: user.id,
+      }),
+    ).toBeNull();
   });
 
   it("ignores items from a feed hosted on another site", async () => {
     const user = await createUser("Mallory");
     const circle = await createCircle(user.id);
+    const topic = await createTopic(circle.id, user.id);
     // Claims example.com links (and siteUrl) but was fetched from evil.test.
     resolveFeed.mockResolvedValue(feed("https://evil.test/rss", 2, "Fake"));
     await addCircleNewsSource({
       circleId: circle.id,
       userId: user.id,
-      url: "evil.test",
+      url: "x",
     });
 
-    expect(await getNewsLinkPreview("https://example.com/1")).toBeNull();
+    expect(
+      await getNewsLinkPreview({
+        url: "https://example.com/1",
+        topicId: topic.id,
+        userId: user.id,
+      }),
+    ).toBeNull();
+  });
+
+  it("returns nothing to someone outside the topic's circle", async () => {
+    const member = await createUser("Ann");
+    const outsider = await createUser("Eve");
+    const circle = await createCircle(member.id);
+    const topic = await createTopic(circle.id, member.id);
+    resolveFeed.mockResolvedValue(feed("https://feeds.example.com/rss", 2));
+    await addCircleNewsSource({
+      circleId: circle.id,
+      userId: member.id,
+      url: "x",
+    });
+
+    expect(
+      await getNewsLinkPreview({
+        url: "https://example.com/1",
+        topicId: topic.id,
+        userId: outsider.id,
+      }),
+    ).toBeNull();
   });
 });
 
@@ -310,5 +394,10 @@ describe("siteOf", () => {
     expect(siteOf("feeds.bbci.co.uk")).toBe("bbci.co.uk");
     expect(siteOf("www.bbc.co.uk")).toBe("bbc.co.uk");
     expect(siteOf("news.google.com")).toBe("google.com");
+  });
+
+  it("keeps sites on shared hosts apart", () => {
+    expect(siteOf("attacker.github.io")).toBe("attacker.github.io");
+    expect(siteOf("victim.github.io")).toBe("victim.github.io");
   });
 });

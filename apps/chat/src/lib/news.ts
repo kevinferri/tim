@@ -8,6 +8,7 @@ import {
   type NewsItemDto,
 } from "@tim/news";
 import { Prisma } from "@prisma/client";
+import { getDomain } from "tldts";
 import { prismaClient } from "@/lib/prisma/client";
 import { ApiError } from "@/lib/api";
 
@@ -166,6 +167,13 @@ export async function addCircleNewsSource({
   const existing = await prismaClient.newsFeed.findUnique({
     where: { url: resolved.url },
   });
+  // It was just fetched successfully, so any failure backoff left from earlier is stale.
+  if (existing && (existing.failureCount > 0 || existing.nextFetchAt > now)) {
+    await prismaClient.newsFeed.update({
+      where: { id: existing.id },
+      data: { failureCount: 0, nextFetchAt: now },
+    });
+  }
   const feed =
     existing ??
     (await prismaClient.newsFeed
@@ -274,18 +282,13 @@ export async function removeCircleNewsSource({
 }
 
 /**
- * Site a hostname belongs to, roughly: its last two labels, or three when the
- * second-to-last is a short second-level suffix like "co" in bbc.co.uk.
+ * The registrable domain a hostname belongs to, using the Public Suffix List
+ * including private suffixes, so each *.github.io or *.substack.com site
+ * counts as its own site.
  */
 export function siteOf(hostname: string) {
-  const labels = hostname.toLowerCase().replace(/\.$/, "").split(".");
-  const take =
-    labels.length > 2 &&
-    labels[labels.length - 1].length === 2 &&
-    labels[labels.length - 2].length <= 3
-      ? 3
-      : 2;
-  return labels.slice(-take).join(".");
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  return getDomain(host, { allowPrivateDomains: true }) ?? host;
 }
 
 function hostSite(url: string) {
@@ -299,15 +302,31 @@ function hostSite(url: string) {
 /**
  * Preview fields for a link that is a stored news story, so shared stories
  * preview with their real headline and image (Google News links don't, when
- * scraped). A feed's items are only trusted for links on the site the feed was
- * fetched from, so a self-hosted feed can't attach a fake headline to someone
- * else's URL.
+ * scraped). Only stories from feeds the viewer's circle follows are used, and
+ * only for links on the site the feed was fetched from, so a self-hosted feed
+ * can't put a fake headline on another site's URL anywhere else.
  */
-export async function getNewsLinkPreview(url: string) {
+export async function getNewsLinkPreview({
+  url,
+  topicId,
+  userId,
+}: {
+  url: string;
+  topicId: string;
+  userId: string;
+}) {
   const site = hostSite(url);
   if (!site) return null;
+  const topic = await prismaClient.topic.findFirst({
+    where: { id: topicId, parentCircle: { members: { some: { id: userId } } } },
+    select: { circleId: true },
+  });
+  if (!topic) return null;
   const items = await prismaClient.newsItem.findMany({
-    where: { link: url },
+    where: {
+      link: url,
+      feed: { sources: { some: { circleId: topic.circleId } } },
+    },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: {
