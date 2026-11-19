@@ -14,6 +14,7 @@ export type CasinoRegistryDeps = { chipStore: ChipStore; rng: Rng };
 export class CasinoRegistry {
   private tables = new Map<string, BlackjackTable>();
   private pendingSettles = new Set<Promise<void>>();
+  private pendingByUser = new Map<string, Set<Promise<void>>>();
   closing = false;
 
   constructor(readonly deps: CasinoRegistryDeps) {}
@@ -28,10 +29,7 @@ export class CasinoRegistry {
     const table = new BlackjackTable(circleId, {
       chipStore: this.deps.chipStore,
       rng: this.deps.rng,
-      trackSettle: (write) => {
-        this.pendingSettles.add(write);
-        write.finally(() => this.pendingSettles.delete(write));
-      },
+      trackSettle: (userId, write) => this.track(circleId, userId, write),
       onIdle: () => {
         if (this.get(circleId, game) !== table) return;
         table.dispose();
@@ -40,6 +38,25 @@ export class CasinoRegistry {
     });
     this.tables.set(tableKey(circleId, game), table);
     return table;
+  }
+
+  private track(circleId: string, userId: string, write: Promise<void>) {
+    const key = `${circleId}:${userId}`;
+    const mine = this.pendingByUser.get(key) ?? new Set();
+    this.pendingByUser.set(key, mine.add(write));
+    this.pendingSettles.add(write);
+    write.finally(() => {
+      this.pendingSettles.delete(write);
+      mine.delete(write);
+      if (mine.size === 0 && this.pendingByUser.get(key) === mine)
+        this.pendingByUser.delete(key);
+    });
+  }
+
+  /** Resolves once this user's chip writes in flight have landed, so a load sees them. */
+  async writesSettled(circleId: string, userId: string) {
+    const mine = this.pendingByUser.get(`${circleId}:${userId}`);
+    if (mine) await Promise.allSettled([...mine]);
   }
 
   tableCount() {

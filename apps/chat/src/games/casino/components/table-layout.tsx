@@ -5,6 +5,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { StackDirectionContext } from "./chips";
-import { FeltLogo } from "./table-dressing";
+import { FeltLogo, FeltPrint } from "./table-dressing";
 
 type Props = {
   backHref: string;
@@ -28,8 +29,12 @@ type Props = {
   title: string;
   /** Embroidered into the felt beside the dealer, e.g. the circle's name. */
   logoName?: string;
+  /** The house rules printed on the felt, one on each side below the logos, e.g. what blackjack pays. */
+  feltRules?: [left: string[], right: string[]];
   /** Shown before the title, e.g. the game's icon. */
   titleIcon?: ReactNode;
+  /** Shown just after the title, e.g. a mute button. */
+  titleAction?: ReactNode;
   headerRight?: ReactNode;
   /** Replaces the felt, e.g. while joining or when the game is off. */
   notice?: ReactNode;
@@ -47,6 +52,8 @@ type Props = {
   }[];
   /** The size of a seat's two-card hand, which fixes where bet circles sit. */
   spotSize?: Size;
+  /** The felt's inside size, whenever it changes (e.g. to fit the cards to it). */
+  onFeltSize?: (felt: Size) => void;
   /** Along the dealer's edge of the table, e.g. the chip rack. */
   rack?: ReactNode;
   /** The viewer's controls, always in one spot in the middle of the felt; the game styles them. */
@@ -109,7 +116,7 @@ const CARDS_TO_BET_PX = 14;
 // The dealer's cards' middle, in px from the felt's top (under the rack); seats aim at it.
 const DEALER_MIDDLE_PX = 110;
 
-type Size = { w: number; h: number };
+export type Size = { w: number; h: number };
 type Vec = { x: number; y: number };
 
 /** A seat's avatar center and unit vector toward the dealer's cards, in px within the felt. */
@@ -152,6 +159,7 @@ function SeatBet({ seat, children }: { seat: number; children: ReactNode }) {
   const { x, y, u } = betCenter(seat, felt, spot);
   return (
     <div
+      data-bet-seat={seat}
       className="md:absolute md:-translate-x-1/2 md:-translate-y-1/2"
       style={{ left: x, top: y }}
     >
@@ -211,6 +219,8 @@ const DEALER_SIDE_REACH_PX = 96;
 const LOGO_MAX_W_PX = 224;
 const LOGO_MIN_W_PX = 96;
 const LOGO_MARGIN_PX = 24;
+// Roughly half the logo's drawn height, for spacing things below it.
+const LOGO_HALF_H_PX = 30;
 
 /** The right-hand logo's center x and width: midway between the dealer (and shoe) and first base's bet circle, shrinking to fit. */
 function logoSpot(felt: Size, spot: Size) {
@@ -255,6 +265,53 @@ function useHeight(el: HTMLElement | null) {
   return h;
 }
 
+type Rect = { x0: number; y0: number; x1: number; y1: number };
+const rectAt = (c: Vec, s: Size): Rect => ({
+  x0: c.x - s.w / 2,
+  y0: c.y - s.h / 2,
+  x1: c.x + s.w / 2,
+  y1: c.y + s.h / 2,
+});
+const overlaps = (a: Rect, b: Rect, gap: number) =>
+  a.x0 < b.x1 + gap &&
+  b.x0 < a.x1 + gap &&
+  a.y0 < b.y1 + gap &&
+  b.y0 < a.y1 + gap;
+
+// Clearance kept between neighbors' cards, and from the dealer's edge.
+const FIT_GAP_PX = 8;
+
+/**
+ * Whether seats' hands fit the felt at one card size: `spot` is a two-card hand (which fixes where
+ * the bet circles sit) and `hand` the largest hand to make room for. No two hands touch, no hand
+ * runs into another seat's bet circle, and none reaches the dealer's edge.
+ */
+export function handsFit(felt: Size, seats: number[], spot: Size, hand: Size) {
+  const hands = seats.map((seat) => {
+    const { avatar, toDealer: u } = seatLine(seat, felt);
+    // As SeatSpot places it: the dealer-side edge at a two-card hand's reach.
+    const reach = cardsFarReach(u, spot) - extent(hand, u) / 2;
+    return rectAt(
+      { x: avatar.x + u.x * reach, y: avatar.y + u.y * reach },
+      hand,
+    );
+  });
+  const bets = seats.map((seat) =>
+    rectAt(betCenter(seat, felt, spot), {
+      w: 2 * BET_RADIUS_PX,
+      h: 2 * BET_RADIUS_PX,
+    }),
+  );
+  // Only the dealer's edge bounds a hand; a long one may run out over its own player's armrest.
+  const inside = (r: Rect) => r.y0 >= FIT_GAP_PX;
+  return hands.every(
+    (h, i) =>
+      inside(h) &&
+      hands.every((o, j) => j <= i || !overlaps(h, o, FIT_GAP_PX)) &&
+      bets.every((b, j) => j === i || !overlaps(h, b, FIT_GAP_PX)),
+  );
+}
+
 /** Full-screen, game-agnostic table: header, a U-shaped felt (a grid on phones), and a control dock. */
 export function TableLayout(props: Props) {
   // Elements in state, not refs, so measuring re-attaches whenever one is replaced (after a notice, or a remount).
@@ -273,6 +330,10 @@ export function TableLayout(props: Props) {
     observer.observe(feltEl);
     return () => observer.disconnect();
   }, [feltEl]);
+  const { onFeltSize } = props;
+  useEffect(() => {
+    if (felt.w) onFeltSize?.(felt);
+  }, [felt, onFeltSize]);
 
   // The dealer's lower edge, where the open middle of the felt starts.
   const [dealerEl, setDealerEl] = useState<HTMLDivElement | null>(null);
@@ -302,6 +363,14 @@ export function TableLayout(props: Props) {
 
   const logoName = props.logoName;
   const logo = logoName ? logoSpot(felt, spot) : null;
+  // The rules sit under the logos, centered in the open felt down to the next seats' bet circles.
+  const rulesSpot = props.feltRules ? logoSpot(felt, spot) : null;
+  const rulesY =
+    (DEALER_MIDDLE_PX +
+      LOGO_HALF_H_PX +
+      betCenter(1, felt, spot).y -
+      BET_RADIUS_PX) /
+    2;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -321,10 +390,13 @@ export function TableLayout(props: Props) {
               </span>
             </Link>
           </Button>
-          <h1 className="flex items-center gap-1.5 text-sm font-medium">
-            {props.titleIcon}
-            {props.title}
-          </h1>
+          <div className="flex items-center gap-1">
+            <h1 className="flex items-center gap-1.5 text-sm font-medium">
+              {props.titleIcon}
+              {props.title}
+            </h1>
+            {props.titleAction}
+          </div>
           <div className="flex items-center gap-2 justify-self-end">
             {props.headerRight}
           </div>
@@ -366,6 +438,19 @@ export function TableLayout(props: Props) {
                             left: x,
                             top: DEALER_MIDDLE_PX,
                             width: logo.w,
+                          }}
+                        />
+                      ))}
+                    {rulesSpot &&
+                      props.feltRules!.map((lines, side) => (
+                        <FeltPrint
+                          key={side}
+                          lines={lines}
+                          className="pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 md:block"
+                          style={{
+                            // logoSpot is the right-hand side.
+                            left: side ? rulesSpot.x : felt.w - rulesSpot.x,
+                            top: rulesY,
                           }}
                         />
                       ))}

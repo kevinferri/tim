@@ -1,5 +1,5 @@
 // Shared casino table pieces (game-agnostic); blackjack now, poker later.
-export { TableLayout } from "./components/table-layout";
+export { TableLayout, handsFit, type Size } from "./components/table-layout";
 export {
   OccupantAvatar,
   PlayerAvatar,
@@ -10,6 +10,7 @@ export {
   BetSpot,
   ChipButton,
   ChipLaunchProvider,
+  ChipStack,
   breakdown,
   type BetStack,
 } from "./components/chips";
@@ -22,5 +23,20 @@ export {
   type CardSize,
 } from "./components/playing-card";
 export { useTable, type TableStatus } from "./use-table";
-export { DealProvider, DealShoe, DEAL_EASING, DEAL_MS } from "./deal";
+export {
+  DealProvider,
+  DealShoe,
+  DEAL_EASING,
+  DEAL_MS,
+  useDealingLive,
+} from "./deal";
 export { ChipRack, FeltLogo } from "./components/table-dressing";
+export {
+  playBustSound,
+  playDoubleSound,
+  playYourTurn,
+  playStandSound,
+  playTableSound,
+  playTallyKnock,
+  playTwentyOne,
+} from "./sounds";

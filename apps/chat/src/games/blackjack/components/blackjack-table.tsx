@@ -17,6 +17,7 @@ import {
   ChipRack,
   ChipButton,
   ChipLaunchProvider,
+  DEAL_MS,
   DealProvider,
   DealShoe,
   OccupantAvatar,
@@ -25,18 +26,27 @@ import {
   StatusLine,
   TableLayout,
   cardBox,
+  handsFit,
+  playTableSound,
+  playYourTurn,
   useTable,
   type BetStack,
   type CardSize,
+  type Size,
 } from "@/games/casino";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SpeakerLoudIcon, SpeakerOffIcon } from "@radix-ui/react-icons";
+import { useMessageSound } from "@/components/dashboard/use-message-sound";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { blackjackGame } from "./game";
 import { Hand, ScoredCards, TurnGlow } from "./hand";
+import { ActionBubble, useActionBubbles } from "./action-bubbles";
+import { useSettlement } from "./settlement";
+import { YourResult } from "./your-result";
 
 const CHIPS = [10, 25, 50, 100];
 
@@ -53,16 +63,55 @@ const PLAY_BUTTONS: {
 
 type Act = (action: BlackjackTableAction) => void;
 
-/** Bigger cards at a smaller table; only changes between rounds so cards don't resize mid-hand. */
-function useCardSize(view: BlackjackTableView | null): CardSize {
-  const count = view ? view.seats.filter(Boolean).length : 0;
-  const target: CardSize = count <= 3 ? "2xl" : count <= 6 ? "xl" : "lg";
+// Room is made for a three-card hand, the common case; a fourth at two neighboring seats at once may
+// just touch, and sizing for it would shrink every table's cards.
+const FIT_HAND_CARDS = 3;
+// Phones lay seats out in a grid, three across, where this size fits.
+const PHONE_CARD_SIZE: CardSize = "lg";
+
+const cardSpot = (size: CardSize, cards: number) => {
+  const { w, h, overlap } = CARD_PX[size];
+  return {
+    w: w + (cards - 1) * (w - overlap) + HAND_PAD_PX,
+    h: h + HAND_PAD_PX,
+  };
+};
+
+/** Cards sized to the seated players and this felt; only changes between rounds so cards don't resize mid-hand. */
+function useCardSize(
+  view: BlackjackTableView | null,
+  felt: Size | null,
+): CardSize {
+  const seats = view?.seats.flatMap((s, i) => (s ? [i] : [])) ?? [];
+  const wide =
+    typeof window !== "undefined" &&
+    window.matchMedia("(min-width: 768px)").matches;
+  // One size below the largest that fits: the deck's large corner index reads well a size down,
+  // and it leaves the felt some air.
+  const fits = CARD_SIZES.filter((size) =>
+    handsFit(
+      felt ?? { w: 0, h: 0 },
+      seats,
+      cardSpot(size, 2),
+      cardSpot(size, FIT_HAND_CARDS),
+    ),
+  );
+  const largest = fits.length ? CARD_SIZES.indexOf(fits[fits.length - 1]) : 0;
+  const target: CardSize =
+    !felt || !wide ? PHONE_CARD_SIZE : CARD_SIZES[Math.max(0, largest - 1)];
   const betweenRounds = view?.phase === "waiting" || view?.phase === "betting";
-  // Unset until the first snapshot, so loading mid-round still sizes for that table.
+  // Unset until the first snapshot, so loading mid-round still sizes for that table; and the first
+  // size picked before the felt was measured is corrected as soon as it is, even mid-hand.
   const [size, setSize] = useState<CardSize | null>(null);
-  if (view && size !== target && (size === null || betweenRounds)) {
+  const [measured, setMeasured] = useState(false);
+  if (
+    view &&
+    size !== target &&
+    (size === null || betweenRounds || !measured)
+  ) {
     setSize(target);
   }
+  if (felt && !measured) setMeasured(true);
   return size ?? target;
 }
 
@@ -84,6 +133,16 @@ const HAND_PAD_PX = 8;
 
 // Gap between cards in the opening deal, dealt one at a time like a real dealer.
 const DEAL_STAGGER_MS = 130;
+// A hit or double card waits a beat after the player's "Hit"/"Double" bubble, like a dealer reacting.
+// Visual only: the server's turn timer has already moved on.
+const HIT_PAUSE_MS = 220;
+// Printed on the felt like a real table's; the engine pays 3:2 and the dealer stands on soft 17.
+const FELT_RULES: [string[], string[]] = [
+  ["BLACKJACK", "PAYS 3 TO 2"],
+  ["DEALER MUST STAND", "ON ALL 17s"],
+];
+// How long your natural's payout holds the status before the turn status comes back.
+const NATURAL_RESULT_MS = 3_200;
 
 // Places leftover chips this long before betting closes, so the bet reaches the server in time.
 const AUTO_PLACE_LEAD_MS = 400;
@@ -106,16 +165,62 @@ export function BlackjackTable({
     BlackjackTableView,
     BlackjackTableAction
   >({ circleId, game: "blackjack" });
-  const cardSize = useCardSize(view);
+  const [felt, setFelt] = useState<Size | null>(null);
+  const cardSize = useCardSize(view, felt);
+  // When a seat's second card lands in the opening deal (see dealDelay).
+  const dealtInMs = (seat: number) => {
+    const dealt = view?.seats.flatMap((s, i) => (s?.inRound ? [i] : [])) ?? [];
+    return (dealt.length + 1 + dealt.indexOf(seat)) * DEAL_STAGGER_MS + DEAL_MS;
+  };
+  const settlement = useSettlement(view, status === "live", mySeat, dealtInMs);
+  // Your natural's payout shows in the status for a moment, then the table carries on.
+  const myNaturalStamped =
+    mySeat !== null && settlement.natural(mySeat).stamped;
+  const [naturalShowing, setNaturalShowing] = useState(false);
+  useEffect(() => {
+    if (!myNaturalStamped) return;
+    setNaturalShowing(true);
+    const t = setTimeout(() => setNaturalShowing(false), NATURAL_RESULT_MS);
+    return () => clearTimeout(t);
+  }, [myNaturalStamped]);
+  const bubbles = useActionBubbles(view, status === "live", mySeat);
+  // A player who went broke is refilled as betting opens: the dealer slides them the chips.
+  const stacks = useRef(new Map<number, number>());
+  useEffect(() => {
+    if (!view) return;
+    const before = stacks.current;
+    stacks.current = new Map(
+      view.seats.flatMap((s) => (s ? [[s.seat, s.stack] as const] : [])),
+    );
+    if (status !== "live" || view.phase !== "betting") return;
+    for (const [seat, stack] of stacks.current) {
+      const was = before.get(seat);
+      if (was !== undefined && was < view.limits.minBet && stack > was)
+        settlement.give(seat, stack - was);
+    }
+    // When the table changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+  // A heads-up when the turn comes to you.
+  const yourTurnNow =
+    status === "live" &&
+    view?.phase === "players" &&
+    view.turn?.seat === mySeat;
+  useEffect(() => {
+    if (yourTurnNow) playYourTurn();
+  }, [yourTurnNow]);
   const me = view && mySeat !== null ? view.seats[mySeat] : null;
   const myBet = me?.bet ?? null;
   const phase = view?.phase;
   // The chips I've put in my circle this round: picked locally, then sent with "Place bet".
   const [chips, setChips] = useState<number[]>([]);
-  const chipsTotal = chips.reduce((a, b) => a + b, 0);
-  useEffect(() => {
+  // Cleared during render, not in an effect, so last round's chips never light Place bet and Clear for a frame.
+  const [chipsPhase, setChipsPhase] = useState(phase);
+  if (phase !== chipsPhase) {
+    setChipsPhase(phase);
     if (phase === "betting") setChips([]);
-  }, [phase]);
+  }
+  const chipsTotal = chips.reduce((a, b) => a + b, 0);
 
   const minBet = view?.limits.minBet ?? 0;
   const cap = me && view ? Math.min(view.limits.maxBet, me.stack) : 0;
@@ -137,6 +242,7 @@ export function BlackjackTable({
     backHref: `/circles/${circleId}`,
     backLabel: circleName,
     logoName: circleName,
+    feltRules: FELT_RULES,
     // Same look as the circle in the circles rail.
     backAvatar: (
       <Avatar className="size-5">
@@ -181,7 +287,12 @@ export function BlackjackTable({
   const dealt = view.seats.flatMap((s, i) => (s?.inRound ? [i] : []));
   const perPass = dealt.length + 1;
   const dealDelay = (position: number) => (cardIndex: number) =>
-    cardIndex < 2 ? (cardIndex * perPass + position) * DEAL_STAGGER_MS : 0;
+    cardIndex < 2
+      ? (cardIndex * perPass + position) * DEAL_STAGGER_MS
+      : HIT_PAUSE_MS;
+  // The dealer draws without a pause: nobody asked.
+  const dealerDelay = (cardIndex: number) =>
+    cardIndex < 2 ? dealDelay(dealt.length)(cardIndex) : 0;
 
   const controls = (
     <Dock
@@ -202,32 +313,32 @@ export function BlackjackTable({
       <ChipLaunchProvider>
         <TableLayout
           {...shell}
+          titleAction={<SoundToggle />}
           headerRight={
-            me && (
-              <>
-                <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
-                  {me.stack.toLocaleString()} chips
-                </span>
-                {!me.leaving && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-sm"
-                    onClick={stand}
-                  >
-                    Leave
-                  </Button>
-                )}
-              </>
-            )
+            <>
+              {me && (
+                <>
+                  <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
+                    {me.stack.toLocaleString()} chips
+                  </span>
+                  {!me.leaving && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm"
+                      onClick={stand}
+                    >
+                      Leave
+                    </Button>
+                  )}
+                </>
+              )}
+            </>
           }
           rack={<ChipRack />}
           // A two-card hand plus the hand's padding: fixes where each bet circle sits.
-          spotSize={{
-            w:
-              2 * CARD_PX[cardSize].w - CARD_PX[cardSize].overlap + HAND_PAD_PX,
-            h: CARD_PX[cardSize].h + HAND_PAD_PX,
-          }}
+          spotSize={cardSpot(cardSize, 2)}
+          onFeltSize={setFelt}
           dealer={
             <div className="flex flex-col items-center" aria-label="Dealer">
               <div className="relative">
@@ -247,7 +358,7 @@ export function BlackjackTable({
                     cards={view.dealer.cards}
                     total={view.dealer.total}
                     size={cardSize}
-                    dealDelayMs={dealDelay(dealt.length)}
+                    dealDelayMs={dealerDelay}
                   />
                 ) : (
                   <div className={cardBox(cardSize)} />
@@ -261,41 +372,63 @@ export function BlackjackTable({
             </div>
           }
           status={
-            <StatusLine
-              leading={
-                live &&
-                view.phase === "players" &&
-                view.turn &&
-                view.seats[view.turn.seat] && (
-                  <OccupantAvatar
-                    occupant={view.seats[view.turn.seat]!.occupant}
-                    size="md"
-                  />
-                )
-              }
-              deadline={live ? deadline : null}
-              highlight={live && isMyTurn}
-              duration={
-                view.phase === "betting"
-                  ? BETTING_WINDOW_MS
-                  : view.phase === "players"
-                    ? TURN_MS
-                    : null
-              }
-            >
-              {statusText(view, me, live)}
-            </StatusLine>
+            // Your natural counts up as it's paid; your result takes over once the dealer reaches your seat.
+            playing && me && naturalShowing ? (
+              <YourResult net={naturalNet(me)} blackjack />
+            ) : view.phase === "results" &&
+              me?.inRound &&
+              me.lastNet !== null &&
+              settlement.isStamped(me.seat) ? (
+              <YourResult
+                net={me.lastNet}
+                blackjack={me.hands.some((h) => h.outcome === "blackjack")}
+                // A natural already counted up; a load or reconnect shows the result as is.
+                still={myNaturalStamped || !settlement.animatingResults}
+              />
+            ) : (
+              <StatusLine
+                leading={
+                  live &&
+                  view.phase === "players" &&
+                  view.turn &&
+                  view.seats[view.turn.seat] && (
+                    <OccupantAvatar
+                      occupant={view.seats[view.turn.seat]!.occupant}
+                      size="md"
+                    />
+                  )
+                }
+                deadline={live ? deadline : null}
+                duration={
+                  view.phase === "betting"
+                    ? BETTING_WINDOW_MS
+                    : view.phase === "players"
+                      ? TURN_MS
+                      : null
+                }
+              >
+                {statusText(view, me, live)}
+              </StatusLine>
+            )
           }
           players={view.seats.flatMap((seat, i) => {
             if (!seat) return [];
             const busted =
               seat.hands.length > 0 &&
               seat.hands.every((h) => h.outcome === "bust");
+            // Waits for a live sweep to take the chips; without one (a load, reduced motion) it shows at once.
+            const bustShown =
+              busted &&
+              seat.hands.every((_, h) => !settlement.isSweeping(i, h));
+            const bustLoss =
+              bustShown && -seat.hands.reduce((sum, h) => sum + h.bet, 0);
+            // A natural's winnings show on the avatar once the seat has them, through the end of the round.
+            const naturalWin = settlement.natural(i).paid && naturalNet(seat);
             const dimmedReason = seat.leaving
               ? "Leaving after this round"
               : playing && !seat.inRound
                 ? "Joins next round"
-                : busted
+                : bustShown
                   ? "Busted"
                   : null;
             // Everyone but the current turn fades a little, you included.
@@ -305,13 +438,16 @@ export function BlackjackTable({
                 key: seat.occupant.userId,
                 seat: i,
                 node: (
-                  <PlayerSpot
-                    dimmed={!!dimmedReason && !busted}
-                    waiting={waiting}
-                  >
+                  // The waiting dim goes on the cards inside, so their result badge can sit above the avatar.
+                  <PlayerSpot dimmed={!!dimmedReason && !busted}>
                     <SeatHands
                       seat={seat}
                       view={view}
+                      mine={i === mySeat}
+                      waiting={waiting}
+                      settled={
+                        view.phase === "results" && settlement.isStamped(i)
+                      }
                       dealDelayMs={
                         seat.hands.length === 1
                           ? dealDelay(dealt.indexOf(i))
@@ -332,12 +468,17 @@ export function BlackjackTable({
                     <SeatBet
                       seat={seat}
                       view={view}
+                      isMoved={(h) => settlement.isMoved(i, h)}
+                      isSweeping={(h) => settlement.isSweeping(i, h)}
                       myChips={
                         i === mySeat
                           ? {
                               chips,
                               picking,
-                              takeBack: () => setChips((c) => c.slice(0, -1)),
+                              takeBack: () => {
+                                playChipPickup();
+                                setChips((c) => c.slice(0, -1));
+                              },
                             }
                           : undefined
                       }
@@ -348,11 +489,31 @@ export function BlackjackTable({
                   <PlayerAvatar
                     occupant={seat.occupant}
                     isYou={i === mySeat}
+                    bubble={
+                      bubbles.get(i) && (
+                        // Keyed so each new action pops in afresh.
+                        <ActionBubble
+                          key={bubbles.get(i)!.id}
+                          text={bubbles.get(i)!.text}
+                          ms={bubbles.get(i)!.ms}
+                        />
+                      )
+                    }
                     active={view.phase === "players" && view.turn?.seat === i}
                     result={
-                      view.phase === "results" &&
-                      seat.inRound &&
-                      seat.lastNet !== null && <NetAmount net={seat.lastNet} />
+                      bustLoss ? (
+                        <NetAmount net={bustLoss} mine={i === mySeat} />
+                      ) : naturalWin ? (
+                        <NetAmount net={naturalWin} mine={i === mySeat} />
+                      ) : (
+                        view.phase === "results" &&
+                        seat.inRound &&
+                        // A push shows on the cards only: there's no amount to put here.
+                        !!seat.lastNet &&
+                        settlement.isSettled(i) && (
+                          <NetAmount net={seat.lastNet} mine={i === mySeat} />
+                        )
+                      )
                     }
                     dimmedReason={dimmedReason}
                     waiting={waiting}
@@ -363,24 +524,48 @@ export function BlackjackTable({
           })}
           dock={live && controls}
         />
+        {settlement.layer}
       </ChipLaunchProvider>
     </DealProvider>
   );
 }
 
-function NetAmount({ net }: { net: number }) {
+/** Taking chips back out of your circle: the sound of picking them up. */
+const playChipPickup = () => playTableSound("chipsHandle", { volume: 0.5 });
+
+/** Mutes or unmutes the table, through the app's own sound setting (shared with chat sounds). */
+function SoundToggle() {
+  const on = useMessageSound((s) => s.isMessageSoundEnabled);
+  const toggle = useMessageSound((s) => s.toggleMessageSound);
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-8"
+      onClick={toggle}
+      aria-label={on ? "Mute sounds" : "Unmute sounds"}
+      aria-pressed={!on}
+      title={on ? "Mute sounds" : "Unmute sounds"}
+    >
+      {on ? <SpeakerLoudIcon /> : <SpeakerOffIcon />}
+    </Button>
+  );
+}
+
+/** A seat's win or loss on its avatar (never a push). Your win is gold; others' are green. */
+function NetAmount({ net, mine }: { net: number; mine: boolean }) {
   return (
     <span
       className={cn(
         "text-sm font-semibold tabular-nums",
-        net > 0
-          ? "text-emerald-300"
-          : net < 0
-            ? "text-rose-300"
-            : "text-white/60",
+        net < 0
+          ? "text-rose-300"
+          : mine
+            ? "text-amber-300"
+            : "text-emerald-300",
       )}
     >
-      {net > 0 ? `+${net}` : net < 0 ? `−${-net}` : "Push"}
+      {net > 0 ? `+${net}` : `−${-net}`}
     </span>
   );
 }
@@ -421,13 +606,7 @@ function statusText(
     case "dealer":
       return "Dealer's turn";
     case "results": {
-      if (me?.inRound && me.lastNet !== null) {
-        const net = me.lastNet;
-        const blackjack = me.hands.some((h) => h.outcome === "blackjack");
-        if (net > 0) return `${blackjack ? "Blackjack! " : ""}You won ${net}`;
-        if (net < 0) return `You lost ${-net}`;
-        return "Push";
-      }
+      // Your own result shows as YourResult; this is the dealer's.
       const { cards, total } = view.dealer;
       if (cards.length === 2 && total === 21) return "Dealer has blackjack";
       if (total !== null && total > 21) return "Dealer busts";
@@ -440,11 +619,20 @@ function SeatHands({
   seat,
   view,
   size,
+  settled,
+  waiting,
+  mine,
   dealDelayMs,
 }: {
   seat: BlackjackSeatView;
+  /** Your seat: a win stamps in gold instead of green. */
+  mine: boolean;
   view: BlackjackTableView;
   size: CardSize;
+  /** Someone else's turn: the cards dim a little. */
+  waiting: boolean;
+  /** The seat's chips have settled at the end of the hand, so its results can show. */
+  settled: boolean;
   dealDelayMs?: (cardIndex: number) => number;
 }) {
   const playing = view.phase !== "waiting" && view.phase !== "betting";
@@ -462,13 +650,22 @@ function SeatHands({
           size={size}
           dealDelayMs={dealDelayMs}
           glow={playingHand === h}
+          settled={settled}
+          waiting={waiting}
+          mine={mine}
         />
       ))}
     </div>
   );
 }
 
-/** One stack per hand: a split gives each hand its own, a double makes that hand's stack taller. */
+/** A natural's winnings (its payout less the bet). */
+function naturalNet(seat: BlackjackSeatView) {
+  const hand = seat.hands[0];
+  return hand ? (hand.payout ?? 0) - hand.bet : 0;
+}
+
+/** One stack per hand: a split gives each hand its own, a double puts a second stack beside it. */
 function betStacks(seat: BlackjackSeatView, chips?: number[]): BetStack[] {
   const matching = (amount: number) =>
     chips?.reduce((a, b) => a + b, 0) === amount ? chips : undefined;
@@ -477,14 +674,13 @@ function betStacks(seat: BlackjackSeatView, chips?: number[]): BetStack[] {
       ? []
       : [{ amount: seat.bet, chips: matching(seat.bet) }];
   }
-  // One stack per hand; a double piles the same chips again on top, labelled with the new total.
+  // One stack per hand; a double places a second, equal stack beside it.
   return seat.hands.map((hand) => {
     const base = hand.doubled ? hand.bet / 2 : hand.bet;
-    const chipsOfBase = matching(base) ?? breakdown(base);
     return {
-      amount: hand.bet,
-      chips: hand.doubled ? [...chipsOfBase, ...chipsOfBase] : chipsOfBase,
-      dimmed: hand.outcome === "bust",
+      amount: base,
+      chips: matching(base) ?? breakdown(base),
+      doubled: hand.doubled,
     };
   });
 }
@@ -493,10 +689,16 @@ function betStacks(seat: BlackjackSeatView, chips?: number[]): BetStack[] {
 function SeatBet({
   seat,
   view,
+  isMoved,
+  isSweeping,
   myChips,
 }: {
   seat: BlackjackSeatView;
   view: BlackjackTableView;
+  /** This hand's chips have been swept or paid out at the end of the round. */
+  isMoved: (hand: number) => boolean;
+  /** This hand busted and its chips are about to be swept. */
+  isSweeping: (hand: number) => boolean;
   myChips?: { chips: number[]; picking: boolean; takeBack: () => void };
 }) {
   const playing = view.phase !== "waiting" && view.phase !== "betting";
@@ -509,13 +711,18 @@ function SeatBet({
         ? pickedTotal
           ? [{ amount: pickedTotal, chips: myChips!.chips }]
           : []
-        : betStacks(seat, myChips?.chips);
+        : betStacks(seat, myChips?.chips).map((s, h) => ({
+            ...s,
+            hidden: isMoved(h),
+            dimmed: seat.hands[h]?.outcome === "bust" && !isSweeping(h),
+          }));
   return (
     <BetSpot
       stacks={stacks}
       flyIn={picking}
       onClick={picking && pickedTotal ? myChips!.takeBack : undefined}
       locked={seat.bet !== null}
+      mine={!!myChips}
     />
   );
 }
@@ -608,6 +815,7 @@ function BetBuilder({
         act({ type: "bet", amount: total });
       } else if (e.key === "Backspace" && total > 0) {
         e.preventDefault();
+        playChipPickup();
         setChips((c) => c.slice(0, -1));
       }
     };
@@ -662,7 +870,10 @@ function BetBuilder({
           keyLabel="⌫"
           label="Clear"
           on={total > 0}
-          onClick={() => setChips([])}
+          onClick={() => {
+            playChipPickup();
+            setChips([]);
+          }}
         />
       </div>
     </div>

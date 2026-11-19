@@ -10,7 +10,12 @@ import {
   type RefObject,
 } from "react";
 import { cn } from "@/lib/utils";
-import { cardBox, type CardSize } from "./components/playing-card";
+import {
+  cardBox,
+  preloadCardFaces,
+  type CardSize,
+} from "./components/playing-card";
+import { playTableSound, preloadTableSounds } from "./sounds";
 
 export const DEAL_MS = 600;
 export const DEAL_EASING = "cubic-bezier(0.2, 0.7, 0.3, 1)";
@@ -33,6 +38,10 @@ type ProviderProps = {
 export function DealProvider({ live, snapshot, children }: ProviderProps) {
   const shoe = useRef<HTMLDivElement>(null);
   const enabled = useRef(false);
+  useEffect(() => {
+    preloadCardFaces();
+    preloadTableSounds();
+  }, []);
   // Runs after the cards' layout effects, so a snapshot's own cards see the previous value.
   useEffect(() => {
     enabled.current = live && snapshot != null;
@@ -70,6 +79,12 @@ export function DealShoe({
   );
 }
 
+/** Reads whether cards mounting now are being dealt live (not a load or reconnect's snapshot). */
+export function useDealingLive() {
+  const ctx = useContext(DealContext);
+  return () => !!ctx?.enabled.current;
+}
+
 /** Whether cards here fly from a shoe (otherwise they fade in). */
 export const useInDeal = () => useContext(DealContext) !== null;
 
@@ -94,6 +109,11 @@ export function useDealFlight(ref: RefObject<HTMLElement | null>, delayMs = 0) {
     };
     // Hidden until the hand has re-centered around this card (a parent re-renders after this effect).
     const flight = el.animate([{ opacity: 0 }, { opacity: 0 }], timing);
+    // The card's "shhk" as it leaves the shoe; a timeout, so dev's double mount cancels the extra one.
+    const sound = setTimeout(
+      () => playTableSound("cardSlide", { volume: 0.4 }),
+      delayMs,
+    );
     const frame = requestAnimationFrame(() => {
       const from = shoe.getBoundingClientRect();
       const to = el.getBoundingClientRect();
@@ -110,6 +130,7 @@ export function useDealFlight(ref: RefObject<HTMLElement | null>, delayMs = 0) {
     // Dev's double mount runs this twice; cancel so only one flight plays.
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(sound);
       flight.cancel();
     };
     // Mount only: a card flies once, when it's dealt.

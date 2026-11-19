@@ -39,8 +39,8 @@ type BlackjackSeat = BaseSeat & {
 export type BlackjackTableDeps = {
   chipStore: ChipStore;
   rng: Rng;
-  /** Lets shutdown await settle writes already in flight. */
-  trackSettle: (write: Promise<void>) => void;
+  /** Lets shutdown, and the user's next sit, await chip writes already in flight. */
+  trackSettle: (userId: string, write: Promise<void>) => void;
   onIdle: () => void;
 };
 
@@ -97,6 +97,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       inRound: false,
       lastNet: null,
     };
+    this.refill(this.seats[seat]!);
     if (this.phase === "waiting") this.enterBetting();
     else this.broadcast();
     return null;
@@ -257,8 +258,24 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     for (const [, seat] of this.occupiedSeats()) {
       seat.bet = null;
       seat.inRound = false;
+      // Broke: refilled between hands, so no one is stuck at the table.
+      if (seat.stack < MIN_BET) this.refill(seat);
     }
     this.broadcast();
+  }
+
+  // Chips are play money (stats, not the balance, are the record): sitting down, or going broke at the
+  // table, refills a stack below the starting one up to it.
+  private refill(seat: BlackjackSeat) {
+    const add = this.deps.chipStore.starting - seat.stack;
+    if (add <= 0) return;
+    seat.stack += add;
+    this.deps.trackSettle(
+      seat.occupant.userId,
+      this.writeRefill(seat.occupant.userId, add).catch((err) =>
+        console.error("casino: refill write failed", err),
+      ),
+    );
   }
 
   private enterWaiting() {
@@ -351,6 +368,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       seat.stack += result.payout;
       seat.lastNet = result.net;
       this.deps.trackSettle(
+        result.userId,
         this.writeSettlement(result.userId, result.net).catch((err) =>
           console.error("casino: chip settle failed", err),
         ),
@@ -369,6 +387,15 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       userId,
       game: "blackjack",
       net,
+    });
+  }
+
+  // Kept apart from settlements, so a refill never reads as a won hand.
+  private async writeRefill(userId: string, amount: number) {
+    await this.deps.chipStore.refill({
+      circleId: this.circleId,
+      userId,
+      amount,
     });
   }
 

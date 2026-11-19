@@ -115,10 +115,31 @@ module.exports = {
             opacity: "0.9",
           },
         },
+        // A hand's total reaching 21: dropped in large, slammed down a little past size, settling.
+        "total-slam": {
+          "0%": { transform: "scale(1.9)", opacity: "0" },
+          "55%": { transform: "scale(0.9)", opacity: "1" },
+          "78%": { transform: "scale(1.06)" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        // A player's action bubble: rises out of the avatar, holds, then fades.
+        "action-bubble": {
+          "0%": { transform: "translateY(14px) scale(0.6)", opacity: "0" },
+          "12%": { transform: "translateY(-2px) scale(1.06)", opacity: "1" },
+          "20%": { transform: "translateY(0) scale(1)", opacity: "1" },
+          "80%": { transform: "translateY(0) scale(1)", opacity: "1" },
+          "100%": { transform: "translateY(-2px) scale(1)", opacity: "0" },
+        },
+        // A won amount landing: up from small, a little past full size, then settling.
+        "result-pop": {
+          "0%": { transform: "scale(0.8)", opacity: "0" },
+          "60%": { transform: "scale(1.08)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
         // The typing pulse, grown and shrunk less: for a casino seat whose turn it is.
         "turn-pulse": {
-          "0%, 100%": { transform: "scale(0.92)", opacity: "0.9" },
-          "50%": { transform: "scale(1)", opacity: "1" },
+          "0%, 100%": { transform: "scale(0.92)" },
+          "50%": { transform: "scale(1)" },
         },
         // Ease-in falling, ease-out rising, so each hop reads as gravity.
         "die-bounce": {
@@ -255,6 +276,9 @@ module.exports = {
         "accordion-up": "accordion-up 0.2s ease-out",
         typing: "typing 1s ease-in-out infinite",
         "turn-pulse": "turn-pulse 1s ease-in-out infinite",
+        "result-pop": "result-pop 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both",
+        "action-bubble": "action-bubble 1.5s ease-out both",
+        "total-slam": "total-slam 0.42s cubic-bezier(0.3, 0.7, 0.4, 1) both",
       },
     },
   },

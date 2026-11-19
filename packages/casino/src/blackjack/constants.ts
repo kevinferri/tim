@@ -11,4 +11,6 @@ export const RESHUFFLE_BELOW = (SHOE_DECKS * 52) / 4;
 /** Pause between dealer cards. */
 export const DEALER_DRAW_MS = 800;
 /** How long round outcomes stay up before the next betting phase. */
-export const RESULTS_MS = 4_000;
+
+// Long enough for the dealer to settle seat by seat and the last seat's win to finish counting up.
+export const RESULTS_MS = 4_200;

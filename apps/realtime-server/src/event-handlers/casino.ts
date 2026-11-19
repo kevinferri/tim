@@ -148,6 +148,8 @@ export function registerCasinoHandlers(
 
     let stack: number;
     try {
+      // A settlement still being written would otherwise load stale and be refilled over.
+      await registry.writesSettled(ref.circleId, id);
       stack = await registry.deps.chipStore.load(ref.circleId, id);
     } catch (err) {
       console.error("casino: chip load failed", err);
