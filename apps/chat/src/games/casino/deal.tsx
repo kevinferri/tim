@@ -6,6 +6,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -58,10 +59,12 @@ export function DealProvider({ live, snapshot, children }: ProviderProps) {
 export function DealShoe({
   size,
   className,
+  style,
 }: {
   /** Matches the cards on the table. */
   size: CardSize;
   className?: string;
+  style?: CSSProperties;
 }) {
   const ctx = useContext(DealContext);
   return (
@@ -75,6 +78,7 @@ export function DealShoe({
         "shadow-[1px_1px_0_#e7e5e4,2px_2px_0_#d6d3d1,3px_3px_0_#a8a29e,5px_7px_12px_rgba(0,0,0,0.45)]",
         className,
       )}
+      style={style}
     />
   );
 }

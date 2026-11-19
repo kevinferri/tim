@@ -363,10 +363,12 @@ export function BlackjackTable({
                 ) : (
                   <div className={cardBox(cardSize)} />
                 )}
-                {/* Well off to the dealer's left, angled like a real shoe, so it doesn't read as a second card. */}
+                {/* Well off to the dealer's left, angled like a real shoe, so it doesn't read as a second card.
+                    Anchored to the dealer's center, past a two-card hand, so it stays put as cards are dealt. */}
                 <DealShoe
                   size={cardSize}
-                  className="absolute left-full -top-3 ml-24 rotate-[18deg]"
+                  className="absolute left-1/2 -top-3 rotate-[18deg]"
+                  style={{ marginLeft: shoeOffset(cardSize) }}
                 />
               </div>
             </div>
@@ -666,6 +668,14 @@ function naturalNet(seat: BlackjackSeatView) {
 }
 
 /** One stack per hand: a split gives each hand its own, a double puts a second stack beside it. */
+// Gap between the dealer's two-card hand and the shoe.
+const SHOE_GAP_PX = 96;
+/** From the dealer's center to the shoe's left edge: half a two-card hand, plus the gap. */
+const shoeOffset = (size: CardSize) => {
+  const { w, overlap } = CARD_PX[size];
+  return (2 * w - overlap) / 2 + SHOE_GAP_PX;
+};
+
 function betStacks(seat: BlackjackSeatView, chips?: number[]): BetStack[] {
   const matching = (amount: number) =>
     chips?.reduce((a, b) => a + b, 0) === amount ? chips : undefined;
