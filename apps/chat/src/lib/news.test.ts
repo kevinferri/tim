@@ -271,6 +271,32 @@ describe("getCircleNews", () => {
     expect(onlyA.items).toHaveLength(20);
   });
 
+  it("reports the newest arrival even when it's not on page 1", async () => {
+    const user = await createUser("Ann");
+    const circle = await createCircle(user.id);
+    resolveFeed.mockResolvedValue(feed("https://a.com/rss", 40));
+    const source = await addCircleNewsSource({
+      circleId: circle.id,
+      userId: user.id,
+      url: "a.com",
+    });
+    // Stored just now but published hours ago, so it sorts past the first 30.
+    const late = await prismaClient.newsItem.create({
+      data: {
+        feedId: source.feedId,
+        guid: "late",
+        title: "Late arrival",
+        link: "https://example.com/late",
+        publishedAt: new Date(Date.now() - 5 * 3_600_000),
+        createdAt: new Date(Date.now() + 1_000),
+      },
+    });
+
+    const res = await getCircleNews({ circleId: circle.id, userId: user.id });
+    expect(res.items.some((i) => i.id === late.id)).toBe(false);
+    expect(res.newestCreatedAt).toBe(late.createdAt.toISOString());
+  });
+
   it("only lists stories from the last 24 hours", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);

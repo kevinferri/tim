@@ -7,11 +7,11 @@ import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useSocketContext } from "@/components/socket/socket-provider";
 import {
   fetchNews,
-  newestCreatedAt,
   newerThanListed,
   newsQueryKey,
   prependNewsItems,
   type NewsCache,
+  type NewsItemDto,
 } from "./news-api";
 import { useNewsSeen, useNewsStore } from "./news-store";
 
@@ -28,9 +28,18 @@ export function useNewsFeed(circleId: string, feedId: string | null = null) {
   });
 }
 
-/** True when the circle has items newer than the newest one the viewer has seen. */
-export function useHasUnreadNews(circleId: string) {
+/** When the circle's newest story arrived: from the API (which looks past page 1) or from a live push since. */
+export function useNewestArrival(circleId: string): string | null {
   const { data } = useNewsFeed(circleId);
+  const fromApi = data?.pages[0]?.newestCreatedAt ?? null;
+  const fromLive = useNewsStore((s) => s.liveNewest[circleId] ?? null);
+  if (!fromApi) return fromLive;
+  return fromLive && fromLive > fromApi ? fromLive : fromApi;
+}
+
+/** True when a story arrived after the newest one the viewer has seen. */
+export function useHasUnreadNews(circleId: string) {
+  const newest = useNewestArrival(circleId);
   const seen = useNewsSeen(circleId);
   // The server never has the feed or what this browser has seen, so render no dot until hydrated.
   const hydrated = useSyncExternalStore(
@@ -38,7 +47,6 @@ export function useHasUnreadNews(circleId: string) {
     () => true,
     () => false,
   );
-  const newest = newestCreatedAt(data?.pages[0]?.items);
   return hydrated && Boolean(newest && (!seen || newest > seen));
 }
 
@@ -59,12 +67,35 @@ export function useNewsLiveUpdates(circleId: string) {
     };
   }, [socket, queryClient, circleId]);
 
+  // A refetch that read the DB before a push landed would overwrite it, so
+  // recently merged pushes are re-applied whenever a fetch of this circle's
+  // news completes (the merge skips what's already listed).
+  const mergeLive = (items: NewsItemDto[]) => {
+    if (items.length === 0) return;
+    rememberLive(circleId, items);
+    prependNewsItems(queryClient, circleId, items);
+  };
+
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((event) => {
+        if (event.type !== "updated" || event.action.type !== "success") return;
+        if ("manual" in event.action && event.action.manual) return;
+        const [scope, keyCircleId] = event.query.queryKey;
+        if (scope !== "news" || keyCircleId !== circleId) return;
+        const recent = recentLive(circleId);
+        if (recent.length) prependNewsItems(queryClient, circleId, recent);
+      }),
+    [queryClient, circleId],
+  );
+
   useSocketHandler<NewsItemsCreatedPayload>(
     SocketEvent.NewsItemsCreated,
     (payload) => {
       if (payload.circleId !== circleId || payload.items.length === 0) return;
+      useNewsStore.getState().noteLive(circleId, payload.items);
       if (!useNewsStore.getState().open) {
-        prependNewsItems(queryClient, circleId, payload.items);
+        mergeLive(payload.items);
         return;
       }
       // While reading, only stories that will appear at the top of the view on screen wait behind the pill; the rest go straight to their place.
@@ -75,11 +106,7 @@ export function useNewsLiveUpdates(circleId: string) {
         payload.items.filter((i) => feedId === null || i.feedId === feedId),
       );
       const topIds = new Set(top.map((i) => i.id));
-      prependNewsItems(
-        queryClient,
-        circleId,
-        payload.items.filter((i) => !topIds.has(i.id)),
-      );
+      mergeLive(payload.items.filter((i) => !topIds.has(i.id)));
       if (top.length > 0) useNewsStore.getState().addPending(circleId, top);
     },
   );
@@ -91,4 +118,25 @@ export function useNewsLiveUpdates(circleId: string) {
       void queryClient.invalidateQueries({ queryKey: ["news", circleId] });
     },
   );
+}
+
+const RECENT_LIVE_MS = 5 * 60_000;
+const recentByCircle = new Map<string, { item: NewsItemDto; at: number }[]>();
+
+function rememberLive(circleId: string, items: NewsItemDto[]) {
+  const now = Date.now();
+  const kept = (recentByCircle.get(circleId) ?? []).filter(
+    (r) => now - r.at < RECENT_LIVE_MS,
+  );
+  recentByCircle.set(circleId, [
+    ...kept,
+    ...items.map((item) => ({ item, at: now })),
+  ]);
+}
+
+function recentLive(circleId: string): NewsItemDto[] {
+  const now = Date.now();
+  return (recentByCircle.get(circleId) ?? [])
+    .filter((r) => now - r.at < RECENT_LIVE_MS)
+    .map((r) => r.item);
 }

@@ -53,6 +53,7 @@ describe("mergeLiveItems", () => {
     sources: [],
     items,
     nextCursor,
+    newestCreatedAt: null,
   });
   const ids = (pages: { items: { id: string }[] }[] | null) =>
     pages?.map((p) => p.items.map((i) => i.id));

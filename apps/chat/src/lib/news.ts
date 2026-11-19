@@ -33,6 +33,12 @@ export type NewsResponse = {
   items: NewsItemDto[];
   /** Pass back as `cursor` for the next (older) page; null when there is none. */
   nextCursor: string | null;
+  /**
+   * When the newest story in this view arrived, for the unread dot. Pages are
+   * ordered by publish date, so a story stored now but dated hours earlier
+   * may not be on page 1.
+   */
+  newestCreatedAt: string | null;
 };
 
 function encodeCursor(item: { publishedAt: Date; id: string }) {
@@ -98,31 +104,40 @@ export async function getCircleNews({
       ? [feedId]
       : []
     : sources.map((s) => s.feedId);
-  if (feedIds.length === 0) return { sources, items: [], nextCursor: null };
+  if (feedIds.length === 0) {
+    return { sources, items: [], nextCursor: null, newestCreatedAt: null };
+  }
 
+  const live = {
+    feedId: { in: feedIds },
+    // The feed hosts a story for 24 hours; this hides it on time even before the poller erases it.
+    publishedAt: { gte: storyCutoff(new Date()) },
+    expiredAt: null,
+  };
   const after = cursor ? decodeCursor(cursor) : null;
-  const rows = await prismaClient.newsItem.findMany({
-    where: {
-      feedId: { in: feedIds },
-      // The feed hosts a story for 24 hours; this hides it on time even before the poller erases it.
-      publishedAt: { gte: storyCutoff(new Date()) },
-      expiredAt: null,
-      ...(after && {
-        OR: [
-          { publishedAt: { lt: after.publishedAt } },
-          { publishedAt: after.publishedAt, id: { lt: after.id } },
-        ],
-      }),
-    },
-    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-    take: PAGE_SIZE + 1,
-  });
+  const [rows, newest] = await Promise.all([
+    prismaClient.newsItem.findMany({
+      where: {
+        ...live,
+        ...(after && {
+          OR: [
+            { publishedAt: { lt: after.publishedAt } },
+            { publishedAt: after.publishedAt, id: { lt: after.id } },
+          ],
+        }),
+      },
+      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+      take: PAGE_SIZE + 1,
+    }),
+    prismaClient.newsItem.aggregate({ where: live, _max: { createdAt: true } }),
+  ]);
   const page = rows.slice(0, PAGE_SIZE);
   return {
     sources,
     items: page.map(toNewsItemDto),
     nextCursor:
       rows.length > PAGE_SIZE ? encodeCursor(page[page.length - 1]) : null,
+    newestCreatedAt: newest._max.createdAt?.toISOString() ?? null,
   };
 }
 

@@ -130,16 +130,6 @@ export function prependNewsItems(
   }
 }
 
-export function newestCreatedAt(
-  items: NewsItemDto[] | undefined,
-): string | null {
-  let newest: string | null = null;
-  for (const item of items ?? []) {
-    if (!newest || item.createdAt > newest) newest = item.createdAt;
-  }
-  return newest;
-}
-
 /** Suggested sources, mixed across subjects. URLs are the feeds' final addresses, so they match what a followed source stores. */
 export const NEWS_PRESETS: { name: string; url: string }[] = [
   { name: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },

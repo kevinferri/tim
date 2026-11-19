@@ -31,7 +31,6 @@ import {
   addNewsSource,
   googleNewsTopicUrl,
   looksLikeUrl,
-  newestCreatedAt,
   prependNewsItems,
   removeNewsSource,
   type NewsItemDto,
@@ -40,7 +39,7 @@ import {
 import { NewsGlyph } from "./news-glyph";
 import { useNewsStore } from "./news-store";
 import { NewsShare, type NewsTopic } from "./news-share";
-import { useNewsFeed, useNewsLiveUpdates } from "./use-news";
+import { useNewestArrival, useNewsFeed, useNewsLiveUpdates } from "./use-news";
 
 type View = "feed" | "sources" | "share";
 
@@ -73,7 +72,7 @@ export function NewsSheet({
 
   const all = useNewsFeed(circleId);
   const sources = all.data?.pages[0]?.sources ?? [];
-  const newest = newestCreatedAt(all.data?.pages[0]?.items);
+  const newest = useNewestArrival(circleId);
   // A refetch (reconnect, another member changing sources) may already have listed some held stories.
   // Counted against the view on screen; held stories were already picked for it.
   const visible = useNewsFeed(circleId, feedId);
