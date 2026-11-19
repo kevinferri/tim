@@ -21,14 +21,21 @@ if (typeof window !== "undefined") {
   window.addEventListener("keydown", unlock, { capture: true });
 }
 
+// Whether a user gesture is happening right now; without the API (older browsers), assume not.
+const inGesture = () =>
+  typeof navigator !== "undefined" && !!navigator.userActivation?.isActive;
+
 /**
- * Runs `play` with the shared context as soon as a sound may play: right away if it's running, or once
- * it finishes starting up (the gesture that unlocks it can be the very one that triggers the sound).
+ * Runs `play` with the shared context if a sound may play: right away if it's running, or once it
+ * finishes starting up when a gesture is unlocking it (that gesture can be the very one that triggers the
+ * sound). Otherwise the sound is dropped, so someone who watches before clicking doesn't get every
+ * sound so far at once on their first click.
  */
 export function whenReady(play: (ctx: AudioContext) => void) {
   const ctx = audioContext();
   if (!ctx || !useMessageSound.getState().isMessageSoundEnabled) return;
   if (ctx.state === "running") return play(ctx);
+  if (!inGesture()) return;
   void ctx.resume().then(
     () => ctx.state === "running" && play(ctx),
     () => undefined,
