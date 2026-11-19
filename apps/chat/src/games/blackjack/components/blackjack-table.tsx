@@ -387,10 +387,16 @@ function NetAmount({ net }: { net: number }) {
 
 // The status is one wide-tracked line, so a long name is cut short to keep "'s turn" on the felt.
 const STATUS_NAME_MAX = 12;
-const truncateName = (name: string) =>
-  name.length > STATUS_NAME_MAX
-    ? `${name.slice(0, STATUS_NAME_MAX - 1).trimEnd()}…`
+// By code points, so an emoji at the cut isn't split in half.
+const truncateName = (name: string) => {
+  const chars = Array.from(name);
+  return chars.length > STATUS_NAME_MAX
+    ? `${chars
+        .slice(0, STATUS_NAME_MAX - 1)
+        .join("")
+        .trimEnd()}…`
     : name;
+};
 
 function statusText(
   view: BlackjackTableView,
@@ -409,8 +415,8 @@ function statusText(
     case "players": {
       if (!view.turn) return "";
       if (me && view.turn.seat === me.seat) return "Your turn";
-      const name = view.seats[view.turn.seat]?.occupant.displayName ?? "";
-      return `${truncateName(name)}'s turn`;
+      const name = view.seats[view.turn.seat]?.occupant.displayName;
+      return name ? `${truncateName(name)}'s turn` : "";
     }
     case "dealer":
       return "Dealer's turn";

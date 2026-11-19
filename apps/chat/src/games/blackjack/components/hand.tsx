@@ -156,14 +156,14 @@ export function TurnGlow({ count, size }: { count: number; size: CardSize }) {
   const cardsW = px.w + (count - 1) * (px.w - px.overlap);
   const ref = useRef<HTMLDivElement>(null);
 
-  // A turn can start while its cards are still flying in (the opening deal), so fade in once they've all landed.
-  // A passive effect, so it runs after the cards' layout effects have started their flights.
+  // Fades in once the cards' flights land; passive, so it runs after their layout effects start them.
   useEffect(() => {
     const el = ref.current;
     if (!el?.parentElement) return;
     const landing = el.parentElement
       .getAnimations({ subtree: true })
-      .filter((a) => (a.effect as KeyframeEffect | null)?.target !== el)
+      // Only the cards' Web Animations flights, not CSS animations (badges) or transitions (this glow's width).
+      .filter((a) => !(a instanceof CSSAnimation || a instanceof CSSTransition))
       .map((a) => {
         const end = Number(a.effect?.getComputedTiming().endTime ?? 0);
         return end - Number(a.currentTime ?? 0);

@@ -221,6 +221,40 @@ function logoSpot(felt: Size, spot: Size) {
   return w < LOGO_MIN_W_PX ? null : { x: (start + end) / 2, w };
 }
 
+/** The status and dock tops in the open middle (from `top` to `bottom`): the status ends just above the midline and the dock hangs below, so the status doesn't move with the dock. */
+function placeMiddle(
+  top: number,
+  bottom: number,
+  statusH: number,
+  dockH: number,
+) {
+  const midline = (top + bottom) / 2;
+  // On a short felt, never over the dealer's cards...
+  const statusTop = Math.max(top, midline - STATUS_DOCK_GAP_PX / 2 - statusH);
+  // ...and the dock moves up rather than over the players' bets, but not into the status.
+  const dockTop = Math.max(
+    statusTop + statusH + STATUS_DOCK_GAP_PX,
+    Math.min(midline + STATUS_DOCK_GAP_PX / 2, bottom - dockH),
+  );
+  return { statusTop, dockTop };
+}
+
+/** An element's height, kept current; 0 until it's attached. */
+function useHeight(el: HTMLElement | null) {
+  const [h, setH] = useState(0);
+  useLayoutEffect(() => {
+    if (!el) return;
+    const measure = () => {
+      if (el.isConnected) setH(el.offsetHeight);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el]);
+  return h;
+}
+
 /** Full-screen, game-agnostic table: header, a U-shaped felt (a grid on phones), and a control dock. */
 export function TableLayout(props: Props) {
   // Elements in state, not refs, so measuring re-attaches whenever one is replaced (after a notice, or a remount).
@@ -257,11 +291,13 @@ export function TableLayout(props: Props) {
   const spot = props.spotSize ?? { w: 0, h: 0 };
   const playersTop =
     betCenter(Math.floor(SEAT_COUNT / 2), felt, spot).y - BET_RADIUS_PX;
-  // The open middle's midline, between the dealer and the players (the bottom-middle seat's bet circle):
-  // the status sits just above it and the dock hangs below, so the status never moves when the dock changes height.
-  const midline =
+  const [statusEl, setStatusEl] = useState<HTMLDivElement | null>(null);
+  const [dockEl, setDockEl] = useState<HTMLDivElement | null>(null);
+  const statusH = useHeight(statusEl);
+  const dockH = useHeight(dockEl);
+  const middle =
     felt.h && dealerBottom
-      ? (dealerBottom + DEALER_GAP_PX + playersTop) / 2
+      ? placeMiddle(dealerBottom + DEALER_GAP_PX, playersTop, statusH, dockH)
       : null;
 
   const logoName = props.logoName;
@@ -371,16 +407,12 @@ export function TableLayout(props: Props) {
                     {/* Phones: after the players, over the controls. */}
                     {props.status && (
                       <div
+                        ref={setStatusEl}
                         className={cn(
-                          "flex justify-center md:absolute md:inset-x-0 md:-translate-y-full",
-                          midline === null && "md:invisible",
+                          "flex justify-center md:absolute md:inset-x-0",
+                          middle === null && "md:invisible",
                         )}
-                        style={{
-                          top:
-                            midline === null
-                              ? undefined
-                              : midline - STATUS_DOCK_GAP_PX / 2,
-                        }}
+                        style={{ top: middle?.statusTop }}
                       >
                         {props.status}
                       </div>
@@ -388,16 +420,12 @@ export function TableLayout(props: Props) {
                     {/* Your controls, hanging below the status in the open middle of the felt. */}
                     {props.dock && (
                       <div
+                        ref={setDockEl}
                         className={cn(
                           "flex justify-center md:absolute md:inset-x-0 md:z-40",
-                          midline === null && "md:invisible",
+                          middle === null && "md:invisible",
                         )}
-                        style={{
-                          top:
-                            midline === null
-                              ? undefined
-                              : midline + STATUS_DOCK_GAP_PX / 2,
-                        }}
+                        style={{ top: middle?.dockTop }}
                       >
                         {props.dock}
                       </div>

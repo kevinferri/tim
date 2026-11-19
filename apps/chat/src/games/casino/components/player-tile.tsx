@@ -23,12 +23,11 @@ type AvatarProps = {
   waiting?: boolean;
 };
 
-/** A thin outline so avatars stand off the rail, the same on every avatar; brighter for whoever's turn it is. */
+/** A thin outline so avatars stand off the rail; whoever's turn it is gets the pulsing purple glow. */
 export const avatarRing = (active?: boolean) =>
-  cn(
-    "ring-[1.5px] transition-shadow",
-    active ? "ring-white/85" : "ring-white/30",
-  );
+  active
+    ? "animate-turn-pulse ring-[1.5px] ring-purple-600 shadow-[0_0_4px_#9333ea,0_0_10px_#9333ea]"
+    : "ring-[1.5px] ring-white/30 transition-shadow";
 
 /** A seated player's avatar on the rail (name on hover). */
 export function PlayerAvatar({
@@ -52,13 +51,7 @@ export function PlayerAvatar({
         <TooltipTrigger asChild>
           <span
             aria-label={dimmedReason ? `${name}, ${dimmedReason}` : name}
-            className={cn(
-              "relative flex rounded-full",
-              // On their turn the purple glow is the border, pulsing a little less than typing's.
-              active
-                ? "animate-turn-pulse ring-[1.5px] ring-purple-600 shadow-[0_0_4px_#9333ea,0_0_10px_#9333ea]"
-                : avatarRing(false),
-            )}
+            className={cn("relative flex rounded-full", avatarRing(active))}
           >
             <OccupantAvatar occupant={occupant} size="2xl" />
             {/* On the bottom edge; your round result takes its place while it shows. */}

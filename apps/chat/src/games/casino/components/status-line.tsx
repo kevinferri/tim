@@ -37,7 +37,7 @@ export function StatusLine({
         className="flex max-w-full items-center gap-3 duration-300 animate-in fade-in"
       >
         {leading && (
-          // The same outline as at the seat; it's always whoever's turn it is.
+          // The same turn glow as at the seat.
           <span className={cn("flex rounded-full", avatarRing(true))}>
             {leading}
           </span>

@@ -111,22 +111,34 @@ export function FeltLogo({
   const id = useId();
   const satin = `${id}-satin`;
   const raise = `${id}-raise`;
+  const svgRef = useRef<SVGSVGElement>(null);
   const measureRef = useRef<SVGTextElement>(null);
   const [fit, setFit] = useState<{ text: string; w: number } | null>(null);
 
   // Measure the real lettering on a hidden copy React leaves empty, trimming characters until it fits.
   useLayoutEffect(() => {
+    const svg = svgRef.current;
     const el = measureRef.current;
-    if (!el) return;
-    const label = name.toUpperCase();
-    let text = label;
-    el.textContent = text;
-    while (el.getBBox().width > MAX_W - 2 * PAD && text.length > 1) {
-      text = text.slice(0, -1).trimEnd();
-      el.textContent = `${text}…`;
-    }
-    const shown = text === label ? label : `${text}…`;
-    setFit({ text: shown, w: Math.max(MIN_W, el.getBBox().width + 2 * PAD) });
+    if (!svg || !el) return;
+    const measure = () => {
+      // Under display:none text can't be measured (getBBox is 0, or throws in Firefox); wait to be shown.
+      if (!svg.getBoundingClientRect().width) return;
+      const label = name.toUpperCase();
+      const chars = Array.from(label);
+      el.textContent = label;
+      while (el.getBBox().width > MAX_W - 2 * PAD && chars.length > 1) {
+        chars.pop();
+        el.textContent = `${chars.join("").trimEnd()}…`;
+      }
+      const text = el.textContent;
+      const w = Math.max(MIN_W, el.getBBox().width + 2 * PAD);
+      setFit((f) => (f?.text === text && f.w === w ? f : { text, w }));
+    };
+    measure();
+    // Fires when a hidden logo is shown (its size goes from 0).
+    const observer = new ResizeObserver(measure);
+    observer.observe(svg);
+    return () => observer.disconnect();
   }, [name]);
 
   const w = fit?.w ?? MIN_W;
@@ -138,6 +150,7 @@ export function FeltLogo({
   };
   return (
     <svg
+      ref={svgRef}
       aria-hidden
       viewBox={`${-w / 2} 0 ${w} ${HEIGHT}`}
       className={className}

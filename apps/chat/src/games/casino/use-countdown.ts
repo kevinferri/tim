@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 
 /** Ms left until a performance.now() deadline, ticking a few times a second. */
 export function useCountdown(deadline: number | null) {
   const [msLeft, setMsLeft] = useState<number | null>(null);
 
-  useEffect(() => {
+  // Before paint, so a new deadline never renders against the old timer's msLeft.
+  useLayoutEffect(() => {
     if (deadline === null) {
       setMsLeft(null);
       return;
