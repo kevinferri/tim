@@ -61,7 +61,13 @@ export function NewsSheet({
   const { open, close, takePending, markSeen } = useNewsStore();
   const held = useNewsStore((s) => s.pending[circleId]);
   const [view, setView] = useState<View>("feed");
-  const [feedId, setFeedId] = useState<string | null>(null);
+  const feedId = useNewsStore((s) => s.filter[circleId] ?? null);
+  const storeSetFilter = useNewsStore((s) => s.setFilter);
+  // Held stories were judged against the old view, so place them before switching.
+  const setFeedId = (next: string | null) => {
+    prependNewsItems(queryClient, circleId, takePending(circleId));
+    storeSetFilter(circleId, next);
+  };
   const [sharing, setSharing] = useState<Sharing | null>(null);
   const listTopRef = useRef<HTMLDivElement>(null);
 
@@ -69,8 +75,10 @@ export function NewsSheet({
   const sources = all.data?.pages[0]?.sources ?? [];
   const newest = newestCreatedAt(all.data?.pages[0]?.items);
   // A refetch (reconnect, another member changing sources) may already have listed some held stories.
+  // Counted against the view on screen; held stories were already picked for it.
+  const visible = useNewsFeed(circleId, feedId);
   const listedIds = new Set(
-    all.data?.pages.flatMap((p) => p.items.map((i) => i.id)) ?? [],
+    visible.data?.pages.flatMap((p) => p.items.map((i) => i.id)) ?? [],
   );
   const pending = (held ?? []).filter((i) => !listedIds.has(i.id));
 
@@ -84,8 +92,8 @@ export function NewsSheet({
     Boolean(all.data) &&
     !sources.some((s) => s.feedId === feedId);
   useEffect(() => {
-    if (filterIsStale) setFeedId(null);
-  }, [filterIsStale]);
+    if (filterIsStale) storeSetFilter(circleId, null);
+  }, [filterIsStale, storeSetFilter, circleId]);
 
   function showPending() {
     prependNewsItems(queryClient, circleId, takePending(circleId));
@@ -298,7 +306,8 @@ function FeedList({
   if (items.length === 0) {
     return (
       <p className="p-6 text-center text-sm text-muted-foreground">
-        No stories yet. New ones show up here as they&apos;re published.
+        Nothing from the last 24 hours yet. New stories show up here as
+        they&apos;re published.
       </p>
     );
   }

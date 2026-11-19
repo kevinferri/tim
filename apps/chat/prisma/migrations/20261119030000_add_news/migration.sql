@@ -38,6 +38,7 @@ CREATE TABLE "news_items" (
     "imageUrl" TEXT,
     "publishedAt" TIMESTAMP(3) NOT NULL,
     "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiredAt" TIMESTAMP(3),
 
     CONSTRAINT "news_items_pkey" PRIMARY KEY ("id")
 );
@@ -59,6 +60,9 @@ CREATE INDEX "news_items_feedId_publishedAt_idx" ON "news_items"("feedId", "publ
 
 -- CreateIndex
 CREATE INDEX "news_items_lastSeenAt_idx" ON "news_items"("lastSeenAt");
+
+-- CreateIndex
+CREATE INDEX "news_items_publishedAt_idx" ON "news_items"("publishedAt");
 
 -- CreateIndex
 CREATE INDEX "news_items_link_idx" ON "news_items"("link");

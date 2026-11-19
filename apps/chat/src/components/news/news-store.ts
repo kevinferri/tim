@@ -17,6 +17,9 @@ type NewsState = {
   open: boolean;
   /** Live items that arrived while the panel was open, held back until the reader asks for them. */
   pending: Record<string, NewsItemDto[]>;
+  /** The source filter selected in each circle's panel (null = All); live updates are judged against it. */
+  filter: Record<string, string | null>;
+  setFilter: (circleId: string, feedId: string | null) => void;
   /** Newest createdAt the viewer has seen, per circle (mirrored to localStorage). */
   seen: Record<string, string | null>;
   openPanel: () => void;
@@ -30,6 +33,9 @@ type NewsState = {
 export const useNewsStore = create<NewsState>((set, get) => ({
   open: false,
   pending: {},
+  filter: {},
+  setFilter: (circleId, feedId) =>
+    set((s) => ({ filter: { ...s.filter, [circleId]: feedId } })),
   seen: {},
   openPanel: () => set({ open: true }),
   close: () => set({ open: false }),

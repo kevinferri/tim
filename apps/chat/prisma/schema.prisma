@@ -429,14 +429,17 @@ model NewsItem {
   summary     String?
   imageUrl    String?
   publishedAt DateTime
-  // Last time the feed still listed it. Stories are pruned only once the feed stops listing them, so one can't be re-inserted as new.
+  // Last time the feed still listed it. The row (as an empty marker, once expired) is kept while the feed lists it, so it can't be re-inserted as new.
   lastSeenAt  DateTime @default(now())
+  // Set when the story passes its 24-hour lifetime and its content (title, link, summary, image) is erased.
+  expiredAt   DateTime?
 
   feed NewsFeed @relation("itemsInFeed", fields: [feedId], references: [id], onDelete: Cascade)
 
   @@unique([feedId, guid])
   @@index([feedId, publishedAt(sort: Desc)])
   @@index([lastSeenAt])
+  @@index([publishedAt])
   // Link previews in chat look stories up by URL.
   @@index([link])
   @@map(name: "news_items")

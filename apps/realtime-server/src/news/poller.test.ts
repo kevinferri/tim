@@ -215,11 +215,11 @@ describe("news poller", () => {
     expect(feed.nextFetchAt.toISOString()).toBe("2026-11-18T12:15:00.000Z");
   });
 
-  it("never stores items older than the retention window", async () => {
+  it("never stores stories older than 24 hours", async () => {
     const circleId = await createCircle();
     const feedId = await createFeed({ circleIds: [circleId] });
     const { server, emit } = mockServer();
-    const old = item(99, new Date(T0.getTime() - 15 * 86_400_000));
+    const old = item(99, new Date(T0.getTime() - 25 * 3_600_000));
     const fetchFeed = vi.fn(async () => ok([item(1), old]));
 
     await createNewsPoller({ server, fetchFeed, now: () => T0 }).tick();
@@ -245,12 +245,31 @@ describe("news poller", () => {
     const poller = createNewsPoller({ server, fetchFeed, now: () => now });
 
     await poller.tick();
-    now = new Date(T0.getTime() + 10 * 86_400_000);
+    now = new Date(T0.getTime() + 2 * 86_400_000);
     await poller.tick();
-    now = new Date(T0.getTime() + 20 * 86_400_000);
+    now = new Date(T0.getTime() + 4 * 86_400_000);
     await poller.tick();
 
     expect(fetchFeed).toHaveBeenCalledTimes(3);
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it("erases a story's content after 24 hours but keeps it from returning", async () => {
+    const circleId = await createCircle();
+    await createFeed({ circleIds: [circleId] });
+    const { server, emit } = mockServer();
+    let now = T0;
+    const story = item(1);
+    const fetchFeed = vi.fn(async () => ok([story]));
+    const poller = createNewsPoller({ server, fetchFeed, now: () => now });
+
+    await poller.tick();
+    now = new Date(T0.getTime() + 25 * 3_600_000);
+    await poller.tick();
+
+    const [row] = await pgClient("news_items");
+    expect(row).toMatchObject({ title: "", link: "", guid: "guid-1" });
+    expect(row.expiredAt).not.toBeNull();
     expect(emit).toHaveBeenCalledTimes(1);
   });
 

@@ -6,6 +6,9 @@ import {
   isPublicAddress,
   publicLookup,
   nextFetchDelayMinutes,
+  seenMarkerCutoff,
+  selectFreshItems,
+  storyCutoff,
   normalizeUrl,
   parseFeed,
   resolveFeed,
@@ -226,4 +229,39 @@ test("publicLookup refuses names that resolve to private addresses", async () =>
     );
     assert.equal(err?.code, "EBLOCKED");
   }
+});
+
+test("stories live 24 hours; seen markers 7 days", () => {
+  const now = new Date("2026-11-19T12:00:00Z");
+  assert.equal(storyCutoff(now).toISOString(), "2026-11-18T12:00:00.000Z");
+  assert.equal(seenMarkerCutoff(now).toISOString(), "2026-11-12T12:00:00.000Z");
+});
+
+test("selectFreshItems keeps the newest 50 unexpired, deduped stories", () => {
+  const now = new Date("2026-11-19T12:00:00Z");
+  const at = (minutesAgo) => new Date(now.getTime() - minutesAgo * 60_000);
+  const story = (guid, publishedAt) => ({
+    guid,
+    title: guid,
+    link: `https://example.com/${guid}`,
+    summary: null,
+    imageUrl: null,
+    publishedAt,
+  });
+  // Relevance order: the newest story is ranked last.
+  const items = [
+    story("week-old", at(7 * 24 * 60)),
+    ...Array.from({ length: 60 }, (_, i) => story(`s${i}`, at(100 + i))),
+    story("s0", at(1)),
+    story("undated", null),
+    story("newest", at(5)),
+  ];
+  const picked = selectFreshItems(items, now);
+  assert.equal(picked.length, 50);
+  assert.deepEqual(
+    picked.slice(0, 3).map((i) => i.guid),
+    ["undated", "newest", "s0"],
+  );
+  assert.ok(!picked.some((i) => i.guid === "week-old"));
+  assert.equal(picked.filter((i) => i.guid === "s0").length, 1);
 });

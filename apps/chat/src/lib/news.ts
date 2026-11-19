@@ -1,9 +1,9 @@
 import {
   FeedError,
-  MAX_ITEMS_PER_FETCH,
   nextFetchDelayMinutes,
   resolveFeed,
-  retentionCutoff,
+  selectFreshItems,
+  storyCutoff,
   toNewsItemDto,
   type NewsItemDto,
   type ResolvedFeed,
@@ -104,6 +104,9 @@ export async function getCircleNews({
   const rows = await prismaClient.newsItem.findMany({
     where: {
       feedId: { in: feedIds },
+      // The feed hosts a story for 24 hours; this hides it on time even before the poller erases it.
+      publishedAt: { gte: storyCutoff(new Date()) },
+      expiredAt: null,
       ...(after && {
         OR: [
           { publishedAt: { lt: after.publishedAt } },
@@ -235,7 +238,6 @@ async function followFeed({
   }
 
   // A brand-new feed is created, seeded, and followed in one write.
-  const cutoff = retentionCutoff(now);
   const feed = await prismaClient.newsFeed.create({
     data: {
       url: resolved.url,
@@ -255,25 +257,16 @@ async function followFeed({
             60_000,
       ),
       items: {
-        create: parsed.items
-          .filter(
-            (i, index, all) =>
-              (!i.publishedAt || i.publishedAt >= cutoff) &&
-              all.findIndex((other) => other.guid === i.guid) === index,
-          )
-          .slice(0, MAX_ITEMS_PER_FETCH)
-          .map((item) => ({
-            guid: item.guid,
-            title: item.title,
-            link: item.link,
-            summary: item.summary,
-            imageUrl: item.imageUrl,
-            publishedAt:
-              item.publishedAt && item.publishedAt < now
-                ? item.publishedAt
-                : now,
-            createdAt: now,
-          })),
+        create: selectFreshItems(parsed.items, now).map((item) => ({
+          guid: item.guid,
+          title: item.title,
+          link: item.link,
+          summary: item.summary,
+          imageUrl: item.imageUrl,
+          publishedAt:
+            item.publishedAt && item.publishedAt < now ? item.publishedAt : now,
+          createdAt: now,
+        })),
       },
       sources: { create: { circleId, addedById: userId } },
     },
@@ -349,6 +342,8 @@ export async function getNewsLinkPreview({
   const items = await prismaClient.newsItem.findMany({
     where: {
       link: url,
+      publishedAt: { gte: storyCutoff(new Date()) },
+      expiredAt: null,
       feed: { sources: { some: { circleId: topic.circleId } } },
     },
     orderBy: { createdAt: "desc" },

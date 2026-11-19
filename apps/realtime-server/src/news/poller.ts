@@ -1,9 +1,8 @@
 import {
   FeedError,
-  MAX_ITEMS_PER_FETCH,
   fetchFeed as defaultFetchFeed,
   nextFetchDelayMinutes,
-  retentionCutoff,
+  selectFreshItems,
   toNewsItemDto,
   type NewsItemsCreatedPayload,
 } from "@tim/news";
@@ -25,7 +24,8 @@ const CLAIM_BATCH = 20;
 const CONCURRENCY = 10;
 // A tick keeps claiming batches until nothing is due, but hands over to the next tick before overlapping it.
 const TICK_BUDGET_MS = 25_000;
-const PRUNE_EVERY_MS = 60 * 60_000;
+// Expiry has to keep up with the 24-hour story lifetime; the feed API also hides expired stories on read.
+const PRUNE_EVERY_MS = 15 * 60_000;
 
 export type NewsPollerDeps = {
   server: AppServer;
@@ -72,7 +72,7 @@ export function createNewsPoller({
       const { feed: parsed } = result;
       const created = await insertNewItems({
         feedId: feed.id,
-        items: parsed.items.slice(0, MAX_ITEMS_PER_FETCH),
+        items: selectFreshItems(parsed.items, startedAt),
         now: startedAt,
       });
       await markItemsSeen({
@@ -127,7 +127,7 @@ export function createNewsPoller({
     const at = now();
     if (at.getTime() - lastPruneAt >= PRUNE_EVERY_MS) {
       lastPruneAt = at.getTime();
-      await pruneNews({ before: retentionCutoff(at) });
+      await pruneNews({ now: at });
     }
     const startedAt = Date.now();
     while (!stopping) {

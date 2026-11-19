@@ -67,10 +67,12 @@ export function useNewsLiveUpdates(circleId: string) {
         prependNewsItems(queryClient, circleId, payload.items);
         return;
       }
-      // While reading, only stories that will appear at the top wait behind the pill; older-dated ones go straight to their place.
+      // While reading, only stories that will appear at the top of the view on screen wait behind the pill; the rest go straight to their place.
+      const feedId = useNewsStore.getState().filter[circleId] ?? null;
       const top = newerThanListed(
-        queryClient.getQueryData<NewsCache>(newsQueryKey(circleId))?.pages,
-        payload.items,
+        queryClient.getQueryData<NewsCache>(newsQueryKey(circleId, feedId))
+          ?.pages,
+        payload.items.filter((i) => feedId === null || i.feedId === feedId),
       );
       const topIds = new Set(top.map((i) => i.id));
       prependNewsItems(

@@ -20,9 +20,12 @@ export {
 } from "./fetch";
 export {
   nextFetchDelayMinutes,
-  retentionCutoff,
+  storyCutoff,
+  selectFreshItems,
+  seenMarkerCutoff,
   MAX_ITEMS_PER_FETCH,
-  RETENTION_DAYS,
+  STORY_LIFETIME_HOURS,
+  SEEN_MARKER_DAYS,
 } from "./schedule";
 export {
   toNewsItemDto,

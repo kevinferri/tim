@@ -271,6 +271,29 @@ describe("getCircleNews", () => {
     expect(onlyA.items).toHaveLength(20);
   });
 
+  it("only lists stories from the last 24 hours", async () => {
+    const user = await createUser("Ann");
+    const circle = await createCircle(user.id);
+    resolveFeed.mockResolvedValue(feed("https://a.com/rss", 2));
+    const source = await addCircleNewsSource({
+      circleId: circle.id,
+      userId: user.id,
+      url: "a.com",
+    });
+    await prismaClient.newsItem.create({
+      data: {
+        feedId: source.feedId,
+        guid: "yesterday",
+        title: "Yesterday",
+        link: "https://example.com/yesterday",
+        publishedAt: new Date(Date.now() - 25 * 3_600_000),
+      },
+    });
+
+    const res = await getCircleNews({ circleId: circle.id, userId: user.id });
+    expect(res.items.map((i) => i.title)).toEqual(["Story 0", "Story 1"]);
+  });
+
   it("ignores a feed filter for a source the circle doesn't follow", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);

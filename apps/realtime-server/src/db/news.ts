@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import type { NewsFeed, NewsItem } from "@tim/db-types";
-import { retentionCutoff, type FeedItem } from "@tim/news";
+import { seenMarkerCutoff, storyCutoff, type FeedItem } from "@tim/news";
 import { pgClient } from "./client";
 
 // How long a claimed feed stays out of other ticks' reach while its fetch runs.
@@ -36,9 +36,9 @@ export async function claimDueFeeds({
 }
 
 /**
- * Inserts items not seen before (by feed + guid) and returns only the new rows.
- * Stories dated before the retention window are skipped: they're old news,
- * and one pruned long ago shouldn't come back as "new".
+ * Inserts items not seen before (by feed + guid) and returns only the new
+ * rows. Callers pass what `selectFreshItems` picked, so nothing expired is
+ * stored.
  */
 export async function insertNewItems({
   feedId,
@@ -49,12 +49,10 @@ export async function insertNewItems({
   items: FeedItem[];
   now: Date;
 }): Promise<NewsItem[]> {
-  const cutoff = retentionCutoff(now);
-  const fresh = items.filter((i) => !i.publishedAt || i.publishedAt >= cutoff);
-  if (fresh.length === 0) return [];
+  if (items.length === 0) return [];
   return await pgClient<NewsItem>("news_items")
     .insert(
-      fresh.map((item) => ({
+      items.map((item) => ({
         id: randomUUID(),
         feedId,
         guid: item.guid,
@@ -120,12 +118,25 @@ export async function getCircleIdsForFeed(feedId: string): Promise<string[]> {
 }
 
 /**
- * Drops stories the feed stopped listing before `before`, and feeds no circle
- * follows anymore. A story the feed still lists is kept, however old, so it
- * can't be re-inserted and pushed again as new.
+ * The feed hosts a story for 24 hours. After that its content is erased and
+ * only an empty "already seen" row stays, while the feed still lists it, so
+ * it can't be stored again as new. Rows the feed stopped listing a week ago,
+ * and feeds no circle follows, are deleted.
  */
-export async function pruneNews({ before }: { before: Date }) {
-  await pgClient<NewsItem>("news_items").where("lastSeenAt", "<", before).del();
+export async function pruneNews({ now }: { now: Date }) {
+  await pgClient<NewsItem>("news_items")
+    .whereNull("expiredAt")
+    .where("publishedAt", "<", storyCutoff(now))
+    .update({
+      title: "",
+      link: "",
+      summary: null,
+      imageUrl: null,
+      expiredAt: now,
+    });
+  await pgClient<NewsItem>("news_items")
+    .where("lastSeenAt", "<", seenMarkerCutoff(now))
+    .del();
   await pgClient("news_feeds")
     .whereNotExists(
       pgClient("circle_news_sources")
