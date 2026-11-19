@@ -79,6 +79,12 @@ export function DealShoe({
   );
 }
 
+/** Reads whether cards mounting now are being dealt live (not a load or reconnect's snapshot). */
+export function useDealingLive() {
+  const ctx = useContext(DealContext);
+  return () => !!ctx?.enabled.current;
+}
+
 /** Whether cards here fly from a shoe (otherwise they fade in). */
 export const useInDeal = () => useContext(DealContext) !== null;
 

@@ -39,8 +39,8 @@ type BlackjackSeat = BaseSeat & {
 export type BlackjackTableDeps = {
   chipStore: ChipStore;
   rng: Rng;
-  /** Lets shutdown await settle writes already in flight. */
-  trackSettle: (write: Promise<void>) => void;
+  /** Lets shutdown, and the user's next sit, await chip writes already in flight. */
+  trackSettle: (userId: string, write: Promise<void>) => void;
   onIdle: () => void;
 };
 
@@ -271,6 +271,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     if (add <= 0) return;
     seat.stack += add;
     this.deps.trackSettle(
+      seat.occupant.userId,
       this.writeRefill(seat.occupant.userId, add).catch((err) =>
         console.error("casino: refill write failed", err),
       ),
@@ -367,6 +368,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       seat.stack += result.payout;
       seat.lastNet = result.net;
       this.deps.trackSettle(
+        result.userId,
         this.writeSettlement(result.userId, result.net).catch((err) =>
           console.error("casino: chip settle failed", err),
         ),

@@ -9,13 +9,13 @@ import {
   playTwentyOne,
   PlayingCard,
   cardOverlap,
+  useDealingLive,
   type CardSize,
 } from "@/games/casino";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-// Result stamps share one style, always solid so the cards never show through; color says how it went. A win in the green of the player's +amount
-// (gold if it's yours, since gold means you), a blackjack in gold, and a loss quiet so the winners stand out.
+// Solid so the cards never show through; color says how it went (see the casino table colors).
 const WIN =
   "border-emerald-300/70 bg-neutral-900 text-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.3)]";
 const GOLD =
@@ -255,15 +255,19 @@ export function Hand({
 }: Props) {
   const net = hand?.payout != null ? hand.payout - hand.bet : 0;
 
-  // The outline is printed on the felt and marks both opening cards: it stays until the second has
-  // landed on it, then hides under the cards for good (they can go see-through when dimmed or faded).
-  // The total likewise waits for the newest card to land, so it never gives a card away mid-flight.
+  // The outline and the total both wait for the newest card to land, so neither gives a card away mid-flight.
   const cardsRef = useRef<HTMLDivElement>(null);
+  const dealingLive = useDealingLive();
   const count = hand?.cards.length ?? 0;
+  // A split replaces the second card without changing the count.
+  const cardsKey =
+    hand?.cards.map((c) => (c ? `${c.rank}${c.suit}` : "?")).join(",") ?? "";
   const [shown, setShown] = useState<{
     total: number;
     soft: boolean;
-    count: number;
+    cardsKey: string;
+    /** Dealt live, so its sounds play (not when a load or reconnect finds it on the table). */
+    live: boolean;
   } | null>(null);
   const landed = shown !== null;
   const total = hand?.total ?? 0;
@@ -273,7 +277,8 @@ export function Hand({
       setShown(null);
       return;
     }
-    // A passive effect, so the newest card's flight from the shoe has already started.
+    // Passive, so the newest card's flight has started, and before DealProvider's effect updates `live`.
+    const live = dealingLive();
     const newest =
       cardsRef.current?.querySelectorAll("[aria-label]")[count - 1];
     const left = (newest?.getAnimations() ?? []).map(
@@ -282,24 +287,23 @@ export function Hand({
         Number(a.currentTime ?? 0),
     );
     const timer = setTimeout(
-      () => setShown({ total, soft, count }),
+      () => setShown({ total, soft, cardsKey, live }),
       Math.max(0, ...left.filter(Number.isFinite)),
     );
     return () => clearTimeout(timer);
     // Once per card.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count]);
+  }, [cardsKey]);
 
-  // A bust or blackjack shows as it happens, but only once its card has landed (hit, deal, then bust);
-  // a win, loss or push waits for the end of the hand.
-  const cardsIn = shown?.count === count;
+  // A bust or blackjack shows once its card lands; a win, loss or push waits for the end of the hand.
+  const cardsIn = shown?.cardsKey === cardsKey;
 
   // A 21 at any seat sounds as its total slams in gold: bigger for a natural blackjack.
   const shownTotal = shown?.total;
   const twentyOne = useRef(false);
   useEffect(() => {
     const is21 = shownTotal === 21;
-    if (is21 && !twentyOne.current)
+    if (is21 && !twentyOne.current && shown?.live)
       playTwentyOne(hand?.outcome === "blackjack");
     twentyOne.current = is21;
     // When the shown total changes.
@@ -315,7 +319,7 @@ export function Hand({
   // A bust sounds as its badge lands (after the busting card), yours a little louder.
   const bustShowing = !!outcome && hand?.outcome === "bust";
   useEffect(() => {
-    if (bustShowing) playBustSound(mine);
+    if (bustShowing && shown?.live) playBustSound(mine);
     // Once, as the bust appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bustShowing]);

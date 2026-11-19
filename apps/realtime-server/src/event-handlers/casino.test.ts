@@ -635,6 +635,35 @@ describe("chips", () => {
     expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
   });
 
+  it("waits for a settlement still being written before refilling on sit", async () => {
+    const chipStore = new InMemoryChipStore();
+    const settle = chipStore.settle.bind(chipStore);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    vi.spyOn(chipStore, "settle").mockImplementation(async (s) => {
+      await gate;
+      await settle(s);
+    });
+    const { connect, stackShoe } = setup(chipStore);
+    const a = connect("a");
+    await watch(a);
+    await sit(a, 0);
+    // 16 vs dealer 20: loses 500.
+    stackShoe("10", "10", "6", "10");
+    await bet(a, 500);
+    await act(a, { type: "stand" });
+    vi.advanceTimersByTime(DEALER_DRAW_MS * 2 + RESULTS_MS);
+    await standUp(a);
+
+    const sitting = sit(a, 0);
+    release();
+    await sitting;
+    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
+    await vi.waitFor(async () =>
+      expect(await chipStore.load("c1", "a")).toBe(STARTING_CHIPS),
+    );
+  });
+
   it("refunds a bet when standing up during betting, with no chip write", async () => {
     const { connect, chipStore } = setup();
     const settleSpy = vi.spyOn(chipStore, "settle");

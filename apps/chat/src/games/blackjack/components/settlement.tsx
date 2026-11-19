@@ -51,10 +51,7 @@ type Flight = {
 // Gap between a bet and the payout set beside it.
 const BESIDE_GAP_PX = 4;
 
-/**
- * The center of the element `sel`, or with `beside`, of a chip stack set down next to it, on the side
- * away from the middle of its bet circle (so a split's payout clears the other hand's bet).
- */
+/** The center of `sel`, or with `beside`, of a stack set next to it on the outer side (clearing a split's other bet). */
 function centerOf(sel: string, beside = false) {
   const el = document.querySelector(sel);
   const r = el?.getBoundingClientRect();
@@ -144,12 +141,7 @@ function FlyingStack({
 const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/**
- * Settling bets with the chips: a bust is swept into the dealer's rack the moment it happens, and a
- * natural blackjack is paid as soon as it's dealt, like a real table; at the end of the hand the other
- * losers are swept, and winners are paid from the rack onto their bet and then collected into the
- * player's seat. Only live, not on a page load or reconnect mid-round.
- */
+/** Moves the chips as bets settle: busts and naturals as they happen, everyone else at the end. Live only. */
 export function useSettlement(
   view: BlackjackTableView | null,
   live: boolean,
@@ -168,6 +160,9 @@ export function useSettlement(
   // Naturals paid during play: when their winnings reached the bet, and when they reached the seat.
   const [naturalStamped, setNaturalStamped] = useState<Set<number>>(new Set());
   const [naturalPaid, setNaturalPaid] = useState<Set<number>>(new Set());
+  const [naturalClaimed, setNaturalClaimed] = useState<Set<number>>(new Set());
+  // Busts whose sweep is scheduled but hasn't taken the chips yet.
+  const [sweeping, setSweeping] = useState<Set<string>>(new Set());
   const viewPhase = useRef(view?.phase);
   const dealtLive = useRef(false);
   const claimed = useRef(new Set<string>());
@@ -179,13 +174,16 @@ export function useSettlement(
   const move = (key: string) => {
     movedRef.current = new Set(movedRef.current).add(key);
     setMoved(movedRef.current);
+    setSweeping((s) => {
+      if (!s.has(key)) return s;
+      const next = new Set(s);
+      next.delete(key);
+      return next;
+    });
   };
   const land = (id: string) =>
     setFlights((fs) => fs.filter((f) => f.id !== id));
-  /**
-   * Pays a winning hand: its winnings fly from the rack onto the bet, sit a moment, then the whole stack goes
-   * to the player. Schedules with `at`; returns when the winnings reach the bet and when the seat has them.
-   */
+  /** Pays a hand from the rack onto its bet, then to the player; returns when each lands. */
   const payOut = (
     at: (ms: number, fn: () => void) => void,
     start: number,
@@ -265,6 +263,7 @@ export function useSettlement(
         ) {
           // Claimed now, so the end of the hand leaves it to this payout even if it comes first.
           claimed.current.add(key);
+          setNaturalClaimed((s) => new Set(s).add(seat.seat));
           const start = dealtInMs(seat.seat) + NATURAL_PAUSE_MS;
           const { stamped, shown } = payOut(at, start, seat.seat, h, hand);
           at(stamped, () =>
@@ -283,6 +282,7 @@ export function useSettlement(
           reducedMotion()
         )
           return;
+        setSweeping((s) => new Set(s).add(key));
         bustTimers.current.push(
           setTimeout(() => {
             // Results may have swept it already.
@@ -320,6 +320,8 @@ export function useSettlement(
       setMoved(movedRef.current);
       setNaturalStamped(new Set());
       setNaturalPaid(new Set());
+      setNaturalClaimed(new Set());
+      setSweeping(new Set());
     }
     if (phase !== "results") {
       setSettledSeats("all");
@@ -422,9 +424,15 @@ export function useSettlement(
     },
     /** This hand's chips have left its bet circle. */
     isMoved: (seat: number, hand: number) => moved.has(handKey(seat, hand)),
-    /** This seat's hands can show their win/loss stamps. */
+    /** This hand busted and its chips are about to be swept. */
+    isSweeping: (seat: number, hand: number) =>
+      sweeping.has(handKey(seat, hand)),
+    /** The results are playing out live, seat by seat (not on a load, reconnect, or with reduced motion). */
+    animatingResults: stampedSeats !== "all",
+    /** This seat's hands can show their win/loss stamps; a natural paid during play waits for its payout. */
     isStamped: (seat: number) =>
-      stampedSeats === "all" || stampedSeats.has(seat),
+      (stampedSeats === "all" || stampedSeats.has(seat)) &&
+      (!naturalClaimed.has(seat) || naturalStamped.has(seat)),
     /** This seat's natural blackjack was paid during play: its winnings reached the bet (`stamped`), then the seat (`paid`). */
     natural: (seat: number) => ({
       stamped: naturalStamped.has(seat),
@@ -432,7 +440,8 @@ export function useSettlement(
     }),
     /** This seat's result can show (its chips have been swept or paid). */
     isSettled: (seat: number) =>
-      settledSeats === "all" || settledSeats.has(seat),
+      (settledSeats === "all" || settledSeats.has(seat)) &&
+      (!naturalClaimed.has(seat) || naturalPaid.has(seat)),
     layer,
   };
 }

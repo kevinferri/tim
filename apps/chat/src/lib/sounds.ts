@@ -43,7 +43,7 @@ export function whenReady(play: (ctx: AudioContext) => void) {
 }
 
 /** The shared context when a sound may play right now: unlocked, with sounds turned on. */
-export function ready() {
+function ready() {
   if (!context || context.state !== "running") return null;
   if (!useMessageSound.getState().isMessageSoundEnabled) return null;
   return context;

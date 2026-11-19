@@ -1,4 +1,4 @@
-import { audioContext, ready, whenReady } from "@/lib/sounds";
+import { audioContext, whenReady } from "@/lib/sounds";
 
 // Kenney's CC0 Casino Audio (public/assets/sounds/casino): a few takes of each, so repeats sound natural.
 const SOUNDS = {

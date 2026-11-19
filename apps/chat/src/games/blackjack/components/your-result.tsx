@@ -4,9 +4,7 @@ import { useEffect, useState } from "react";
 import { playTallyKnock } from "@/games/casino";
 import { cn } from "@/lib/utils";
 
-// Bigger wins count up longer and knock more, climbing higher; capped so even the last seat's tally
-// finishes well inside the results phase (RESULTS_MS).
-/** The longest count-up, for a big win. */
+/** The longest count-up, capped to finish inside RESULTS_MS. */
 export const TALLY_MAX_MS = 1800;
 
 const tally = (amount: number) => {
@@ -43,13 +41,11 @@ function useCountUp(to: number, still: boolean) {
     });
     return () => cancelAnimationFrame(frame);
   }, [to, still]);
-  return value;
+  // Turning still mid-count cancels it, so jump to the end.
+  return still ? to : value;
 }
 
-/**
- * Your own result, in the status area once the dealer reaches your seat: a win counts up big and
- * in gold ("Blackjack!" for one), a loss is quieter, a push is calm. The same box as the status line.
- */
+/** Your own result in the status area: a win counts up in gold, a loss is quieter, a push is calm. */
 export function YourResult({
   net,
   blackjack,

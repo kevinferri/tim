@@ -12,11 +12,7 @@ const SHORT_BUBBLE_MS = 820;
 
 type Bubble = { text: string; id: number; ms: number };
 
-/**
- * A player's move, read from what changed between two updates: a hit (a new card, the same hand
- * count), a double, or a stand (the turn moves on without a new card, which a timeout does too).
- * A split already shows itself as the hand splitting.
- */
+/** A player's hit, double or stand (a timeout reads as one too), inferred from two updates; a split shows itself. */
 function actionBetween(prev: BlackjackTableView, next: BlackjackTableView) {
   if (prev.phase !== "players" || !prev.turn) return null;
   const { seat, hand } = prev.turn;

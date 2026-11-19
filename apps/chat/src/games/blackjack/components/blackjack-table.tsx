@@ -369,19 +369,19 @@ export function BlackjackTable({
             </div>
           }
           status={
-            // Yours takes over once the dealer reaches your seat (or right away for a natural, which was
-            // paid during play and doesn't count up again); until then, the dealer's result.
-            view.phase === "results" &&
-            me?.inRound &&
-            me.lastNet !== null &&
-            (settlement.isStamped(me.seat) || myNaturalStamped) ? (
+            // Your natural counts up as it's paid; your result takes over once the dealer reaches your seat.
+            playing && me && naturalShowing ? (
+              <YourResult net={naturalNet(me)} blackjack />
+            ) : view.phase === "results" &&
+              me?.inRound &&
+              me.lastNet !== null &&
+              settlement.isStamped(me.seat) ? (
               <YourResult
                 net={me.lastNet}
                 blackjack={me.hands.some((h) => h.outcome === "blackjack")}
-                still={myNaturalStamped}
+                // A natural already counted up; a load or reconnect shows the result as is.
+                still={myNaturalStamped || !settlement.animatingResults}
               />
-            ) : playing && me && naturalShowing ? (
-              <YourResult net={naturalNet(me)} blackjack />
             ) : (
               <StatusLine
                 leading={
@@ -413,11 +413,10 @@ export function BlackjackTable({
             const busted =
               seat.hands.length > 0 &&
               seat.hands.every((h) => h.outcome === "bust");
-            // A bust only shows once its card has landed and the dealer has swept the chips: then the
-            // avatar dims and the loss appears on it, staying put through the end of the round (the
-            // same element, so it doesn't pop in again).
+            // Waits for a live sweep to take the chips; without one (a load, reduced motion) it shows at once.
             const bustShown =
-              busted && seat.hands.every((_, h) => settlement.isMoved(i, h));
+              busted &&
+              seat.hands.every((_, h) => !settlement.isSweeping(i, h));
             const bustLoss =
               bustShown && -seat.hands.reduce((sum, h) => sum + h.bet, 0);
             // A natural's winnings show on the avatar once the seat has them, through the end of the round.
@@ -467,6 +466,7 @@ export function BlackjackTable({
                       seat={seat}
                       view={view}
                       isMoved={(h) => settlement.isMoved(i, h)}
+                      isSweeping={(h) => settlement.isSweeping(i, h)}
                       myChips={
                         i === mySeat
                           ? {
@@ -527,7 +527,6 @@ export function BlackjackTable({
   );
 }
 
-/** A seat's win or loss on its avatar (never a push). Your win is gold; others' are green. */
 /** Taking chips back out of your circle: the sound of picking them up. */
 const playChipPickup = () => playTableSound("chipsHandle", { volume: 0.5 });
 
@@ -550,6 +549,7 @@ function SoundToggle() {
   );
 }
 
+/** A seat's win or loss on its avatar (never a push). Your win is gold; others' are green. */
 function NetAmount({ net, mine }: { net: number; mine: boolean }) {
   return (
     <span
@@ -656,13 +656,13 @@ function SeatHands({
   );
 }
 
-/** One stack per hand: a split gives each hand its own, a double puts a second stack beside it. */
 /** A natural's winnings (its payout less the bet). */
 function naturalNet(seat: BlackjackSeatView) {
   const hand = seat.hands[0];
   return hand ? (hand.payout ?? 0) - hand.bet : 0;
 }
 
+/** One stack per hand: a split gives each hand its own, a double puts a second stack beside it. */
 function betStacks(seat: BlackjackSeatView, chips?: number[]): BetStack[] {
   const matching = (amount: number) =>
     chips?.reduce((a, b) => a + b, 0) === amount ? chips : undefined;
@@ -687,12 +687,15 @@ function SeatBet({
   seat,
   view,
   isMoved,
+  isSweeping,
   myChips,
 }: {
   seat: BlackjackSeatView;
   view: BlackjackTableView;
   /** This hand's chips have been swept or paid out at the end of the round. */
   isMoved: (hand: number) => boolean;
+  /** This hand busted and its chips are about to be swept. */
+  isSweeping: (hand: number) => boolean;
   myChips?: { chips: number[]; picking: boolean; takeBack: () => void };
 }) {
   const playing = view.phase !== "waiting" && view.phase !== "betting";
@@ -708,6 +711,7 @@ function SeatBet({
         : betStacks(seat, myChips?.chips).map((s, h) => ({
             ...s,
             hidden: isMoved(h),
+            dimmed: seat.hands[h]?.outcome === "bust" && !isSweeping(h),
           }));
   return (
     <BetSpot

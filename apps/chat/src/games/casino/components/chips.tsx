@@ -346,9 +346,7 @@ function StackedChip({
     );
     onFlight?.(true);
     flight.onfinish = () => onFlight?.(false);
-    // Every chip lands with the same clack, a touch higher up the stack. Scheduled on the audio clock, not tied to this chip staying on screen: holding a number
-    // key piles chips on faster than they land, scrolling older ones out of the drawn stack. Once per pick,
-    // since dev's double mount runs this twice.
+    // On the audio clock, since held keys scroll chips out of the stack before they land; once per pick for dev's double mount.
     if (!sounded.has(from.at)) {
       sounded.add(from.at);
       playTableSound("chipsCollide", {
