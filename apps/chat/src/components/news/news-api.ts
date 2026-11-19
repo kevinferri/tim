@@ -53,7 +53,56 @@ export async function removeNewsSource(circleId: string, feedId: string) {
     throw new Error(await errorMessage(res, "Couldn't remove that source."));
 }
 
-/** Prepends live items to every cached view of the circle's feed they belong in. */
+/** Feed order: newest published first, then by id, matching the API's paging. */
+function sortsBefore(a: NewsItemDto, b: NewsItemDto) {
+  return a.publishedAt !== b.publishedAt
+    ? a.publishedAt > b.publishedAt
+    : a.id > b.id;
+}
+
+/**
+ * Puts live items into loaded pages in feed order. A story can be stored now
+ * but dated earlier than what's on screen (e.g. a Google News result from
+ * yesterday); one older than every loaded story is left for "Load older
+ * stories" to return, so it never shows twice. Returns null when nothing changed.
+ */
+export function mergeLiveItems(
+  pages: NewsResponse[],
+  items: NewsItemDto[],
+): NewsResponse[] | null {
+  if (pages.length === 0) return null;
+  // By link too: a story re-stored after pruning or a feed's guid change gets a new id.
+  const known = new Set(
+    pages.flatMap((p) =>
+      p.items.flatMap((i) => [i.id, `${i.feedId} ${i.link}`]),
+    ),
+  );
+  const added = items.filter(
+    (i) => !known.has(i.id) && !known.has(`${i.feedId} ${i.link}`),
+  );
+  if (added.length === 0) return null;
+
+  const hasOlder = pages[pages.length - 1].nextCursor !== null;
+  const next = pages.map((p) => ({ ...p, items: [...p.items] }));
+  let changed = false;
+  for (const item of added) {
+    let index = next.findIndex(
+      (p) =>
+        p.items.length > 0 && sortsBefore(item, p.items[p.items.length - 1]),
+    );
+    if (index === -1) {
+      if (hasOlder) continue;
+      index = next.length - 1;
+    }
+    const list = next[index].items;
+    const at = list.findIndex((x) => sortsBefore(item, x));
+    list.splice(at === -1 ? list.length : at, 0, item);
+    changed = true;
+  }
+  return changed ? next : null;
+}
+
+/** Adds live items to every cached view of the circle's feed they belong in. */
 export function prependNewsItems(
   queryClient: QueryClient,
   circleId: string,
@@ -64,29 +113,11 @@ export function prependNewsItems(
   })) {
     if (!data?.pages.length) continue;
     const feedId = key[2] as string | null;
-    const fresh = items.filter((i) => feedId === null || i.feedId === feedId);
-    if (fresh.length === 0) continue;
-    const [first, ...rest] = data.pages;
-    // By link too: a story re-stored after pruning or a feed's guid change gets a new id.
-    const known = new Set(
-      data.pages.flatMap((p) =>
-        p.items.flatMap((i) => [i.id, `${i.feedId} ${i.link}`]),
-      ),
+    const pages = mergeLiveItems(
+      data.pages,
+      items.filter((i) => feedId === null || i.feedId === feedId),
     );
-    const added = fresh.filter(
-      (i) => !known.has(i.id) && !known.has(`${i.feedId} ${i.link}`),
-    );
-    if (added.length === 0) continue;
-    queryClient.setQueryData<NewsCache>(key, {
-      ...data,
-      pages: [
-        {
-          ...first,
-          items: [...added, ...first.items],
-        },
-        ...rest,
-      ],
-    });
+    if (pages) queryClient.setQueryData<NewsCache>(key, { ...data, pages });
   }
 }
 

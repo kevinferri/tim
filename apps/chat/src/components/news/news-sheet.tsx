@@ -280,7 +280,11 @@ function FeedList({
     isFetchingNextPage,
   } = useNewsFeed(circleId, feedId);
   const byId = new Map(sources.map((s) => [s.feedId, s]));
-  const items = data?.pages.flatMap((p) => p.items) ?? [];
+  // Deduped as a safety net: the same story must never render under one key twice.
+  const seenIds = new Set<string>();
+  const items = (data?.pages.flatMap((p) => p.items) ?? []).filter(
+    (i) => !seenIds.has(i.id) && Boolean(seenIds.add(i.id)),
+  );
   const now = new Date();
 
   if (isPending) return <FeedSkeleton />;
