@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { googleNewsTopicUrl, looksLikeUrl, mergeLiveItems } from "./news-api";
+import {
+  googleNewsTopicUrl,
+  looksLikeUrl,
+  mergeLiveItems,
+  newerThanListed,
+} from "./news-api";
 
 describe("looksLikeUrl", () => {
   it("treats addresses as links", () => {
@@ -75,6 +80,20 @@ describe("mergeLiveItems", () => {
     expect(ids(mergeLiveItems(pages, [story("old", 600)]))).toEqual([
       ["a", "old"],
     ]);
+  });
+
+  it("finds only stories newer than the top of the list", () => {
+    const pages = [page([story("a", 10), story("b", 20)], "cursor")];
+    expect(
+      newerThanListed(pages, [
+        story("new", 0),
+        story("mid", 15),
+        story("old", 600),
+      ]).map((i) => i.id),
+    ).toEqual(["new"]);
+    expect(
+      newerThanListed(undefined, [story("x", 0)]).map((i) => i.id),
+    ).toEqual(["x"]);
   });
 
   it("skips stories already listed by id or link", () => {

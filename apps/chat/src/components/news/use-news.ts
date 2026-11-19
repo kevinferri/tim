@@ -8,8 +8,10 @@ import { useSocketContext } from "@/components/socket/socket-provider";
 import {
   fetchNews,
   newestCreatedAt,
+  newerThanListed,
   newsQueryKey,
   prependNewsItems,
+  type NewsCache,
 } from "./news-api";
 import { useNewsSeen, useNewsStore } from "./news-store";
 
@@ -61,11 +63,22 @@ export function useNewsLiveUpdates(circleId: string) {
     SocketEvent.NewsItemsCreated,
     (payload) => {
       if (payload.circleId !== circleId || payload.items.length === 0) return;
-      if (useNewsStore.getState().open) {
-        useNewsStore.getState().addPending(circleId, payload.items);
-      } else {
+      if (!useNewsStore.getState().open) {
         prependNewsItems(queryClient, circleId, payload.items);
+        return;
       }
+      // While reading, only stories that will appear at the top wait behind the pill; older-dated ones go straight to their place.
+      const top = newerThanListed(
+        queryClient.getQueryData<NewsCache>(newsQueryKey(circleId))?.pages,
+        payload.items,
+      );
+      const topIds = new Set(top.map((i) => i.id));
+      prependNewsItems(
+        queryClient,
+        circleId,
+        payload.items.filter((i) => !topIds.has(i.id)),
+      );
+      if (top.length > 0) useNewsStore.getState().addPending(circleId, top);
     },
   );
 

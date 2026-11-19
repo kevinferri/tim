@@ -102,6 +102,15 @@ export function mergeLiveItems(
   return changed ? next : null;
 }
 
+/** Live items that would land above everything currently listed (all of them when nothing is). */
+export function newerThanListed(
+  pages: NewsResponse[] | undefined,
+  items: NewsItemDto[],
+): NewsItemDto[] {
+  const first = pages?.[0]?.items[0];
+  return first ? items.filter((i) => sortsBefore(i, first)) : items;
+}
+
 /** Adds live items to every cached view of the circle's feed they belong in. */
 export function prependNewsItems(
   queryClient: QueryClient,

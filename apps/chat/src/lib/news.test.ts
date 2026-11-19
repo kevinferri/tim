@@ -126,6 +126,41 @@ describe("addCircleNewsSource", () => {
     expect(updated.nextFetchAt.getTime()).toBeLessThanOrEqual(Date.now());
   });
 
+  it("still follows a feed that's pruned mid-add", async () => {
+    const user = await createUser("Ann");
+    const [a, b] = [await createCircle(user.id), await createCircle(user.id)];
+    resolveFeed.mockResolvedValue(feed("https://example.com/rss", 1));
+    const first = await addCircleNewsSource({
+      circleId: a.id,
+      userId: user.id,
+      url: "x",
+    });
+    await prismaClient.circleNewsSource.deleteMany();
+    // The poller's prune deletes the now-unfollowed feed right after the add finds it.
+    const findUnique = prismaClient.newsFeed.findUnique;
+    const spy = vi
+      .spyOn(prismaClient.newsFeed, "findUnique")
+      .mockImplementationOnce((async (
+        args: Parameters<typeof findUnique>[0],
+      ) => {
+        const found = await findUnique(args);
+        await prismaClient.newsFeed.delete({ where: { id: first.feedId } });
+        return found;
+      }) as typeof findUnique);
+
+    const source = await addCircleNewsSource({
+      circleId: b.id,
+      userId: user.id,
+      url: "x",
+    });
+    spy.mockRestore();
+
+    expect(source.feedId).not.toBe(first.feedId);
+    expect(
+      await prismaClient.circleNewsSource.count({ where: { circleId: b.id } }),
+    ).toBe(1);
+  });
+
   it("skips stories older than the retention window and duplicate guids", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);

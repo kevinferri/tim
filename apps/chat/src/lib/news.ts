@@ -6,6 +6,7 @@ import {
   retentionCutoff,
   toNewsItemDto,
   type NewsItemDto,
+  type ResolvedFeed,
 } from "@tim/news";
 import { Prisma } from "@prisma/client";
 import { getDomain } from "tldts";
@@ -160,93 +161,48 @@ export async function addCircleNewsSource({
     throw err;
   }
 
-  const now = new Date();
-  const { feed: parsed } = resolved;
-  // Only a brand-new feed is seeded here. For one other circles already follow,
-  // the poller owns inserts, so its new stories reach every circle live.
-  const existing = await prismaClient.newsFeed.findUnique({
-    where: { url: resolved.url },
-  });
-  // It was just fetched successfully, so any failure backoff left from earlier is stale.
-  if (existing && (existing.failureCount > 0 || existing.nextFetchAt > now)) {
-    await prismaClient.newsFeed.update({
-      where: { id: existing.id },
-      data: { failureCount: 0, nextFetchAt: now },
-    });
-  }
-  const feed =
-    existing ??
-    (await prismaClient.newsFeed
-      .create({
-        data: {
-          url: resolved.url,
-          title: parsed.title || new URL(resolved.url).hostname,
-          siteUrl: parsed.siteUrl,
-          imageUrl: parsed.imageUrl,
-          ttlMinutes: parsed.ttlMinutes,
-          etag: resolved.etag,
-          lastModified: resolved.lastModified,
-          lastFetchedAt: now,
-          nextFetchAt: new Date(
-            now.getTime() +
-              nextFetchDelayMinutes({
-                ttlMinutes: parsed.ttlMinutes,
-                failureCount: 0,
-              }) *
-                60_000,
-          ),
-          items: {
-            create: parsed.items
-              .filter(
-                (i, index, all) =>
-                  (!i.publishedAt || i.publishedAt >= retentionCutoff(now)) &&
-                  all.findIndex((other) => other.guid === i.guid) === index,
-              )
-              .slice(0, MAX_ITEMS_PER_FETCH)
-              .map((item) => ({
-                guid: item.guid,
-                title: item.title,
-                link: item.link,
-                summary: item.summary,
-                imageUrl: item.imageUrl,
-                publishedAt:
-                  item.publishedAt && item.publishedAt < now
-                    ? item.publishedAt
-                    : now,
-                createdAt: now,
-              })),
-          },
-        },
-      })
-      .catch(async (err) => {
-        // Another request created the same feed first; follow that one.
-        if (
-          err instanceof Prisma.PrismaClientKnownRequestError &&
-          err.code === "P2002"
-        ) {
-          return prismaClient.newsFeed.findUniqueOrThrow({
-            where: { url: resolved.url },
-          });
-        }
-        throw err;
-      }));
-
-  let source;
-  try {
-    source = await prismaClient.circleNewsSource.create({
-      data: { circleId, feedId: feed.id, addedById: userId },
-    });
-  } catch (err) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
-      throw new ApiError(409, "This circle already follows that source.");
+  // The poller's hourly prune deletes feeds nobody follows, and could do so between
+  // finding a feed and following it; that shows up as one of these, so try again.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await followFeed({ circleId, userId, resolved, now: new Date() });
+    } catch (err) {
+      if (!(err instanceof Prisma.PrismaClientKnownRequestError)) throw err;
+      const target = String(err.meta?.target ?? "");
+      if (err.code === "P2002" && !target.includes("url")) {
+        throw new ApiError(409, "This circle already follows that source.");
+      }
+      const raced =
+        err.code === "P2003" || // the feed was pruned before the follow was written
+        err.code === "P2025" || // ...or before its backoff reset
+        err.code === "P2002"; // another request created the same feed first
+      if (!raced || attempt >= 2) throw err;
     }
-    throw err;
   }
+}
 
-  return {
+async function followFeed({
+  circleId,
+  userId,
+  resolved,
+  now,
+}: {
+  circleId: string;
+  userId: string;
+  resolved: ResolvedFeed;
+  now: Date;
+}): Promise<NewsSourceDto> {
+  const { feed: parsed } = resolved;
+  const toDto = (
+    feed: {
+      id: string;
+      url: string;
+      title: string;
+      siteUrl: string | null;
+      imageUrl: string | null;
+    },
+    source: { addedById: string | null; createdAt: Date },
+  ): NewsSourceDto => ({
     feedId: feed.id,
     url: feed.url,
     title: feed.title,
@@ -255,7 +211,75 @@ export async function addCircleNewsSource({
     addedById: source.addedById,
     createdAt: source.createdAt.toISOString(),
     canRemove: true,
-  };
+  });
+
+  const existing = await prismaClient.newsFeed.findUnique({
+    where: { url: resolved.url },
+  });
+  if (existing) {
+    // Stories stay with the poller, so its new ones reach every following circle live.
+    // The feed was just fetched successfully, so any failure backoff left from earlier is stale.
+    const [, source] = await prismaClient.$transaction([
+      prismaClient.newsFeed.update({
+        where: { id: existing.id },
+        data: {
+          failureCount: 0,
+          nextFetchAt: existing.nextFetchAt > now ? now : existing.nextFetchAt,
+        },
+      }),
+      prismaClient.circleNewsSource.create({
+        data: { circleId, feedId: existing.id, addedById: userId },
+      }),
+    ]);
+    return toDto(existing, source);
+  }
+
+  // A brand-new feed is created, seeded, and followed in one write.
+  const cutoff = retentionCutoff(now);
+  const feed = await prismaClient.newsFeed.create({
+    data: {
+      url: resolved.url,
+      title: parsed.title || new URL(resolved.url).hostname,
+      siteUrl: parsed.siteUrl,
+      imageUrl: parsed.imageUrl,
+      ttlMinutes: parsed.ttlMinutes,
+      etag: resolved.etag,
+      lastModified: resolved.lastModified,
+      lastFetchedAt: now,
+      nextFetchAt: new Date(
+        now.getTime() +
+          nextFetchDelayMinutes({
+            ttlMinutes: parsed.ttlMinutes,
+            failureCount: 0,
+          }) *
+            60_000,
+      ),
+      items: {
+        create: parsed.items
+          .filter(
+            (i, index, all) =>
+              (!i.publishedAt || i.publishedAt >= cutoff) &&
+              all.findIndex((other) => other.guid === i.guid) === index,
+          )
+          .slice(0, MAX_ITEMS_PER_FETCH)
+          .map((item) => ({
+            guid: item.guid,
+            title: item.title,
+            link: item.link,
+            summary: item.summary,
+            imageUrl: item.imageUrl,
+            publishedAt:
+              item.publishedAt && item.publishedAt < now
+                ? item.publishedAt
+                : now,
+            createdAt: now,
+          })),
+      },
+      sources: { create: { circleId, addedById: userId } },
+    },
+    include: { sources: { where: { circleId } } },
+  });
+  return toDto(feed, feed.sources[0]);
 }
 
 /** Whoever added a source, or the circle's creator, can remove it. */
