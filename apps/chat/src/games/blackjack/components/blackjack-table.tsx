@@ -354,12 +354,15 @@ export function BlackjackTable({
                   <TurnGlow count={view.dealer.cards.length} size={cardSize} />
                 )}
                 {view.dealer.cards.length > 0 ? (
-                  <ScoredCards
-                    cards={view.dealer.cards}
-                    total={view.dealer.total}
-                    size={cardSize}
-                    dealDelayMs={dealerDelay}
-                  />
+                  // Above the deck, which a long hand (5+ cards) reaches.
+                  <div className="relative z-10">
+                    <ScoredCards
+                      cards={view.dealer.cards}
+                      total={view.dealer.total}
+                      size={cardSize}
+                      dealDelayMs={dealerDelay}
+                    />
+                  </div>
                 ) : (
                   <div className={cardBox(cardSize)} />
                 )}
