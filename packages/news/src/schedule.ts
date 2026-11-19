@@ -21,3 +21,10 @@ export function nextFetchDelayMinutes({
   }
   return Math.max(BASE_MINUTES, Math.min(ttlMinutes ?? 0, MAX_TTL_MINUTES));
 }
+
+/** Stories older than this (by publish date) are pruned, and never stored in the first place. */
+export const RETENTION_DAYS = 14;
+
+export function retentionCutoff(now: Date): Date {
+  return new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60_000);
+}

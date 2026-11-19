@@ -1,5 +1,8 @@
-import { lookup } from "node:dns/promises";
-import { BlockList, isIP } from "node:net";
+import { lookup as dnsLookup } from "node:dns";
+import http, { type IncomingHttpHeaders } from "node:http";
+import https from "node:https";
+import zlib from "node:zlib";
+import { BlockList, isIP, type LookupFunction } from "node:net";
 import {
   NotAFeedError,
   discoverFeedUrls,
@@ -80,45 +83,114 @@ export function normalizeUrl(input: string): URL {
   return url;
 }
 
-async function assertPublicHost(url: URL) {
+/**
+ * dns.lookup that fails unless every answer is public. It's passed to the
+ * request as its own lookup, so the address checked is the one connected to
+ * (a separate pre-flight lookup could be answered differently: DNS rebinding).
+ */
+export const publicLookup: LookupFunction = (hostname, options, callback) => {
+  dnsLookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (err) return callback(err, "");
+    if (
+      addresses.length === 0 ||
+      !addresses.every((a) => isPublicAddress(a.address))
+    ) {
+      return callback(
+        Object.assign(new Error(`${hostname} is not a public address`), {
+          code: "EBLOCKED",
+        }),
+        "",
+      );
+    }
+    if (options.all) return callback(null, addresses);
+    callback(null, addresses[0].address, addresses[0].family);
+  });
+};
+
+// Requests to an IP literal skip lookup entirely, so those are checked here.
+function assertHostAllowed(url: URL) {
   const host = url.hostname.replace(/^\[|\]$/g, "");
   if (host === "localhost" || host.endsWith(".localhost")) {
     throw new FeedError("blocked");
   }
-  let addresses: { address: string }[];
-  try {
-    addresses = isIP(host)
-      ? [{ address: host }]
-      : await lookup(host, { all: true });
-  } catch {
-    throw new FeedError("fetch-failed", `Couldn't resolve ${host}`);
-  }
-  if (
-    addresses.length === 0 ||
-    !addresses.every((a) => isPublicAddress(a.address))
-  ) {
-    throw new FeedError("blocked");
-  }
+  if (isIP(host) && !isPublicAddress(host)) throw new FeedError("blocked");
 }
 
-async function readCapped(res: Response): Promise<string> {
-  const declared = Number(res.headers.get("content-length"));
-  if (declared > MAX_BYTES) throw new FeedError("too-large");
-  if (!res.body) return "";
-  const reader = res.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_BYTES) {
-      await reader.cancel();
-      throw new FeedError("too-large");
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString("utf8");
+type RawResponse = {
+  status: number;
+  headers: IncomingHttpHeaders;
+  body: string | null;
+};
+
+function header(headers: IncomingHttpHeaders, name: string): string | null {
+  const value = headers[name];
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+function getOnce(
+  url: URL,
+  headers: Record<string, string>,
+): Promise<RawResponse> {
+  return new Promise((resolve, reject) => {
+    const host = url.hostname;
+    const transport = url.protocol === "https:" ? https : http;
+    const req = transport.request(
+      url,
+      { method: "GET", headers, lookup: publicLookup },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        if (status < 200 || status >= 300) {
+          res.resume();
+          resolve({ status, headers: res.headers, body: null });
+          return;
+        }
+        if (Number(header(res.headers, "content-length")) > MAX_BYTES) {
+          req.destroy(new FeedError("too-large"));
+          return;
+        }
+        const encoding = header(res.headers, "content-encoding");
+        const stream: NodeJS.ReadableStream =
+          encoding === "gzip"
+            ? res.pipe(zlib.createGunzip())
+            : encoding === "deflate"
+              ? res.pipe(zlib.createInflate())
+              : encoding === "br"
+                ? res.pipe(zlib.createBrotliDecompress())
+                : res;
+        const chunks: Buffer[] = [];
+        let total = 0;
+        stream.on("data", (chunk: Buffer) => {
+          total += chunk.length;
+          if (total > MAX_BYTES) {
+            req.destroy(new FeedError("too-large"));
+            return;
+          }
+          chunks.push(chunk);
+        });
+        stream.on("end", () =>
+          resolve({
+            status,
+            headers: res.headers,
+            body: Buffer.concat(chunks).toString("utf8"),
+          }),
+        );
+        stream.on("error", () =>
+          reject(new FeedError("fetch-failed", `Couldn't read ${host}`)),
+        );
+      },
+    );
+    const deadline = setTimeout(
+      () => req.destroy(new FeedError("fetch-failed", `${host} timed out`)),
+      TIMEOUT_MS,
+    );
+    req.on("close", () => clearTimeout(deadline));
+    req.on("error", (err: NodeJS.ErrnoException) => {
+      if (err instanceof FeedError) reject(err);
+      else if (err.code === "EBLOCKED") reject(new FeedError("blocked"));
+      else reject(new FeedError("fetch-failed", `Couldn't reach ${host}`));
+    });
+    req.end();
+  });
 }
 
 type FetchResult =
@@ -132,44 +204,34 @@ type FetchResult =
       lastModified: string | null;
     };
 
-/** GET with a public-host check on every redirect hop, a timeout, and a body size cap. */
+/** GET that only ever connects to public addresses (every redirect hop included), with a timeout and a body size cap. */
 export async function safeFetch(
   input: URL,
   cache: { etag?: string | null; lastModified?: string | null } = {},
 ): Promise<FetchResult> {
   let url = input;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await assertPublicHost(url);
+    assertHostAllowed(url);
     const headers: Record<string, string> = {
       "User-Agent": USER_AGENT,
       Accept:
         "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5",
+      "Accept-Encoding": "gzip, deflate, br",
     };
     if (cache.etag) headers["If-None-Match"] = cache.etag;
     if (cache.lastModified) headers["If-Modified-Since"] = cache.lastModified;
 
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        headers,
-        redirect: "manual",
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-    } catch {
-      throw new FeedError("fetch-failed", `Couldn't reach ${url.hostname}`);
-    }
+    const res = await getOnce(url, headers);
 
     if (res.status >= 300 && res.status < 400 && res.status !== 304) {
-      const location = res.headers.get("location");
-      await res.body?.cancel();
+      const location = header(res.headers, "location");
       if (!location) throw new FeedError("fetch-failed");
       url = normalizeUrl(new URL(location, url).toString());
       continue;
     }
     if (res.status === 304)
       return { status: "not-modified", url: url.toString() };
-    if (!res.ok) {
-      await res.body?.cancel();
+    if (res.body === null) {
       throw new FeedError(
         "fetch-failed",
         `${url.hostname} returned ${res.status}`,
@@ -178,10 +240,10 @@ export async function safeFetch(
     return {
       status: "ok",
       url: url.toString(),
-      body: await readCapped(res),
-      contentType: res.headers.get("content-type") ?? "",
-      etag: res.headers.get("etag"),
-      lastModified: res.headers.get("last-modified"),
+      body: res.body,
+      contentType: header(res.headers, "content-type") ?? "",
+      etag: header(res.headers, "etag"),
+      lastModified: header(res.headers, "last-modified"),
     };
   }
   throw new FeedError("fetch-failed", "Too many redirects");

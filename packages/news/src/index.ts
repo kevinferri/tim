@@ -12,12 +12,18 @@ export {
   safeFetch,
   normalizeUrl,
   isPublicAddress,
+  publicLookup,
   FeedError,
   type FeedErrorCode,
   type FetchFeedResult,
   type ResolvedFeed,
 } from "./fetch";
-export { nextFetchDelayMinutes, MAX_ITEMS_PER_FETCH } from "./schedule";
+export {
+  nextFetchDelayMinutes,
+  retentionCutoff,
+  MAX_ITEMS_PER_FETCH,
+  RETENTION_DAYS,
+} from "./schedule";
 export {
   toNewsItemDto,
   type NewsItemDto,

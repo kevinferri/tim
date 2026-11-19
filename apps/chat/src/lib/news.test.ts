@@ -14,6 +14,7 @@ const {
   getCircleNews,
   getNewsLinkPreview,
   removeCircleNewsSource,
+  siteOf,
 } = await import("./news");
 
 beforeEach(async () => {
@@ -58,7 +59,7 @@ function feed(url: string, count: number, title = "Example"): ResolvedFeed {
         link: `https://example.com/${n}`,
         summary: null,
         imageUrl: null,
-        publishedAt: new Date(Date.UTC(2026, 10, 18, 12, 0, 0) - n * 60_000),
+        publishedAt: new Date(Date.now() - (n + 1) * 60_000),
       })),
     },
   };
@@ -85,6 +86,40 @@ describe("addCircleNewsSource", () => {
     expect(await prismaClient.newsFeed.count()).toBe(1);
     expect(await prismaClient.newsItem.count()).toBe(3);
     expect(await prismaClient.circleNewsSource.count()).toBe(2);
+  });
+
+  it("leaves a feed that's already followed to the poller", async () => {
+    const user = await createUser("Ann");
+    const [a, b] = [await createCircle(user.id), await createCircle(user.id)];
+    resolveFeed.mockResolvedValueOnce(feed("https://example.com/rss", 2));
+    await addCircleNewsSource({ circleId: a.id, userId: user.id, url: "x" });
+    // By the time a second circle adds it, the feed has a newer story.
+    resolveFeed.mockResolvedValueOnce(feed("https://example.com/rss", 3));
+    await addCircleNewsSource({ circleId: b.id, userId: user.id, url: "x" });
+
+    expect(await prismaClient.newsItem.count()).toBe(2);
+  });
+
+  it("skips stories older than the retention window and duplicate guids", async () => {
+    const user = await createUser("Ann");
+    const circle = await createCircle(user.id);
+    const resolved = feed("https://example.com/rss", 2);
+    resolved.feed.items.push(
+      { ...resolved.feed.items[0] },
+      {
+        ...resolved.feed.items[1],
+        guid: "old",
+        publishedAt: new Date(Date.now() - 30 * 86_400_000),
+      },
+    );
+    resolveFeed.mockResolvedValue(resolved);
+    await addCircleNewsSource({
+      circleId: circle.id,
+      userId: user.id,
+      url: "x",
+    });
+
+    expect(await prismaClient.newsItem.count()).toBe(2);
   });
 
   it("rejects a source the circle already follows", async () => {
@@ -235,11 +270,13 @@ describe("getNewsLinkPreview", () => {
   it("previews a stored story's link from its own fields", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
-    resolveFeed.mockResolvedValue(feed("https://a.com/rss", 2, "A"));
+    resolveFeed.mockResolvedValue(
+      feed("https://feeds.example.com/rss", 2, "A"),
+    );
     await addCircleNewsSource({
       circleId: circle.id,
       userId: user.id,
-      url: "a.com",
+      url: "example.com",
     });
 
     expect(await getNewsLinkPreview("https://example.com/1")).toEqual({
@@ -249,5 +286,29 @@ describe("getNewsLinkPreview", () => {
       ogImage: undefined,
     });
     expect(await getNewsLinkPreview("https://example.com/nope")).toBeNull();
+  });
+
+  it("ignores items from a feed hosted on another site", async () => {
+    const user = await createUser("Mallory");
+    const circle = await createCircle(user.id);
+    // Claims example.com links (and siteUrl) but was fetched from evil.test.
+    resolveFeed.mockResolvedValue(feed("https://evil.test/rss", 2, "Fake"));
+    await addCircleNewsSource({
+      circleId: circle.id,
+      userId: user.id,
+      url: "evil.test",
+    });
+
+    expect(await getNewsLinkPreview("https://example.com/1")).toBeNull();
+  });
+});
+
+describe("siteOf", () => {
+  it("groups subdomains under their site", () => {
+    expect(siteOf("rss.nytimes.com")).toBe("nytimes.com");
+    expect(siteOf("www.nytimes.com")).toBe("nytimes.com");
+    expect(siteOf("feeds.bbci.co.uk")).toBe("bbci.co.uk");
+    expect(siteOf("www.bbc.co.uk")).toBe("bbc.co.uk");
+    expect(siteOf("news.google.com")).toBe("google.com");
   });
 });

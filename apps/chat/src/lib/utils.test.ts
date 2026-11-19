@@ -77,6 +77,12 @@ describe("shortUrlLabel", () => {
     expect(label.length).toBe(40);
   });
 
+  it("keeps a path with a bare % instead of throwing", () => {
+    expect(shortUrlLabel("https://example.com/50%off")).toBe(
+      "example.com/50%off",
+    );
+  });
+
   it("handles links without a scheme and leaves junk alone", () => {
     expect(shortUrlLabel("www.example.com/a")).toBe("example.com/a");
     expect(shortUrlLabel("http://%")).toBe("http://%");

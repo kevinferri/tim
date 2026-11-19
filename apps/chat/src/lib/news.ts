@@ -3,6 +3,7 @@ import {
   MAX_ITEMS_PER_FETCH,
   nextFetchDelayMinutes,
   resolveFeed,
+  retentionCutoff,
   toNewsItemDto,
   type NewsItemDto,
 } from "@tim/news";
@@ -160,43 +161,67 @@ export async function addCircleNewsSource({
 
   const now = new Date();
   const { feed: parsed } = resolved;
-  const feed = await prismaClient.newsFeed.upsert({
+  // Only a brand-new feed is seeded here. For one other circles already follow,
+  // the poller owns inserts, so its new stories reach every circle live.
+  const existing = await prismaClient.newsFeed.findUnique({
     where: { url: resolved.url },
-    create: {
-      url: resolved.url,
-      title: parsed.title || new URL(resolved.url).hostname,
-      siteUrl: parsed.siteUrl,
-      imageUrl: parsed.imageUrl,
-      ttlMinutes: parsed.ttlMinutes,
-      etag: resolved.etag,
-      lastModified: resolved.lastModified,
-      lastFetchedAt: now,
-      nextFetchAt: new Date(
-        now.getTime() +
-          nextFetchDelayMinutes({
-            ttlMinutes: parsed.ttlMinutes,
-            failureCount: 0,
-          }) *
-            60_000,
-      ),
-    },
-    update: {},
   });
-
-  await prismaClient.newsItem.createMany({
-    data: parsed.items.slice(0, MAX_ITEMS_PER_FETCH).map((item) => ({
-      feedId: feed.id,
-      guid: item.guid,
-      title: item.title,
-      link: item.link,
-      summary: item.summary,
-      imageUrl: item.imageUrl,
-      publishedAt:
-        item.publishedAt && item.publishedAt < now ? item.publishedAt : now,
-      createdAt: now,
-    })),
-    skipDuplicates: true,
-  });
+  const feed =
+    existing ??
+    (await prismaClient.newsFeed
+      .create({
+        data: {
+          url: resolved.url,
+          title: parsed.title || new URL(resolved.url).hostname,
+          siteUrl: parsed.siteUrl,
+          imageUrl: parsed.imageUrl,
+          ttlMinutes: parsed.ttlMinutes,
+          etag: resolved.etag,
+          lastModified: resolved.lastModified,
+          lastFetchedAt: now,
+          nextFetchAt: new Date(
+            now.getTime() +
+              nextFetchDelayMinutes({
+                ttlMinutes: parsed.ttlMinutes,
+                failureCount: 0,
+              }) *
+                60_000,
+          ),
+          items: {
+            create: parsed.items
+              .filter(
+                (i, index, all) =>
+                  (!i.publishedAt || i.publishedAt >= retentionCutoff(now)) &&
+                  all.findIndex((other) => other.guid === i.guid) === index,
+              )
+              .slice(0, MAX_ITEMS_PER_FETCH)
+              .map((item) => ({
+                guid: item.guid,
+                title: item.title,
+                link: item.link,
+                summary: item.summary,
+                imageUrl: item.imageUrl,
+                publishedAt:
+                  item.publishedAt && item.publishedAt < now
+                    ? item.publishedAt
+                    : now,
+                createdAt: now,
+              })),
+          },
+        },
+      })
+      .catch(async (err) => {
+        // Another request created the same feed first; follow that one.
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2002"
+        ) {
+          return prismaClient.newsFeed.findUniqueOrThrow({
+            where: { url: resolved.url },
+          });
+        }
+        throw err;
+      }));
 
   let source;
   try {
@@ -248,18 +273,51 @@ export async function removeCircleNewsSource({
   });
 }
 
-/** Preview fields for a link that is a stored news story, so shared stories preview with their real headline and image (Google News links don't, when scraped). */
+/**
+ * Site a hostname belongs to, roughly: its last two labels, or three when the
+ * second-to-last is a short second-level suffix like "co" in bbc.co.uk.
+ */
+export function siteOf(hostname: string) {
+  const labels = hostname.toLowerCase().replace(/\.$/, "").split(".");
+  const take =
+    labels.length > 2 &&
+    labels[labels.length - 1].length === 2 &&
+    labels[labels.length - 2].length <= 3
+      ? 3
+      : 2;
+  return labels.slice(-take).join(".");
+}
+
+function hostSite(url: string) {
+  try {
+    return siteOf(new URL(url).hostname);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Preview fields for a link that is a stored news story, so shared stories
+ * preview with their real headline and image (Google News links don't, when
+ * scraped). A feed's items are only trusted for links on the site the feed was
+ * fetched from, so a self-hosted feed can't attach a fake headline to someone
+ * else's URL.
+ */
 export async function getNewsLinkPreview(url: string) {
-  const item = await prismaClient.newsItem.findFirst({
+  const site = hostSite(url);
+  if (!site) return null;
+  const items = await prismaClient.newsItem.findMany({
     where: { link: url },
     orderBy: { createdAt: "desc" },
+    take: 10,
     select: {
       title: true,
       summary: true,
       imageUrl: true,
-      feed: { select: { title: true } },
+      feed: { select: { title: true, url: true } },
     },
   });
+  const item = items.find((i) => hostSite(i.feed.url) === site);
   if (!item) return null;
   return {
     ogSiteName: item.feed.title,

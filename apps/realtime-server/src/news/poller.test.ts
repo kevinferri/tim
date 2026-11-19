@@ -136,6 +136,20 @@ describe("news poller", () => {
     ).toEqual(["Story 0"]);
   });
 
+  it("keeps claiming until every due feed is fetched", async () => {
+    const circleId = await createCircle();
+    for (let i = 0; i < 45; i++) await createFeed({ circleIds: [circleId] });
+    const fetchFeed = vi.fn(async () => ({ status: "not-modified" }) as const);
+
+    await createNewsPoller({
+      server: mockServer().server,
+      fetchFeed,
+      now: () => T0,
+    }).tick();
+
+    expect(fetchFeed).toHaveBeenCalledTimes(45);
+  });
+
   it("skips feeds that aren't due or that no circle follows", async () => {
     const circleId = await createCircle();
     await createFeed({
@@ -180,6 +194,22 @@ describe("news poller", () => {
     expect(feed.nextFetchAt.toISOString()).toBe("2026-11-18T12:15:00.000Z");
   });
 
+  it("never stores items older than the retention window", async () => {
+    const circleId = await createCircle();
+    const feedId = await createFeed({ circleIds: [circleId] });
+    const { server, emit } = mockServer();
+    const old = item(99, new Date(T0.getTime() - 15 * 86_400_000));
+    const fetchFeed = vi.fn(async () => ok([item(1), old]));
+
+    await createNewsPoller({ server, fetchFeed, now: () => T0 }).tick();
+
+    const guids = (await pgClient("news_items").where({ feedId })).map(
+      (r) => r.guid,
+    );
+    expect(guids).toEqual(["guid-1"]);
+    expect(emit.mock.calls[0][1].items).toHaveLength(1);
+  });
+
   it("prunes old items and feeds nobody follows", async () => {
     const circleId = await createCircle();
     const followed = await createFeed({
@@ -194,8 +224,9 @@ describe("news poller", () => {
         guid: "old",
         title: "Old",
         link: "https://e.com/o",
-        publishedAt: T0,
-        createdAt: new Date(T0.getTime() - 15 * 86_400_000),
+        // Seen recently but published long ago: pruned by publish date.
+        publishedAt: new Date(T0.getTime() - 15 * 86_400_000),
+        createdAt: T0,
       },
       {
         id: crypto.randomUUID(),

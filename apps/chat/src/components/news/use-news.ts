@@ -21,6 +21,8 @@ export function useNewsFeed(circleId: string, feedId: string | null = null) {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
     staleTime: 60_000,
+    // Live pushes and the reconnect refetch keep it current; a focus refetch would also jump the list under the reader.
+    refetchOnWindowFocus: false,
   });
 }
 

@@ -59,7 +59,7 @@ export function NewsSheet({
   useNewsLiveUpdates(circleId);
   const queryClient = useQueryClient();
   const { open, close, takePending, markSeen } = useNewsStore();
-  const pending = useNewsStore((s) => s.pending[circleId] ?? []);
+  const held = useNewsStore((s) => s.pending[circleId]);
   const [view, setView] = useState<View>("feed");
   const [feedId, setFeedId] = useState<string | null>(null);
   const [sharing, setSharing] = useState<Sharing | null>(null);
@@ -68,6 +68,11 @@ export function NewsSheet({
   const all = useNewsFeed(circleId);
   const sources = all.data?.pages[0]?.sources ?? [];
   const newest = newestCreatedAt(all.data?.pages[0]?.items);
+  // A refetch (reconnect, another member changing sources) may already have listed some held stories.
+  const listedIds = new Set(
+    all.data?.pages.flatMap((p) => p.items.map((i) => i.id)) ?? [],
+  );
+  const pending = (held ?? []).filter((i) => !listedIds.has(i.id));
 
   useEffect(() => {
     if (open) markSeen(circleId, newest);

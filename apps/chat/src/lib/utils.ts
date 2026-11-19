@@ -60,7 +60,13 @@ export function shortUrlLabel(url: string, max = 40) {
     return url;
   }
   const host = parsed.hostname.replace(/^www\./, "");
-  const path = decodeURIComponent(parsed.pathname).replace(/\/+$/, "");
+  let path = parsed.pathname;
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    // A bare "%" (e.g. /50%off) isn't a valid escape; show the path as-is.
+  }
+  path = path.replace(/\/+$/, "");
   const label = `${host}${path}`;
   return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }

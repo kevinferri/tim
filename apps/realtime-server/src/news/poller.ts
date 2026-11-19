@@ -3,6 +3,7 @@ import {
   MAX_ITEMS_PER_FETCH,
   fetchFeed as defaultFetchFeed,
   nextFetchDelayMinutes,
+  retentionCutoff,
   toNewsItemDto,
   type NewsItemsCreatedPayload,
 } from "@tim/news";
@@ -19,10 +20,11 @@ import {
 } from "../db/news";
 
 const TICK_MS = 30_000;
-const FEEDS_PER_TICK = 20;
-const CONCURRENCY = 5;
+const CLAIM_BATCH = 20;
+const CONCURRENCY = 10;
+// A tick keeps claiming batches until nothing is due, but hands over to the next tick before overlapping it.
+const TICK_BUDGET_MS = 25_000;
 const PRUNE_EVERY_MS = 60 * 60_000;
-const KEEP_ITEMS_DAYS = 14;
 
 export type NewsPollerDeps = {
   server: AppServer;
@@ -116,11 +118,16 @@ export function createNewsPoller({
     const at = now();
     if (at.getTime() - lastPruneAt >= PRUNE_EVERY_MS) {
       lastPruneAt = at.getTime();
-      await pruneNews({ before: addMinutes(at, -KEEP_ITEMS_DAYS * 24 * 60) });
+      await pruneNews({ before: retentionCutoff(at) });
     }
-    const feeds = await claimDueFeeds({ now: at, limit: FEEDS_PER_TICK });
-    for (let i = 0; i < feeds.length; i += CONCURRENCY) {
-      await Promise.all(feeds.slice(i, i + CONCURRENCY).map(pollFeed));
+    const startedAt = Date.now();
+    for (;;) {
+      const feeds = await claimDueFeeds({ now: at, limit: CLAIM_BATCH });
+      for (let i = 0; i < feeds.length; i += CONCURRENCY) {
+        await Promise.all(feeds.slice(i, i + CONCURRENCY).map(pollFeed));
+      }
+      if (feeds.length < CLAIM_BATCH) return;
+      if (Date.now() - startedAt >= TICK_BUDGET_MS) return;
     }
   }
 

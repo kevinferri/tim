@@ -4,6 +4,7 @@ import {
   FeedError,
   discoverFeedUrls,
   isPublicAddress,
+  publicLookup,
   nextFetchDelayMinutes,
   normalizeUrl,
   parseFeed,
@@ -216,4 +217,13 @@ test("nextFetchDelayMinutes honors ttl within bounds and backs off on failure", 
     nextFetchDelayMinutes({ ttlMinutes: null, failureCount: 20 }),
     360,
   );
+});
+
+test("publicLookup refuses names that resolve to private addresses", async () => {
+  for (const all of [false, true]) {
+    const err = await new Promise((resolve) =>
+      publicLookup("localhost", { all }, (e) => resolve(e)),
+    );
+    assert.equal(err?.code, "EBLOCKED");
+  }
 });

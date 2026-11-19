@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import type { NewsFeed, NewsItem } from "@tim/db-types";
-import type { FeedItem } from "@tim/news";
+import { retentionCutoff, type FeedItem } from "@tim/news";
 import { pgClient } from "./client";
 
 // How long a claimed feed stays out of other ticks' reach while its fetch runs.
@@ -35,7 +35,11 @@ export async function claimDueFeeds({
   return rows;
 }
 
-/** Inserts items not seen before (by feed + guid) and returns only the new rows. */
+/**
+ * Inserts items not seen before (by feed + guid) and returns only the new rows.
+ * Items older than the retention window are skipped, so one that was pruned
+ * can't come back as "new" while the feed still lists it.
+ */
 export async function insertNewItems({
   feedId,
   items,
@@ -45,10 +49,12 @@ export async function insertNewItems({
   items: FeedItem[];
   now: Date;
 }): Promise<NewsItem[]> {
-  if (items.length === 0) return [];
+  const cutoff = retentionCutoff(now);
+  const fresh = items.filter((i) => !i.publishedAt || i.publishedAt >= cutoff);
+  if (fresh.length === 0) return [];
   return await pgClient<NewsItem>("news_items")
     .insert(
-      items.map((item) => ({
+      fresh.map((item) => ({
         id: randomUUID(),
         feedId,
         guid: item.guid,
@@ -94,9 +100,11 @@ export async function getCircleIdsForFeed(feedId: string): Promise<string[]> {
   return rows.map((r: { circleId: string }) => r.circleId);
 }
 
-/** Drops items first seen before `before`, and feeds no circle follows anymore. */
+/** Drops items published before `before`, and feeds no circle follows anymore. */
 export async function pruneNews({ before }: { before: Date }) {
-  await pgClient<NewsItem>("news_items").where("createdAt", "<", before).del();
+  await pgClient<NewsItem>("news_items")
+    .where("publishedAt", "<", before)
+    .del();
   await pgClient("news_feeds")
     .whereNotExists(
       pgClient("circle_news_sources")
