@@ -1,4 +1,10 @@
-import { useId } from "react";
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { CHIP_COLORS } from "./chips";
 
 // Each chip lies on its side in the rack, so a tube shows a column of chip edges this tall.
@@ -81,6 +87,137 @@ function RackTube({ chip }: { chip: (typeof CHIP_COLORS)[number] }) {
         stroke="#000"
         strokeOpacity="0.45"
       />
+    </svg>
+  );
+}
+
+// In SVG units. The name shrinks to fit up to MAX_W wide, then truncates; short names don't grow past MIN_W's scale.
+const NAME_SIZE = 20;
+const MIN_W = 150;
+const MAX_W = 340;
+const PAD = 6;
+const HEIGHT = 60;
+
+/** The circle's name over "CASINO", embroidered into the felt: satin-stitched thread, a stitched outline, a slight rise. Decorative. */
+export function FeltLogo({
+  name,
+  className,
+  style,
+}: {
+  name: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const id = useId();
+  const satin = `${id}-satin`;
+  const raise = `${id}-raise`;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const measureRef = useRef<SVGTextElement>(null);
+  const [fit, setFit] = useState<{ text: string; w: number } | null>(null);
+
+  // Measure the real lettering on a hidden copy React leaves empty, trimming characters until it fits.
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    const el = measureRef.current;
+    if (!svg || !el) return;
+    const measure = () => {
+      // Under display:none text can't be measured (getBBox is 0, or throws in Firefox); wait to be shown.
+      if (!svg.getBoundingClientRect().width) return;
+      const label = name.toUpperCase();
+      const chars = Array.from(label);
+      el.textContent = label;
+      while (el.getBBox().width > MAX_W - 2 * PAD && chars.length > 1) {
+        chars.pop();
+        el.textContent = `${chars.join("").trimEnd()}…`;
+      }
+      const text = el.textContent;
+      const w = Math.max(MIN_W, el.getBBox().width + 2 * PAD);
+      setFit((f) => (f?.text === text && f.w === w ? f : { text, w }));
+    };
+    measure();
+    // Fires when a hidden logo is shown (its size goes from 0).
+    const observer = new ResizeObserver(measure);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, [name]);
+
+  const w = fit?.w ?? MIN_W;
+  const thread = {
+    fill: `url(#${satin})`,
+    stroke: "#c9dccf",
+    strokeDasharray: "1.1 0.7",
+    strokeLinejoin: "round" as const,
+  };
+  return (
+    <svg
+      ref={svgRef}
+      aria-hidden
+      viewBox={`${-w / 2} 0 ${w} ${HEIGHT}`}
+      className={className}
+      style={{ ...style, visibility: fit ? undefined : "hidden" }}
+    >
+      <defs>
+        {/* Satin stitch: tight diagonal threads, light with a darker sheen between. */}
+        <pattern
+          id={satin}
+          width="1.4"
+          height="1.4"
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(55)"
+        >
+          <rect width="1.4" height="1.4" fill="#d6e6db" />
+          <rect width="0.5" height="1.4" fill="#9db8a8" />
+        </pattern>
+        {/* Thread sits on the felt: a soft shadow below, a faint lit edge above. */}
+        <filter id={raise} x="-10%" y="-10%" width="120%" height="130%">
+          <feDropShadow
+            dx="0"
+            dy="0.7"
+            stdDeviation="0.45"
+            floodColor="#000"
+            floodOpacity="0.6"
+          />
+          <feDropShadow
+            dx="0"
+            dy="-0.3"
+            stdDeviation="0.2"
+            floodColor="#fff"
+            floodOpacity="0.15"
+          />
+        </filter>
+      </defs>
+      <g
+        filter={`url(#${raise})`}
+        fontFamily="Georgia, 'Times New Roman', serif"
+        fontWeight="700"
+        textAnchor="middle"
+      >
+        <text
+          ref={measureRef}
+          y="30"
+          fontSize={NAME_SIZE}
+          letterSpacing="3"
+          visibility="hidden"
+        />
+        <text
+          y="30"
+          fontSize={NAME_SIZE}
+          letterSpacing="3"
+          strokeWidth={0.5}
+          {...thread}
+        >
+          {fit?.text}
+        </text>
+        <text
+          y="50"
+          fontSize="9"
+          letterSpacing="5"
+          strokeWidth={0.35}
+          {...thread}
+        >
+          CASINO
+        </text>
+      </g>
     </svg>
   );
 }

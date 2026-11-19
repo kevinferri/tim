@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { StackDirectionContext } from "./chips";
+import { FeltLogo } from "./table-dressing";
 
 type Props = {
   backHref: string;
@@ -25,12 +26,15 @@ type Props = {
   /** Shown between the chevron and the label, e.g. the circle's avatar. */
   backAvatar?: ReactNode;
   title: string;
+  /** Embroidered into the felt beside the dealer, e.g. the circle's name. */
+  logoName?: string;
   /** Shown before the title, e.g. the game's icon. */
   titleIcon?: ReactNode;
   headerRight?: ReactNode;
   /** Replaces the felt, e.g. while joining or when the game is off. */
   notice?: ReactNode;
   dealer?: ReactNode;
+  /** Just above the dock: what's happening, over what you can do about it. */
   status?: ReactNode;
   /** Seated players only; `seat` fixes where each sits. `node` goes on the felt (bet, cards), `rail` on the armrest (avatar). */
   players?: {
@@ -55,7 +59,7 @@ type Props = {
 const U = { cx: 50, cy: 22, rx: 40, ry: 56 };
 
 // Half the rail's width, so an avatar centers on the armrest rather than its inner edge.
-const RAIL_HALF_PX = 16;
+const RAIL_HALF_PX = 18;
 
 /** Where a seat meets the rail (felt-relative 0–1) and the rail's outward direction there. */
 function railPoint(seat: number) {
@@ -159,8 +163,10 @@ function SeatBet({ seat, children }: { seat: number; children: ReactNode }) {
   );
 }
 
-// Between the rack, the dealer's cards and the status area, top to bottom.
-const STATUS_GAP_PX = 20;
+// Between the rack and the dealer's cards, and below the dealer's cards.
+const DEALER_GAP_PX = 20;
+// Between the status and the dock.
+const STATUS_DOCK_GAP_PX = 16;
 
 /** A seat's cards on the line to the dealer, with the dealer-side edge pinned. */
 function SeatSpot({ seat, children }: { seat: number; children: ReactNode }) {
@@ -200,52 +206,102 @@ function SeatSpot({ seat, children }: { seat: number; children: ReactNode }) {
   );
 }
 
+// The dealer's cards plus the shoe beside them, from the felt's middle (px past a two-card hand's half-width).
+const DEALER_SIDE_REACH_PX = 96;
+const LOGO_MAX_W_PX = 224;
+const LOGO_MIN_W_PX = 96;
+const LOGO_MARGIN_PX = 24;
+
+/** The right-hand logo's center x and width: midway between the dealer (and shoe) and first base's bet circle, shrinking to fit. */
+function logoSpot(felt: Size, spot: Size) {
+  if (!felt.w) return null;
+  const start = felt.w / 2 + spot.w / 2 + DEALER_SIDE_REACH_PX + spot.h;
+  const end = betCenter(0, felt, spot).x - BET_RADIUS_PX;
+  const w = Math.min(LOGO_MAX_W_PX, end - start - 2 * LOGO_MARGIN_PX);
+  return w < LOGO_MIN_W_PX ? null : { x: (start + end) / 2, w };
+}
+
+/** The status and dock tops in the open middle (from `top` to `bottom`): the status ends just above the midline and the dock hangs below, so the status doesn't move with the dock. */
+function placeMiddle(
+  top: number,
+  bottom: number,
+  statusH: number,
+  dockH: number,
+) {
+  const midline = (top + bottom) / 2;
+  // On a short felt, never over the dealer's cards...
+  const statusTop = Math.max(top, midline - STATUS_DOCK_GAP_PX / 2 - statusH);
+  // ...and the dock moves up rather than over the players' bets, but not into the status.
+  const dockTop = Math.max(
+    statusTop + statusH + STATUS_DOCK_GAP_PX,
+    Math.min(midline + STATUS_DOCK_GAP_PX / 2, bottom - dockH),
+  );
+  return { statusTop, dockTop };
+}
+
+/** An element's height, kept current; 0 until it's attached. */
+function useHeight(el: HTMLElement | null) {
+  const [h, setH] = useState(0);
+  useLayoutEffect(() => {
+    if (!el) return;
+    const measure = () => {
+      if (el.isConnected) setH(el.offsetHeight);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el]);
+  return h;
+}
+
 /** Full-screen, game-agnostic table: header, a U-shaped felt (a grid on phones), and a control dock. */
 export function TableLayout(props: Props) {
-  const feltRef = useRef<HTMLDivElement>(null);
+  // Elements in state, not refs, so measuring re-attaches whenever one is replaced (after a notice, or a remount).
+  const [feltEl, setFeltEl] = useState<HTMLDivElement | null>(null);
   const [felt, setFelt] = useState<Size>({ w: 0, h: 0 });
   useLayoutEffect(() => {
-    const el = feltRef.current;
-    if (!el) return;
+    if (!feltEl) return;
     // The inside of the rail, which is what seat positions are measured against.
-    const measure = () => setFelt({ w: el.clientWidth, h: el.clientHeight });
+    const measure = () => {
+      // A removed element reads as 0; ignore it.
+      if (feltEl.isConnected)
+        setFelt({ w: feltEl.clientWidth, h: feltEl.clientHeight });
+    };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
+    observer.observe(feltEl);
     return () => observer.disconnect();
-  }, [props.notice]);
+  }, [feltEl]);
 
-  // The dealer's lower edge: the status area sits just under it, like the dealer speaking.
-  const dealerRef = useRef<HTMLDivElement>(null);
+  // The dealer's lower edge, where the open middle of the felt starts.
+  const [dealerEl, setDealerEl] = useState<HTMLDivElement | null>(null);
   const [dealerBottom, setDealerBottom] = useState(0);
   useLayoutEffect(() => {
-    const el = dealerRef.current;
-    if (!el) return;
-    const measure = () => setDealerBottom(el.offsetTop + el.offsetHeight);
+    if (!dealerEl) return;
+    const measure = () => {
+      if (dealerEl.isConnected)
+        setDealerBottom(dealerEl.offsetTop + dealerEl.offsetHeight);
+    };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
+    observer.observe(dealerEl);
     return () => observer.disconnect();
-  }, [felt.h]);
+  }, [dealerEl, felt.h]);
   const spot = props.spotSize ?? { w: 0, h: 0 };
-  const statusTop =
-    felt.h && dealerBottom ? dealerBottom + STATUS_GAP_PX : null;
-
-  // The dock sits midway between the status area and the players (the bottom-middle seat's bet circle).
-  const [statusH, setStatusH] = useState(0);
-  // A ref callback, so it measures whenever the status area mounts (it's absent behind a notice).
-  const statusRef = useCallback((el: HTMLDivElement | null) => {
-    if (!el) return;
-    const observer = new ResizeObserver(() => setStatusH(el.offsetHeight));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
   const playersTop =
     betCenter(Math.floor(SEAT_COUNT / 2), felt, spot).y - BET_RADIUS_PX;
-  const dockMiddle =
-    statusTop !== null && statusH
-      ? (statusTop + statusH + playersTop) / 2
+  const [statusEl, setStatusEl] = useState<HTMLDivElement | null>(null);
+  const [dockEl, setDockEl] = useState<HTMLDivElement | null>(null);
+  const statusH = useHeight(statusEl);
+  const dockH = useHeight(dockEl);
+  const middle =
+    felt.h && dealerBottom
+      ? placeMiddle(dealerBottom + DEALER_GAP_PX, playersTop, statusH, dockH)
       : null;
+
+  const logoName = props.logoName;
+  const logo = logoName ? logoSpot(felt, spot) : null;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -283,36 +339,50 @@ export function TableLayout(props: Props) {
             <div className="flex min-h-0 flex-1 px-2 pt-2 sm:px-6 sm:pt-6 md:px-24 md:pt-10">
               {/* On wide screens the border is the padded armrest: thick and black on the sides and curve, thin along the dealer's edge. */}
               <div
-                ref={feltRef}
-                className="relative flex-1 overflow-y-auto rounded-3xl border-4 border-amber-900/70 bg-emerald-800 shadow-inner dark:border-amber-950 dark:bg-[#123a2f] md:overflow-visible md:rounded-b-[50%] md:border-[32px] md:border-neutral-950 md:border-t-[10px] md:border-t-amber-950 md:shadow-[inset_0_0_24px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.5)] dark:md:border-zinc-900"
+                ref={setFeltEl}
+                className="relative flex-1 overflow-y-auto rounded-3xl border-4 border-amber-900/70 bg-emerald-800 shadow-inner dark:border-amber-950 dark:bg-[#123a2f] md:overflow-visible md:rounded-b-[50%] md:border-[36px] md:border-neutral-950 md:border-t-[10px] md:border-t-amber-950 md:shadow-[inset_0_0_24px_rgba(0,0,0,0.45),inset_0_0_6px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.5)] dark:md:border-zinc-900"
               >
+                {/* Shading over the armrest so it reads as padded: dark at its outer edge, a soft highlight along its crown. Matches the border box. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-[36px] -left-[36px] -right-[36px] -top-[10px] hidden rounded-t-3xl rounded-b-[50%] shadow-[inset_0_0_10px_2px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)] md:block"
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-[19px] -left-[19px] -right-[19px] -top-[5px] hidden rounded-t-[20px] rounded-b-[50%] border-[5px] border-t-0 border-white/[0.11] blur-[5px] md:block"
+                />
                 <FeltSizeContext.Provider value={{ felt, spot }}>
                   {/* The felt is dark in both themes, so its contents use dark tokens. */}
                   <div className="dark flex min-h-full w-full flex-col items-center gap-6 p-4 text-emerald-50 md:block md:h-full md:p-0">
-                    {/* Rack, dealer, then status (below), each STATUS_GAP_PX apart. */}
+                    {/* The house name, embroidered into the open felt on either side of the dealer. */}
+                    {logo &&
+                      logoName &&
+                      [logo.x, felt.w - logo.x].map((x) => (
+                        <FeltLogo
+                          name={logoName}
+                          key={x}
+                          className="pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 opacity-25 md:block"
+                          style={{
+                            left: x,
+                            top: DEALER_MIDDLE_PX,
+                            width: logo.w,
+                          }}
+                        />
+                      ))}
+                    {/* Rack, then dealer, DEALER_GAP_PX apart. */}
                     <div
                       className="flex flex-col items-center md:absolute md:inset-x-0 md:top-0"
-                      style={{ gap: STATUS_GAP_PX }}
+                      style={{ gap: DEALER_GAP_PX }}
                     >
                       {props.rack && (
                         <div className="hidden md:block">{props.rack}</div>
                       )}
                       <div
-                        ref={dealerRef}
+                        ref={setDealerEl}
                         className="flex min-h-16 items-center justify-center"
                       >
                         {props.dealer}
                       </div>
-                    </div>
-                    <div
-                      ref={statusRef}
-                      className={cn(
-                        "flex justify-center md:absolute md:inset-x-0",
-                        statusTop === null && "md:invisible",
-                      )}
-                      style={{ top: statusTop ?? undefined }}
-                    >
-                      {props.status}
                     </div>
                     <div className="flex w-full flex-wrap justify-center gap-2 md:contents">
                       {props.players?.map(({ key, seat, node, bet, rail }) => (
@@ -334,14 +404,28 @@ export function TableLayout(props: Props) {
                         </div>
                       ))}
                     </div>
-                    {/* Your controls, in the open middle of the felt between the dealer and the players. */}
+                    {/* Phones: after the players, over the controls. */}
+                    {props.status && (
+                      <div
+                        ref={setStatusEl}
+                        className={cn(
+                          "flex justify-center md:absolute md:inset-x-0",
+                          middle === null && "md:invisible",
+                        )}
+                        style={{ top: middle?.statusTop }}
+                      >
+                        {props.status}
+                      </div>
+                    )}
+                    {/* Your controls, hanging below the status in the open middle of the felt. */}
                     {props.dock && (
                       <div
+                        ref={setDockEl}
                         className={cn(
-                          "flex justify-center md:absolute md:inset-x-0 md:z-40 md:-translate-y-1/2",
-                          dockMiddle === null && "md:invisible",
+                          "flex justify-center md:absolute md:inset-x-0 md:z-40",
+                          middle === null && "md:invisible",
                         )}
-                        style={{ top: dockMiddle ?? undefined }}
+                        style={{ top: middle?.dockTop }}
                       >
                         {props.dock}
                       </div>

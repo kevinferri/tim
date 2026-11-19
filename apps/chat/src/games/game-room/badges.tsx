@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import { cn } from "@/lib/utils";
 import { gameRoomBadgeQueryKey } from "./store";
 import type { GameBadge, GameDefinition } from "./types";
@@ -13,7 +14,9 @@ export function BadgeDot({
   badge: GameBadge;
   className?: string;
 }) {
-  if (!badge) return null;
+  // A boundary that streams in late hydrates against an already-warm badge cache the server never saw.
+  const isClient = useIsClient();
+  if (!badge || !isClient) return null;
   return (
     <span
       className={cn(
