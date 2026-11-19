@@ -2,7 +2,9 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -12,57 +14,59 @@ import {
   type RefObject,
 } from "react";
 import { cn } from "@/lib/utils";
+import { playTableSound } from "../sounds";
 
-// Casino-style chips by value (5 and 1 cover any whole-number bet): the face, its darker edge,
-// the edge spots, the lighter center inlay, and the printed value.
+// Chips by value (5 and 1 cover any whole-number bet), drawn as real clay chips to sit with the vintage
+// card deck: the face, its darker edge, the inserts set into the rim, the printed center label, and the
+// ink its value is printed in.
 const CHIPS = [
   {
     value: 100,
-    face: "#1f1f23",
-    edge: "#09090b",
-    spot: "#f4f4f5",
-    inlay: "#2e2e34",
-    text: "#fff",
+    face: "#1e1e1e",
+    edge: "#0b0b0b",
+    insert: "#f1ece0",
+    label: "#f4efe3",
+    ink: "#1e1e1e",
   },
   {
     value: 50,
-    face: "#1d4ed8",
-    edge: "#122f85",
-    spot: "#f8fafc",
-    inlay: "#3062e8",
-    text: "#fff",
+    face: "#2f3fc0",
+    edge: "#1a2577",
+    insert: "#f1ece0",
+    label: "#f4efe3",
+    ink: "#26339e",
   },
   {
     value: 25,
-    face: "#047857",
-    edge: "#023d2c",
-    spot: "#f8fafc",
-    inlay: "#0b8c66",
-    text: "#fff",
+    face: "#1d7a3a",
+    edge: "#0f4a22",
+    insert: "#f1ece0",
+    label: "#f4efe3",
+    ink: "#17642f",
   },
   {
     value: 10,
-    face: "#c81e1e",
-    edge: "#6f0f0f",
-    spot: "#f8fafc",
-    inlay: "#d93636",
-    text: "#fff",
+    face: "#c41e1e",
+    edge: "#7a0f0f",
+    insert: "#f1ece0",
+    label: "#f4efe3",
+    ink: "#a81818",
   },
   {
     value: 5,
-    face: "#db2777",
-    edge: "#7d1544",
-    spot: "#f8fafc",
-    inlay: "#e64b8f",
-    text: "#fff",
+    face: "#d4a017",
+    edge: "#7d5c08",
+    insert: "#f8f3e6",
+    label: "#f4efe3",
+    ink: "#7d5408",
   },
   {
     value: 1,
-    face: "#f4f4f5",
-    edge: "#a1a1aa",
-    spot: "#1d4ed8",
-    inlay: "#ffffff",
-    text: "#18181b",
+    face: "#efeae0",
+    edge: "#a9a49a",
+    insert: "#2f3fc0",
+    label: "#ffffff",
+    ink: "#26339e",
   },
 ];
 type ChipColors = (typeof CHIPS)[number];
@@ -71,11 +75,14 @@ export const CHIP_COLORS: readonly ChipColors[] = [...CHIPS].reverse();
 const colorsOf = (value: number): ChipColors =>
   CHIPS.find((c) => c.value <= value) ?? CHIPS[CHIPS.length - 1];
 
-// Spots around the rim: 8 spots and 8 gaps share the circumference of the spot ring.
-const SPOT_RING_R = 15.1;
-const SPOT_DASH = (2 * Math.PI * SPOT_RING_R) / 16;
+// The clay's grain: a small tile of faint light and dark specks, repeated over the face.
+const GRAIN =
+  "data:image/png;base64,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";
 
-/** A casino chip drawn top-down at a slight angle; 36px wide, with a 2.5px edge band below. */
+// Eight inserts around the rim, between the compass points.
+const INSERT_ANGLES = [0, 1, 2, 3, 4, 5, 6, 7].map((k) => k * 45 + 22.5);
+
+/** A clay casino chip drawn top-down at a slight angle; 36px wide, with a 2.5px edge band below. */
 function ChipArt({ colors }: { colors: ChipColors }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
@@ -85,46 +92,124 @@ function ChipArt({ colors }: { colors: ChipColors }) {
       className="pointer-events-none absolute left-0 top-0 h-[39px] w-9 overflow-visible drop-shadow-[0_2px_2px_rgba(0,0,0,0.45)]"
     >
       <defs>
-        <linearGradient id={`${id}-sheen`} x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
-          <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.18" />
-        </linearGradient>
+        {/* Matte: a soft lift in the middle, falling off toward the rim. */}
+        <radialGradient id={`${id}-shade`} cx="0.45" cy="0.4" r="0.65">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.1" />
+          <stop offset="0.7" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.22" />
+        </radialGradient>
+        <pattern
+          id={`${id}-grain`}
+          width="12"
+          height="12"
+          patternUnits="userSpaceOnUse"
+        >
+          <image href={GRAIN} width="12" height="12" />
+        </pattern>
+        <clipPath id={`${id}-edge`}>
+          <circle cx="18" cy="20.5" r="17" />
+        </clipPath>
       </defs>
-      {/* The chip's thickness: a thin solid band of its edge, just below the face. */}
+      {/* The edge band, striped where the inserts on the near side come round it. */}
       <circle cx="18" cy="20.5" r="17" fill={colors.edge} />
-      <circle cx="18" cy="20.5" r="17" fill="#000" fillOpacity="0.15" />
-      {/* The face. */}
-      <circle cx="18" cy="18" r="17" fill={colors.face} />
+      <g clipPath={`url(#${id}-edge)`}>
+        {INSERT_ANGLES.filter((a) => Math.cos((a * Math.PI) / 180) < -0.2).map(
+          (a) => (
+            <rect
+              key={a}
+              x={18 + 17 * Math.sin((a * Math.PI) / 180) - 1.5}
+              y="18.5"
+              width="3"
+              height="4.5"
+              fill={colors.insert}
+              opacity="0.85"
+            />
+          ),
+        )}
+      </g>
+      <circle cx="18" cy="20.5" r="17" fill={`url(#${id}-grain)`} />
       <circle
         cx="18"
-        cy="18"
-        r={SPOT_RING_R}
-        fill="none"
-        stroke={colors.spot}
-        strokeWidth="3.4"
-        strokeDasharray={`${SPOT_DASH} ${SPOT_DASH}`}
-      />
-      <circle
-        cx="18"
-        cy="18"
-        r="12.3"
-        fill="none"
-        stroke={colors.spot}
-        strokeOpacity="0.85"
-        strokeWidth="0.8"
-        strokeDasharray="1.4 1.4"
-      />
-      <circle cx="18" cy="18" r="11.4" fill={colors.inlay} />
-      <circle cx="18" cy="18" r="17" fill={`url(#${id}-sheen)`} />
-      <circle
-        cx="18"
-        cy="18"
-        r="16.75"
+        cy="20.5"
+        r="17"
         fill="none"
         stroke="#000"
-        strokeOpacity="0.3"
+        strokeOpacity="0.55"
+        strokeWidth="0.6"
+      />
+      {/* The face, its inserts, grain, molded rings near the rim, and shading. */}
+      <circle cx="18" cy="18" r="17" fill={colors.face} />
+      {INSERT_ANGLES.map((a) => (
+        <rect
+          key={a}
+          x="16.1"
+          y="1.15"
+          width="3.8"
+          height="3.3"
+          rx="0.4"
+          fill={colors.insert}
+          transform={`rotate(${a} 18 18)`}
+        />
+      ))}
+      <circle cx="18" cy="18" r="17" fill={`url(#${id}-grain)`} />
+      {[15.9, 15.2, 14.6].map((r, i) => (
+        <circle
+          key={r}
+          cx="18"
+          cy="18"
+          r={r}
+          fill="none"
+          stroke="#000"
+          strokeOpacity={0.07 + i * 0.02}
+          strokeWidth="0.25"
+        />
+      ))}
+      <circle cx="18" cy="18" r="17" fill={`url(#${id}-shade)`} />
+      {/* The printed ring and center label, lightly grained, with its own fine borders. */}
+      <circle
+        cx="18"
+        cy="18"
+        r="13.9"
+        fill="none"
+        stroke={colors.insert}
+        strokeOpacity="0.7"
+        strokeWidth="0.45"
+      />
+      <circle cx="18" cy="18" r="12.9" fill={colors.label} />
+      <circle
+        cx="18"
+        cy="18"
+        r="12.9"
+        fill={`url(#${id}-grain)`}
+        opacity="0.6"
+      />
+      <circle
+        cx="18"
+        cy="18"
+        r="12.9"
+        fill="none"
+        stroke={colors.ink}
+        strokeOpacity="0.55"
         strokeWidth="0.5"
+      />
+      <circle
+        cx="18"
+        cy="18"
+        r="11.7"
+        fill="none"
+        stroke={colors.ink}
+        strokeOpacity="0.35"
+        strokeWidth="0.3"
+        strokeDasharray="0.6 0.6"
+      />
+      <circle
+        cx="18"
+        cy="18"
+        r="16.8"
+        fill="none"
+        stroke="#000"
+        strokeOpacity="0.6"
+        strokeWidth="0.6"
       />
     </svg>
   );
@@ -139,8 +224,10 @@ const CHIP_FLIGHT_MS = 400;
 
 // One size everywhere: the bar, the bet circles, and in flight. The art draws the chip; this
 // holds it and centers the printed value on the face.
+// The value is printed in a serif with lining figures (every digit the same height), its box trimmed to
+// the digits so they sit dead center on the label.
 const CHIP =
-  "relative flex size-9 shrink-0 items-center justify-center rounded-full text-[11.5px] font-medium tabular-nums [text-shadow:0_1px_1px_rgba(0,0,0,0.35)]";
+  "relative flex size-9 shrink-0 items-center justify-center rounded-full [font-family:'Times_New_Roman',Times,serif] text-[13px] font-bold leading-none [font-variant-numeric:lining-nums_tabular-nums]";
 
 /** A chip's art with its printed value on top. */
 function ChipBody({ value, label }: { value: number; label?: ReactNode }) {
@@ -149,7 +236,11 @@ function ChipBody({ value, label }: { value: number; label?: ReactNode }) {
     <>
       <ChipArt colors={colors} />
       {label != null && label !== false && (
-        <span className="relative" style={{ color: colors.text }}>
+        // Trimmed to the digits (text-box doesn't inherit, so it goes on the value's own box).
+        <span
+          className="relative [text-box:trim-both_cap_alphabetic]"
+          style={{ color: colors.ink }}
+        >
           {label}
         </span>
       )}
@@ -193,6 +284,11 @@ export function ChipButton({
     <button
       type="button"
       {...props}
+      // A click doesn't take focus, so Enter afterwards places the bet instead of re-clicking this chip.
+      onMouseDown={(e) => {
+        e.preventDefault();
+        props.onMouseDown?.(e);
+      }}
       onClick={(e) => {
         if (launch) {
           launch.current = {
@@ -213,17 +309,23 @@ export function ChipButton({
   );
 }
 
+// Picks (by their launch time) whose landing sound has been scheduled.
+const sounded = new Set<number>();
+
 /** A chip in a stack; one that mounts just after a pick flies in from the bar. */
 function StackedChip({
   value,
   label,
   index,
   flyIn,
+  onFlight,
 }: {
   value: number;
   label?: ReactNode;
   index: number;
   flyIn?: boolean;
+  /** Told when this chip takes off (true) and lands or is dropped mid-air (false). */
+  onFlight?: (airborne: boolean) => void;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const launch = useContext(ChipLaunchContext);
@@ -242,7 +344,23 @@ function StackedChip({
       [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
       { duration: CHIP_FLIGHT_MS, easing: "cubic-bezier(0.2, 0.7, 0.3, 1)" },
     );
-    return () => flight.cancel();
+    onFlight?.(true);
+    flight.onfinish = () => onFlight?.(false);
+    // Every chip lands with the same clack, a touch higher up the stack. Scheduled on the audio clock, not tied to this chip staying on screen: holding a number
+    // key piles chips on faster than they land, scrolling older ones out of the drawn stack. Once per pick,
+    // since dev's double mount runs this twice.
+    if (!sounded.has(from.at)) {
+      sounded.add(from.at);
+      playTableSound("chipsCollide", {
+        volume: 0.55,
+        rate: 1 + index * 0.03,
+        delayMs: CHIP_FLIGHT_MS * 0.8,
+      });
+    }
+    return () => {
+      flight.cancel();
+      onFlight?.(false);
+    };
     // Mount only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -268,6 +386,8 @@ export function ChipStack({
   label,
   flyIn,
   dimmed,
+  hidden,
+  still,
 }: {
   amount: number;
   /** The actual chips, bottom to top (e.g. the ones the player clicked). */
@@ -277,14 +397,36 @@ export function ChipStack({
   /** New chips fly in from the last one picked, instead of the whole stack dropping in. */
   flyIn?: boolean;
   dimmed?: boolean;
+  /** Kept in place but invisible, e.g. while a copy of it is moving elsewhere. */
+  hidden?: boolean;
+  /** Appears in place, without dropping in. */
+  still?: boolean;
 }) {
   // Drop in only when the stack first appears: placing a picked bet mustn't replay it.
-  const [dropIn] = useState(!flyIn);
+  const [dropIn] = useState(!flyIn && !still);
   const all = chips ?? breakdown(amount);
   const shown = all.slice(-MAX_SHOWN);
   // Keyed by position in the full stack, so a pick past MAX_SHOWN mounts (and flies in) a new chip.
-  const hidden = all.length - shown.length;
-  const top = shown.length - 1;
+  const below = all.length - shown.length;
+  // Chips still in the air, by key. Until one lands, the stack under it keeps its previous total on top
+  // and the flying chip shows its own value, so the top is never blank.
+  const [airborne, setAirborne] = useState<ReadonlySet<number>>(new Set());
+  const onFlight = useCallback(
+    (key: number, up: boolean) =>
+      setAirborne((prev) => {
+        if (prev.has(key) === up) return prev;
+        const next = new Set(prev);
+        if (up) next.add(key);
+        else next.delete(key);
+        return next;
+      }),
+    [],
+  );
+  const inAir = (i: number) => airborne.has(below + i);
+  const landedTop = shown.findLastIndex((_, i) => !inAir(i));
+  const landedTotal =
+    amount -
+    all.reduce((sum, value, i) => sum + (airborne.has(i) ? value : 0), 0);
 
   return (
     <div
@@ -292,16 +434,18 @@ export function ChipStack({
         "relative size-9 transition-opacity duration-300",
         dropIn && "animate-chip-drop",
         dimmed && "opacity-40",
+        hidden && "opacity-0 transition-none",
       )}
       aria-label={`${amount} in chips`}
     >
       {shown.map((value, i) => (
         <StackedChip
-          key={hidden + i}
+          key={below + i}
           index={i}
           value={value}
           flyIn={flyIn}
-          label={i === top && (label ?? amount)}
+          onFlight={(up) => onFlight(below + i, up)}
+          label={inAir(i) ? value : i === landedTop && (label ?? landedTotal)}
         />
       ))}
     </div>
@@ -313,6 +457,10 @@ export type BetStack = {
   chips?: number[];
   /** Out of the running (e.g. a bust): shown faded. */
   dimmed?: boolean;
+  /** Settled and moved off the circle (swept or paid out). */
+  hidden?: boolean;
+  /** Doubled down: a second, equal stack placed beside it (each of `amount`), as on a real table. */
+  doubled?: boolean;
 };
 
 type BetSpotProps = {
@@ -323,11 +471,22 @@ type BetSpotProps = {
   onClick?: () => void;
   /** The bet is in: a glowing ring circles the spot, drawn in clockwise when it locks. */
   locked?: boolean;
+  /** Your own bet: its chips sound a little fuller as it locks. */
+  mine?: boolean;
   className?: string;
 };
 
 /** The glowing white ring around a locked-in bet, like the felt's printed text; `draw` traces it clockwise from the top with a brief glow. */
-function LockRing({ draw }: { draw: boolean }) {
+function LockRing({ draw, mine }: { draw: boolean; mine?: boolean }) {
+  // The chips settle into place as the ring traces in, your own a little fuller; a timeout, so dev's
+  // double mount cancels the extra one.
+  useEffect(() => {
+    if (!draw) return;
+    const sound = setTimeout(() =>
+      playTableSound("chipsStack", { volume: mine ? 0.65 : 0.3 }),
+    );
+    return () => clearTimeout(sound);
+  }, [draw, mine]);
   const ring = {
     cx: 28,
     cy: 28,
@@ -348,7 +507,7 @@ function LockRing({ draw }: { draw: boolean }) {
         {...ring}
         strokeWidth="1.25"
         className={cn(
-          "stroke-white/85 [filter:drop-shadow(0_0_3px_rgba(255,255,255,0.2))]",
+          "stroke-white/70 [filter:drop-shadow(0_0_5px_rgba(255,255,255,0.35))]",
           draw && "animate-bet-lock",
         )}
       />
@@ -366,6 +525,8 @@ function LockRing({ draw }: { draw: boolean }) {
 
 // Gap between stacks (one per split hand), so they never overlap.
 const STACK_SPACING_PX = 40;
+// Wider when a hand is doubled, since its stack is a pair side by side.
+const PAIR_SPACING_PX = 80;
 
 /** The circle printed on the felt where a hand's bet goes: a fixed size, with chips piled on top. */
 export function BetSpot({
@@ -373,6 +534,7 @@ export function BetSpot({
   flyIn,
   onClick,
   locked,
+  mine,
   className,
 }: BetSpotProps) {
   // Draw the ring only on the change to locked; one already locked at mount (e.g. a reconnect) just shows.
@@ -385,30 +547,49 @@ export function BetSpot({
   // Side by side across the line to the dealer, so extra stacks never crowd toward the cards.
   const dir = useContext(StackDirectionContext);
   const across = { x: -dir.y, y: dir.x };
+  const spacing = stacks.some((s) => s.doubled)
+    ? PAIR_SPACING_PX
+    : STACK_SPACING_PX;
   return (
     <div
       onClick={onClick}
       title={onClick ? "Take back a chip" : undefined}
       className={cn(
-        "relative size-[3.25rem] shrink-0 rounded-full bg-black/60 shadow-inner transition-shadow duration-300",
+        "relative size-[3.25rem] shrink-0 rounded-full bg-black/40 shadow-inner transition-shadow duration-300",
         onClick && "cursor-pointer",
         className,
       )}
     >
-      {locked && <LockRing key={ringKey} draw={ringKey > 0} />}
-      {stacks.map((stack, i) => (
+      {/* Always there: a dim version of the lock-in ring, which traces in over it. */}
+      <svg
+        aria-hidden
+        viewBox="0 0 56 56"
+        className="pointer-events-none absolute -inset-0.5 overflow-visible"
+      >
+        <circle
+          cx="28"
+          cy="28"
+          r="27"
+          fill="none"
+          strokeWidth="1.25"
+          className="stroke-white/20 [filter:drop-shadow(0_0_4px_rgba(255,255,255,0.12))]"
+        />
+      </svg>
+      {locked && <LockRing key={ringKey} draw={ringKey > 0} mine={mine} />}
+      {stacks.map(({ doubled, ...stack }, i) => (
         // Centered on the circle; extra chips rise above it instead of resizing anything.
         <div
           key={i}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          data-bet-stack={i}
+          className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 gap-1"
           style={{
-            marginLeft:
-              across.x * (i - (stacks.length - 1) / 2) * STACK_SPACING_PX,
-            marginTop:
-              across.y * (i - (stacks.length - 1) / 2) * STACK_SPACING_PX,
+            marginLeft: across.x * (i - (stacks.length - 1) / 2) * spacing,
+            marginTop: across.y * (i - (stacks.length - 1) / 2) * spacing,
           }}
         >
           <ChipStack {...stack} flyIn={flyIn} />
+          {/* The double's stack drops in beside the first when it's placed. */}
+          {doubled && <ChipStack {...stack} />}
         </div>
       ))}
     </div>

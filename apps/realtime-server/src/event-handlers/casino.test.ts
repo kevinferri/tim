@@ -556,14 +556,8 @@ describe("chips", () => {
   });
 
   it("does not offer double or split without enough chips", async () => {
-    const chipStore = new InMemoryChipStore();
-    await chipStore.settle({
-      circleId: "c1",
-      userId: "a",
-      game: "blackjack",
-      net: -850,
-    });
-    const { connect, stackShoe } = setup(chipStore);
+    // A short starting stack, since sitting down refills to it.
+    const { connect, stackShoe } = setup(new InMemoryChipStore(150));
     const a = connect("a");
     await watch(a);
     stackShoe("8", "9", "8", "7");
@@ -576,6 +570,67 @@ describe("chips", () => {
     await act(a, { type: "split" });
     expect(lastError(a)).toBe("You can't split now");
     expect(state(a).seats[0]!.stack).toBe(50);
+  });
+
+  it("refills a short stack when sitting down, never cutting a big one", async () => {
+    const chipStore = new InMemoryChipStore();
+    await chipStore.settle({
+      circleId: "c1",
+      userId: "a",
+      game: "blackjack",
+      net: -850,
+    });
+    await chipStore.settle({
+      circleId: "c1",
+      userId: "b",
+      game: "blackjack",
+      net: 500,
+    });
+    const settleSpy = vi.spyOn(chipStore, "settle");
+    const { connect } = setup(chipStore);
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    await sit(a, 0);
+    await sit(b, 1);
+    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
+    expect(state(a).seats[1]!.stack).toBe(STARTING_CHIPS + 500);
+    expect(settleSpy).toHaveBeenCalledTimes(1);
+    expect(settleSpy).toHaveBeenCalledWith({
+      circleId: "c1",
+      userId: "a",
+      game: "blackjack",
+      net: 850,
+    });
+    await vi.waitFor(async () =>
+      expect(await chipStore.load("c1", "a")).toBe(STARTING_CHIPS),
+    );
+  });
+
+  it("refills a player who goes broke at the table before the next hand", async () => {
+    const { connect, stackShoe } = setup();
+    const a = connect("a");
+    await watch(a);
+    await sit(a, 0);
+    // All in on 10 6 vs dealer 10 + 10: stands on 16 and loses.
+    stackShoe("10", "10", "6", "10");
+    await bet(a, 500);
+    await act(a, { type: "stand" });
+    vi.advanceTimersByTime(DEALER_DRAW_MS * 2);
+    expect(state(a).phase).toBe("results");
+    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS - 500);
+
+    stackShoe("10", "10", "6", "10");
+    vi.advanceTimersByTime(RESULTS_MS);
+    await bet(a, 500);
+    await act(a, { type: "stand" });
+    vi.advanceTimersByTime(DEALER_DRAW_MS * 2);
+    expect(state(a).seats[0]!.stack).toBe(0);
+
+    vi.advanceTimersByTime(RESULTS_MS);
+    expect(state(a).phase).toBe("betting");
+    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
   });
 
   it("refunds a bet when standing up during betting, with no chip write", async () => {

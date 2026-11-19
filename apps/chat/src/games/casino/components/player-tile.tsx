@@ -21,6 +21,8 @@ type AvatarProps = {
   dimmedReason?: string | null;
   /** Still in the round but someone else is playing: dimmed less than sitting out. */
   waiting?: boolean;
+  /** A brief speech bubble rising from the avatar, e.g. what they just did. Keyed by the caller so each one pops in. */
+  bubble?: ReactNode;
 };
 
 /** A thin outline so avatars stand off the rail; whoever's turn it is gets the pulsing purple glow. */
@@ -37,48 +39,59 @@ export function PlayerAvatar({
   result,
   dimmedReason,
   waiting,
+  bubble,
 }: AvatarProps) {
   const name = isYou ? "You" : occupant.displayName;
 
   return (
-    <div
-      className={cn(
-        "transition-opacity",
-        dimmedReason ? "opacity-50" : waiting && "opacity-75",
+    <div className="relative">
+      {/* Rising from the avatar, over their own cards; outside the dimmed avatar, so it stays bright
+          after they've acted and someone else is up. */}
+      {bubble && (
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2">
+          {bubble}
+        </div>
       )}
-    >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            aria-label={dimmedReason ? `${name}, ${dimmedReason}` : name}
-            className={cn("relative flex rounded-full", avatarRing(active))}
-          >
-            <OccupantAvatar occupant={occupant} size="2xl" />
-            {/* On the bottom edge; your round result takes its place while it shows. */}
-            {isYou && !result && (
-              <span className="absolute inset-x-0 -bottom-2.5 flex justify-center">
-                <span className="rounded-full bg-amber-300 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow">
-                  You
+      <div
+        className={cn(
+          "transition-opacity",
+          dimmedReason ? "opacity-50" : waiting && "opacity-75",
+        )}
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              aria-label={dimmedReason ? `${name}, ${dimmedReason}` : name}
+              className={cn("relative flex rounded-full", avatarRing(active))}
+            >
+              <OccupantAvatar occupant={occupant} size="2xl" />
+              {/* Straddling the bottom edge, mostly inside the circle; your round result takes its place while it shows.
+                Purple-600 to match the turn pulse it sits next to. */}
+              {isYou && !result && (
+                <span className="absolute inset-x-0 -bottom-[5px] flex justify-center">
+                  <span className="rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-slate-100 shadow">
+                    You
+                  </span>
                 </span>
-              </span>
-            )}
-            {/* Pinned to the avatar's bottom edge without taking space, so the seat doesn't move when it appears. */}
-            {result && (
-              <span className="absolute inset-x-0 -bottom-2.5 flex justify-center">
-                <span className="whitespace-nowrap rounded-full bg-black/85 px-2 py-0.5 shadow ring-1 ring-white/15 animate-in fade-in zoom-in-75 duration-300">
-                  {result}
+              )}
+              {/* Pinned to the avatar's bottom edge without taking space, so the seat doesn't move when it appears. */}
+              {result && (
+                <span className="absolute inset-x-0 -bottom-2.5 flex justify-center">
+                  <span className="whitespace-nowrap rounded-full bg-black/85 px-2 py-0.5 shadow ring-1 ring-white/15 animate-in fade-in zoom-in-75 duration-300">
+                    {result}
+                  </span>
                 </span>
-              </span>
+              )}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {occupant.displayName}
+            {dimmedReason && (
+              <span className="text-muted-foreground"> · {dimmedReason}</span>
             )}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          {occupant.displayName}
-          {dimmedReason && (
-            <span className="text-muted-foreground"> · {dimmedReason}</span>
-          )}
-        </TooltipContent>
-      </Tooltip>
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }

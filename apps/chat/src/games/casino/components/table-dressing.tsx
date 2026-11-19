@@ -5,6 +5,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { cn } from "@/lib/utils";
 import { CHIP_COLORS } from "./chips";
 
 // Each chip lies on its side in the rack, so a tube shows a column of chip edges this tall.
@@ -19,6 +20,7 @@ export function ChipRack() {
   return (
     <div
       aria-hidden
+      data-chip-rack
       className="flex gap-1 rounded-b-xl bg-black/60 px-2 pb-1.5 pt-1 shadow-inner ring-1 ring-white/10"
     >
       {CHIP_COLORS.map((chip) => (
@@ -46,14 +48,14 @@ function RackTube({ chip }: { chip: (typeof CHIP_COLORS)[number] }) {
             y="0"
             width="4"
             height={CHIP_EDGE - 0.6}
-            fill={chip.spot}
+            fill={chip.insert}
           />
           <rect
             x="7"
             y={CHIP_EDGE}
             width="4"
             height={CHIP_EDGE - 0.6}
-            fill={chip.spot}
+            fill={chip.insert}
           />
           <rect
             y={CHIP_EDGE - 0.6}
@@ -219,5 +221,30 @@ export function FeltLogo({
         </text>
       </g>
     </svg>
+  );
+}
+
+/** Lettering printed into the felt, like a real table's house rules: faint serif lettering, centered (pass it in capitals). */
+export function FeltPrint({
+  lines,
+  className,
+  style,
+}: {
+  lines: string[];
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      className={cn(
+        "whitespace-nowrap text-center [font-family:'Times_New_Roman',Times,serif] text-[11px] font-bold leading-[1.7] [font-variant-numeric:lining-nums] tracking-[0.28em] text-emerald-50/25 [text-shadow:0_1px_0_rgba(0,0,0,0.35)]",
+        className,
+      )}
+      style={style}
+    >
+      {lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </div>
   );
 }

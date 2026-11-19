@@ -5,9 +5,15 @@ let context: AudioContext | null = null;
 
 // Browsers only let audio start after a user gesture (Safari: inside one), so unlock on the first.
 function unlock() {
-  if (!window.AudioContext) return;
+  const ctx = audioContext();
+  if (ctx?.state === "suspended") void ctx.resume();
+}
+
+/** The shared context, created on demand (suspended until a gesture unlocks it), e.g. to decode audio files ahead of time. */
+export function audioContext() {
+  if (typeof window === "undefined" || !window.AudioContext) return null;
   context ??= new AudioContext();
-  if (context.state === "suspended") void context.resume();
+  return context;
 }
 
 if (typeof window !== "undefined") {
@@ -15,7 +21,22 @@ if (typeof window !== "undefined") {
   window.addEventListener("keydown", unlock, { capture: true });
 }
 
-function ready() {
+/**
+ * Runs `play` with the shared context as soon as a sound may play: right away if it's running, or once
+ * it finishes starting up (the gesture that unlocks it can be the very one that triggers the sound).
+ */
+export function whenReady(play: (ctx: AudioContext) => void) {
+  const ctx = audioContext();
+  if (!ctx || !useMessageSound.getState().isMessageSoundEnabled) return;
+  if (ctx.state === "running") return play(ctx);
+  void ctx.resume().then(
+    () => ctx.state === "running" && play(ctx),
+    () => undefined,
+  );
+}
+
+/** The shared context when a sound may play right now: unlocked, with sounds turned on. */
+export function ready() {
   if (!context || context.state !== "running") return null;
   if (!useMessageSound.getState().isMessageSoundEnabled) return null;
   return context;

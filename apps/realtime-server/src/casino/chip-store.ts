@@ -9,6 +9,8 @@ export type ChipSettlement = {
 
 // Swapped for a DB-backed store when chips persist (TIM-8).
 export interface ChipStore {
+  /** A new player's balance, which sitting down (or going broke at the table) refills to. */
+  readonly starting: number;
   load(circleId: string, userId: string): Promise<number>;
   settle(settlement: ChipSettlement): Promise<void>;
 }
@@ -16,7 +18,7 @@ export interface ChipStore {
 export class InMemoryChipStore implements ChipStore {
   private balances = new Map<string, number>();
 
-  constructor(private starting = STARTING_CHIPS) {}
+  constructor(readonly starting = STARTING_CHIPS) {}
 
   async load(circleId: string, userId: string) {
     return this.balances.get(`${circleId}:${userId}`) ?? this.starting;
