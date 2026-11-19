@@ -64,13 +64,17 @@ function sortsBefore(a: NewsItemDto, b: NewsItemDto) {
  * Puts live items into loaded pages in feed order. A story can be stored now
  * but dated earlier than what's on screen (e.g. a Google News result from
  * yesterday); one older than every loaded story is left for "Load older
- * stories" to return, so it never shows twice. Returns null when nothing changed.
+ * stories" to return, so it never shows twice. Stories from feeds the view no
+ * longer lists as sources are dropped. Returns null when nothing changed.
  */
 export function mergeLiveItems(
   pages: NewsResponse[],
   items: NewsItemDto[],
 ): NewsResponse[] | null {
   if (pages.length === 0) return null;
+  // A source removed after its story was pushed (or mid-poll) mustn't come back via a live item.
+  const followed = new Set(pages[0].sources.map((src) => src.feedId));
+  items = items.filter((i) => followed.has(i.feedId));
   // By link too: a story re-stored after pruning or a feed's guid change gets a new id.
   const known = new Set(
     pages.flatMap((p) =>

@@ -50,7 +50,18 @@ describe("mergeLiveItems", () => {
     items: ReturnType<typeof story>[],
     nextCursor: string | null,
   ) => ({
-    sources: [],
+    sources: [
+      {
+        feedId: "f",
+        url: "https://example.com/rss",
+        title: "Example",
+        siteUrl: null,
+        imageUrl: null,
+        addedById: null,
+        createdAt: "2026-11-19T00:00:00.000Z",
+        canRemove: true,
+      },
+    ],
     items,
     nextCursor,
     newestCreatedAt: null,
@@ -95,6 +106,13 @@ describe("mergeLiveItems", () => {
     expect(
       newerThanListed(undefined, [story("x", 0)]).map((i) => i.id),
     ).toEqual(["x"]);
+  });
+
+  it("drops stories from feeds the view no longer follows", () => {
+    const pages = [page([story("a", 0)], null)];
+    expect(
+      mergeLiveItems(pages, [{ ...story("removed", -5), feedId: "gone" }]),
+    ).toBeNull();
   });
 
   it("skips stories already listed by id or link", () => {

@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import type { NewsItemsCreatedPayload } from "@tim/news";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 import { useSocketContext } from "@/components/socket/socket-provider";
@@ -83,7 +87,15 @@ export function useNewsLiveUpdates(circleId: string) {
         if ("manual" in event.action && event.action.manual) return;
         const [scope, keyCircleId] = event.query.queryKey;
         if (scope !== "news" || keyCircleId !== circleId) return;
-        const recent = recentLive(circleId);
+        // Only stories from sources the circle still follows survive a refetch.
+        const followed = followedFeedIds(queryClient, circleId);
+        const recent = recentLive(circleId).filter(
+          (i) => !followed || followed.has(i.feedId),
+        );
+        if (followed) {
+          pruneRecent(circleId, followed);
+          useNewsStore.getState().resetLive(circleId, recent);
+        }
         if (recent.length) prependNewsItems(queryClient, circleId, recent);
       }),
     [queryClient, circleId],
@@ -92,7 +104,14 @@ export function useNewsLiveUpdates(circleId: string) {
   useSocketHandler<NewsItemsCreatedPayload>(
     SocketEvent.NewsItemsCreated,
     (payload) => {
-      if (payload.circleId !== circleId || payload.items.length === 0) return;
+      if (payload.circleId !== circleId) return;
+      // A push can race a source's removal; ignore stories from feeds the circle no longer follows.
+      const followed = followedFeedIds(queryClient, circleId);
+      payload = {
+        ...payload,
+        items: payload.items.filter((i) => !followed || followed.has(i.feedId)),
+      };
+      if (payload.items.length === 0) return;
       useNewsStore.getState().noteLive(circleId, payload.items);
       if (!useNewsStore.getState().open) {
         mergeLive(payload.items);
@@ -139,4 +158,21 @@ function recentLive(circleId: string): NewsItemDto[] {
   return (recentByCircle.get(circleId) ?? [])
     .filter((r) => now - r.at < RECENT_LIVE_MS)
     .map((r) => r.item);
+}
+
+function pruneRecent(circleId: string, followed: Set<string>) {
+  const kept = (recentByCircle.get(circleId) ?? []).filter((r) =>
+    followed.has(r.item.feedId),
+  );
+  recentByCircle.set(circleId, kept);
+}
+
+/** Feeds the circle follows, per the loaded All view; null before it has loaded. */
+function followedFeedIds(
+  queryClient: QueryClient,
+  circleId: string,
+): Set<string> | null {
+  const sources = queryClient.getQueryData<NewsCache>(newsQueryKey(circleId))
+    ?.pages[0]?.sources;
+  return sources ? new Set(sources.map((s) => s.feedId)) : null;
 }

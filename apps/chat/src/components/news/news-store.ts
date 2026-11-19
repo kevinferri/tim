@@ -22,6 +22,8 @@ type NewsState = {
   /** Newest createdAt among live stories pushed this session, per circle; they may not be in any loaded page. */
   liveNewest: Record<string, string>;
   noteLive: (circleId: string, items: NewsItemDto[]) => void;
+  /** Replaces the circle's live newest, e.g. after a refetch, from the live stories still relevant. */
+  resetLive: (circleId: string, items: NewsItemDto[]) => void;
   setFilter: (circleId: string, feedId: string | null) => void;
   /** Newest createdAt the viewer has seen, per circle (mirrored to localStorage). */
   seen: Record<string, string | null>;
@@ -45,6 +47,14 @@ export const useNewsStore = create<NewsState>((set, get) => ({
       return newest
         ? { liveNewest: { ...s.liveNewest, [circleId]: newest } }
         : {};
+    }),
+  resetLive: (circleId, items) =>
+    set((s) => {
+      const rest = { ...s.liveNewest };
+      delete rest[circleId];
+      let newest = "";
+      for (const i of items) if (i.createdAt > newest) newest = i.createdAt;
+      return { liveNewest: newest ? { ...rest, [circleId]: newest } : rest };
     }),
   setFilter: (circleId, feedId) =>
     set((s) => ({ filter: { ...s.filter, [circleId]: feedId } })),
