@@ -600,7 +600,7 @@ function NetAmount({ net, mine }: { net: number; mine: boolean }) {
 }
 
 // The status is one wide-tracked line, so a long name is cut short to keep "'s turn" on the felt.
-const STATUS_NAME_MAX = 12;
+const STATUS_NAME_MAX = 11;
 // By code points, so an emoji at the cut isn't split in half.
 const truncateName = (name: string) => {
   const chars = Array.from(name);
