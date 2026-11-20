@@ -242,6 +242,8 @@ function PlayView({
     onSuccess: ({ play }) => {
       setCurrent("");
       setMessage(null);
+      // A shake cut short never fires animationend, so it would carry to the next row.
+      setShaking(false);
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         setAnim({
           row: play.rows.length - 1,
