@@ -34,6 +34,7 @@ export { ChipRack, FeltLogo } from "./components/table-dressing";
 export {
   playBustSound,
   playDoubleSound,
+  playJoinSound,
   playYourTurn,
   playStandSound,
   playTableSound,

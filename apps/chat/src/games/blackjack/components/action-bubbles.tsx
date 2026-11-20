@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { BlackjackTableView } from "@tim/casino";
-import { playDoubleSound, playStandSound } from "@/games/casino";
+import { playDoubleSound, playJoinSound, playStandSound } from "@/games/casino";
 
 // How long each bubble shows (its animation stretches to match). A hit is quick: its card says the rest.
 const BUBBLE_MS = 1500;
@@ -11,6 +11,9 @@ const HIT_BUBBLE_MS = 1100;
 const SHORT_BUBBLE_MS = 820;
 
 type Bubble = { text: string; id: number; ms: number };
+
+/** A new player's bubble; their avatar snaps into the seat while it shows. */
+export const JOINED = "Joined";
 
 /** A player's hit, double or stand (a timeout reads as one too), inferred from two updates; a split shows itself. */
 function actionBetween(prev: BlackjackTableView, next: BlackjackTableView) {
@@ -39,7 +42,14 @@ function actionBetween(prev: BlackjackTableView, next: BlackjackTableView) {
   return null;
 }
 
-/** Each seat's latest action bubble, shown briefly and live only (not on a page load). */
+/** Seats a new player sat down in between two updates. */
+function joinsBetween(prev: BlackjackTableView, next: BlackjackTableView) {
+  return next.seats.flatMap((seat, i) =>
+    seat && prev.seats[i]?.occupant.userId !== seat.occupant.userId ? [i] : [],
+  );
+}
+
+/** Each seat's latest action bubble, shown briefly and live only (not on a page load); "Joined" for a new player. */
 export function useActionBubbles(
   view: BlackjackTableView | null,
   live: boolean,
@@ -56,24 +66,31 @@ export function useActionBubbles(
     const before = prev.current;
     prev.current = view;
     if (!live || !before || !view) return;
+    const show = (seat: number, text: string, ms: number) => {
+      const bubble = { text, id: ++next.current, ms };
+      setBubbles((b) => new Map(b).set(seat, bubble));
+      const timer = setTimeout(
+        () =>
+          setBubbles((b) => {
+            if (b.get(seat)?.id !== bubble.id) return b;
+            const rest = new Map(b);
+            rest.delete(seat);
+            return rest;
+          }),
+        ms,
+      );
+      timers.current.push(timer);
+    };
+    for (const seat of joinsBetween(before, view)) {
+      playJoinSound(seat === mySeat);
+      show(seat, JOINED, BUBBLE_MS);
+    }
     const action = actionBetween(before, view);
     if (!action) return;
     // A stand gets a sound, as a hit already has its card's; louder for your own.
     if (action.text === "Stand") playStandSound(action.seat === mySeat);
     if (action.text === "Double") playDoubleSound(action.seat === mySeat);
-    const bubble = { text: action.text, id: ++next.current, ms: action.ms };
-    setBubbles((b) => new Map(b).set(action.seat, bubble));
-    const timer = setTimeout(
-      () =>
-        setBubbles((b) => {
-          if (b.get(action.seat)?.id !== bubble.id) return b;
-          const rest = new Map(b);
-          rest.delete(action.seat);
-          return rest;
-        }),
-      action.ms,
-    );
-    timers.current.push(timer);
+    show(action.seat, action.text, action.ms);
     // Once per update; your seat only matters when an action comes in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, live]);

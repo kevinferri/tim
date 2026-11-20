@@ -123,6 +123,13 @@ module.exports = {
           "100%": { transform: "scale(1)", opacity: "1" },
         },
         // A player's action bubble: rises out of the avatar, holds, then fades.
+        // A new player dropping into their seat: in from a little large, past it, then settling.
+        "seat-snap": {
+          "0%": { transform: "scale(1.35)", opacity: "0" },
+          "55%": { transform: "scale(0.92)", opacity: "1" },
+          "78%": { transform: "scale(1.04)" },
+          "100%": { transform: "scale(1)" },
+        },
         "action-bubble": {
           "0%": { transform: "translateY(14px) scale(0.6)", opacity: "0" },
           "12%": { transform: "translateY(-2px) scale(1.06)", opacity: "1" },
@@ -278,6 +285,7 @@ module.exports = {
         "turn-pulse": "turn-pulse 1s ease-in-out infinite",
         "result-pop": "result-pop 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both",
         "action-bubble": "action-bubble 1.5s ease-out both",
+        "seat-snap": "seat-snap 0.45s cubic-bezier(0.3, 0.7, 0.4, 1) both",
         "total-slam": "total-slam 0.42s cubic-bezier(0.3, 0.7, 0.4, 1) both",
       },
     },

@@ -44,7 +44,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { blackjackGame } from "./game";
 import { DealerBlackjackBadge, Hand, ScoredCards, TurnGlow } from "./hand";
-import { ActionBubble, useActionBubbles } from "./action-bubbles";
+import { ActionBubble, JOINED, useActionBubbles } from "./action-bubbles";
 import { useSettlement } from "./settlement";
 import { YourResult } from "./your-result";
 
@@ -525,6 +525,7 @@ export function BlackjackTable({
                         />
                       )
                     }
+                    joining={bubbles.get(i)?.text === JOINED}
                     active={view.phase === "players" && view.turn?.seat === i}
                     result={
                       bustLoss ? (
