@@ -44,7 +44,7 @@ export function StatusLine({
           <p
             // The negative margin drops the spacing after the last letter, so the line ends with the text;
             // truncates rather than running off the felt, as a backstop for anything long.
-            className="-mr-[0.22em] truncate text-[15px] font-semibold uppercase tracking-[0.22em] text-white/85 [text-shadow:0_0_2px_rgba(255,255,255,0.2)]"
+            className="-mr-[0.22em] truncate text-[15px] font-semibold uppercase tracking-[0.22em] text-white/85 [text-shadow:0_0_6px_rgba(255,255,255,0.2)]"
             aria-live="polite"
           >
             {children}
