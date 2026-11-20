@@ -8,7 +8,7 @@ export type ShutdownDeps = {
   exit: (code: number) => void;
 };
 
-/** Cancels live tables, lets in-flight chip and news writes finish, then closes the pool and exits. */
+/** Cancels live tables, lets in-flight up/down and news writes finish, then closes the pool and exits. */
 export async function shutdown(
   deps: ShutdownDeps = {
     registry: casinoRegistry,

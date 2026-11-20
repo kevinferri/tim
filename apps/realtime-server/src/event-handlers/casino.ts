@@ -146,14 +146,14 @@ export function registerCasinoHandlers(
       );
     }
 
-    let stack: number;
+    let net: number;
     try {
-      // A settlement still being written would otherwise load stale and be refilled over.
+      // A settlement still being written would otherwise load stale.
       await registry.writesSettled(ref.circleId, id);
-      stack = await registry.deps.chipStore.load(ref.circleId, id);
+      net = await registry.deps.netStore.load(ref.circleId, id);
     } catch (err) {
-      console.error("casino: chip load failed", err);
-      return emitError(socket, ref, "Couldn't load your chips. Try again.");
+      console.error("casino: up/down load failed", err);
+      return emitError(socket, ref, "Couldn't load your up/down. Try again.");
     }
     // Re-checked after the await: the socket may have left or the table closed.
     if (registry.closing) return emitError(socket, ref, "Table is closing");
@@ -168,7 +168,7 @@ export function registerCasinoHandlers(
       current.sit(
         { userId: id, name, displayName, imageUrl, createdAt },
         target,
-        stack,
+        net,
       ),
     );
   });

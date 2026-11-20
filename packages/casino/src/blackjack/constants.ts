@@ -1,6 +1,8 @@
+// Beside a 1/3 poker cash game (300 buy-in), luck-driven blackjack moves up/down less than poker, where skill shows.
 export const MIN_BET = 10;
-export const MAX_BET = 500;
-export const STARTING_CHIPS = 1000;
+export const MAX_BET = 100;
+/** Bets come in red 5s, as on a real table; the white 1 only appears as change (an odd 3:2 rounds down). */
+export const BET_UNIT = 5;
 export const BETTING_WINDOW_MS = 10_000;
 export const TURN_MS = 20_000;
 

@@ -34,8 +34,8 @@ export function StatusLine({
         className="flex max-w-full items-center gap-3 duration-300 animate-in fade-in"
       >
         {leading && (
-          // The same turn glow as at the seat.
-          <span className={cn("flex rounded-full", avatarRing(true))}>
+          // A plain outline like every avatar's: the turn's glow stays at the seat, so only one thing pulses.
+          <span className={cn("flex rounded-full", avatarRing(false))}>
             {leading}
           </span>
         )}

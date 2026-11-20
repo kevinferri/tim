@@ -21,7 +21,7 @@ import {
 import { EmptyState } from "./empty-state";
 import { Keyboard, letterStates } from "./keyboard";
 import { WordsmithIcon } from "./wordsmith-icon";
-import { SmallGrid, Tile } from "./tiles";
+import { BOUNCE_TOTAL_MS, REVEAL_MS, SmallGrid, Tile } from "./tiles";
 import type { WordsmithView } from "./view-store";
 
 type EnabledState = Extract<WordsmithState, { enabled: true }>;
@@ -208,7 +208,33 @@ function PlayView({
   const { myPlay, maxGuesses } = data;
   const [current, setCurrent] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [shaking, setShaking] = useState(false);
+  // The just-scored row, while its tiles flip in and then (if solved) bounce.
+  const [anim, setAnim] = useState<{
+    row: number;
+    phase: "reveal" | "bounce";
+    solved: boolean;
+  } | null>(null);
   const notifyCircle = useNotifyCircle();
+
+  const reject = (text: string) => {
+    setMessage(text);
+    setShaking(true);
+  };
+
+  useEffect(() => {
+    if (!anim) return;
+    const t = setTimeout(
+      () =>
+        setAnim(
+          anim.phase === "reveal" && anim.solved
+            ? { ...anim, phase: "bounce" }
+            : null,
+        ),
+      anim.phase === "reveal" ? REVEAL_MS : BOUNCE_TOTAL_MS,
+    );
+    return () => clearTimeout(t);
+  }, [anim]);
 
   const submit = useMutation({
     mutationFn: (guess: string) =>
@@ -216,6 +242,15 @@ function PlayView({
     onSuccess: ({ play }) => {
       setCurrent("");
       setMessage(null);
+      // A shake cut short never fires animationend, so it would carry to the next row.
+      setShaking(false);
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setAnim({
+          row: play.rows.length - 1,
+          phase: "reveal",
+          solved: play.solved,
+        });
+      }
       queryClient.setQueryData<WordsmithState>(
         wordsmithQueryKey(circleId),
         (prev) => (prev?.enabled ? { ...prev, myPlay: play } : prev),
@@ -231,17 +266,18 @@ function PlayView({
         notifyCircle(circleId);
       }
     },
-    onError: (err: Error) => setMessage(err.message),
+    onError: (err: Error) => reject(err.message),
   });
 
-  const locked = myPlay.finished || submit.isPending;
+  const revealing = anim?.phase === "reveal";
+  const locked = myPlay.finished || submit.isPending || revealing;
 
   const onKey = useCallback(
     (key: string) => {
       if (locked) return;
       if (key === "enter") {
         if (current.length < WORD_LENGTH) {
-          setMessage(`Guesses are ${WORD_LENGTH} letters`);
+          reject(`Guesses are ${WORD_LENGTH} letters`);
           return;
         }
         submit.mutate(current);
@@ -280,18 +316,36 @@ function PlayView({
     const isCurrent = i === myPlay.rows.length && !myPlay.finished;
     return { word: isCurrent ? current : "", scores: null, active: isCurrent };
   });
+  // Hold back the revealing row's letters so the keyboard doesn't give it away early.
+  const keyboardRows = revealing
+    ? myPlay.rows.filter((_, i) => i !== anim.row)
+    : myPlay.rows;
 
   return (
     <>
       <div className="flex flex-col items-center gap-1.5" role="grid">
         {rows.map((row, i) => (
-          <div key={i} className="flex gap-1.5" role="row">
+          <div
+            key={i}
+            className={cn(
+              "flex gap-1.5",
+              row.active && shaking && "motion-safe:animate-row-shake",
+            )}
+            onAnimationEnd={(e) => {
+              if (e.target === e.currentTarget) setShaking(false);
+            }}
+            role="row"
+          >
             {Array.from({ length: WORD_LENGTH }, (_, j) => (
               <Tile
                 key={j}
                 letter={row.word[j]}
                 score={row.scores?.[j]}
                 active={row.active}
+                revealIndex={revealing && anim.row === i ? j : undefined}
+                bounceIndex={
+                  anim?.phase === "bounce" && anim.row === i ? j : undefined
+                }
               />
             ))}
           </div>
@@ -306,7 +360,7 @@ function PlayView({
         ) : null}
       </div>
 
-      {myPlay.finished ? (
+      {myPlay.finished && !revealing ? (
         <FinishedSummary
           myPlay={myPlay}
           maxGuesses={maxGuesses}
@@ -314,7 +368,7 @@ function PlayView({
         />
       ) : (
         <Keyboard
-          states={letterStates(myPlay.rows)}
+          states={letterStates(keyboardRows)}
           disabled={submit.isPending}
           onKey={onKey}
         />
@@ -456,7 +510,7 @@ function StatsView({ data }: { data: EnabledState }) {
                 className={cn(
                   "flex h-5 min-w-fit items-center justify-end rounded px-1.5 font-medium tabular-nums",
                   todayGuesses === i + 1
-                    ? "bg-purple-500 text-white"
+                    ? "bg-success text-white"
                     : "bg-muted text-muted-foreground",
                 )}
                 style={{ width: `${(count / maxCount) * 100}%` }}

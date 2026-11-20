@@ -61,8 +61,8 @@ type Props = {
   card: Card | null;
   size?: CardSize;
   className?: string;
-  /** Holds the flight from the shoe, for a staggered deal. */
-  dealDelayMs?: number;
+  /** Holds the flight from the shoe, for a staggered deal; `null` places the card without one. */
+  dealDelayMs?: number | null;
   /** Dimmed with a shade over the face, so the card stays opaque and still covers what's under it. */
   shaded?: boolean;
 };

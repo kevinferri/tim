@@ -33,6 +33,7 @@ import {
   type BetStack,
   type CardSize,
   type Size,
+  UpDown,
 } from "@/games/casino";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,12 +44,12 @@ import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { blackjackGame } from "./game";
-import { Hand, ScoredCards, TurnGlow } from "./hand";
-import { ActionBubble, useActionBubbles } from "./action-bubbles";
+import { DealerBlackjackBadge, Hand, ScoredCards, TurnGlow } from "./hand";
+import { ActionBubble, JOINED, useActionBubbles } from "./action-bubbles";
 import { useSettlement } from "./settlement";
 import { YourResult } from "./your-result";
 
-const CHIPS = [10, 25, 50, 100];
+const CHIPS = [5, 25, 100];
 
 const PLAY_BUTTONS: {
   action: BlackjackPlayAction;
@@ -135,7 +136,7 @@ const HAND_PAD_PX = 8;
 const DEAL_STAGGER_MS = 130;
 // A hit or double card waits a beat after the player's "Hit"/"Double" bubble, like a dealer reacting.
 // Visual only: the server's turn timer has already moved on.
-const HIT_PAUSE_MS = 220;
+const HIT_PAUSE_MS = 160;
 // Printed on the felt like a real table's; the engine pays 3:2 and the dealer stands on soft 17.
 const FELT_RULES: [string[], string[]] = [
   ["BLACKJACK", "PAYS 3 TO 2"],
@@ -184,23 +185,6 @@ export function BlackjackTable({
     return () => clearTimeout(t);
   }, [myNaturalStamped]);
   const bubbles = useActionBubbles(view, status === "live", mySeat);
-  // A player who went broke is refilled as betting opens: the dealer slides them the chips.
-  const stacks = useRef(new Map<number, number>());
-  useEffect(() => {
-    if (!view) return;
-    const before = stacks.current;
-    stacks.current = new Map(
-      view.seats.flatMap((s) => (s ? [[s.seat, s.stack] as const] : [])),
-    );
-    if (status !== "live" || view.phase !== "betting") return;
-    for (const [seat, stack] of stacks.current) {
-      const was = before.get(seat);
-      if (was !== undefined && was < view.limits.minBet && stack > was)
-        settlement.give(seat, stack - was);
-    }
-    // When the table changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]);
   // A heads-up when the turn comes to you.
   const yourTurnNow =
     status === "live" &&
@@ -210,6 +194,35 @@ export function BlackjackTable({
     if (yourTurnNow) playYourTurn();
   }, [yourTurnNow]);
   const me = view && mySeat !== null ? view.seats[mySeat] : null;
+  // The amount pinned to a seat's avatar right now, if any: a bust's loss, a natural's win, or the round's net once settled.
+  const resultShown = (seat: BlackjackSeatView, i: number): number | null => {
+    const busted =
+      seat.hands.length > 0 && seat.hands.every((h) => h.outcome === "bust");
+    // Waits for a live sweep to take the chips; without one (a load, reduced motion) it shows at once.
+    if (busted && seat.hands.every((_, h) => !settlement.isSweeping(i, h)))
+      return -seat.hands.reduce((sum, h) => sum + h.bet, 0);
+    // A natural's winnings show on the avatar once the seat has them, through the end of the round.
+    const naturalWin = settlement.natural(i).paid && naturalNet(seat);
+    if (naturalWin) return naturalWin;
+    const settled =
+      view?.phase === "results" &&
+      seat.inRound &&
+      // A bust's loss shows above, once its chips are swept.
+      !busted &&
+      // A push shows on the cards only: there's no amount to put here.
+      !!seat.lastNet &&
+      settlement.isSettled(i) &&
+      // A bust still being swept (a split's last hand) holds the seat's result until its card lands.
+      !seat.hands.some((_, h) => settlement.isSweeping(i, h));
+    return settled ? seat.lastNet : null;
+  };
+  // A seat's up/down as it should read now. A natural's win or a bust's loss is final once it shows, so it counts
+  // before the round settles; the server adds it to `net` at settle (results), so it's never counted twice.
+  const liveNet = (seat: BlackjackSeatView, i: number) =>
+    seat.net +
+    (view?.phase !== "results" && seat.inRound
+      ? (resultShown(seat, i) ?? 0)
+      : 0);
   const myBet = me?.bet ?? null;
   const phase = view?.phase;
   // The chips I've put in my circle this round: picked locally, then sent with "Place bet".
@@ -223,7 +236,7 @@ export function BlackjackTable({
   const chipsTotal = chips.reduce((a, b) => a + b, 0);
 
   const minBet = view?.limits.minBet ?? 0;
-  const cap = me && view ? Math.min(view.limits.maxBet, me.stack) : 0;
+  const cap = me && view ? view.limits.maxBet : 0;
   const canPlace = (n: number) => n >= minBet && n <= cap;
   const picking = phase === "betting" && me !== null && myBet === null;
 
@@ -243,6 +256,9 @@ export function BlackjackTable({
     backLabel: circleName,
     logoName: circleName,
     feltRules: FELT_RULES,
+    tableLimits: view
+      ? [`MIN BET ${view.limits.minBet}`, `MAX BET ${view.limits.maxBet}`]
+      : undefined,
     // Same look as the circle in the circles rail.
     backAvatar: (
       <Avatar className="size-5">
@@ -282,6 +298,11 @@ export function BlackjackTable({
   const live = status === "live";
   const isMyTurn = view.phase === "players" && view.turn?.seat === mySeat;
   const playing = view.phase !== "waiting" && view.phase !== "betting";
+  // Two cards to 21: the dealer only draws below 17, so this is always a natural.
+  const dealerBlackjack =
+    view.phase === "results" &&
+    view.dealer.cards.length === 2 &&
+    view.dealer.total === 21;
 
   // Opening deal order: one card to each player from first base, one to the dealer, then again.
   const dealt = view.seats.flatMap((s, i) => (s?.inRound ? [i] : []));
@@ -318,9 +339,13 @@ export function BlackjackTable({
             <>
               {me && (
                 <>
-                  <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
-                    {me.stack.toLocaleString()} chips
-                  </span>
+                  <UpDown
+                    net={liveNet(me, me.seat)}
+                    // Rolls in step with your avatar's up/down.
+                    hold={me.inRound && resultShown(me, me.seat) === null}
+                    // A fixed width, so the header doesn't shift as it rolls.
+                    className="min-w-[4.75rem] justify-end whitespace-nowrap text-sm font-medium"
+                  />
                   {!me.leaving && (
                     <Button
                       variant="ghost"
@@ -341,7 +366,9 @@ export function BlackjackTable({
           onFeltSize={setFelt}
           dealer={
             <div className="flex flex-col items-center" aria-label="Dealer">
-              <div className="relative">
+              {/* Its own stacking context, so the deck can sit under the dealer's cards without dropping under the
+                  felt, and nothing here rises over seat cards flying past. */}
+              <div className="relative isolate">
                 {/* Printed on the felt; the dealt cards cover it. */}
                 <div
                   aria-hidden
@@ -353,6 +380,10 @@ export function BlackjackTable({
                 {view.phase === "dealer" && (
                   <TurnGlow count={view.dealer.cards.length} size={cardSize} />
                 )}
+                {dealerBlackjack && (
+                  // Once the dealer's opening hand has landed: a dealer blackjack ends the round at the deal.
+                  <DealerBlackjackBadge delayMs={dealerDelay(1) + DEAL_MS} />
+                )}
                 {view.dealer.cards.length > 0 ? (
                   <ScoredCards
                     cards={view.dealer.cards}
@@ -363,10 +394,13 @@ export function BlackjackTable({
                 ) : (
                   <div className={cardBox(cardSize)} />
                 )}
-                {/* Well off to the dealer's left, angled like a real shoe, so it doesn't read as a second card. */}
+                {/* Well off to the dealer's left, angled like a real shoe, so it doesn't read as a second card.
+                    Anchored to the dealer's center, past a two-card hand, so it stays put as cards are dealt;
+                    beneath the dealer's cards, which a long hand (5+ cards) brings over it. */}
                 <DealShoe
                   size={cardSize}
-                  className="absolute left-full -top-3 ml-24 rotate-[18deg]"
+                  className="absolute left-1/2 -top-3 -z-10 rotate-[18deg]"
+                  style={{ marginLeft: shoeOffset(cardSize) }}
                 />
               </div>
             </div>
@@ -378,12 +412,15 @@ export function BlackjackTable({
             ) : view.phase === "results" &&
               me?.inRound &&
               me.lastNet !== null &&
-              settlement.isStamped(me.seat) ? (
+              settlement.isStamped(me.seat) &&
+              // A bust waits for its card to land and its chips to be taken.
+              !me.hands.some((_, h) => settlement.isSweeping(me.seat, h)) ? (
               <YourResult
                 net={me.lastNet}
                 blackjack={me.hands.some((h) => h.outcome === "blackjack")}
                 // A natural already counted up; a load or reconnect shows the result as is.
                 still={myNaturalStamped || !settlement.animatingResults}
+                cause={dealerBlackjack ? "Dealer blackjack" : undefined}
               />
             ) : (
               <StatusLine
@@ -420,17 +457,30 @@ export function BlackjackTable({
             const bustShown =
               busted &&
               seat.hands.every((_, h) => !settlement.isSweeping(i, h));
-            const bustLoss =
-              bustShown && -seat.hands.reduce((sum, h) => sum + h.bet, 0);
-            // A natural's winnings show on the avatar once the seat has them, through the end of the round.
-            const naturalWin = settlement.natural(i).paid && naturalNet(seat);
+            const shownResult = resultShown(seat, i);
+            // A loss dims like a bust, once the dealer takes its chips; a seat that won or pushed any hand stays bright.
+            const lost =
+              !busted &&
+              view.phase === "results" &&
+              seat.inRound &&
+              seat.hands.length > 0 &&
+              seat.hands.every(
+                (h) => h.outcome === "lose" || h.outcome === "bust",
+              );
+            // A bust still being swept (a split's last hand) holds the seat's result until its card lands.
+            const sweeping = seat.hands.some((_, h) =>
+              settlement.isSweeping(i, h),
+            );
+            const lossShown = lost && settlement.isSettled(i) && !sweeping;
             const dimmedReason = seat.leaving
               ? "Leaving after this round"
               : playing && !seat.inRound
                 ? "Joins next round"
                 : bustShown
                   ? "Busted"
-                  : null;
+                  : lossShown
+                    ? "Lost"
+                    : null;
             // Everyone but the current turn fades a little, you included.
             const waiting = view.phase === "players" && view.turn?.seat !== i;
             return [
@@ -439,7 +489,9 @@ export function BlackjackTable({
                 seat: i,
                 node: (
                   // The waiting dim goes on the cards inside, so their result badge can sit above the avatar.
-                  <PlayerSpot dimmed={!!dimmedReason && !busted}>
+                  <PlayerSpot
+                    dimmed={!!dimmedReason && !bustShown && !lossShown}
+                  >
                     <SeatHands
                       seat={seat}
                       view={view}
@@ -462,7 +514,7 @@ export function BlackjackTable({
                 ),
                 bet: (
                   <PlayerSpot
-                    dimmed={!!dimmedReason && !busted}
+                    dimmed={!!dimmedReason && !bustShown && !lossShown}
                     waiting={waiting}
                   >
                     <SeatBet
@@ -489,6 +541,8 @@ export function BlackjackTable({
                   <PlayerAvatar
                     occupant={seat.occupant}
                     isYou={i === mySeat}
+                    net={liveNet(seat, i)}
+                    holdNet={seat.inRound}
                     bubble={
                       bubbles.get(i) && (
                         // Keyed so each new action pops in afresh.
@@ -499,20 +553,11 @@ export function BlackjackTable({
                         />
                       )
                     }
+                    joining={bubbles.get(i)?.text === JOINED}
                     active={view.phase === "players" && view.turn?.seat === i}
                     result={
-                      bustLoss ? (
-                        <NetAmount net={bustLoss} mine={i === mySeat} />
-                      ) : naturalWin ? (
-                        <NetAmount net={naturalWin} mine={i === mySeat} />
-                      ) : (
-                        view.phase === "results" &&
-                        seat.inRound &&
-                        // A push shows on the cards only: there's no amount to put here.
-                        !!seat.lastNet &&
-                        settlement.isSettled(i) && (
-                          <NetAmount net={seat.lastNet} mine={i === mySeat} />
-                        )
+                      shownResult !== null && (
+                        <NetAmount net={shownResult} mine={i === mySeat} />
                       )
                     }
                     dimmedReason={dimmedReason}
@@ -594,9 +639,7 @@ function statusText(
       return "Waiting for players";
     case "betting":
       if (!me || me.bet !== null) return "Waiting for bets";
-      return me.stack < view.limits.minBet
-        ? "Not enough chips to bet"
-        : "Place your bet";
+      return "Place your bet";
     case "players": {
       if (!view.turn) return "";
       if (me && view.turn.seat === me.seat) return "Your turn";
@@ -648,7 +691,7 @@ function SeatHands({
           key={h}
           hand={hand}
           size={size}
-          dealDelayMs={dealDelayMs}
+          dealDelayMs={seat.hands.length > 1 ? splitDealDelay(h) : dealDelayMs}
           glow={playingHand === h}
           settled={settled}
           waiting={waiting}
@@ -659,6 +702,15 @@ function SeatHands({
   );
 }
 
+// A split deals each hand its second card in turn, left then right once the left has landed, like two hits.
+// The pair's second card only moves over to start the right hand, so it's placed without a flight from the shoe.
+const splitDealDelay = (hand: number) => (cardIndex: number) =>
+  cardIndex === 0
+    ? null
+    : cardIndex === 1 && hand === 1
+      ? HIT_PAUSE_MS + DEAL_MS
+      : HIT_PAUSE_MS;
+
 /** A natural's winnings (its payout less the bet). */
 function naturalNet(seat: BlackjackSeatView) {
   const hand = seat.hands[0];
@@ -666,6 +718,14 @@ function naturalNet(seat: BlackjackSeatView) {
 }
 
 /** One stack per hand: a split gives each hand its own, a double puts a second stack beside it. */
+// Gap between the dealer's two-card hand and the shoe.
+const SHOE_GAP_PX = 96;
+/** From the dealer's center to the shoe's left edge: half a two-card hand, plus the gap. */
+const shoeOffset = (size: CardSize) => {
+  const { w, overlap } = CARD_PX[size];
+  return (2 * w - overlap) / 2 + SHOE_GAP_PX;
+};
+
 function betStacks(seat: BlackjackSeatView, chips?: number[]): BetStack[] {
   const matching = (amount: number) =>
     chips?.reduce((a, b) => a + b, 0) === amount ? chips : undefined;
@@ -749,12 +809,7 @@ function Dock({
   act: Act;
 } & BetProps) {
   // One thing at a time in the middle of the table: betting while your bet is open, otherwise the play keys.
-  if (
-    me &&
-    view.phase === "betting" &&
-    me.bet === null &&
-    me.stack >= view.limits.minBet
-  ) {
+  if (me && view.phase === "betting" && me.bet === null) {
     return <BetBuilder act={act} {...bet} />;
   }
   // Only on your turn, so their arrival is the cue; nothing below the status otherwise.

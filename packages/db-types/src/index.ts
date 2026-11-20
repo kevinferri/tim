@@ -12,4 +12,5 @@ export type {
   NewsFeed,
   NewsItem,
   CircleNewsSource,
+  CasinoPlayerStats,
 } from "@prisma/client";

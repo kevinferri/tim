@@ -1,14 +1,13 @@
 import { randomInt } from "crypto";
 import { Rng, TableGame } from "@tim/casino";
 import { BlackjackTable } from "./blackjack-table";
-import { ChipStore, InMemoryChipStore } from "./chip-store";
-import { isLocalDev } from "../lib/is-local-dev";
+import { NetStore, dbNetStore } from "./net-store";
 
 export const cryptoRng: Rng = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
 const tableKey = (circleId: string, game: TableGame) => `${game}:${circleId}`;
 
-export type CasinoRegistryDeps = { chipStore: ChipStore; rng: Rng };
+export type CasinoRegistryDeps = { netStore: NetStore; rng: Rng };
 
 // Tables live in this process's memory: scaling tim-ws past one instance needs Redis or sticky routing.
 export class CasinoRegistry {
@@ -27,7 +26,7 @@ export class CasinoRegistry {
     const existing = this.get(circleId, game);
     if (existing) return existing;
     const table = new BlackjackTable(circleId, {
-      chipStore: this.deps.chipStore,
+      netStore: this.deps.netStore,
       rng: this.deps.rng,
       trackSettle: (userId, write) => this.track(circleId, userId, write),
       onIdle: () => {
@@ -53,7 +52,7 @@ export class CasinoRegistry {
     });
   }
 
-  /** Resolves once this user's chip writes in flight have landed, so a load sees them. */
+  /** Resolves once this user's up/down writes in flight have landed, so a load sees them. */
   async writesSettled(circleId: string, userId: string) {
     const mine = this.pendingByUser.get(`${circleId}:${userId}`);
     if (mine) await Promise.allSettled([...mine]);
@@ -85,7 +84,6 @@ export class CasinoRegistry {
 }
 
 export const casinoRegistry = new CasinoRegistry({
-  // A deep stack locally, so testing never runs dry.
-  chipStore: new InMemoryChipStore(isLocalDev() ? 100_000 : undefined),
+  netStore: dbNetStore,
   rng: cryptoRng,
 });

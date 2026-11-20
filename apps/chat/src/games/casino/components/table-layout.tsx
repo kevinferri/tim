@@ -31,6 +31,8 @@ type Props = {
   logoName?: string;
   /** The house rules printed on the felt, one on each side below the logos, e.g. what blackjack pays. */
   feltRules?: [left: string[], right: string[]];
+  /** The table's bet limits, printed on the felt just under the dealer's cards, a line each. */
+  tableLimits?: string[];
   /** Shown before the title, e.g. the game's icon. */
   titleIcon?: ReactNode;
   /** Shown just after the title, e.g. a mute button. */
@@ -462,11 +464,20 @@ export function TableLayout(props: Props) {
                       {props.rack && (
                         <div className="hidden md:block">{props.rack}</div>
                       )}
+                      {/* The limits print sits inside the dealer's box, so the status below starts under it. */}
                       <div
                         ref={setDealerEl}
-                        className="flex min-h-16 items-center justify-center"
+                        className="flex flex-col items-center"
                       >
-                        {props.dealer}
+                        <div className="flex min-h-16 items-center justify-center">
+                          {props.dealer}
+                        </div>
+                        {props.tableLimits && (
+                          <FeltPrint
+                            lines={props.tableLimits}
+                            className="mt-3 hidden md:block"
+                          />
+                        )}
                       </div>
                     </div>
                     <div className="flex w-full flex-wrap justify-center gap-2 md:contents">
@@ -481,7 +492,8 @@ export function TableLayout(props: Props) {
                           <SeatSpot seat={seat}>{node}</SeatSpot>
                           <div
                             data-rail-seat={seat}
-                            className="md:absolute md:left-[var(--x)] md:top-[var(--y)] md:z-10 md:-translate-x-1/2 md:-translate-y-1/2"
+                            // Phones: room for the up/down hung below the avatar (it's out of the flow).
+                            className="max-md:mb-7 md:absolute md:left-[var(--x)] md:top-[var(--y)] md:z-10 md:-translate-x-1/2 md:-translate-y-1/2"
                             style={railPosition(seat)}
                           >
                             {rail}
@@ -519,8 +531,8 @@ export function TableLayout(props: Props) {
                 </FeltSizeContext.Provider>
               </div>
             </div>
-            {/* Room below the table for the bottom seats' avatars, which overhang the rail. */}
-            <div className="h-4 shrink-0 md:h-14" />
+            {/* Room below the table for the bottom seats' avatars and up/down, which overhang the rail. */}
+            <div className="h-6 shrink-0 md:h-20" />
           </>
         )}
       </div>

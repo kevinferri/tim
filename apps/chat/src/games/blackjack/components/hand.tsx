@@ -37,7 +37,7 @@ const OUTCOME: Record<
 
 type DealProps = {
   /** Per-card hold before it flies from the shoe (the opening deal's order). */
-  dealDelayMs?: (cardIndex: number) => number;
+  dealDelayMs?: (cardIndex: number) => number | null;
   /** Key cards by value so one replaced at the same index (after a split) mounts and flies. The dealer keeps index keys so the hole card flips in place. */
   keyByCard?: boolean;
   /** Dim the cards while staying opaque (see PlayingCard's `shaded`). */
@@ -152,7 +152,7 @@ type Props = {
   waiting?: boolean;
   /** Your hand: a win stamps in gold. */
   mine?: boolean;
-  dealDelayMs?: (cardIndex: number) => number;
+  dealDelayMs?: (cardIndex: number) => number | null;
 };
 
 /** A dealt pair's footprint with a dashed outline, so nothing moves at the deal. */
@@ -382,6 +382,25 @@ export function Hand({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Over the dealer's hand when they turn up a blackjack, which ends the round at once; neutral, as it's bad news. */
+export function DealerBlackjackBadge({ delayMs }: { delayMs: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 flex justify-center">
+      <Badge
+        variant="outline"
+        className={cn(
+          "whitespace-nowrap px-2.5 py-0.5 text-sm font-medium uppercase tracking-wider shadow-lg animate-in fade-in zoom-in-50 duration-300 fill-mode-both",
+          PUSH,
+        )}
+        // Hidden until the dealer's cards have landed (fill-mode-both holds the start of the animation).
+        style={{ animationDelay: `${delayMs}ms` }}
+      >
+        Blackjack
+      </Badge>
     </div>
   );
 }

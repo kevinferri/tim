@@ -6,7 +6,6 @@ import {
   DEALER_DRAW_MS,
   RESULTS_MS,
   Rank,
-  STARTING_CHIPS,
   TURN_MS,
   applyAction,
   dealerDraw,
@@ -15,7 +14,7 @@ import { SocketEvent } from "@tim/socket-types";
 import { createMockSocket } from "../test/socket-mocks";
 import { registerCasinoHandlers } from "./casino";
 import { CasinoRegistry } from "../casino/registry";
-import { ChipStore, InMemoryChipStore } from "../casino/chip-store";
+import { InMemoryNetStore, NetStore } from "../casino/net-store";
 import { TABLE_RESTARTING, TABLE_RESTARTING_REFUNDED } from "../casino/table";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
@@ -45,8 +44,8 @@ function seededRng(seed = 1) {
   };
 }
 
-function setup(chipStore: ChipStore = new InMemoryChipStore()) {
-  const registry = new CasinoRegistry({ chipStore, rng: seededRng() });
+function setup(netStore: NetStore = new InMemoryNetStore()) {
+  const registry = new CasinoRegistry({ netStore, rng: seededRng() });
   const connect = (userId: string) => {
     const socket = createMockSocket({
       id: userId,
@@ -67,7 +66,7 @@ function setup(chipStore: ChipStore = new InMemoryChipStore()) {
     }));
     table().shoe = cards;
   };
-  return { registry, connect, table, stackShoe, chipStore };
+  return { registry, connect, table, stackShoe, netStore };
 }
 
 const watch = (s: MockSocket) => s.trigger(SocketEvent.TableWatch, REF);
@@ -249,7 +248,7 @@ describe("watching", () => {
     await sit(b, 0);
     expect(lastError(b)).toBe("You're not at this table");
     await standUp(b);
-    await bet(b, 10);
+    await bet(b, 50);
     expect(emitted(b, SocketEvent.TableError)).toHaveLength(3);
     expect(state(a).seats.every((s) => s === null)).toBe(true);
   });
@@ -297,7 +296,7 @@ describe("seats", () => {
     expect(lastError(late)).toBe("Table is full");
   });
 
-  it("seats a player with their chip balance", async () => {
+  it("seats a player with their all-time up/down", async () => {
     const { connect } = setup();
     const a = connect("a");
     await watch(a);
@@ -305,7 +304,7 @@ describe("seats", () => {
     expect(state(a).seats[3]).toMatchObject({
       seat: 3,
       occupant: { userId: "a", displayName: "a" },
-      stack: STARTING_CHIPS,
+      net: 0,
       bet: null,
       inRound: false,
       leaving: false,
@@ -316,7 +315,7 @@ describe("seats", () => {
 
 describe("a round", () => {
   it("plays a solo round from bet to results and back to betting", async () => {
-    const { connect, stackShoe, chipStore } = setup();
+    const { connect, stackShoe, netStore } = setup();
     const a = connect("a");
     await watch(a);
     stackShoe("10", "9", "8", "7", "K"); // player 18, dealer 9 + 7, draws K
@@ -331,7 +330,7 @@ describe("a round", () => {
     expect(view.msLeft).toBe(TURN_MS);
     expect(view.turnActions).toEqual(["hit", "stand", "double"]);
     expect(view.seats[0]).toMatchObject({
-      stack: 900,
+      net: 0,
       bet: 100,
       inRound: true,
     });
@@ -356,16 +355,16 @@ describe("a round", () => {
       outcome: "win",
       payout: 200,
     });
-    expect(view.seats[0]).toMatchObject({ stack: 1100, lastNet: 100 });
+    expect(view.seats[0]).toMatchObject({ net: 100, lastNet: 100 });
     await vi.waitFor(async () =>
-      expect(await chipStore.load("c1", "a")).toBe(1100),
+      expect(await netStore.load("c1", "a")).toBe(100),
     );
 
     vi.advanceTimersByTime(RESULTS_MS);
     view = state(a);
     expect(view.phase).toBe("betting");
     expect(view.seats[0]).toMatchObject({
-      stack: 1100,
+      net: 100,
       bet: null,
       inRound: false,
       hands: [],
@@ -396,7 +395,7 @@ describe("a round", () => {
     expect(lastError(b)).toBe("It's not your turn");
     expect(state(a)).toEqual(before);
 
-    await bet(a, 10);
+    await bet(a, 50);
     expect(lastError(a)).toBe("Betting is closed");
 
     await act(a, { type: "stand" });
@@ -407,8 +406,8 @@ describe("a round", () => {
     vi.advanceTimersByTime(DEALER_DRAW_MS);
     const view = state(b);
     expect(view.phase).toBe("results");
-    expect(view.seats[2]).toMatchObject({ stack: 1100, lastNet: 100 });
-    expect(view.seats[5]).toMatchObject({ stack: 1000, lastNet: 0 });
+    expect(view.seats[2]).toMatchObject({ net: 100, lastNet: 100 });
+    expect(view.seats[5]).toMatchObject({ net: 0, lastNet: 0 });
     expect(view.seats[5]!.hands[0].outcome).toBe("push");
   });
 
@@ -421,7 +420,7 @@ describe("a round", () => {
     stackShoe("10", "9", "8", "7");
     await sit(a, 0);
     await sit(b, 1);
-    await bet(a, 20);
+    await bet(a, 100);
 
     vi.advanceTimersByTime(BETTING_WINDOW_MS - 1);
     expect(state(a).phase).toBe("betting");
@@ -435,9 +434,9 @@ describe("a round", () => {
       hands: [],
       bet: null,
     });
-    expect(view.seats[1]!.stack).toBe(STARTING_CHIPS);
+    expect(view.seats[1]!.net).toBe(0);
 
-    await bet(b, 20);
+    await bet(b, 100);
     expect(lastError(b)).toBe("Betting is closed");
   });
 
@@ -451,19 +450,21 @@ describe("a round", () => {
     await sit(b, 1);
 
     await bet(a, 5);
-    expect(lastError(a)).toMatch(/whole number from 10 to 500/);
-    await bet(a, 501);
-    expect(lastError(a)).toMatch(/whole number/);
+    expect(lastError(a)).toBe("Bet must be a multiple of 5 from 10 to 100");
+    await bet(a, 105);
+    expect(lastError(a)).toMatch(/multiple of 5/);
+    await bet(a, 11);
+    expect(lastError(a)).toMatch(/multiple of 5/);
     await act(a, { type: "bet", amount: 10.5 });
     expect(lastError(a)).toBe("Invalid action");
     await act(a, { type: "surrender" });
     expect(lastError(a)).toBe("Invalid action");
-    expect(state(a).seats[0]).toMatchObject({ bet: null, stack: 1000 });
+    expect(state(a).seats[0]).toMatchObject({ bet: null });
 
-    await bet(a, 10);
-    await bet(a, 20);
+    await bet(a, 50);
+    await bet(a, 100);
     expect(lastError(a)).toBe("You already bet this round");
-    expect(state(a).seats[0]).toMatchObject({ bet: 10, stack: 990 });
+    expect(state(a).seats[0]).toMatchObject({ bet: 50 });
   });
 });
 
@@ -478,8 +479,8 @@ describe("turn timer", () => {
     stackShoe("5", "10", "9", "6", "8", "8", "2");
     await sit(a, 0);
     await sit(b, 1);
-    await bet(a, 10);
-    await bet(b, 10);
+    await bet(a, 50);
+    await bet(b, 50);
 
     vi.advanceTimersByTime(15_000);
     await act(a, { type: "hit" });
@@ -504,7 +505,7 @@ describe("turn timer", () => {
     // 8 8 vs dealer 9 + 8; split hands get 3 and 2
     stackShoe("8", "9", "8", "8", "3", "2");
     await sit(a, 0);
-    await bet(a, 10);
+    await bet(a, 50);
     await act(a, { type: "split" });
     expect(state(a).turn).toEqual({ seat: 0, hand: 0 });
     await act(a, { type: "stand" });
@@ -516,22 +517,18 @@ describe("turn timer", () => {
   });
 });
 
-describe("chips", () => {
-  it("tracks the stack across bet, split, double, and settle", async () => {
-    const { connect, stackShoe, chipStore } = setup();
-    const settleSpy = vi.spyOn(chipStore, "settle");
+describe("up/down", () => {
+  it("records net and wagered across bet, split, double, and settle", async () => {
+    const { connect, stackShoe, netStore } = setup();
+    const recordSpy = vi.spyOn(netStore, "record");
     const a = connect("a");
     await watch(a);
     // 8 8 vs dealer 9 + 7; split → 8+3, 8+2; double hand 1 → +10 = 21; dealer draws K
     stackShoe("8", "9", "8", "7", "3", "2", "10", "K");
     await sit(a, 0);
     await bet(a, 100);
-    expect(state(a).seats[0]!.stack).toBe(900);
-
     await act(a, { type: "split" });
-    expect(state(a).seats[0]!.stack).toBe(800);
     await act(a, { type: "double" });
-    expect(state(a).seats[0]!.stack).toBe(700);
     expect(state(a).seats[0]!.hands[0]).toMatchObject({
       bet: 200,
       total: 21,
@@ -542,115 +539,72 @@ describe("chips", () => {
     vi.advanceTimersByTime(DEALER_DRAW_MS * 2);
     const view = state(a);
     expect(view.phase).toBe("results");
-    expect(view.seats[0]).toMatchObject({ stack: 1300, lastNet: 300 });
-    expect(settleSpy).toHaveBeenCalledTimes(1);
-    expect(settleSpy).toHaveBeenCalledWith({
+    expect(view.seats[0]).toMatchObject({ net: 300, lastNet: 300 });
+    expect(recordSpy).toHaveBeenCalledTimes(1);
+    expect(recordSpy).toHaveBeenCalledWith({
       circleId: "c1",
       userId: "a",
       game: "blackjack",
       net: 300,
+      wagered: 300,
     });
     await vi.waitFor(async () =>
-      expect(await chipStore.load("c1", "a")).toBe(1300),
+      expect(await netStore.load("c1", "a")).toBe(300),
     );
   });
 
-  it("does not offer double or split without enough chips", async () => {
-    // A short starting stack, since sitting down refills to it.
-    const { connect, stackShoe } = setup(new InMemoryChipStore(150));
+  it("always offers double and split, with no stack to run out of", async () => {
+    const netStore = new InMemoryNetStore();
+    await netStore.record({
+      circleId: "c1",
+      userId: "a",
+      game: "blackjack",
+      net: -5_000,
+      wagered: 5_000,
+    });
+    const { connect, stackShoe } = setup(netStore);
     const a = connect("a");
     await watch(a);
     stackShoe("8", "9", "8", "7");
     await sit(a, 0);
+    expect(state(a).seats[0]!.net).toBe(-5_000);
     await bet(a, 100);
-    expect(state(a).seats[0]!.stack).toBe(50);
-    expect(state(a).turnActions).toEqual(["hit", "stand"]);
-    await act(a, { type: "double" });
-    expect(lastError(a)).toBe("You can't double now");
-    await act(a, { type: "split" });
-    expect(lastError(a)).toBe("You can't split now");
-    expect(state(a).seats[0]!.stack).toBe(50);
+    expect(state(a).turnActions).toEqual(["hit", "stand", "double", "split"]);
   });
 
-  it("refills a short stack when sitting down, never cutting a big one", async () => {
-    const chipStore = new InMemoryChipStore();
-    await chipStore.settle({
-      circleId: "c1",
-      userId: "a",
-      game: "blackjack",
-      net: -850,
-    });
-    await chipStore.settle({
-      circleId: "c1",
-      userId: "b",
-      game: "blackjack",
-      net: 500,
-    });
-    const settleSpy = vi.spyOn(chipStore, "settle");
-    const refillSpy = vi.spyOn(chipStore, "refill");
-    const { connect } = setup(chipStore);
-    const a = connect("a");
-    const b = connect("b");
-    await watch(a);
-    await watch(b);
-    await sit(a, 0);
-    await sit(b, 1);
-    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
-    expect(state(a).seats[1]!.stack).toBe(STARTING_CHIPS + 500);
-    // A refill, not a settlement, so it never counts as a hand won.
-    expect(settleSpy).not.toHaveBeenCalled();
-    expect(refillSpy).toHaveBeenCalledTimes(1);
-    expect(refillSpy).toHaveBeenCalledWith({
-      circleId: "c1",
-      userId: "a",
-      amount: 850,
-    });
-    await vi.waitFor(async () =>
-      expect(await chipStore.load("c1", "a")).toBe(STARTING_CHIPS),
-    );
-  });
-
-  it("refills a player who goes broke at the table before the next hand", async () => {
+  it("keeps going down without any refill", async () => {
     const { connect, stackShoe } = setup();
     const a = connect("a");
     await watch(a);
     await sit(a, 0);
-    // All in on 10 6 vs dealer 10 + 10: stands on 16 and loses.
-    stackShoe("10", "10", "6", "10");
-    await bet(a, 500);
-    await act(a, { type: "stand" });
-    vi.advanceTimersByTime(DEALER_DRAW_MS * 2);
-    expect(state(a).phase).toBe("results");
-    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS - 500);
-
-    stackShoe("10", "10", "6", "10");
-    vi.advanceTimersByTime(RESULTS_MS);
-    await bet(a, 500);
-    await act(a, { type: "stand" });
-    vi.advanceTimersByTime(DEALER_DRAW_MS * 2);
-    expect(state(a).seats[0]!.stack).toBe(0);
-
-    vi.advanceTimersByTime(RESULTS_MS);
+    for (const expected of [-100, -200]) {
+      // 16 vs dealer 20: loses 100.
+      stackShoe("10", "10", "6", "10");
+      await bet(a, 100);
+      await act(a, { type: "stand" });
+      vi.advanceTimersByTime(DEALER_DRAW_MS * 2);
+      expect(state(a).seats[0]!.net).toBe(expected);
+      vi.advanceTimersByTime(RESULTS_MS);
+    }
     expect(state(a).phase).toBe("betting");
-    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
   });
 
-  it("waits for a settlement still being written before refilling on sit", async () => {
-    const chipStore = new InMemoryChipStore();
-    const settle = chipStore.settle.bind(chipStore);
+  it("waits for a settlement still being written before loading on sit", async () => {
+    const netStore = new InMemoryNetStore();
+    const record = netStore.record.bind(netStore);
     let release!: () => void;
     const gate = new Promise<void>((resolve) => (release = resolve));
-    vi.spyOn(chipStore, "settle").mockImplementation(async (s) => {
+    vi.spyOn(netStore, "record").mockImplementation(async (hand) => {
       await gate;
-      await settle(s);
+      await record(hand);
     });
-    const { connect, stackShoe } = setup(chipStore);
+    const { connect, stackShoe } = setup(netStore);
     const a = connect("a");
     await watch(a);
     await sit(a, 0);
-    // 16 vs dealer 20: loses 500.
+    // 16 vs dealer 20: loses 100.
     stackShoe("10", "10", "6", "10");
-    await bet(a, 500);
+    await bet(a, 100);
     await act(a, { type: "stand" });
     vi.advanceTimersByTime(DEALER_DRAW_MS * 2 + RESULTS_MS);
     await standUp(a);
@@ -658,15 +612,12 @@ describe("chips", () => {
     const sitting = sit(a, 0);
     release();
     await sitting;
-    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
-    await vi.waitFor(async () =>
-      expect(await chipStore.load("c1", "a")).toBe(STARTING_CHIPS),
-    );
+    expect(state(a).seats[0]!.net).toBe(-100);
   });
 
-  it("refunds a bet when standing up during betting, with no chip write", async () => {
-    const { connect, chipStore } = setup();
-    const settleSpy = vi.spyOn(chipStore, "settle");
+  it("records nothing when standing up during betting", async () => {
+    const { connect, netStore } = setup();
+    const recordSpy = vi.spyOn(netStore, "record");
     const a = connect("a");
     const b = connect("b");
     await watch(a);
@@ -679,10 +630,10 @@ describe("chips", () => {
     // b alone, hasn't bet: the countdown is cancelled.
     expect(state(b).phase).toBe("betting");
     expect(state(b).msLeft).toBeNull();
-    expect(settleSpy).not.toHaveBeenCalled();
+    expect(recordSpy).not.toHaveBeenCalled();
 
     await sit(a, 0);
-    expect(state(a).seats[0]!.stack).toBe(STARTING_CHIPS);
+    expect(state(a).seats[0]!.net).toBe(0);
   });
 });
 
@@ -716,8 +667,8 @@ describe("leaving", () => {
   });
 
   it("still settles a player who leaves mid-round, then frees the seat", async () => {
-    const { connect, stackShoe, chipStore, registry } = setup();
-    const settleSpy = vi.spyOn(chipStore, "settle");
+    const { connect, stackShoe, netStore, registry } = setup();
+    const recordSpy = vi.spyOn(netStore, "record");
     const a = connect("a");
     const watcher = connect("w");
     await watch(a);
@@ -735,8 +686,8 @@ describe("leaving", () => {
     view = state(watcher);
     expect(view.phase).toBe("results");
     expect(view.seats[0]!.hands[0].outcome).toBe("win");
-    expect(settleSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "a", net: 100 }),
+    expect(recordSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "a", net: 100, wagered: 100 }),
     );
 
     vi.advanceTimersByTime(RESULTS_MS);
@@ -754,7 +705,7 @@ describe("leaving", () => {
     const a = connect("a");
     await watch(a);
     await sit(a, 0);
-    await bet(a, 10);
+    await bet(a, 50);
     // Solo bet deals immediately; stand during betting needs a second seat.
     expect(state(a).phase).toBe("players");
 
@@ -765,7 +716,7 @@ describe("leaving", () => {
     expect(state(b).phase).toBe("betting");
 
     await sit(b, 1);
-    await bet(b, 10);
+    await bet(b, 50);
     expect(state(b).msLeft).toBe(BETTING_WINDOW_MS);
     await standUp(b);
     await standUp(a);
@@ -779,16 +730,16 @@ describe("leaving", () => {
 });
 
 describe("shutdown", () => {
-  function deferredChipStore() {
-    const store = new InMemoryChipStore();
+  function deferredNetStore() {
+    const store = new InMemoryNetStore();
     let release!: () => void;
     const gate = new Promise<void>((resolve) => (release = resolve));
-    vi.spyOn(store, "settle").mockImplementation(() => gate);
+    vi.spyOn(store, "record").mockImplementation(() => gate);
     return { store, release };
   }
 
   it("cancels tables, waits for settle writes, then closes the pool and exits", async () => {
-    const { store, release } = deferredChipStore();
+    const { store, release } = deferredNetStore();
     const { connect, stackShoe, registry } = setup(store);
     const a = connect("a");
     const watcher = connect("w");
@@ -853,21 +804,21 @@ describe("shutdown", () => {
         await watch(b);
         await sit(a, 0);
         await sit(b, 1);
-        await bet(a, 10);
+        await bet(a, 50);
       }),
     ).toBe(TABLE_RESTARTING_REFUNDED);
     expect(
       await closingMessageAfter(async ({ stackShoe }, a) => {
         stackShoe("10", "9", "8", "8");
         await sit(a, 0);
-        await bet(a, 10);
+        await bet(a, 50);
       }),
     ).toBe(TABLE_RESTARTING_REFUNDED);
     expect(
       await closingMessageAfter(async ({ stackShoe }, a) => {
         stackShoe("10", "9", "8", "8");
         await sit(a, 0);
-        await bet(a, 10);
+        await bet(a, 50);
         await act(a, { type: "stand" });
       }),
     ).toBe(TABLE_RESTARTING_REFUNDED);
@@ -881,7 +832,7 @@ describe("shutdown", () => {
     await sit(a, 0);
     await watch(b);
     await sit(b, 1);
-    await bet(a, 10); // betting window running
+    await bet(a, 50); // betting window running
 
     await shutdown({ registry, destroyDb: async () => {}, exit: () => {} });
     const statesBefore = emitted(a, SocketEvent.TableState).length;
@@ -889,7 +840,7 @@ describe("shutdown", () => {
     expect(emitted(a, SocketEvent.TableState)).toHaveLength(statesBefore);
     expect(vi.getTimerCount()).toBe(0);
 
-    await bet(b, 10);
+    await bet(b, 50);
     expect(lastError(b)).toBe("Table is closing");
     const c = connect("c");
     await watch(c);
@@ -897,7 +848,7 @@ describe("shutdown", () => {
   });
 
   it("stops waiting on a stuck settle write after the cap", async () => {
-    const { store } = deferredChipStore();
+    const { store } = deferredNetStore();
     const { connect, stackShoe, registry } = setup(store);
     const a = connect("a");
     await watch(a);
@@ -949,18 +900,18 @@ describe("unexpected errors", () => {
 
     const view = state(a);
     expect(view.phase).toBe("betting");
-    expect(view.seats[0]).toMatchObject({ stack: 1000, bet: null, hands: [] });
-    expect(view.seats[1]).toMatchObject({ stack: 1000, bet: null, hands: [] });
+    expect(view.seats[0]).toMatchObject({ net: 0, bet: null, hands: [] });
+    expect(view.seats[1]).toMatchObject({ net: 0, bet: null, hands: [] });
     expect(lastError(a)).toMatch(/cancelled and bets were returned/);
     expect(lastError(b)).toMatch(/cancelled and bets were returned/);
     expect(console.error).toHaveBeenCalled();
 
     // The table keeps working afterwards.
-    await bet(a, 10);
-    expect(state(a).seats[0]).toMatchObject({ bet: 10, stack: 990 });
+    await bet(a, 50);
+    expect(state(a).seats[0]).toMatchObject({ bet: 50 });
   });
 
-  it("returns split and double chips when an action throws mid-round", async () => {
+  it("cancels a split round without recording when an action throws", async () => {
     const { connect, stackShoe } = setup();
     const a = connect("a");
     const leaver = connect("l");
@@ -973,7 +924,6 @@ describe("unexpected errors", () => {
     await bet(a, 100);
     await bet(leaver, 100);
     await act(a, { type: "split" });
-    expect(state(a).seats[0]!.stack).toBe(800);
     await leaver.trigger(SocketEvent.Disconnecting);
     expect(state(a).seats[1]).toMatchObject({ leaving: true });
 
@@ -982,30 +932,30 @@ describe("unexpected errors", () => {
 
     const view = state(a);
     expect(view.phase).toBe("betting");
-    expect(view.seats[0]).toMatchObject({ stack: 1000, bet: null, hands: [] });
+    expect(view.seats[0]).toMatchObject({ net: 0, bet: null, hands: [] });
     // A leaving seat is freed rather than kept for the next round.
     expect(view.seats[1]).toBeNull();
     expect(emitted(a, SocketEvent.TableError)).toHaveLength(1);
   });
 
-  it("tells the player when loading their chips fails, without seating them", async () => {
-    const chipStore = new InMemoryChipStore();
-    vi.spyOn(chipStore, "load").mockRejectedValueOnce(new Error("db down"));
-    const { connect } = setup(chipStore);
+  it("tells the player when loading their up/down fails, without seating them", async () => {
+    const netStore = new InMemoryNetStore();
+    vi.spyOn(netStore, "load").mockRejectedValueOnce(new Error("db down"));
+    const { connect } = setup(netStore);
     const a = connect("a");
     await watch(a);
     await expect(sit(a, 0)).resolves.toBeUndefined();
-    expect(lastError(a)).toBe("Couldn't load your chips. Try again.");
+    expect(lastError(a)).toBe("Couldn't load your up/down. Try again.");
     expect(state(a).seats[0]).toBeNull();
 
     await sit(a, 0);
-    expect(state(a).seats[0]).toMatchObject({ stack: STARTING_CHIPS });
+    expect(state(a).seats[0]).toMatchObject({ net: 0 });
   });
 
-  it("still settles when the chip store throws synchronously", async () => {
-    const chipStore = new InMemoryChipStore();
-    vi.spyOn(chipStore, "settle").mockImplementation(boom);
-    const { connect, stackShoe } = setup(chipStore);
+  it("still settles when the net store throws synchronously", async () => {
+    const netStore = new InMemoryNetStore();
+    vi.spyOn(netStore, "record").mockImplementation(boom);
+    const { connect, stackShoe } = setup(netStore);
     const a = connect("a");
     await watch(a);
     stackShoe("10", "9", "8", "8");
@@ -1015,10 +965,10 @@ describe("unexpected errors", () => {
     vi.advanceTimersByTime(DEALER_DRAW_MS);
 
     expect(state(a).phase).toBe("results");
-    expect(state(a).seats[0]).toMatchObject({ stack: 1100, lastNet: 100 });
+    expect(state(a).seats[0]).toMatchObject({ net: 100, lastNet: 100 });
     await vi.waitFor(() =>
       expect(console.error).toHaveBeenCalledWith(
-        "casino: chip settle failed",
+        "casino: settle write failed",
         expect.any(Error),
       ),
     );

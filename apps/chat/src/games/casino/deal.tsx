@@ -6,6 +6,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -58,10 +59,12 @@ export function DealProvider({ live, snapshot, children }: ProviderProps) {
 export function DealShoe({
   size,
   className,
+  style,
 }: {
   /** Matches the cards on the table. */
   size: CardSize;
   className?: string;
+  style?: CSSProperties;
 }) {
   const ctx = useContext(DealContext);
   return (
@@ -75,6 +78,7 @@ export function DealShoe({
         "shadow-[1px_1px_0_#e7e5e4,2px_2px_0_#d6d3d1,3px_3px_0_#a8a29e,5px_7px_12px_rgba(0,0,0,0.45)]",
         className,
       )}
+      style={style}
     />
   );
 }
@@ -91,13 +95,17 @@ export const useInDeal = () => useContext(DealContext) !== null;
 const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** On mount, flies the element from the shoe to where it sits. */
-export function useDealFlight(ref: RefObject<HTMLElement | null>, delayMs = 0) {
+/** On mount, flies the element from the shoe to where it sits; `null` places it without a flight (a card moved, not dealt). */
+export function useDealFlight(
+  ref: RefObject<HTMLElement | null>,
+  delayMs: number | null = 0,
+) {
   const ctx = useContext(DealContext);
 
   useLayoutEffect(() => {
     const el = ref.current;
     const shoe = ctx?.shoe.current;
+    if (delayMs === null) return;
     if (!el || !shoe || !ctx?.enabled.current || reducedMotion()) return;
 
     // Web Animations, not a CSS class, so it can't collide with layout transforms.

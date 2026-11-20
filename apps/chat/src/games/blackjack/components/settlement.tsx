@@ -19,7 +19,7 @@ const LAST_SEAT_START_MS =
   Math.max(PAY_MS + PAY_HOLD_MS + COLLECT_MS, PAY_MS + TALLY_MAX_MS) -
   150;
 // A bust is taken just after the busting card lands (a hit waits a beat before it flies; see HIT_PAUSE_MS).
-const BUST_SWEEP_DELAY_MS = 970;
+const BUST_SWEEP_DELAY_MS = 910;
 // A natural is paid a beat after its second card lands, once its 21 has slammed in.
 const NATURAL_PAUSE_MS = 650;
 const EASING = "cubic-bezier(0.2, 0.7, 0.3, 1)";
@@ -272,9 +272,10 @@ export function useSettlement(
           at(shown, () => setNaturalPaid((s) => new Set(s).add(seat.seat)));
           return;
         }
+        // Any phase: when the last player to act busts, the round has already moved on to the dealer
+        // (or results) by the time this view arrives, and the bust must still wait for its card.
         if (
           !live ||
-          view.phase !== "players" ||
           hand.outcome !== "bust" ||
           was === undefined ||
           was === "bust" ||
@@ -282,6 +283,8 @@ export function useSettlement(
           reducedMotion()
         )
           return;
+        // Claimed, so the end of the hand leaves this sweep to its timer instead of taking the chips at once.
+        claimed.current.add(key);
         setSweeping((s) => new Set(s).add(key));
         bustTimers.current.push(
           setTimeout(() => {
@@ -409,19 +412,6 @@ export function useSettlement(
       : null;
 
   return {
-    /** The dealer slides `amount` from the rack to a seat, e.g. refilling a player who went broke. */
-    give: (seat: number, amount: number) => {
-      if (amount <= 0 || reducedMotion()) return;
-      fly({
-        id: `give:${seat}:${performance.now()}`,
-        amount,
-        from: RACK,
-        to: avatarSelector(seat),
-        ms: COLLECT_MS,
-        vanish: true,
-        mine: seat === mySeat,
-      });
-    },
     /** This hand's chips have left its bet circle. */
     isMoved: (seat: number, hand: number) => moved.has(handKey(seat, hand)),
     /** This hand busted and its chips are about to be swept. */
