@@ -19,7 +19,7 @@ const LAST_SEAT_START_MS =
   Math.max(PAY_MS + PAY_HOLD_MS + COLLECT_MS, PAY_MS + TALLY_MAX_MS) -
   150;
 // A bust is taken just after the busting card lands (a hit waits a beat before it flies; see HIT_PAUSE_MS).
-const BUST_SWEEP_DELAY_MS = 970;
+const BUST_SWEEP_DELAY_MS = 910;
 // A natural is paid a beat after its second card lands, once its 21 has slammed in.
 const NATURAL_PAUSE_MS = 650;
 const EASING = "cubic-bezier(0.2, 0.7, 0.3, 1)";

@@ -135,7 +135,7 @@ const HAND_PAD_PX = 8;
 const DEAL_STAGGER_MS = 130;
 // A hit or double card waits a beat after the player's "Hit"/"Double" bubble, like a dealer reacting.
 // Visual only: the server's turn timer has already moved on.
-const HIT_PAUSE_MS = 220;
+const HIT_PAUSE_MS = 160;
 // Printed on the felt like a real table's; the engine pays 3:2 and the dealer stands on soft 17.
 const FELT_RULES: [string[], string[]] = [
   ["BLACKJACK", "PAYS 3 TO 2"],

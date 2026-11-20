@@ -58,8 +58,8 @@ export function useActionBubbles(
     if (!live || !before || !view) return;
     const action = actionBetween(before, view);
     if (!action) return;
-    // Your stand gets a sound too, as a hit already has its card's; other players' stay quiet.
-    if (action.text === "Stand" && action.seat === mySeat) playStandSound(true);
+    // A stand gets a sound, as a hit already has its card's; louder for your own.
+    if (action.text === "Stand") playStandSound(action.seat === mySeat);
     if (action.text === "Double") playDoubleSound(action.seat === mySeat);
     const bubble = { text: action.text, id: ++next.current, ms: action.ms };
     setBubbles((b) => new Map(b).set(action.seat, bubble));
