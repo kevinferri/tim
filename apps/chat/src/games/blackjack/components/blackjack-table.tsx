@@ -887,9 +887,9 @@ function BetBuilder({
               disabled={total + value > cap}
               onClick={() => chipRefs.current[n]?.click()}
               // Lit like the other keys while you can add that chip.
-              className="text-white/85 transition-[color,text-shadow] duration-300 [text-shadow:0_0_6px_rgba(255,255,255,0.2)] hover:text-white disabled:cursor-default disabled:text-white/20 disabled:[text-shadow:none]"
+              className="text-white/85 transition-[color,text-shadow] duration-300 [text-shadow:0_0_2px_rgba(255,255,255,0.2)] hover:text-white disabled:cursor-default disabled:text-white/20 disabled:[text-shadow:none]"
             >
-              <kbd className="flex size-5 items-center justify-center rounded-[3px] border border-current font-sans text-[11px] font-bold shadow-[0_0_6px_rgba(255,255,255,0.12)] transition-shadow duration-300 [:disabled>&]:shadow-none">
+              <kbd className="flex size-5 items-center justify-center rounded-[3px] border border-current font-sans text-[11px] font-bold shadow-[0_0_3px_rgba(255,255,255,0.12)] transition-shadow duration-300 [:disabled>&]:shadow-none">
                 {n + 1}
               </kbd>
             </button>
@@ -974,14 +974,14 @@ function PrintedKey({
       className={cn(
         "flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold uppercase tracking-[0.18em] transition-[color,text-shadow] duration-300",
         on
-          ? "text-white/85 [text-shadow:0_0_6px_rgba(255,255,255,0.2)] hover:text-white"
+          ? "text-white/85 [text-shadow:0_0_2px_rgba(255,255,255,0.2)] hover:text-white"
           : "cursor-default text-white/20",
       )}
     >
       <kbd
         className={cn(
           "flex h-6 min-w-6 items-center justify-center rounded-[3px] border border-current px-1 font-sans text-[13px] font-bold tracking-normal transition-shadow duration-300",
-          on && "shadow-[0_0_6px_rgba(255,255,255,0.12)]",
+          on && "shadow-[0_0_3px_rgba(255,255,255,0.12)]",
         )}
       >
         {keyLabel}
