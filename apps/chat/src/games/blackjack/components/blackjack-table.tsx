@@ -43,7 +43,7 @@ import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { blackjackGame } from "./game";
-import { Hand, ScoredCards, TurnGlow } from "./hand";
+import { DealerBlackjackBadge, Hand, ScoredCards, TurnGlow } from "./hand";
 import { ActionBubble, useActionBubbles } from "./action-bubbles";
 import { useSettlement } from "./settlement";
 import { YourResult } from "./your-result";
@@ -282,6 +282,11 @@ export function BlackjackTable({
   const live = status === "live";
   const isMyTurn = view.phase === "players" && view.turn?.seat === mySeat;
   const playing = view.phase !== "waiting" && view.phase !== "betting";
+  // Two cards to 21: the dealer only draws below 17, so this is always a natural.
+  const dealerBlackjack =
+    view.phase === "results" &&
+    view.dealer.cards.length === 2 &&
+    view.dealer.total === 21;
 
   // Opening deal order: one card to each player from first base, one to the dealer, then again.
   const dealt = view.seats.flatMap((s, i) => (s?.inRound ? [i] : []));
@@ -355,6 +360,7 @@ export function BlackjackTable({
                 {view.phase === "dealer" && (
                   <TurnGlow count={view.dealer.cards.length} size={cardSize} />
                 )}
+                {dealerBlackjack && <DealerBlackjackBadge />}
                 {view.dealer.cards.length > 0 ? (
                   <ScoredCards
                     cards={view.dealer.cards}
@@ -391,6 +397,7 @@ export function BlackjackTable({
                 blackjack={me.hands.some((h) => h.outcome === "blackjack")}
                 // A natural already counted up; a load or reconnect shows the result as is.
                 still={myNaturalStamped || !settlement.animatingResults}
+                cause={dealerBlackjack ? "Dealer blackjack" : undefined}
               />
             ) : (
               <StatusLine

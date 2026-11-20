@@ -50,11 +50,14 @@ export function YourResult({
   net,
   blackjack,
   still = false,
+  cause,
 }: {
   net: number;
   blackjack: boolean;
   /** Already counted up (a natural paid during play): shows the amount as is. */
   still?: boolean;
+  /** Names why you lost or pushed in place of "You lost"/"Bet returned", e.g. "Dealer blackjack". */
+  cause?: string;
 }) {
   const shown = useCountUp(Math.max(net, 0), still);
   const win = net > 0;
@@ -62,9 +65,7 @@ export function YourResult({
     ? blackjack
       ? "Blackjack!"
       : "You won"
-    : net < 0
-      ? "You lost"
-      : "Bet returned";
+    : (cause ?? (net < 0 ? "You lost" : "Bet returned"));
 
   return (
     <div
