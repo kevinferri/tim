@@ -23,6 +23,8 @@ type AvatarProps = {
   waiting?: boolean;
   /** A brief speech bubble rising from the avatar, e.g. what they just did. Keyed by the caller so each one pops in. */
   bubble?: ReactNode;
+  /** Just sat down: the avatar snaps into the seat. */
+  joining?: boolean;
 };
 
 /** A thin outline so avatars stand off the rail; whoever's turn it is gets the pulsing purple glow. */
@@ -40,6 +42,7 @@ export function PlayerAvatar({
   dimmedReason,
   waiting,
   bubble,
+  joining,
 }: AvatarProps) {
   const name = isYou ? "You" : occupant.displayName;
 
@@ -56,6 +59,7 @@ export function PlayerAvatar({
         className={cn(
           "transition-opacity",
           dimmedReason ? "opacity-50" : waiting && "opacity-75",
+          joining && "animate-seat-snap motion-reduce:animate-none",
         )}
       >
         <Tooltip>

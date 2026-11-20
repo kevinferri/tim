@@ -361,6 +361,20 @@ export function playDoubleSound(mine: boolean) {
   playTableSound("chipsStack", { volume: mine ? 0.65 : 0.3 });
 }
 
+/** A player sitting down: two soft low plucks rising a fifth, in the win tally's voice (`mine` louder). */
+export function playJoinSound(mine: boolean) {
+  whenReady((ctx) => {
+    const at = ctx.currentTime;
+    const out = roomBus(ctx, 0.5);
+    const level = mine ? 1 : 0.6;
+    const root = TALLY_LANDING_HZ / 4;
+    [root, root * 1.5].forEach((frequency, i) => {
+      tallyPluck(ctx, out, frequency, at + i * 0.09, 0.035 * level, 0.9);
+      tallyPluck(ctx, out, frequency * 2, at + i * 0.09, 0.005 * level, 0.35);
+    });
+  });
+}
+
 /** Your turn: one low pluck in the win tally's voice, ringing softly into the room; a nudge, not an alarm. */
 export function playYourTurn() {
   whenReady((ctx) => {

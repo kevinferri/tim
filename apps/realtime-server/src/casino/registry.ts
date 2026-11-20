@@ -2,7 +2,6 @@ import { randomInt } from "crypto";
 import { Rng, TableGame } from "@tim/casino";
 import { BlackjackTable } from "./blackjack-table";
 import { ChipStore, InMemoryChipStore } from "./chip-store";
-import { isLocalDev } from "../lib/is-local-dev";
 
 export const cryptoRng: Rng = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
@@ -85,7 +84,8 @@ export class CasinoRegistry {
 }
 
 export const casinoRegistry = new CasinoRegistry({
-  // A deep stack locally, so testing never runs dry.
-  chipStore: new InMemoryChipStore(isLocalDev() ? 100_000 : undefined),
+  // TEMP while blackjack is tested in prod: everyone starts (and refills) at 100k, as locally. Back to
+  // `isLocalDev() ? 100_000 : undefined` (STARTING_CHIPS) before launch.
+  chipStore: new InMemoryChipStore(100_000),
   rng: cryptoRng,
 });
