@@ -412,19 +412,6 @@ export function useSettlement(
       : null;
 
   return {
-    /** The dealer slides `amount` from the rack to a seat, e.g. refilling a player who went broke. */
-    give: (seat: number, amount: number) => {
-      if (amount <= 0 || reducedMotion()) return;
-      fly({
-        id: `give:${seat}:${performance.now()}`,
-        amount,
-        from: RACK,
-        to: avatarSelector(seat),
-        ms: COLLECT_MS,
-        vanish: true,
-        mine: seat === mySeat,
-      });
-    },
     /** This hand's chips have left its bet circle. */
     isMoved: (seat: number, hand: number) => moved.has(handKey(seat, hand)),
     /** This hand busted and its chips are about to be swept. */

@@ -11,7 +11,8 @@ import { AppSocket } from "../lib/socket";
 
 export type BaseSeat = {
   occupant: SeatOccupant;
-  stack: number;
+  /** All-time up/down in this circle, loaded at sit and kept current at settle. */
+  net: number;
   /** Stood up mid-round; freed once the round ends. */
   leaving: boolean;
 };
