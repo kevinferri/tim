@@ -234,6 +234,34 @@ module.exports = {
             transform: "translateY(0) scale(1) rotate(0)",
           },
         },
+        // Wordsmith tiles, after Wordle: a typed letter pops, a scored tile flips, a solved row bounces.
+        "tile-pop": {
+          "0%": { transform: "scale(0.8)", opacity: "0" },
+          "40%": { transform: "scale(1.1)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "tile-flip": {
+          "0%": { transform: "rotateX(0)", animationTimingFunction: "ease-in" },
+          "50%": {
+            transform: "rotateX(-90deg)",
+            animationTimingFunction: "ease-out",
+          },
+          "100%": { transform: "rotateX(0)" },
+        },
+        "tile-bounce": {
+          "0%, 20%": { transform: "translateY(0)" },
+          "40%": { transform: "translateY(-30px)" },
+          "50%": { transform: "translateY(5px)" },
+          "60%": { transform: "translateY(-15px)" },
+          "80%": { transform: "translateY(2px)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        "row-shake": {
+          "10%, 90%": { transform: "translateX(-1px)" },
+          "20%, 80%": { transform: "translateX(2px)" },
+          "30%, 50%, 70%": { transform: "translateX(-4px)" },
+          "40%, 60%": { transform: "translateX(4px)" },
+        },
         // Casino chips landing in a bet circle.
         "chip-drop": {
           "0%": { opacity: "0", transform: "translateY(-14px)" },
@@ -254,6 +282,11 @@ module.exports = {
         },
       },
       animation: {
+        // Durations match the constants in games/wordsmith/components/tiles.tsx.
+        "tile-pop": "tile-pop 0.1s ease-in-out",
+        "tile-flip": "tile-flip 0.5s both",
+        "tile-bounce": "tile-bounce 1s both",
+        "row-shake": "row-shake 0.6s",
         "chip-drop": "chip-drop 0.35s ease-out both",
         "bet-lock": "bet-lock 0.45s ease-out both",
         "bet-lock-flare": "bet-lock-flare 1.1s ease-out both",

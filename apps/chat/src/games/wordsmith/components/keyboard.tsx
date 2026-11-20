@@ -35,9 +35,11 @@ export function Keyboard({
         disabled={disabled}
         onClick={() => onKey(k)}
         className={cn(
-          "flex h-11 items-center justify-center rounded-md border text-sm font-medium uppercase transition-colors disabled:opacity-50",
+          "flex h-11 items-center justify-center rounded-md border text-sm font-bold uppercase transition-colors disabled:opacity-50",
           wide ? "flex-[1.5] text-xs" : "flex-1",
-          state ? SCORE_CLASSES[state] : "bg-secondary hover:bg-secondary/80",
+          state
+            ? SCORE_CLASSES[state]
+            : "border-transparent bg-border text-foreground dark:bg-muted-foreground/60",
         )}
       >
         {label}
