@@ -41,6 +41,7 @@ model User {
   samePagePlayerStats   SamePagePlayerStats[] @relation("samePageStatsForUser")
   wordsmithPlays       WordsmithPlay[]      @relation("wordsmithPlaysByUser")
   gameRoomSeen          GameRoomSeen[]        @relation("gameRoomSeenByUser")
+  casinoStats           CasinoPlayerStats[]   @relation("casinoStatsForUser")
 
   @@map(name: "users")
 }
@@ -68,6 +69,7 @@ model Circle {
   samePagePlayerStats SamePagePlayerStats[] @relation("samePageStatsForCircle")
   games               CircleGame[]          @relation("gamesForCircle")
   gameRoomSeen        GameRoomSeen[]        @relation("gameRoomSeenInCircle")
+  casinoStats         CasinoPlayerStats[]   @relation("casinoStatsForCircle")
   notifications       Notification[]        @relation("notificationsForCircle")
 
   @@index([userId])
@@ -281,6 +283,26 @@ model CircleGame {
   @@id([circleId, gameId])
   @@index([gameId])
   @@map(name: "circle_games")
+}
+
+// All-time up/down per player; the UI shows `net` summed across games for the circle.
+model CasinoPlayerStats {
+  circleId    String
+  userId      String
+  game        String
+  net         Int      @default(0)
+  wagered     Int      @default(0)
+  handsPlayed Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  circle Circle @relation("casinoStatsForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  user   User   @relation("casinoStatsForUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([circleId, userId, game])
+  @@index([circleId])
+  @@index([userId])
+  @@map(name: "casino_player_stats")
 }
 
 // Badges the Game room button already showed a user today, so it only lights up for new ones.

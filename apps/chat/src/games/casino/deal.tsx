@@ -95,13 +95,17 @@ export const useInDeal = () => useContext(DealContext) !== null;
 const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** On mount, flies the element from the shoe to where it sits. */
-export function useDealFlight(ref: RefObject<HTMLElement | null>, delayMs = 0) {
+/** On mount, flies the element from the shoe to where it sits; `null` places it without a flight (a card moved, not dealt). */
+export function useDealFlight(
+  ref: RefObject<HTMLElement | null>,
+  delayMs: number | null = 0,
+) {
   const ctx = useContext(DealContext);
 
   useLayoutEffect(() => {
     const el = ref.current;
     const shoe = ctx?.shoe.current;
+    if (delayMs === null) return;
     if (!el || !shoe || !ctx?.enabled.current || reducedMotion()) return;
 
     // Web Animations, not a CSS class, so it can't collide with layout transforms.

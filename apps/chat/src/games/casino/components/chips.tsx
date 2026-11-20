@@ -16,9 +16,9 @@ import {
 import { cn } from "@/lib/utils";
 import { playTableSound } from "../sounds";
 
-// Chips by value (5 and 1 cover any whole-number bet), drawn as real clay chips to sit with the vintage
-// card deck: the face, its darker edge, the inserts set into the rim, the printed center label, and the
-// ink its value is printed in.
+// Chips by value in real casino colors (the white 1 only appears as change: an odd 3:2 payout rounds down), drawn as
+// real clay chips to sit with the vintage card deck: the face, its darker edge, the inserts set into the
+// rim, the printed center label, and the ink its value is printed in.
 const CHIPS = [
   {
     value: 100,
@@ -29,14 +29,6 @@ const CHIPS = [
     ink: "#1e1e1e",
   },
   {
-    value: 50,
-    face: "#2f3fc0",
-    edge: "#1a2577",
-    insert: "#f1ece0",
-    label: "#f4efe3",
-    ink: "#26339e",
-  },
-  {
     value: 25,
     face: "#1d7a3a",
     edge: "#0f4a22",
@@ -45,20 +37,12 @@ const CHIPS = [
     ink: "#17642f",
   },
   {
-    value: 10,
+    value: 5,
     face: "#c41e1e",
     edge: "#7a0f0f",
     insert: "#f1ece0",
     label: "#f4efe3",
     ink: "#a81818",
-  },
-  {
-    value: 5,
-    face: "#d4a017",
-    edge: "#7d5c08",
-    insert: "#f8f3e6",
-    label: "#f4efe3",
-    ink: "#7d5408",
   },
   {
     value: 1,
@@ -229,19 +213,37 @@ const CHIP_FLIGHT_MS = 400;
 const CHIP =
   "relative flex size-9 shrink-0 items-center justify-center rounded-full [font-family:'Times_New_Roman',Times,serif] text-[13px] font-bold leading-none [font-variant-numeric:lining-nums_tabular-nums]";
 
-/** A chip's art with its printed value on top. */
+/** A chip amount in short form: thousands as k (1k, 1.5k, 12.5k), so a big number never crowds a chip or pill. */
+export const chipText = (amount: number, keepZeros = false) => {
+  const abs = Math.abs(amount);
+  if (abs <= 999) return String(amount);
+  // Trailing zeros are trimmed (1.5k), except mid-roll, where a steady length keeps the text from jittering.
+  const fixed = (n: number, digits: number) =>
+    keepZeros ? n.toFixed(digits) : String(Number(n.toFixed(digits)));
+  // Fewer decimals as it grows, so it stays about four characters: 1.25k, 12.5k, 125k, 1.25M.
+  if (abs >= 999_500) return `${fixed(amount / 1e6, 2)}M`;
+  const digits = abs < 9_995 ? 2 : abs < 99_950 ? 1 : 0;
+  return `${fixed(amount / 1000, digits)}k`;
+};
+
+/** A chip's art with its printed value on top; a number label prints via chipText. */
 function ChipBody({ value, label }: { value: number; label?: ReactNode }) {
   const colors = colorsOf(value);
+  const text = typeof label === "number" ? chipText(label) : label;
   return (
     <>
       <ChipArt colors={colors} />
-      {label != null && label !== false && (
+      {text != null && text !== false && (
         // Trimmed to the digits (text-box doesn't inherit, so it goes on the value's own box).
         <span
-          className="relative [text-box:trim-both_cap_alphabetic]"
+          className={cn(
+            "relative [text-box:trim-both_cap_alphabetic]",
+            // Four characters or more (e.g. 2.5k) fit the label at a smaller size.
+            typeof text === "string" && text.length >= 4 && "text-[10px]",
+          )}
           style={{ color: colors.ink }}
         >
-          {label}
+          {text}
         </span>
       )}
     </>

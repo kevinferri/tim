@@ -220,22 +220,18 @@ function currentHand(round: BlackjackRound, seat: number) {
   return { player, hand };
 }
 
-/** `stack` is the chips the player has left after their bets. */
 export function legalActions(
   round: BlackjackRound,
   seat: number,
-  stack: number,
 ): BlackjackPlayAction[] {
   const current = currentHand(round, seat);
   if (!current) return [];
   const { player, hand } = current;
   const actions: BlackjackPlayAction[] = ["hit", "stand"];
   const twoCards = hand.cards.length === 2;
-  const canAfford = stack >= hand.bet;
-  if (twoCards && canAfford) actions.push("double");
+  if (twoCards) actions.push("double");
   if (
     twoCards &&
-    canAfford &&
     player.hands.length === 1 &&
     cardValue(hand.cards[0].rank) === cardValue(hand.cards[1].rank)
   ) {
@@ -249,9 +245,8 @@ export function applyAction(
   round: BlackjackRound,
   seat: number,
   action: BlackjackPlayAction,
-  stack: number,
 ): { round: BlackjackRound; wagered: number } {
-  if (!legalActions(round, seat, stack).includes(action)) {
+  if (!legalActions(round, seat).includes(action)) {
     throw new Error(`Illegal action ${action} for seat ${seat}`);
   }
   const { player, hand } = currentHand(round, seat)!;

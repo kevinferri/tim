@@ -9,6 +9,7 @@ import {
   Card,
   DEALER_DRAW_MS,
   MAX_BET,
+  BET_UNIT,
   MIN_BET,
   RESULTS_MS,
   Rng,
@@ -28,7 +29,7 @@ import {
   standSeat,
 } from "@tim/casino";
 import { BaseSeat, Table } from "./table";
-import { ChipStore } from "./chip-store";
+import { NetStore } from "./net-store";
 
 type BlackjackSeat = BaseSeat & {
   bet: number | null;
@@ -37,9 +38,9 @@ type BlackjackSeat = BaseSeat & {
 };
 
 export type BlackjackTableDeps = {
-  chipStore: ChipStore;
+  netStore: NetStore;
   rng: Rng;
-  /** Lets shutdown, and the user's next sit, await chip writes already in flight. */
+  /** Lets shutdown, and the user's next sit, await up/down writes already in flight. */
   trackSettle: (userId: string, write: Promise<void>) => void;
   onIdle: () => void;
 };
@@ -63,8 +64,8 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     super(circleId, "blackjack", deps.onIdle);
   }
 
-  sit(occupant: SeatOccupant, seat: number, stack: number): string | null {
-    return this.guard(null, () => this.trySit(occupant, seat, stack));
+  sit(occupant: SeatOccupant, seat: number, net: number): string | null {
+    return this.guard(null, () => this.trySit(occupant, seat, net));
   }
 
   stand(userId: string): string | null {
@@ -78,7 +79,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
   private trySit(
     occupant: SeatOccupant,
     seat: number,
-    stack: number,
+    net: number,
   ): string | null {
     if (this.closed) return "Table is closing";
     if (!Number.isInteger(seat) || seat < 0 || seat >= SEAT_COUNT) {
@@ -91,13 +92,12 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
 
     this.seats[seat] = {
       occupant,
-      stack,
+      net,
       leaving: false,
       bet: null,
       inRound: false,
       lastNet: null,
     };
-    this.refill(this.seats[seat]!);
     if (this.phase === "waiting") this.enterBetting();
     else this.broadcast();
     return null;
@@ -110,7 +110,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     const seat = this.seats[index]!;
 
     if (!seat.inRound) {
-      // Betting refund: chips only move at settle, so nothing to write.
+      // Nothing is written until settle, so leaving before the deal costs nothing.
       this.seats[index] = null;
       this.afterSeatFreed();
       return null;
@@ -134,18 +134,9 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     return this.play(index, action.type);
   }
 
-  /** Cancels the round like a deploy would: chips at risk go back, nothing is written. */
+  /** Cancels the round like a deploy would: nothing is written, so it never counted. */
   protected recover() {
     this.clearTimer();
-    // In results, payouts are already on the stacks.
-    if (this.phase !== "results") {
-      for (const [i, seat] of this.occupiedSeats()) {
-        const player = this.round?.players.find((p) => p.seat === i);
-        seat.stack += player
-          ? player.hands.reduce((sum, h) => sum + h.bet, 0)
-          : (seat.bet ?? 0);
-      }
-    }
     for (const [i, seat] of this.occupiedSeats()) {
       if (seat.leaving) this.seats[i] = null;
     }
@@ -181,7 +172,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
         return {
           seat: i,
           occupant: seat.occupant,
-          stack: seat.stack,
+          net: seat.net,
           bet: seat.bet,
           inRound: seat.inRound,
           leaving: seat.leaving,
@@ -192,9 +183,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       dealer: round ? dealerView(round) : { cards: [], total: null },
       turn,
       turnActions:
-        round && turn && turnSeat
-          ? legalActions(round, turn.seat, turnSeat.stack)
-          : [],
+        round && turn && turnSeat ? legalActions(round, turn.seat) : [],
       limits: { minBet: MIN_BET, maxBet: MAX_BET },
     };
   }
@@ -206,14 +195,12 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     if (
       typeof amount !== "number" ||
       !Number.isInteger(amount) ||
+      amount % BET_UNIT !== 0 ||
       amount < MIN_BET ||
       amount > MAX_BET
     ) {
-      return `Bet must be a whole number from ${MIN_BET} to ${MAX_BET}`;
+      return `Bet must be a multiple of ${BET_UNIT} from ${MIN_BET} to ${MAX_BET}`;
     }
-    if (amount > seat.stack) return "Not enough chips";
-
-    seat.stack -= amount;
     seat.bet = amount;
     if (this.everyoneBet()) {
       this.deal();
@@ -232,13 +219,11 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     if (!round || this.phase !== "players" || round.turn?.seat !== index) {
       return "It's not your turn";
     }
-    const seat = this.seats[index]!;
     const playAction = action as BlackjackPlayAction;
-    if (!legalActions(round, index, seat.stack).includes(playAction)) {
+    if (!legalActions(round, index).includes(playAction)) {
       return `You can't ${action} now`;
     }
-    const result = applyAction(round, index, playAction, seat.stack);
-    seat.stack -= result.wagered;
+    const result = applyAction(round, index, playAction);
     // Every decision gets a fresh turn clock, not just a new hand.
     this.turnKey = null;
     this.updateRound(result.round);
@@ -258,24 +243,8 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     for (const [, seat] of this.occupiedSeats()) {
       seat.bet = null;
       seat.inRound = false;
-      // Broke: refilled between hands, so no one is stuck at the table.
-      if (seat.stack < MIN_BET) this.refill(seat);
     }
     this.broadcast();
-  }
-
-  // Chips are play money (stats, not the balance, are the record): sitting down, or going broke at the
-  // table, refills a stack below the starting one up to it.
-  private refill(seat: BlackjackSeat) {
-    const add = this.deps.chipStore.starting - seat.stack;
-    if (add <= 0) return;
-    seat.stack += add;
-    this.deps.trackSettle(
-      seat.occupant.userId,
-      this.writeRefill(seat.occupant.userId, add).catch((err) =>
-        console.error("casino: refill write failed", err),
-      ),
-    );
   }
 
   private enterWaiting() {
@@ -365,12 +334,12 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
 
     for (const result of roundResults(round)) {
       const seat = this.seats[result.seat]!;
-      seat.stack += result.payout;
+      seat.net += result.net;
       seat.lastNet = result.net;
       this.deps.trackSettle(
         result.userId,
-        this.writeSettlement(result.userId, result.net).catch((err) =>
-          console.error("casino: chip settle failed", err),
+        this.writeSettlement(result.userId, result.net, result.wagered).catch(
+          (err) => console.error("casino: settle write failed", err),
         ),
       );
     }
@@ -381,21 +350,13 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
   }
 
   // A synchronous throw becomes a rejection so it can't stop the payout loop halfway.
-  private async writeSettlement(userId: string, net: number) {
-    await this.deps.chipStore.settle({
+  private async writeSettlement(userId: string, net: number, wagered: number) {
+    await this.deps.netStore.record({
       circleId: this.circleId,
       userId,
       game: "blackjack",
       net,
-    });
-  }
-
-  // Kept apart from settlements, so a refill never reads as a won hand.
-  private async writeRefill(userId: string, amount: number) {
-    await this.deps.chipStore.refill({
-      circleId: this.circleId,
-      userId,
-      amount,
+      wagered,
     });
   }
 

@@ -37,7 +37,7 @@ const OUTCOME: Record<
 
 type DealProps = {
   /** Per-card hold before it flies from the shoe (the opening deal's order). */
-  dealDelayMs?: (cardIndex: number) => number;
+  dealDelayMs?: (cardIndex: number) => number | null;
   /** Key cards by value so one replaced at the same index (after a split) mounts and flies. The dealer keeps index keys so the hole card flips in place. */
   keyByCard?: boolean;
   /** Dim the cards while staying opaque (see PlayingCard's `shaded`). */
@@ -152,7 +152,7 @@ type Props = {
   waiting?: boolean;
   /** Your hand: a win stamps in gold. */
   mine?: boolean;
-  dealDelayMs?: (cardIndex: number) => number;
+  dealDelayMs?: (cardIndex: number) => number | null;
 };
 
 /** A dealt pair's footprint with a dashed outline, so nothing moves at the deal. */

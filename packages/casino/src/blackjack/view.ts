@@ -25,11 +25,13 @@ export type BlackjackHandView = {
 export type BlackjackSeatView = {
   seat: number;
   occupant: SeatOccupant;
-  stack: number;
+  /** All-time up/down in this circle, across casino games. */
+  net: number;
   bet: number | null;
   inRound: boolean;
   leaving: boolean;
   hands: BlackjackHandView[];
+  /** This round's result. */
   lastNet: number | null;
 };
 

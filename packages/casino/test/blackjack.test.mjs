@@ -199,17 +199,17 @@ test("hit and stand; turn moves in seat order", () => {
   ]);
   // a: 10+6=16, b: 5+7=12, dealer 9 up, 8 hole
   assert.deepEqual(round.turn, { seat: 2, hand: 0 });
-  assert.deepEqual(legalActions(round, 5, 100), []);
-  assert.throws(() => applyAction(round, 5, "hit", 100));
-  round = applyAction(round, 2, "stand", 100).round;
+  assert.deepEqual(legalActions(round, 5), []);
+  assert.throws(() => applyAction(round, 5, "hit"));
+  round = applyAction(round, 2, "stand").round;
   assert.deepEqual(round.turn, { seat: 5, hand: 0 });
-  round = applyAction(round, 5, "hit", 100).round; // 12+4=16
+  round = applyAction(round, 5, "hit").round; // 12+4=16
   assert.equal(round.players[1].hands[0].cards.length, 3);
 });
 
 test("bust ends the hand with payout 0", () => {
   let round = deal1("10", "9", "6", "8", ["K"]);
-  round = applyAction(round, 0, "hit", 100).round;
+  round = applyAction(round, 0, "hit").round;
   const hand = round.players[0].hands[0];
   assert.equal(hand.outcome, "bust");
   assert.equal(hand.payout, 0);
@@ -218,7 +218,7 @@ test("bust ends the hand with payout 0", () => {
 
 test("reaching 21 is automatically done", () => {
   let round = deal1("10", "9", "6", "8", ["5"]);
-  round = applyAction(round, 0, "hit", 100).round;
+  round = applyAction(round, 0, "hit").round;
   const hand = round.players[0].hands[0];
   assert.equal(hand.done, true);
   assert.equal(hand.outcome, null);
@@ -227,8 +227,8 @@ test("reaching 21 is automatically done", () => {
 
 test("double takes exactly one card, doubles the bet, and ends the hand", () => {
   let round = deal1("6", "9", "5", "8", ["2", "K"]);
-  assert.deepEqual(legalActions(round, 0, 10), ["hit", "stand", "double"]);
-  const res = applyAction(round, 0, "double", 10);
+  assert.deepEqual(legalActions(round, 0), ["hit", "stand", "double"]);
+  const res = applyAction(round, 0, "double");
   assert.equal(res.wagered, 10);
   const hand = res.round.players[0].hands[0];
   assert.equal(hand.bet, 20);
@@ -243,26 +243,18 @@ test("double takes exactly one card, doubles the bet, and ends the hand", () => 
 
 test("double is not offered after a hit", () => {
   let round = deal1("2", "9", "3", "8", ["2"]);
-  round = applyAction(round, 0, "hit", 100).round;
-  assert.deepEqual(legalActions(round, 0, 100), ["hit", "stand"]);
+  round = applyAction(round, 0, "hit").round;
+  assert.deepEqual(legalActions(round, 0), ["hit", "stand"]);
 });
 
-test("double and split are not offered without enough stack", () => {
+test("double and split are offered on a pair's first two cards", () => {
   const round = deal1("8", "9", "8", "7");
-  assert.deepEqual(legalActions(round, 0, 100), [
-    "hit",
-    "stand",
-    "double",
-    "split",
-  ]);
-  assert.deepEqual(legalActions(round, 0, 9), ["hit", "stand"]);
-  assert.throws(() => applyAction(round, 0, "double", 9));
-  assert.throws(() => applyAction(round, 0, "split", 9));
+  assert.deepEqual(legalActions(round, 0), ["hit", "stand", "double", "split"]);
 });
 
 test("split on equal value (K+Q) makes two hands; double allowed after split", () => {
   let round = deal1("K", "9", "Q", "8", ["A", "2", "9"]);
-  const res = applyAction(round, 0, "split", 10);
+  const res = applyAction(round, 0, "split");
   assert.equal(res.wagered, 10);
   round = res.round;
   const [h1, h2] = round.players[0].hands;
@@ -279,8 +271,8 @@ test("split on equal value (K+Q) makes two hands; double allowed after split", (
   assert.equal(h1.done, true);
   assert.equal(h1.outcome, null);
   assert.deepEqual(round.turn, { seat: 0, hand: 1 });
-  assert.deepEqual(legalActions(round, 0, 10), ["hit", "stand", "double"]);
-  round = applyAction(round, 0, "double", 10).round; // Q+2+9=21
+  assert.deepEqual(legalActions(round, 0), ["hit", "stand", "double"]);
+  round = applyAction(round, 0, "double").round; // Q+2+9=21
   const settled = playDealer(round); // dealer 17
   const [s1, s2] = settled.players[0].hands;
   assert.equal(s1.outcome, "win");
@@ -298,18 +290,18 @@ test("split on equal value (K+Q) makes two hands; double allowed after split", (
 
 test("no resplit", () => {
   let round = deal1("8", "9", "8", "7", ["8", "5"]);
-  round = applyAction(round, 0, "split", 100).round;
+  round = applyAction(round, 0, "split").round;
   // First split hand is 8+8 but cannot split again.
   assert.deepEqual(
     round.players[0].hands[0].cards.map((x) => x.rank),
     ["8", "8"],
   );
-  assert.deepEqual(legalActions(round, 0, 100), ["hit", "stand", "double"]);
+  assert.deepEqual(legalActions(round, 0), ["hit", "stand", "double"]);
 });
 
 test("split aces get one card each and are done", () => {
   let round = deal1("A", "9", "A", "7", ["K", "5"]);
-  round = applyAction(round, 0, "split", 100).round;
+  round = applyAction(round, 0, "split").round;
   const [h1, h2] = round.players[0].hands;
   assert.equal(h1.cards.length, 2);
   assert.equal(h2.cards.length, 2);
@@ -320,7 +312,7 @@ test("split aces get one card each and are done", () => {
 
 test("split ace 21 pays 1:1, not 3:2", () => {
   let round = deal1("A", "9", "A", "8", ["K", "5"]);
-  round = applyAction(round, 0, "split", 100).round;
+  round = applyAction(round, 0, "split").round;
   const settled = playDealer(round); // dealer 17, stands
   const [h1, h2] = settled.players[0].hands;
   assert.equal(h1.outcome, "win");
@@ -333,7 +325,7 @@ test("standSeat stands all unfinished hands and advances the turn", () => {
     { seat: 0, userId: "a", bet: 10 },
     { seat: 1, userId: "b", bet: 10 },
   ]);
-  round = applyAction(round, 0, "split", 100).round;
+  round = applyAction(round, 0, "split").round;
   assert.deepEqual(round.turn, { seat: 0, hand: 0 });
   round = standSeat(round, 0);
   assert.equal(
@@ -350,7 +342,7 @@ test("standSeat stands all unfinished hands and advances the turn", () => {
 
 test("dealer stands on soft 17", () => {
   let round = deal1("10", "A", "8", "6");
-  round = applyAction(round, 0, "stand", 100).round;
+  round = applyAction(round, 0, "stand").round;
   assert.equal(dealerShouldDraw(round), false);
   const settled = settle(round);
   assert.equal(settled.players[0].hands[0].outcome, "win");
@@ -358,7 +350,7 @@ test("dealer stands on soft 17", () => {
 
 test("dealer draws to 16 and on soft 16, one card at a time", () => {
   let round = deal1("10", "A", "8", "5", ["A", "4"]);
-  round = applyAction(round, 0, "stand", 100).round;
+  round = applyAction(round, 0, "stand").round;
   assert.equal(dealerShouldDraw(round), true); // soft 16
   assert.throws(() => settle(round));
   round = dealerDraw(round); // A+5+A = soft 17
@@ -371,7 +363,7 @@ test("dealer draws to 16 and on soft 16, one card at a time", () => {
 
 test("dealer stands on hard 17 and busts over 21", () => {
   let round = deal1("10", "10", "8", "6", ["K"]);
-  round = applyAction(round, 0, "stand", 100).round;
+  round = applyAction(round, 0, "stand").round;
   round = dealerDraw(round);
   assert.equal(dealerShouldDraw(round), false);
   const settled = settle(round);
@@ -381,17 +373,17 @@ test("dealer stands on hard 17 and busts over 21", () => {
 
 test("push on equal totals, lose on lower", () => {
   let round = deal1("10", "10", "8", "8");
-  round = applyAction(round, 0, "stand", 100).round;
+  round = applyAction(round, 0, "stand").round;
   assert.equal(settle(round).players[0].hands[0].outcome, "push");
 
   round = deal1("10", "10", "7", "8");
-  round = applyAction(round, 0, "stand", 100).round;
+  round = applyAction(round, 0, "stand").round;
   assert.equal(settle(round).players[0].hands[0].outcome, "lose");
 });
 
 test("dealer does not draw when every player hand busted", () => {
   let round = deal1("10", "6", "6", "5", ["K"]);
-  round = applyAction(round, 0, "hit", 100).round;
+  round = applyAction(round, 0, "hit").round;
   assert.equal(round.phase, "dealer");
   assert.equal(round.holeRevealed, true);
   assert.equal(dealerShouldDraw(round), false); // dealer 11
@@ -403,7 +395,7 @@ test("dealer does not draw when every player hand busted", () => {
 test("dealerView reveals the hole card once revealed", () => {
   let round = deal1("10", "9", "8", "7");
   assert.deepEqual(dealerView(round), { cards: [c("9"), null], total: 9 });
-  round = applyAction(round, 0, "stand", 100).round;
+  round = applyAction(round, 0, "stand").round;
   assert.deepEqual(dealerView(round), {
     cards: [c("9"), c("7")],
     total: 16,
@@ -428,7 +420,7 @@ test("engine functions do not mutate their input", () => {
   const round = dealRound(shoe, [{ seat: 0, userId: "u0", bet: 10 }]);
   assert.equal(JSON.stringify(shoe), snapshot);
   const before = JSON.stringify(round);
-  applyAction(round, 0, "split", 100);
+  applyAction(round, 0, "split");
   standSeat(round, 0);
   assert.equal(JSON.stringify(round), before);
 });

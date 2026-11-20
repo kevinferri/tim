@@ -237,7 +237,7 @@ export function FeltPrint({
   return (
     <div
       className={cn(
-        "whitespace-nowrap text-center [font-family:'Times_New_Roman',Times,serif] text-[11px] font-bold leading-[1.7] [font-variant-numeric:lining-nums] tracking-[0.28em] text-emerald-50/25 [text-shadow:0_1px_0_rgba(0,0,0,0.35)]",
+        "whitespace-nowrap text-center [font-family:'Times_New_Roman',Times,serif] text-sm font-bold leading-[1.7] [font-variant-numeric:lining-nums] tracking-[0.28em] text-emerald-50/25 [text-shadow:0_1px_0_rgba(0,0,0,0.35)]",
         className,
       )}
       style={style}

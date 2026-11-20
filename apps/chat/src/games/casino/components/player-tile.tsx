@@ -9,10 +9,15 @@ import {
 } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
+import { UpDown } from "./up-down";
 
 type AvatarProps = {
   occupant: SeatOccupant;
   isYou?: boolean;
+  /** All-time up/down, in the pill under the avatar. */
+  net?: number;
+  /** Keep showing the previous up/down (a round in play); released, it rolls to `net`. */
+  holdNet?: boolean;
   /** Their turn: a pulsing purple glow replaces the white ring. */
   active?: boolean;
   /** Pinned under the avatar, e.g. the round's net. */
@@ -37,6 +42,8 @@ export const avatarRing = (active?: boolean) =>
 export function PlayerAvatar({
   occupant,
   isYou,
+  net,
+  holdNet,
   active,
   result,
   dimmedReason,
@@ -80,7 +87,7 @@ export function PlayerAvatar({
               )}
               {/* Pinned to the avatar's bottom edge without taking space, so the seat doesn't move when it appears. */}
               {result && (
-                <span className="absolute inset-x-0 -bottom-2.5 flex justify-center">
+                <span className="absolute inset-x-0 -bottom-1 flex justify-center">
                   <span className="whitespace-nowrap rounded-full bg-black/85 px-2 py-0.5 shadow ring-1 ring-white/15 animate-in fade-in zoom-in-75 duration-300">
                     {result}
                   </span>
@@ -96,6 +103,17 @@ export function PlayerAvatar({
           </TooltipContent>
         </Tooltip>
       </div>
+      {/* Hung below the avatar, out of the flow: the seat centers only the avatar on the armrest, and the
+          number's width changing as it rolls never moves anything. */}
+      {net !== undefined && (
+        <UpDown
+          net={net}
+          // Held through the round, then rolls to the new total as the result pill pops in (or when betting reopens).
+          hold={!!holdNet && !result}
+          onFelt
+          className="absolute left-1/2 top-full mt-3.5 -translate-x-1/2 whitespace-nowrap text-sm font-medium leading-none"
+        />
+      )}
     </div>
   );
 }

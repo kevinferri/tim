@@ -6,6 +6,7 @@ export {
   PlayerSpot,
 } from "./components/player-tile";
 export { StatusLine } from "./components/status-line";
+export { UpDown, formatUpDown } from "./components/up-down";
 export {
   BetSpot,
   ChipButton,
