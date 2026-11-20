@@ -421,7 +421,7 @@ export function TableLayout(props: Props) {
                 />
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute -bottom-[19px] -left-[19px] -right-[19px] -top-[5px] hidden rounded-t-[20px] rounded-b-[50%] border-[5px] border-t-0 border-white/[0.09] blur-[5px] md:block"
+                  className="pointer-events-none absolute -bottom-[19px] -left-[19px] -right-[19px] -top-[5px] hidden rounded-t-[20px] rounded-b-[50%] border-[5px] border-t-0 border-white/[0.07] blur-[5px] md:block"
                 />
                 <FeltSizeContext.Provider value={{ felt, spot }}>
                   {/* The felt is dark in both themes, so its contents use dark tokens. */}
