@@ -272,9 +272,10 @@ export function useSettlement(
           at(shown, () => setNaturalPaid((s) => new Set(s).add(seat.seat)));
           return;
         }
+        // Any phase: when the last player to act busts, the round has already moved on to the dealer
+        // (or results) by the time this view arrives, and the bust must still wait for its card.
         if (
           !live ||
-          view.phase !== "players" ||
           hand.outcome !== "bust" ||
           was === undefined ||
           was === "bust" ||
@@ -282,6 +283,8 @@ export function useSettlement(
           reducedMotion()
         )
           return;
+        // Claimed, so the end of the hand leaves this sweep to its timer instead of taking the chips at once.
+        claimed.current.add(key);
         setSweeping((s) => new Set(s).add(key));
         bustTimers.current.push(
           setTimeout(() => {

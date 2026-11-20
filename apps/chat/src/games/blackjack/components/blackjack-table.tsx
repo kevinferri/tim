@@ -383,7 +383,9 @@ export function BlackjackTable({
             ) : view.phase === "results" &&
               me?.inRound &&
               me.lastNet !== null &&
-              settlement.isStamped(me.seat) ? (
+              settlement.isStamped(me.seat) &&
+              // A bust waits for its card to land and its chips to be taken.
+              !me.hands.some((_, h) => settlement.isSweeping(me.seat, h)) ? (
               <YourResult
                 net={me.lastNet}
                 blackjack={me.hands.some((h) => h.outcome === "blackjack")}
@@ -513,6 +515,8 @@ export function BlackjackTable({
                       ) : (
                         view.phase === "results" &&
                         seat.inRound &&
+                        // A bust's loss shows as bustLoss, once its chips are swept.
+                        !busted &&
                         // A push shows on the cards only: there's no amount to put here.
                         !!seat.lastNet &&
                         settlement.isSettled(i) && (
