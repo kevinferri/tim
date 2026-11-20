@@ -346,14 +346,10 @@ function StackedChip({
     );
     onFlight?.(true);
     flight.onfinish = () => onFlight?.(false);
-    // On the audio clock, since held keys scroll chips out of the stack before they land; once per pick for dev's double mount.
+    // Sounds as it's picked, not as it lands; once per pick for dev's double mount.
     if (!sounded.has(from.at)) {
       sounded.add(from.at);
-      playTableSound("chipsCollide", {
-        volume: 0.55,
-        rate: 1 + index * 0.03,
-        delayMs: CHIP_FLIGHT_MS * 0.8,
-      });
+      playTableSound("chipsCollide", { volume: 0.55, rate: 1 + index * 0.03 });
     }
     return () => {
       flight.cancel();
