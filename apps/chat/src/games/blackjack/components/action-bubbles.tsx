@@ -64,7 +64,9 @@ export function useActionBubbles(
 
   useEffect(() => {
     const before = prev.current;
-    prev.current = view;
+    // Forgotten while disconnected, so a reconnect's first snapshot isn't compared with a stale one (and
+    // everyone who sat down meanwhile doesn't get a Joined bubble).
+    prev.current = live ? view : null;
     if (!live || !before || !view) return;
     const show = (seat: number, text: string, ms: number) => {
       const bubble = { text, id: ++next.current, ms };

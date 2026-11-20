@@ -387,16 +387,17 @@ export function Hand({
 }
 
 /** Over the dealer's hand when they turn up a blackjack, which ends the round at once; neutral, as it's bad news. */
-export function DealerBlackjackBadge() {
+export function DealerBlackjackBadge({ delayMs }: { delayMs: number }) {
   return (
-    // Waits out the hole card's flip.
     <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 flex justify-center">
       <Badge
         variant="outline"
         className={cn(
-          "whitespace-nowrap px-2.5 py-0.5 text-sm font-medium uppercase tracking-wider shadow-lg animate-in fade-in zoom-in-50 duration-300 delay-500 fill-mode-both",
+          "whitespace-nowrap px-2.5 py-0.5 text-sm font-medium uppercase tracking-wider shadow-lg animate-in fade-in zoom-in-50 duration-300 fill-mode-both",
           PUSH,
         )}
+        // Hidden until the dealer's cards have landed (fill-mode-both holds the start of the animation).
+        style={{ animationDelay: `${delayMs}ms` }}
       >
         Blackjack
       </Badge>

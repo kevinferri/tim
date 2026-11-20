@@ -360,7 +360,10 @@ export function BlackjackTable({
                 {view.phase === "dealer" && (
                   <TurnGlow count={view.dealer.cards.length} size={cardSize} />
                 )}
-                {dealerBlackjack && <DealerBlackjackBadge />}
+                {dealerBlackjack && (
+                  // Once the dealer's opening hand has landed: a dealer blackjack ends the round at the deal.
+                  <DealerBlackjackBadge delayMs={dealerDelay(1) + DEAL_MS} />
+                )}
                 {view.dealer.cards.length > 0 ? (
                   <ScoredCards
                     cards={view.dealer.cards}
@@ -447,7 +450,11 @@ export function BlackjackTable({
               seat.hands.every(
                 (h) => h.outcome === "lose" || h.outcome === "bust",
               );
-            const lossShown = lost && settlement.isSettled(i);
+            // A bust still being swept (a split's last hand) holds the seat's result until its card lands.
+            const sweeping = seat.hands.some((_, h) =>
+              settlement.isSweeping(i, h),
+            );
+            const lossShown = lost && settlement.isSettled(i) && !sweeping;
             const dimmedReason = seat.leaving
               ? "Leaving after this round"
               : playing && !seat.inRound
@@ -465,7 +472,9 @@ export function BlackjackTable({
                 seat: i,
                 node: (
                   // The waiting dim goes on the cards inside, so their result badge can sit above the avatar.
-                  <PlayerSpot dimmed={!!dimmedReason && !busted && !lost}>
+                  <PlayerSpot
+                    dimmed={!!dimmedReason && !bustShown && !lossShown}
+                  >
                     <SeatHands
                       seat={seat}
                       view={view}
@@ -488,7 +497,7 @@ export function BlackjackTable({
                 ),
                 bet: (
                   <PlayerSpot
-                    dimmed={!!dimmedReason && !busted && !lost}
+                    dimmed={!!dimmedReason && !bustShown && !lossShown}
                     waiting={waiting}
                   >
                     <SeatBet
@@ -539,7 +548,8 @@ export function BlackjackTable({
                         !busted &&
                         // A push shows on the cards only: there's no amount to put here.
                         !!seat.lastNet &&
-                        settlement.isSettled(i) && (
+                        settlement.isSettled(i) &&
+                        !sweeping && (
                           <NetAmount net={seat.lastNet} mine={i === mySeat} />
                         )
                       )
