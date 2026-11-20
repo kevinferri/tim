@@ -431,13 +431,25 @@ export function BlackjackTable({
               bustShown && -seat.hands.reduce((sum, h) => sum + h.bet, 0);
             // A natural's winnings show on the avatar once the seat has them, through the end of the round.
             const naturalWin = settlement.natural(i).paid && naturalNet(seat);
+            // A loss dims like a bust, once the dealer takes its chips; a seat that won or pushed any hand stays bright.
+            const lost =
+              !busted &&
+              view.phase === "results" &&
+              seat.inRound &&
+              seat.hands.length > 0 &&
+              seat.hands.every(
+                (h) => h.outcome === "lose" || h.outcome === "bust",
+              );
+            const lossShown = lost && settlement.isSettled(i);
             const dimmedReason = seat.leaving
               ? "Leaving after this round"
               : playing && !seat.inRound
                 ? "Joins next round"
                 : bustShown
                   ? "Busted"
-                  : null;
+                  : lossShown
+                    ? "Lost"
+                    : null;
             // Everyone but the current turn fades a little, you included.
             const waiting = view.phase === "players" && view.turn?.seat !== i;
             return [
@@ -446,7 +458,7 @@ export function BlackjackTable({
                 seat: i,
                 node: (
                   // The waiting dim goes on the cards inside, so their result badge can sit above the avatar.
-                  <PlayerSpot dimmed={!!dimmedReason && !busted}>
+                  <PlayerSpot dimmed={!!dimmedReason && !busted && !lost}>
                     <SeatHands
                       seat={seat}
                       view={view}
@@ -469,7 +481,7 @@ export function BlackjackTable({
                 ),
                 bet: (
                   <PlayerSpot
-                    dimmed={!!dimmedReason && !busted}
+                    dimmed={!!dimmedReason && !busted && !lost}
                     waiting={waiting}
                   >
                     <SeatBet
