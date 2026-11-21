@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,32 +16,35 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { AttachmentFrame } from "@/components/topics/message-attachment";
-import type { NewsItemDto, NewsSourceDto } from "./news-api";
-
-export type NewsTopic = { id: string; name: string };
+import {
+  fetchShareTopics,
+  type NewsItemDto,
+  type NewsSourceDto,
+} from "./news-api";
 
 type Props = {
   circleId: string;
-  topics: NewsTopic[];
-  defaultTopicId: string | null;
   item: NewsItemDto;
   source?: NewsSourceDto;
   onDone: () => void;
 };
 
 /** Composes a message that shares a story into a topic: an optional comment above the story's link. */
-export function NewsShare({
-  circleId,
-  topics,
-  defaultTopicId,
-  item,
-  source,
-  onDone,
-}: Props) {
+export function NewsShare({ circleId, item, source, onDone }: Props) {
   const { topicId: currentTopicId } = useParams<{ topicId?: string }>();
-  const [topicId, setTopicId] = useState(
-    currentTopicId ?? defaultTopicId ?? topics[0]?.id ?? "",
-  );
+  // Fetched each time the form opens: topics are created and deleted after page load.
+  const { data, isFetchedAfterMount } = useQuery({
+    queryKey: ["news-share-topics", circleId],
+    queryFn: () => fetchShareTopics(circleId),
+    refetchOnMount: "always",
+  });
+  const topics = isFetchedAfterMount ? (data?.topics ?? []) : [];
+  const [picked, setPicked] = useState<string | null>(null);
+  const has = (id: string | null | undefined) =>
+    !!id && topics.some((t) => t.id === id);
+  const topicId =
+    [picked, currentTopicId, data?.defaultTopicId, topics[0]?.id].find(has) ??
+    "";
   const [comment, setComment] = useState("");
   const { emit: sendMessage } = useSocketEmit<{
     message: string;
@@ -72,9 +76,11 @@ export function NewsShare({
     >
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">To</span>
-        <Select value={topicId} onValueChange={setTopicId}>
+        <Select value={topicId} onValueChange={setPicked}>
           <SelectTrigger className="h-8 w-auto min-w-36" aria-label="Topic">
-            <SelectValue placeholder="Pick a topic" />
+            <SelectValue
+              placeholder={isFetchedAfterMount ? "Pick a topic" : "Loading…"}
+            />
           </SelectTrigger>
           <SelectContent>
             {topics.map((t) => (

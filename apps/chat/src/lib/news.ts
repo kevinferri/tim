@@ -379,3 +379,35 @@ export async function getNewsLinkPreview({
     ogImage: item.imageUrl ?? undefined,
   };
 }
+
+export type ShareTopicsResponse = {
+  topics: { id: string; name: string }[];
+  defaultTopicId: string | null;
+};
+
+/** The circle's topics for the share picker; read when it opens, since topics change after page load. */
+export async function getShareTopics({
+  circleId,
+  userId,
+}: {
+  circleId: string;
+  userId: string;
+}): Promise<ShareTopicsResponse> {
+  const [topics, circle] = await Promise.all([
+    prismaClient.topic.getAllForCircleAndUser({
+      userId,
+      circleId,
+      select: { id: true, name: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prismaClient.circle.getByIdForUser({
+      userId,
+      circleId,
+      select: { defaultTopicId: true },
+    }),
+  ]);
+  return {
+    topics: (topics ?? []).map((t) => ({ id: t.id, name: t.name })),
+    defaultTopicId: circle?.defaultTopicId ?? null,
+  };
+}

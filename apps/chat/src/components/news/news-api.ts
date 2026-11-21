@@ -1,6 +1,10 @@
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import type { NewsItemDto } from "@tim/news";
-import type { NewsResponse, NewsSourceDto } from "@/lib/news";
+import type {
+  NewsResponse,
+  NewsSourceDto,
+  ShareTopicsResponse,
+} from "@/lib/news";
 
 export type { NewsItemDto, NewsResponse, NewsSourceDto };
 
@@ -24,6 +28,14 @@ export async function fetchNews({
   if (cursor) params.set("cursor", cursor);
   const res = await fetch(`/api/circles/${circleId}/news?${params}`);
   if (!res.ok) throw new Error("Couldn't load news");
+  return res.json();
+}
+
+export async function fetchShareTopics(
+  circleId: string,
+): Promise<ShareTopicsResponse> {
+  const res = await fetch(`/api/circles/${circleId}/news/topics`);
+  if (!res.ok) throw new Error("Couldn't load topics");
   return res.json();
 }
 

@@ -38,7 +38,7 @@ import {
 } from "./news-api";
 import { NewsGlyph } from "./news-glyph";
 import { useNewsStore } from "./news-store";
-import { NewsShare, type NewsTopic } from "./news-share";
+import { NewsShare } from "./news-share";
 import { useNewestArrival, useNewsFeed, useNewsLiveUpdates } from "./use-news";
 
 type View = "feed" | "sources" | "share";
@@ -46,15 +46,7 @@ type View = "feed" | "sources" | "share";
 type Sharing = { item: NewsItemDto; source?: NewsSourceDto };
 
 /** Mounted once in the circle layout, so live updates land even while the panel is closed. */
-export function NewsSheet({
-  circleId,
-  topics,
-  defaultTopicId,
-}: {
-  circleId: string;
-  topics: NewsTopic[];
-  defaultTopicId: string | null;
-}) {
+export function NewsSheet({ circleId }: { circleId: string }) {
   useNewsLiveUpdates(circleId);
   const queryClient = useQueryClient();
   const { open, close, takePending, markSeen } = useNewsStore();
@@ -213,8 +205,6 @@ export function NewsSheet({
                 <NewsShare
                   key={sharing.item.id}
                   circleId={circleId}
-                  topics={topics}
-                  defaultTopicId={defaultTopicId}
                   item={sharing.item}
                   source={sharing.source}
                   onDone={() => setView("feed")}

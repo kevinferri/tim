@@ -23,6 +23,8 @@ export class FeedError extends Error {
 }
 
 const TIMEOUT_MS = 10_000;
+/** Whole budget for resolving a pasted address, across every request and redirect. */
+export const RESOLVE_TIMEOUT_MS = 20_000;
 const MAX_BYTES = 3 * 1024 * 1024;
 const MAX_REDIRECTS = 4;
 const USER_AGENT = "TimNews/1.0 (feed reader)";
@@ -130,13 +132,18 @@ function header(headers: IncomingHttpHeaders, name: string): string | null {
 function getOnce(
   url: URL,
   headers: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<RawResponse> {
   return new Promise((resolve, reject) => {
     const host = url.hostname;
+    if (signal?.aborted) {
+      reject(new FeedError("fetch-failed", `${host} timed out`));
+      return;
+    }
     const transport = url.protocol === "https:" ? https : http;
     const req = transport.request(
       url,
-      { method: "GET", headers, lookup: publicLookup },
+      { method: "GET", headers, lookup: publicLookup, signal },
       (res) => {
         const status = res.statusCode ?? 0;
         if (status < 200 || status >= 300) {
@@ -186,6 +193,8 @@ function getOnce(
     req.on("close", () => clearTimeout(deadline));
     req.on("error", (err: NodeJS.ErrnoException) => {
       if (err instanceof FeedError) reject(err);
+      else if (err.name === "AbortError")
+        reject(new FeedError("fetch-failed", `${host} timed out`));
       else if (err.code === "EBLOCKED") reject(new FeedError("blocked"));
       else reject(new FeedError("fetch-failed", `Couldn't reach ${host}`));
     });
@@ -208,6 +217,7 @@ type FetchResult =
 export async function safeFetch(
   input: URL,
   cache: { etag?: string | null; lastModified?: string | null } = {},
+  signal?: AbortSignal,
 ): Promise<FetchResult> {
   let url = input;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -221,7 +231,7 @@ export async function safeFetch(
     if (cache.etag) headers["If-None-Match"] = cache.etag;
     if (cache.lastModified) headers["If-Modified-Since"] = cache.lastModified;
 
-    const res = await getOnce(url, headers);
+    const res = await getOnce(url, headers, signal);
 
     if (res.status >= 300 && res.status < 400 && res.status !== 304) {
       const location = header(res.headers, "location");
@@ -287,8 +297,12 @@ export type ResolvedFeed = {
 };
 
 /** Turns whatever a user pasted (a feed URL or a site's address) into a parsed feed. */
-export async function resolveFeed(input: string): Promise<ResolvedFeed> {
-  const first = await safeFetch(normalizeUrl(input));
+export async function resolveFeed(
+  input: string,
+  timeoutMs = RESOLVE_TIMEOUT_MS,
+): Promise<ResolvedFeed> {
+  const signal = AbortSignal.timeout(timeoutMs);
+  const first = await safeFetch(normalizeUrl(input), {}, signal);
   if (first.status !== "ok") throw new FeedError("fetch-failed");
 
   try {
@@ -304,7 +318,7 @@ export async function resolveFeed(input: string): Promise<ResolvedFeed> {
 
   for (const candidate of discoverFeedUrls(first.body, first.url).slice(0, 3)) {
     try {
-      const res = await safeFetch(normalizeUrl(candidate));
+      const res = await safeFetch(normalizeUrl(candidate), {}, signal);
       if (res.status !== "ok") continue;
       return {
         url: res.url,
@@ -314,6 +328,7 @@ export async function resolveFeed(input: string): Promise<ResolvedFeed> {
       };
     } catch (err) {
       if (err instanceof FeedError && err.code === "blocked") throw err;
+      if (signal.aborted) throw err;
     }
   }
   throw new FeedError("not-a-feed");
