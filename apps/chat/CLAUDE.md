@@ -91,6 +91,10 @@ Each game is self-contained under `src/games/<game>/` (`lib/`, `server/`, `compo
 
 Same Page's scheduled work (6am prompt, 2pm nudge, 4pm reveal, weekdays, Eastern time; defined once in `src/games/same-page/lib/schedule.ts`) runs from a cron started in `src/instrumentation.ts`, which also runs once on startup to catch up on anything missed. Alerts are saved as circle-level notifications (`Notification.circleId`, no message or actor) with no socket push. Open tabs pick them up from a refresh timer at each alert time and when the tab becomes visible again. The realtime server has no Same Page code apart from the `/samepage sock` command.
 
+### News
+
+Circles follow news sources (RSS/Atom feeds, or Google News topic searches) and see new stories live. The feed hosts a story for 24 hours (`storyCutoff` in `@tim/news`); reads filter on that directly, and the realtime server erases expired content. Links already shared into chat stay. A feed URL is stored once in `news_feeds` and shared by every circle that follows it (`circle_news_sources`); `apps/realtime-server` polls feeds and pushes new `news_items` over Socket.IO. Here, `src/lib/news.ts` holds the server side (adding a source resolves and seeds it via `@tim/news`, listing items, removal by the adder or circle creator, and `getNewsLinkPreview`, which `/api/link-metadata` uses so shared stories preview from stored data, only from feeds the viewing topic's circle follows and only for links on the feed's own site), with routes under `src/app/api/circles/[circleId]/news/`. The UI is `src/components/news/`: the sidebar button beside the Game room, and a panel mounted once in the circle layout (feed, sources screen, share form). Live items are held as "N new stories" while the panel is open; the unread dot compares the newest item's `createdAt` with what the viewer last saw (localStorage).
+
 ### Path aliases & conventions
 
 - `@/*` → `src/*`

@@ -35,6 +35,7 @@
     "@tim/commands": "workspace:*",
     "@tim/crypto": "workspace:*",
     "@tim/db-types": "workspace:*",
+    "@tim/news": "workspace:*",
     "@tim/socket-types": "workspace:*",
     "@tim/user-display": "workspace:*",
     "jsonwebtoken": "^9.0.2",

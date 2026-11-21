@@ -45,6 +45,10 @@ export enum SocketEvent {
   // Content-free "refetch your notifications" ping for a circle's other members, sent by the browser after the chat app saves circle notifications.
   CircleNotificationsChanged = "notification:circleChanged",
 
+  // news: the realtime server pushes ItemsCreated to each following circle's room as feeds update; SourcesChanged is a content-free refetch ping the browser sends after the chat app adds or removes a source
+  NewsItemsCreated = "news:itemsCreated",
+  NewsSourcesChanged = "news:sourcesChanged",
+
   // casino (payload types live in @tim/casino)
   TableWatch = "table:watch",
   TableUnwatch = "table:unwatch",

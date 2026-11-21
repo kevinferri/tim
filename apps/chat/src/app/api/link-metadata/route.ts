@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import og from "fetch-opengraph";
 import { hydrateUrl, isValidUrl } from "@/lib/utils";
 import { ApiError, apiRoute, requireUserId } from "@/lib/api";
+import { getNewsLinkPreview } from "@/lib/news";
 
 export type LinkMetadataResponse = {
   ogSiteName?: string;
@@ -13,10 +14,16 @@ export type LinkMetadataResponse = {
 };
 
 export const GET = apiRoute(async (request: NextRequest) => {
-  await requireUserId();
+  const userId = await requireUserId();
 
   const url = hydrateUrl(request.nextUrl.searchParams.get("url") ?? "");
   if (!isValidUrl(url)) throw new ApiError(400);
+
+  const topicId = request.nextUrl.searchParams.get("topicId");
+  const stored = topicId
+    ? await getNewsLinkPreview({ url, topicId, userId })
+    : null;
+  if (stored) return NextResponse.json(stored satisfies LinkMetadataResponse);
 
   // An unreachable or unparseable page is bad input from the caller, not a server error.
   const metadata = await og.fetch(url).catch(() => null);
