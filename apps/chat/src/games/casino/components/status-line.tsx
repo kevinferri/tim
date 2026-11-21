@@ -27,7 +27,7 @@ export function StatusLine({
     msLeft !== null && duration ? Math.min(1, msLeft / duration) : null;
 
   return (
-    // Only as tall as its text (or avatar), so the text sits STATUS_DOCK_GAP_PX above the dock like the dock's own rows.
+    // Only as tall as its content, so the timer line sits STATUS_DOCK_GAP_PX above the dock like the dock's own rows.
     <div className="flex w-80 justify-center">
       {/* Keyed on the message so each new state fades in. */}
       <div
@@ -41,7 +41,7 @@ export function StatusLine({
           </span>
         )}
         {/* The timer runs under the text, as wide as it, so with the avatar it all forms one block. */}
-        <div className="relative min-w-0">
+        <div className="flex min-w-0 flex-col gap-2.5">
           <p
             // The negative margin drops the spacing after the last letter, so the line ends with the text;
             // truncates rather than running off the felt, as a backstop for anything long.
@@ -50,10 +50,10 @@ export function StatusLine({
           >
             {children}
           </p>
-          {/* Hangs in the gap above the dock, so a hidden timer adds no space and the text never shifts. */}
+          {/* Always laid out, so the text doesn't shift when a timer starts or stops. */}
           <div
             aria-hidden
-            className="absolute inset-x-0 top-full mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/10 transition-opacity duration-300"
+            className="h-0.5 w-full overflow-hidden rounded-full bg-white/10 transition-opacity duration-300"
             style={{ opacity: fraction === null ? 0 : 1 }}
           >
             <div
