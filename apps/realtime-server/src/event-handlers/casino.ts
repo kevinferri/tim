@@ -4,6 +4,7 @@ import {
   TableErrorCode,
   TableErrorPayload,
   TableRef,
+  TableWatchPayload,
 } from "@tim/casino";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
@@ -112,7 +113,9 @@ export function registerCasinoHandlers(
       );
     }
     if (registry.closing) return emitError(socket, ref, "Table is closing");
-    registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket);
+    registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket, {
+      spectator: (payload as TableWatchPayload).spectate === true,
+    });
   });
 
   queued(SocketEvent.TableUnwatch, (payload: unknown) => {
@@ -146,6 +149,15 @@ export function registerCasinoHandlers(
       );
     }
 
+    // Checked again here, not just at watch: a page opened before it was turned off can't seat anyone new.
+    if (!(await isGameEnabled({ circleId: ref.circleId, gameId: ref.game }))) {
+      return emitError(
+        socket,
+        ref,
+        "This game isn't on in this circle",
+        "game_off",
+      );
+    }
     let net: number;
     try {
       // A settlement still being written would otherwise load stale.

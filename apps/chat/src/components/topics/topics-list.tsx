@@ -36,6 +36,7 @@ import { useEffectOnce } from "@/lib/hooks/use-effect-once";
 import { useCoalescedRefresh } from "@/lib/hooks/use-coalesced-refresh";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
+import { StackedAvatars } from "@/components/topics/stacked-avatars";
 import { UpsertCircleForm } from "@/components/circles/upsert-circle-form";
 import { reorderTopics, setTopicMuted } from "@/actions/topics";
 import {
@@ -158,7 +159,7 @@ const TopicRow = ({
   const rowButton = (
     <Button
       variant={isCurrentTopic ? "secondary" : "ghost"}
-      className="w-full flex justify-start text-base font-normal p-3"
+      className="group w-full flex justify-start text-base font-normal p-3"
       style={dragCursorStyle}
     >
       <span
@@ -171,21 +172,16 @@ const TopicRow = ({
       >
         {topic.name}
       </span>
-      <div className="flex gap-1 ml-auto shrink-0">
-        {activeUsers.map((user) => (
-          <UserAvatar
-            key={user.id}
-            id={user.id}
-            name={user.name}
-            displayName={user.displayName}
-            imageUrl={user.imageUrl}
-            createdAt={user.createdAt}
-            size="xs"
-            showStatus={false}
-            status={user.status}
-            lastStatusUpdate={user.lastStatusUpdate}
-          />
-        ))}
+      <div className="ml-auto shrink-0">
+        <StackedAvatars
+          users={activeUsers}
+          ringClass={
+            isCurrentTopic
+              ? "ring-secondary"
+              : "ring-sidebar group-hover:ring-accent"
+          }
+          unfurl
+        />
       </div>
     </Button>
   );
@@ -823,22 +819,12 @@ export const TopicsList = ({
                             )}
                           </div>
                           {activeUsers.length > 0 && (
-                            <div className="flex gap-1">
-                              {activeUsers.map((user) => (
-                                <UserAvatar
-                                  key={user.id}
-                                  id={user.id}
-                                  name={user.name}
-                                  displayName={user.displayName}
-                                  imageUrl={user.imageUrl}
-                                  createdAt={user.createdAt}
-                                  size="xs"
-                                  showStatus={false}
-                                  status={user.status}
-                                  lastStatusUpdate={user.lastStatusUpdate}
-                                />
-                              ))}
-                            </div>
+                            <StackedAvatars
+                              users={activeUsers}
+                              // The popover has room for everyone, and +N's own tooltip couldn't open in it.
+                              maxFaces={activeUsers.length}
+                              ringClass="ring-popover"
+                            />
                           )}
                         </div>
                       </TooltipContent>

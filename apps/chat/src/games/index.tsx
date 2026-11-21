@@ -13,8 +13,8 @@ import { samePageGame, samePageNotificationCopy } from "@/games/same-page";
 import { texasHoldemGame } from "@/games/texas-holdem";
 import { wordsmithGame, wordsmithNotificationCopy } from "@/games/wordsmith";
 
-const GAMES: GameDefinition[] = [samePageGame, wordsmithGame];
-const COMING_SOON: ComingSoonGame[] = [texasHoldemGame, blackjackGame];
+const GAMES: GameDefinition[] = [samePageGame, wordsmithGame, blackjackGame];
+const COMING_SOON: ComingSoonGame[] = [texasHoldemGame];
 
 /** Runs a game's slash command in the browser; false means send it as a normal message. */
 export function runGameCommand(

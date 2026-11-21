@@ -4,6 +4,7 @@ import { getLoggedInUserId } from "@/lib/session";
 import { NotFound } from "@/components/dashboard/not-found";
 import { DEFAULT_TITLE } from "@/lib/constants";
 import { BlackjackTable } from "@/games/blackjack";
+import { getBlackjackState } from "@/games/blackjack/server";
 
 type Props = {
   params: Promise<{ circleId: string }>;
@@ -11,11 +12,14 @@ type Props = {
 
 const getCircle = cache(async (circleId: string) => {
   const userId = await getLoggedInUserId();
-  return prismaClient.circle.getByIdForUser({
+  const circle = await prismaClient.circle.getByIdForUser({
     userId,
     circleId,
     select: { id: true, name: true, imageUrl: true },
   });
+  return circle && userId
+    ? { ...circle, ...(await getBlackjackState(circle.id, userId)) }
+    : null;
 });
 
 export async function generateMetadata({ params }: Props) {
@@ -33,6 +37,10 @@ export default async function BlackjackPage({ params }: Props) {
       circleId={circle.id}
       circleName={circle.name}
       circleImageUrl={circle.imageUrl}
+      enabled={circle.enabled}
+      isAdmin={circle.isAdmin}
+      // Remounts on turning it on, so the table watches afresh.
+      key={String(circle.enabled)}
     />
   ) : (
     <div className="flex h-dvh w-full">

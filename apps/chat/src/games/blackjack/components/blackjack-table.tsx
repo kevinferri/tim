@@ -46,7 +46,11 @@ import { useMessageSound } from "@/components/dashboard/use-message-sound";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import { blackjackGame } from "./game";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { BlackjackIcon } from "./icon";
+import { blackjackStandingsQueryKey } from "./api";
+import { BlackjackOff } from "./blackjack-panel";
 import { DealerBlackjackBadge, Hand, ScoredCards, TurnGlow } from "./hand";
 import { ActionBubble, JOINED, useActionBubbles } from "./action-bubbles";
 import { useSettlement } from "./settlement";
@@ -161,11 +165,62 @@ type Props = {
   circleImageUrl: string | null;
 };
 
+/** The header and print shared by the live table and its off state. */
+function tableShell(
+  { circleId, circleName, circleImageUrl }: Props,
+  view: BlackjackTableView | null,
+) {
+  return {
+    backHref: `/circles/${circleId}`,
+    backLabel: circleName,
+    logoName: circleName,
+    // The house limits until the first snapshot, so the loading table's print matches.
+    tableLimits: [
+      `MIN BET ${view?.limits.minBet ?? MIN_BET}`,
+      `MAX BET ${view?.limits.maxBet ?? MAX_BET}`,
+    ],
+    // Same look as the circle in the circles rail.
+    backAvatar: (
+      <Avatar className="size-5">
+        <AvatarImage src={circleImageUrl ?? undefined} alt="" />
+        <AvatarFallback className="text-[9px]">
+          {getInitials(circleName)}
+        </AvatarFallback>
+      </Avatar>
+    ),
+    titleIcon: <BlackjackIcon className="size-4" />,
+    title: "Blackjack",
+  };
+}
+
 export function BlackjackTable({
-  circleId,
-  circleName,
-  circleImageUrl,
-}: Props) {
+  enabled,
+  isAdmin,
+  ...props
+}: Props & { enabled: boolean; isAdmin: boolean }) {
+  const router = useRouter();
+  if (!enabled) {
+    return (
+      <TableLayout
+        {...tableShell(props, null)}
+        notice={
+          <div className="w-full max-w-sm rounded-xl border bg-card">
+            <BlackjackOff
+              circleId={props.circleId}
+              isAdmin={isAdmin}
+              onTurnedOn={() => router.refresh()}
+            />
+          </div>
+        }
+      />
+    );
+  }
+  return <LiveTable {...props} />;
+}
+
+function LiveTable(props: Props) {
+  const { circleId } = props;
+  const queryClient = useQueryClient();
   const {
     view,
     status,
@@ -266,28 +321,17 @@ export function BlackjackTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picking, deadline, chipsTotal]);
 
-  const shell = {
-    backHref: `/circles/${circleId}`,
-    backLabel: circleName,
-    logoName: circleName,
-    // The house limits until the first snapshot, so the loading table's print matches.
-    tableLimits: [
-      `MIN BET ${view?.limits.minBet ?? MIN_BET}`,
-      `MAX BET ${view?.limits.maxBet ?? MAX_BET}`,
-    ],
-    // Same look as the circle in the circles rail.
-    backAvatar: (
-      <Avatar className="size-5">
-        <AvatarImage src={circleImageUrl ?? undefined} alt="" />
-        <AvatarFallback className="text-[9px]">
-          {getInitials(circleName)}
-        </AvatarFallback>
-      </Avatar>
-    ),
-    titleIcon: <blackjackGame.Icon className="size-4" />,
-    title: "Blackjack",
-  };
+  // Up/down standings change once per round, when it settles.
+  useEffect(() => {
+    if (phase === "results")
+      queryClient.invalidateQueries({
+        queryKey: blackjackStandingsQueryKey(circleId),
+      });
+  }, [phase, circleId, queryClient]);
 
+  const shell = tableShell(props, view);
+
+  // Turned off while this page was open.
   if (status === "off") {
     return (
       <TableLayout
@@ -295,7 +339,7 @@ export function BlackjackTable({
         notice={
           <Alert variant="secondary" className="max-w-sm text-center">
             <AlertDescription>
-              Blackjack isn&rsquo;t on in this circle yet.
+              Blackjack was turned off in this circle.
             </AlertDescription>
           </Alert>
         }

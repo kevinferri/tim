@@ -69,6 +69,8 @@ function setup(netStore: NetStore = new InMemoryNetStore()) {
 }
 
 const watch = (s: MockSocket) => s.trigger(SocketEvent.TableWatch, REF);
+const spectate = (s: MockSocket) =>
+  s.trigger(SocketEvent.TableWatch, { ...REF, spectate: true });
 const sit = (s: MockSocket, seat: unknown) =>
   s.trigger(SocketEvent.TableSit, { ...REF, seat });
 const standUp = (s: MockSocket) => s.trigger(SocketEvent.TableStand, REF);
@@ -237,6 +239,47 @@ describe("watching", () => {
     await a.trigger(SocketEvent.TableWatch, payload);
     expect(a.emit).not.toHaveBeenCalled();
     expect(registry.tableCount()).toBe(0);
+  });
+
+  it("lets a spectator see seats live but not sit", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    const peek = connect("b");
+    await spectate(peek);
+    expect(state(peek).phase).toBe("waiting");
+
+    await watch(a);
+    await sit(a, 0);
+    expect(state(peek).seats[0]?.occupant.userId).toBe("a");
+
+    await sit(peek, 1);
+    expect(lastError(peek)).toBe("You're not at this table");
+    expect(state(a).seats[1]).toBeNull();
+  });
+
+  it("doesn't keep a player seated through their spectating tab", async () => {
+    const { connect } = setup();
+    const tab = connect("a");
+    const peek = connect("a");
+    await watch(tab);
+    await sit(tab, 0);
+    await spectate(peek);
+
+    await tab.trigger(SocketEvent.Disconnecting);
+    expect(state(peek).seats[0]).toBeNull();
+  });
+
+  it("won't seat anyone once the game is turned off, even on an open page", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    await watch(a);
+    vi.mocked(isGameEnabled).mockResolvedValue(false);
+
+    await sit(a, 0);
+    expect(emitted(a, SocketEvent.TableError).at(-1)).toMatchObject({
+      code: "game_off",
+    });
+    expect(state(a).seats[0]).toBeNull();
   });
 
   it("requires watching before sitting, standing, or acting", async () => {

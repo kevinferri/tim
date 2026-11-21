@@ -13,7 +13,8 @@ export type SeatOccupant = {
 
 export type TableRef = { circleId: string; game: TableGame };
 
-export type TableWatchPayload = TableRef;
+/** `spectate`: see who's seated without playing; a spectator can't sit and doesn't keep a player seated. */
+export type TableWatchPayload = TableRef & { spectate?: boolean };
 export type TableUnwatchPayload = TableRef;
 /** Omit `seat` to take the free seat closest to the middle of the table. */
 export type TableSitPayload = TableRef & { seat?: number };
