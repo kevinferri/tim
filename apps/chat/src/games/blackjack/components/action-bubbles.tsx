@@ -107,7 +107,7 @@ export function ActionBubble({ text, ms }: { text: string; ms: number }) {
       className="flex animate-action-bubble flex-col items-center motion-reduce:animate-none"
       style={{ animationDuration: `${ms}ms` }}
     >
-      <span className="flex whitespace-nowrap rounded-full bg-black/85 px-4 py-2.5 text-[15px] font-semibold uppercase tracking-[0.18em] text-white/90 shadow-lg ring-1 ring-white/15 [text-shadow:0_0_6px_rgba(255,255,255,0.2)]">
+      <span className="flex whitespace-nowrap rounded-full bg-black/85 px-3.5 py-2 text-[13px] font-semibold uppercase tracking-[0.18em] text-white/90 shadow-lg ring-1 ring-white/15 [text-shadow:0_0_6px_rgba(255,255,255,0.2)]">
         {/* Trimmed to the capitals' height and without the spacing after the last letter, so the padding
             is the same on all four sides and the word sits dead center. */}
         <span className="-mr-[0.18em] leading-none [text-box:trim-both_cap_alphabetic]">
@@ -116,7 +116,7 @@ export function ActionBubble({ text, ms }: { text: string; ms: number }) {
       </span>
       <span
         aria-hidden
-        className="-mt-px size-0 border-x-[7px] border-t-[8px] border-x-transparent border-t-black/85"
+        className="-mt-px size-0 border-x-[6px] border-t-[7px] border-x-transparent border-t-black/85"
       />
     </div>
   );
