@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BETTING_WINDOW_MS,
+  MAX_BET,
+  MIN_BET,
   SEAT_COUNT,
   TURN_MS,
   type BlackjackPlayAction,
@@ -268,9 +270,11 @@ export function BlackjackTable({
     backHref: `/circles/${circleId}`,
     backLabel: circleName,
     logoName: circleName,
-    tableLimits: view
-      ? [`MIN BET ${view.limits.minBet}`, `MAX BET ${view.limits.maxBet}`]
-      : undefined,
+    // The house limits until the first snapshot, so the loading table's print matches.
+    tableLimits: [
+      `MIN BET ${view?.limits.minBet ?? MIN_BET}`,
+      `MAX BET ${view?.limits.maxBet ?? MAX_BET}`,
+    ],
     // Same look as the circle in the circles rail.
     backAvatar: (
       <Avatar className="size-5">

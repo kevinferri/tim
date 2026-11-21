@@ -17,6 +17,7 @@ import {
   initialPresence,
   nextPresence,
   type PresenceEvent,
+  type PresenceNotice,
   type PresenceState,
 } from "./table-presence";
 
@@ -28,7 +29,7 @@ export const TABLE_NOTICES = {
   restarting: "Table restarting",
   restarted: "Table restarted",
   disconnected: "You were disconnected",
-};
+} satisfies Record<NonNullable<PresenceNotice>, string>;
 export type TableNotice = keyof typeof TABLE_NOTICES;
 
 // How long a seat-lost notice holds the status before the table's own comes back.
@@ -71,21 +72,21 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   // The last snapshot before a restart, so the game can say what happened to your bet.
   const [restartedFrom, setRestartedFrom] = useState<View | null>(null);
   const lastView = useRef<View | null>(null);
-  // "restarting" holds until the table is back; the others clear themselves.
-  useEffect(() => {
-    if (!notice || notice === "restarting") return;
-    const t = setTimeout(() => setNotice(null), NOTICE_MS);
-    return () => clearTimeout(t);
-  }, [notice]);
 
   const presence = useRef<PresenceState>(initialPresence);
   // Stable, so the watch effect below doesn't re-run because of it.
   const onPresence = useCallback((event: PresenceEvent) => {
     const { state, notice } = nextPresence(presence.current, event);
     presence.current = state;
+    // Called before lastView takes the new snapshot, so this is the table as it was before the restart.
     if (notice === "restarted") setRestartedFrom(lastView.current);
-    if (notice) setNotice(notice);
+    setNotice(state.shown);
   }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => onPresence({ type: "expire" }), NOTICE_MS);
+    return () => clearTimeout(t);
+  }, [notice, onPresence]);
 
   const isThisTable = (p: { circleId: string; game: string }) =>
     p.circleId === circleId && p.game === game;
@@ -117,19 +118,6 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
     const key = JSON.stringify([mine, next.phase, next.turn]);
     if (key !== actedOn.current) settle();
     actedOn.current = key;
-    // Seated again: the notice is done. Back from a restart without the seat you had: say so.
-    if (mine) setNotice(null);
-    else if (
-      presence.current.closing &&
-      next.serverId !== lastView.current?.serverId
-    ) {
-      const before = lastView.current;
-      const wasSeated = before?.seats.some(
-        (s) => s?.occupant.userId === self.id,
-      );
-      setRestartedFrom(before);
-      setNotice(wasSeated ? "restarted" : null);
-    }
     onPresence({
       type: "state",
       serverId: next.serverId,
@@ -153,7 +141,6 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   useSocketHandler<TableClosingPayload>(SocketEvent.TableClosing, (payload) => {
     if (!isThisTable(payload)) return;
     onPresence({ type: "closing" });
-    setNotice("restarting");
   });
 
   const sit = useCallback(
