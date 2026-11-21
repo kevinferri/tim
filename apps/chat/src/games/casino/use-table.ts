@@ -68,7 +68,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   useEffect(() => settle, [settle]);
 
   const [notice, setNotice] = useState<TableNotice | null>(null);
-  // The last snapshot before an announced restart, so the game can say what happened to your bet.
+  // The last snapshot before a restart, so the game can say what happened to your bet.
   const [restartedFrom, setRestartedFrom] = useState<View | null>(null);
   const lastView = useRef<View | null>(null);
   // "restarting" holds until the table is back; the others clear themselves.
@@ -83,6 +83,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   const onPresence = useCallback((event: PresenceEvent) => {
     const { state, notice } = nextPresence(presence.current, event);
     presence.current = state;
+    if (notice === "restarted") setRestartedFrom(lastView.current);
     if (notice) setNotice(notice);
   }, []);
 
@@ -126,6 +127,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
       const wasSeated = before?.seats.some(
         (s) => s?.occupant.userId === self.id,
       );
+      setRestartedFrom(before);
       setNotice(wasSeated ? "restarted" : null);
     }
     onPresence({
@@ -151,7 +153,6 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   useSocketHandler<TableClosingPayload>(SocketEvent.TableClosing, (payload) => {
     if (!isThisTable(payload)) return;
     onPresence({ type: "closing" });
-    setRestartedFrom(lastView.current);
     setNotice("restarting");
   });
 
