@@ -42,7 +42,6 @@ import { useMessageSound } from "@/components/dashboard/use-message-sound";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { blackjackGame } from "./game";
 import { DealerBlackjackBadge, Hand, ScoredCards, TurnGlow } from "./hand";
 import { ActionBubble, JOINED, useActionBubbles } from "./action-bubbles";
@@ -282,9 +281,22 @@ export function BlackjackTable({
   }
   if (!view) {
     return (
+      // The empty table, so the real one fills in where it stands.
       <TableLayout
         {...shell}
-        notice={<Skeleton className="h-full w-full rounded-3xl" />}
+        rack={<ChipRack />}
+        spotSize={cardSpot(cardSize, 2)}
+        onFeltSize={setFelt}
+        dealer={
+          <div
+            aria-hidden
+            className={cn(
+              cardBox(cardSize),
+              "rounded-md border-2 border-dashed border-white/20",
+            )}
+          />
+        }
+        status={<StatusLine>Joining table</StatusLine>}
       />
     );
   }
