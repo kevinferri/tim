@@ -13,15 +13,20 @@ const VIEW_LABELS = {
 } as const;
 
 function Panel({ circleId }: { circleId: string }) {
-  const { view, setView } = useBlackjackViewStore();
+  const { view, setView, setShown } = useBlackjackViewStore();
   return (
-    <BlackjackPanel circleId={circleId} view={view} onViewChange={setView} />
+    <BlackjackPanel
+      circleId={circleId}
+      view={view}
+      onViewChange={setView}
+      onShownChange={setShown}
+    />
   );
 }
 
 function TitleSuffix() {
-  const view = useBlackjackViewStore((s) => s.view);
-  return <> · {VIEW_LABELS[view]}</>;
+  const shown = useBlackjackViewStore((s) => s.shown);
+  return shown && <> · {VIEW_LABELS[shown]}</>;
 }
 
 export const blackjackGame: GameDefinition = {

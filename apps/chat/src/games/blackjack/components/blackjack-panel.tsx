@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChartIcon } from "@radix-ui/react-icons";
@@ -32,6 +33,8 @@ type Props = {
   circleId: string;
   view: BlackjackView;
   onViewChange: (view: BlackjackView) => void;
+  /** The tab on screen, for the sheet's title; null while loading or off. */
+  onShownChange: (shown: BlackjackView | null) => void;
 };
 
 export function useSetBlackjackEnabled(circleId: string) {
@@ -43,11 +46,23 @@ export function useSetBlackjackEnabled(circleId: string) {
   });
 }
 
-export function BlackjackPanel({ circleId, view, onViewChange }: Props) {
+export function BlackjackPanel({
+  circleId,
+  view,
+  onViewChange,
+  onShownChange,
+}: Props) {
   const { data, isLoading, error } = useQuery({
     queryKey: blackjackQueryKey(circleId),
     queryFn: () => fetchBlackjack(circleId),
   });
+  // Settings is the admin's only; anyone else picking it (e.g. from another circle) sees Play.
+  const activeView = view === "settings" && !data?.isAdmin ? "play" : view;
+  const shown = data?.enabled ? activeView : null;
+  useEffect(() => {
+    onShownChange(shown);
+    return () => onShownChange(null);
+  }, [shown, onShownChange]);
 
   if (isLoading) {
     return (
@@ -80,7 +95,6 @@ export function BlackjackPanel({ circleId, view, onViewChange }: Props) {
       ? [["settings", "Settings"] as [BlackjackView, string]]
       : []),
   ];
-  const activeView = view === "settings" && !data.isAdmin ? "play" : view;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

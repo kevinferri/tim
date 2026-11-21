@@ -821,6 +821,8 @@ export const TopicsList = ({
                           {activeUsers.length > 0 && (
                             <StackedAvatars
                               users={activeUsers}
+                              // The popover has room for everyone, and +N's own tooltip couldn't open in it.
+                              maxFaces={activeUsers.length}
                               ringClass="ring-popover"
                             />
                           )}
