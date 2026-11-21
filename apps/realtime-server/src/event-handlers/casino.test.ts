@@ -15,7 +15,6 @@ import { createMockSocket } from "../test/socket-mocks";
 import { registerCasinoHandlers } from "./casino";
 import { CasinoRegistry } from "../casino/registry";
 import { InMemoryNetStore, NetStore } from "../casino/net-store";
-import { TABLE_RESTARTING, TABLE_RESTARTING_REFUNDED } from "../casino/table";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
 import { shutdown } from "../shutdown";
@@ -763,10 +762,9 @@ describe("shutdown", () => {
       },
     });
 
-    // Results: payouts are already on the stacks, so nothing was cancelled.
     for (const s of [a, watcher]) {
       expect(emitted(s, SocketEvent.TableClosing)).toEqual([
-        { circleId: "c1", game: "blackjack", message: TABLE_RESTARTING },
+        { circleId: "c1", game: "blackjack" },
       ]);
     }
     await Promise.resolve();
@@ -776,52 +774,6 @@ describe("shutdown", () => {
     release();
     await done;
     expect(order).toEqual(["settled", "destroyDb", "exit:0"]);
-  });
-
-  async function closingMessageAfter(
-    prepare: (ctx: ReturnType<typeof setup>, a: MockSocket) => Promise<void>,
-  ) {
-    const ctx = setup();
-    const a = ctx.connect("a");
-    await watch(a);
-    await prepare(ctx, a);
-    await shutdown({
-      registry: ctx.registry,
-      destroyDb: async () => {},
-      exit: () => {},
-    });
-    return (emitted(a, SocketEvent.TableClosing)[0] as any)?.message;
-  }
-
-  it("says bets were returned only when chips were in play", async () => {
-    expect(await closingMessageAfter(async () => {})).toBe(TABLE_RESTARTING);
-    expect(await closingMessageAfter((_, a) => sit(a, 0))).toBe(
-      TABLE_RESTARTING,
-    );
-    expect(
-      await closingMessageAfter(async ({ connect }, a) => {
-        const b = connect("b");
-        await watch(b);
-        await sit(a, 0);
-        await sit(b, 1);
-        await bet(a, 50);
-      }),
-    ).toBe(TABLE_RESTARTING_REFUNDED);
-    expect(
-      await closingMessageAfter(async ({ stackShoe }, a) => {
-        stackShoe("10", "9", "8", "8");
-        await sit(a, 0);
-        await bet(a, 50);
-      }),
-    ).toBe(TABLE_RESTARTING_REFUNDED);
-    expect(
-      await closingMessageAfter(async ({ stackShoe }, a) => {
-        stackShoe("10", "9", "8", "8");
-        await sit(a, 0);
-        await bet(a, 50);
-        await act(a, { type: "stand" });
-      }),
-    ).toBe(TABLE_RESTARTING_REFUNDED);
   });
 
   it("starts no new round and rejects requests after shutdown begins", async () => {

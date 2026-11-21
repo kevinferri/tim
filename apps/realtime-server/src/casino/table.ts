@@ -17,10 +17,6 @@ export type BaseSeat = {
   leaving: boolean;
 };
 
-export const TABLE_RESTARTING = "Table restarting for an update.";
-export const TABLE_RESTARTING_REFUNDED =
-  "Table restarting for an update. This round was cancelled and bets were returned.";
-
 type Watcher = { socket: AppSocket; userId: string };
 
 /** Game-agnostic table: seats, watchers, one phase timer, and broadcast. */
@@ -47,8 +43,6 @@ export abstract class Table<Seat extends BaseSeat, View> {
   abstract stand(userId: string): string | null;
   /** Puts the table back in a safe state after an unexpected error. */
   protected abstract recover(): void;
-  /** Whether closing now would cancel bets that need returning. */
-  protected abstract hasChipsInPlay(): boolean;
 
   addWatcher(socket: AppSocket) {
     this.watchers.set(socket.id, { socket, userId: socket.data.user.id });
@@ -98,15 +92,11 @@ export abstract class Table<Seat extends BaseSeat, View> {
 
   /** Clears timers and tells every watcher the table is going away. */
   close() {
-    const message = this.hasChipsInPlay()
-      ? TABLE_RESTARTING_REFUNDED
-      : TABLE_RESTARTING;
     this.closed = true;
     this.clearTimer();
     const payload: TableClosingPayload = {
       circleId: this.circleId,
       game: this.game,
-      message,
     };
     for (const { socket } of this.watchers.values()) {
       socket.emit(SocketEvent.TableClosing, payload);
