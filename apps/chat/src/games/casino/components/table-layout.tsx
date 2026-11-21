@@ -249,29 +249,31 @@ function logoSpot(felt: Size, spot: Size) {
   return w < LOGO_MIN_W_PX ? null : { x: (start + end) / 2, w };
 }
 
-/** The status and dock tops in the open middle (from `top` to `bottom`): the status ends just above the midline and the dock hangs below, so the status doesn't move with the dock. */
+/** The status and dock tops: centered together in the open middle (from `top` to `bottom`). */
 function placeMiddle(
   top: number,
   bottom: number,
   statusH: number,
   dockH: number,
 ) {
-  const midline = (top + bottom) / 2;
-  // On a short felt, never over the dealer's cards...
-  const statusTop = Math.max(top, midline - STATUS_DOCK_GAP_PX / 2 - statusH);
-  // ...and the dock moves up rather than over the players' bets, but not into the status.
-  const dockTop = Math.max(
-    statusTop + statusH + STATUS_DOCK_GAP_PX,
-    Math.min(midline + STATUS_DOCK_GAP_PX / 2, bottom - dockH),
+  const gap = dockH ? STATUS_DOCK_GAP_PX : 0;
+  const total = statusH + gap + dockH;
+  // On a short felt, never over the dealer's cards; past that, the players' bets give way first.
+  const statusTop = Math.max(
+    top,
+    Math.min((top + bottom - total) / 2, bottom - total),
   );
-  return { statusTop, dockTop };
+  return { statusTop, dockTop: statusTop + statusH + gap };
 }
 
 /** An element's height, kept current; 0 until it's attached. */
 function useHeight(el: HTMLElement | null) {
   const [h, setH] = useState(0);
   useLayoutEffect(() => {
-    if (!el) return;
+    if (!el) {
+      setH(0);
+      return;
+    }
     const measure = () => {
       if (el.isConnected) setH(el.offsetHeight);
     };
