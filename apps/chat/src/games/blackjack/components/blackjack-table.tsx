@@ -52,6 +52,7 @@ import { YourResult } from "./your-result";
 
 const CHIPS = [5, 25, 100];
 // The tallest dock, the bet builder: chips (36), gap, number keys (20), gap, Place bet / Clear (24).
+// Not measured: keep in step with BetBuilder's sizes, or the status and dock sit off-center.
 const BET_BUILDER_H_PX = 36 + 16 + 20 + 16 + 24;
 
 const PLAY_BUTTONS: {
