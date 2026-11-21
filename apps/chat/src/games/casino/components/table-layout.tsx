@@ -58,6 +58,10 @@ type Props = {
   rack?: ReactNode;
   /** The viewer's controls, always in one spot in the middle of the felt; the game styles them. */
   dock?: ReactNode;
+  /** The dock's tallest height: the status and dock center on it as one block, so neither moves as the dock changes. */
+  dockReserveH?: number;
+  /** A round is on: seated players keep their spots, and anyone who sits down takes the widest open gap. */
+  holdSeats?: boolean;
 };
 
 // Each seat's direction from the dealer's side of the table (percent of the felt): angle 0 is first base,
@@ -76,6 +80,32 @@ export function seatAngles(seats: number[]) {
   return new Map(
     sorted.map((seat, k) => [seat, Math.PI / 2 + (k - (n - 1) / 2) * step]),
   );
+}
+
+/** The open angle farthest from every taken one: an end of the U, or the middle of the widest gap. */
+function widestGap(taken: number[]) {
+  if (!taken.length) return Math.PI / 2;
+  const sorted = [...taken].sort((a, b) => a - b);
+  let best = { angle: 0, room: sorted[0] };
+  const endRoom = Math.PI - sorted[sorted.length - 1];
+  if (endRoom > best.room) best = { angle: Math.PI, room: endRoom };
+  for (let i = 1; i < sorted.length; i++) {
+    const room = (sorted[i] - sorted[i - 1]) / 2;
+    if (room > best.room) {
+      best = { angle: (sorted[i] + sorted[i - 1]) / 2, room };
+    }
+  }
+  return best.angle;
+}
+
+/** Spots for these seats: spread evenly, or while held, kept where they were so hands and chip flights mid-round don't move. */
+function placeSeats(seats: number[], prev: Map<number, number>, hold: boolean) {
+  if (!hold) return seatAngles(seats);
+  const placed = new Map([...prev].filter(([seat]) => seats.includes(seat)));
+  for (const seat of [...seats].sort((a, b) => a - b)) {
+    if (!placed.has(seat)) placed.set(seat, widestGap([...placed.values()]));
+  }
+  return placed;
 }
 
 // Half the rail's width, so an avatar centers on the armrest rather than its inner edge.
@@ -249,40 +279,19 @@ function logoSpot(felt: Size, spot: Size) {
   return w < LOGO_MIN_W_PX ? null : { x: (start + end) / 2, w };
 }
 
-/** The status and dock tops: centered together in the open middle (from `top` to `bottom`). */
-function placeMiddle(
-  top: number,
-  bottom: number,
-  statusH: number,
-  dockH: number,
-) {
-  const gap = dockH ? STATUS_DOCK_GAP_PX : 0;
-  const total = statusH + gap + dockH;
+// The status line's tallest (with the turn's avatar); a taller one, like a result, grows up from its fixed bottom.
+const STATUS_RESERVE_PX = 40;
+
+/** The status's bottom and the dock's top: centered as one block in the open middle (from `top` to `bottom`), on reserved heights so they never move. */
+function placeMiddle(top: number, bottom: number, dockReserve: number) {
+  const total = STATUS_RESERVE_PX + STATUS_DOCK_GAP_PX + dockReserve;
   // On a short felt, never over the dealer's cards; past that, the players' bets give way first.
-  const statusTop = Math.max(
+  const blockTop = Math.max(
     top,
     Math.min((top + bottom - total) / 2, bottom - total),
   );
-  return { statusTop, dockTop: statusTop + statusH + gap };
-}
-
-/** An element's height, kept current; 0 until it's attached. */
-function useHeight(el: HTMLElement | null) {
-  const [h, setH] = useState(0);
-  useLayoutEffect(() => {
-    if (!el) {
-      setH(0);
-      return;
-    }
-    const measure = () => {
-      if (el.isConnected) setH(el.offsetHeight);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [el]);
-  return h;
+  const statusBottom = blockTop + STATUS_RESERVE_PX;
+  return { statusBottom, dockTop: statusBottom + STATUS_DOCK_GAP_PX };
 }
 
 type Rect = { x0: number; y0: number; x1: number; y1: number };
@@ -373,18 +382,26 @@ export function TableLayout(props: Props) {
   const spot = props.spotSize ?? { w: 0, h: 0 };
   // The bottom of the U, whether or not anyone sits there.
   const playersTop = betCenter(Math.PI / 2, felt, spot).y - BET_RADIUS_PX;
-  const [statusEl, setStatusEl] = useState<HTMLDivElement | null>(null);
-  const [dockEl, setDockEl] = useState<HTMLDivElement | null>(null);
-  const statusH = useHeight(statusEl);
-  const dockH = useHeight(dockEl);
   const middle =
     felt.h && dealerBottom
-      ? placeMiddle(dealerBottom + DEALER_GAP_PX, playersTop, statusH, dockH)
+      ? placeMiddle(
+          dealerBottom + DEALER_GAP_PX,
+          playersTop,
+          props.dockReserveH ?? 0,
+        )
       : null;
 
   const logoName = props.logoName;
   const logo = logoName ? logoSpot(felt, spot) : null;
-  const angles = seatAngles(props.players?.map((p) => p.seat) ?? []);
+  const placed = useRef(new Map<number, number>());
+  const angles = placeSeats(
+    props.players?.map((p) => p.seat) ?? [],
+    placed.current,
+    !!props.holdSeats,
+  );
+  useLayoutEffect(() => {
+    placed.current = angles;
+  });
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -510,12 +527,12 @@ export function TableLayout(props: Props) {
                     {/* Phones: after the players, over the controls. */}
                     {props.status && (
                       <div
-                        ref={setStatusEl}
+                        // Pinned by its bottom, so a taller status grows upward.
                         className={cn(
-                          "flex justify-center md:absolute md:inset-x-0",
+                          "flex justify-center md:absolute md:inset-x-0 md:-translate-y-full",
                           middle === null && "md:invisible",
                         )}
-                        style={{ top: middle?.statusTop }}
+                        style={{ top: middle?.statusBottom }}
                       >
                         {props.status}
                       </div>
@@ -523,7 +540,6 @@ export function TableLayout(props: Props) {
                     {/* Your controls, hanging below the status in the open middle of the felt. */}
                     {props.dock && (
                       <div
-                        ref={setDockEl}
                         className={cn(
                           "flex justify-center md:absolute md:inset-x-0 md:z-40",
                           middle === null && "md:invisible",

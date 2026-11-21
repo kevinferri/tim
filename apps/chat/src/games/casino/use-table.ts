@@ -68,6 +68,9 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   useEffect(() => settle, [settle]);
 
   const [notice, setNotice] = useState<TableNotice | null>(null);
+  // The last snapshot before an announced restart, so the game can say what happened to your bet.
+  const [restartedFrom, setRestartedFrom] = useState<View | null>(null);
+  const lastView = useRef<View | null>(null);
   // "restarting" holds until the table is back; the others clear themselves.
   useEffect(() => {
     if (!notice || notice === "restarting") return;
@@ -113,9 +116,18 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
     const key = JSON.stringify([mine, next.phase, next.turn]);
     if (key !== actedOn.current) settle();
     actedOn.current = key;
-    // Back from a restart, or seated again after losing the seat: the notice is done.
+    // Seated again: the notice is done. Back from a restart without the seat you had: say so.
     if (mine) setNotice(null);
-    else setNotice((n) => (n === "restarting" ? null : n));
+    else if (
+      presence.current.closing &&
+      next.serverId !== lastView.current?.serverId
+    ) {
+      const before = lastView.current;
+      const wasSeated = before?.seats.some(
+        (s) => s?.occupant.userId === self.id,
+      );
+      setNotice(wasSeated ? "restarted" : null);
+    }
     onPresence({
       type: "state",
       serverId: next.serverId,
@@ -123,6 +135,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
       leaving: !!mine?.leaving,
     });
 
+    lastView.current = next;
     setView(next);
     setDeadline(next.msLeft === null ? null : performance.now() + next.msLeft);
     setStatus("live");
@@ -138,6 +151,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
   useSocketHandler<TableClosingPayload>(SocketEvent.TableClosing, (payload) => {
     if (!isThisTable(payload)) return;
     onPresence({ type: "closing" });
+    setRestartedFrom(lastView.current);
     setNotice("restarting");
   });
 
@@ -175,6 +189,7 @@ export function useTable<View extends TableViewBase, Action>(ref: TableRef) {
     status,
     deadline,
     notice,
+    restartedFrom: notice === "restarted" ? restartedFrom : null,
     mySeat: mySeat === -1 ? null : mySeat,
     selfId: self.id,
     sit,

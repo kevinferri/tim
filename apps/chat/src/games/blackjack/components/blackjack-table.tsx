@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BETTING_WINDOW_MS,
+  SEAT_COUNT,
   TURN_MS,
   type BlackjackPlayAction,
   type BlackjackSeatView,
@@ -50,6 +51,8 @@ import { useSettlement } from "./settlement";
 import { YourResult } from "./your-result";
 
 const CHIPS = [5, 25, 100];
+// The tallest dock, the bet builder: chips (36), gap, number keys (20), gap, Place bet / Clear (24).
+const BET_BUILDER_H_PX = 36 + 16 + 20 + 16 + 24;
 
 const PLAY_BUTTONS: {
   action: BlackjackPlayAction;
@@ -83,7 +86,10 @@ function useCardSize(
   view: BlackjackTableView | null,
   felt: Size | null,
 ): CardSize {
-  const seats = view?.seats.flatMap((s, i) => (s ? [i] : [])) ?? [];
+  // Before the first snapshot, sized for a full table: the real one then only grows the cards or leaves them.
+  const seats = view
+    ? view.seats.flatMap((s, i) => (s ? [i] : []))
+    : Array.from({ length: SEAT_COUNT }, (_, i) => i);
   const wide =
     typeof window !== "undefined" &&
     window.matchMedia("(min-width: 768px)").matches;
@@ -157,10 +163,21 @@ export function BlackjackTable({
   circleName,
   circleImageUrl,
 }: Props) {
-  const { view, status, deadline, notice, mySeat, sit, stand, act } = useTable<
-    BlackjackTableView,
-    BlackjackTableAction
-  >({ circleId, game: "blackjack" });
+  const {
+    view,
+    status,
+    deadline,
+    notice,
+    restartedFrom,
+    mySeat,
+    selfId,
+    sit,
+    stand,
+    act,
+  } = useTable<BlackjackTableView, BlackjackTableAction>({
+    circleId,
+    game: "blackjack",
+  });
   const [felt, setFelt] = useState<Size | null>(null);
   const cardSize = useCardSize(view, felt);
   // When a seat's second card lands in the opening deal (see dealDelay).
@@ -298,6 +315,7 @@ export function BlackjackTable({
           />
         }
         status={<StatusLine>Joining table</StatusLine>}
+        dockReserveH={BET_BUILDER_H_PX}
       />
     );
   }
@@ -452,7 +470,11 @@ export function BlackjackTable({
                       : null
                 }
               >
-                {notice ? TABLE_NOTICES[notice] : statusText(view, me, live)}
+                {notice
+                  ? hadChipsInPlay(restartedFrom, selfId)
+                    ? "Restarted, bet returned"
+                    : TABLE_NOTICES[notice]
+                  : statusText(view, me, live)}
               </StatusLine>
             )
           }
@@ -576,6 +598,8 @@ export function BlackjackTable({
             ];
           })}
           dock={live && controls}
+          dockReserveH={BET_BUILDER_H_PX}
+          holdSeats={playing}
         />
         {settlement.layer}
       </ChipLaunchProvider>
@@ -718,6 +742,14 @@ const splitDealDelay = (hand: number) => (cardIndex: number) =>
     : cardIndex === 1 && hand === 1
       ? HIT_PAUSE_MS + DEAL_MS
       : HIT_PAUSE_MS;
+
+/** Whether you had chips on the table in this snapshot: a cancelled round returns them. */
+function hadChipsInPlay(view: BlackjackTableView | null, selfId: string) {
+  const seat = view?.seats.find((s) => s?.occupant.userId === selfId);
+  if (!view || !seat) return false;
+  if (view.phase === "betting") return seat.bet !== null;
+  return (view.phase === "players" || view.phase === "dealer") && seat.inRound;
+}
 
 /** A natural's winnings (its payout less the bet). */
 function naturalNet(seat: BlackjackSeatView) {
