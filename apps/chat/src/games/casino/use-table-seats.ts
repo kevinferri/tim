@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { SeatOccupant, TableRef } from "@tim/casino";
+import type { SeatOccupant, TableRef, TableWatchPayload } from "@tim/casino";
 import { useSocketContext } from "@/components/socket/socket-provider";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
 
@@ -9,14 +9,18 @@ type SeatsSnapshot = TableRef & {
   seats: ({ occupant: SeatOccupant } | null)[];
 };
 
-/** Who's seated at a table, live; null until the first snapshot. Watches without sitting, so it never takes a seat. */
+/** Who's seated at a table, live; null until the first snapshot. Spectates, so it can't sit and doesn't keep anyone seated. */
 export function useTableSeats({ circleId, game }: TableRef) {
   const { socket } = useSocketContext();
   const [occupants, setOccupants] = useState<SeatOccupant[] | null>(null);
 
   useEffect(() => {
     const watch = () =>
-      socket.emit(SocketEvent.TableWatch, { circleId, game } as TableRef);
+      socket.emit(SocketEvent.TableWatch, {
+        circleId,
+        game,
+        spectate: true,
+      } satisfies TableWatchPayload);
     if (socket.connected) watch();
     socket.on("connect", watch);
     return () => {

@@ -17,7 +17,7 @@ export type BaseSeat = {
   leaving: boolean;
 };
 
-type Watcher = { socket: AppSocket; userId: string };
+type Watcher = { socket: AppSocket; userId: string; spectator: boolean };
 
 /** Game-agnostic table: seats, watchers, one phase timer, and broadcast. */
 // One per server process, sent in views: it changes only on a restart (tables are dropped and recreated whenever they go idle).
@@ -44,21 +44,28 @@ export abstract class Table<Seat extends BaseSeat, View> {
   /** Puts the table back in a safe state after an unexpected error. */
   protected abstract recover(): void;
 
-  addWatcher(socket: AppSocket) {
-    this.watchers.set(socket.id, { socket, userId: socket.data.user.id });
+  addWatcher(socket: AppSocket, { spectator = false } = {}) {
+    this.watchers.set(socket.id, {
+      socket,
+      userId: socket.data.user.id,
+      spectator,
+    });
     socket.emit(SocketEvent.TableState, this.viewFor(socket.data.user.id));
   }
 
+  /** Watching as a player, so allowed to sit, stand and act; spectators aren't. */
   isWatching(socketId: string) {
-    return this.watchers.has(socketId);
+    const watcher = this.watchers.get(socketId);
+    return !!watcher && !watcher.spectator;
   }
 
   removeWatcher(socketId: string) {
     const watcher = this.watchers.get(socketId);
     if (!watcher) return;
     this.watchers.delete(socketId);
+    // A spectating tab (e.g. the Game room) doesn't keep its user seated.
     const stillHere = [...this.watchers.values()].some(
-      (w) => w.userId === watcher.userId,
+      (w) => w.userId === watcher.userId && !w.spectator,
     );
     if (!stillHere && this.seatIndexOf(watcher.userId) !== null) {
       this.stand(watcher.userId);
