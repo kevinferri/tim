@@ -13,6 +13,7 @@ export {
   ChipLaunchProvider,
   ChipStack,
   breakdown,
+  chipText,
   type BetStack,
 } from "./components/chips";
 export {
@@ -47,3 +48,4 @@ export {
   playTallyKnock,
   playTwentyOne,
 } from "./sounds";
+export { useTableSeats } from "./use-table-seats";

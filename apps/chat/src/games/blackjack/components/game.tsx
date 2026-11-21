@@ -1,79 +1,35 @@
-import { useId } from "react";
-import type { ComingSoonGame } from "@/games/game-room";
+"use client";
 
-const FRONT_CARD = {
-  x: 9,
-  y: 5,
-  width: 11,
-  height: 15,
-  rx: 2,
-  transform: "rotate(12 14.5 12.5)",
-};
+import type { GameDefinition } from "@/games/game-room";
+import { BLACKJACK_GAME_ID } from "../lib/game-id";
+import { BlackjackIcon } from "./icon";
+import { BlackjackPanel } from "./blackjack-panel";
+import { useBlackjackViewStore } from "./view-store";
 
-/** Blackjack mark — two tilted, filled cards, a diamond cut out of the front one. */
-function BlackjackIcon({ className }: { className?: string }) {
-  // Masks need ids unique per instance; strip useId's punctuation so url(#…) resolves.
-  const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  const backMask = `${id}-back`;
-  const frontMask = `${id}-front`;
+const VIEW_LABELS = {
+  play: "Play",
+  standings: "Standings",
+  settings: "Settings",
+} as const;
 
+function Panel({ circleId }: { circleId: string }) {
+  const { view, setView } = useBlackjackViewStore();
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden
-    >
-      <defs>
-        {/* Cutouts instead of a background-colored outline, so it works on any surface. */}
-        <mask
-          id={backMask}
-          maskUnits="userSpaceOnUse"
-          x="0"
-          y="0"
-          width="24"
-          height="24"
-        >
-          <rect width="24" height="24" fill="white" />
-          <rect {...FRONT_CARD} fill="black" stroke="black" strokeWidth="2.5" />
-        </mask>
-        <mask
-          id={frontMask}
-          maskUnits="userSpaceOnUse"
-          x="0"
-          y="0"
-          width="24"
-          height="24"
-        >
-          <rect width="24" height="24" fill="white" />
-          <path
-            d="M14.5 9 17 12.5 14.5 16 12 12.5Z"
-            transform={FRONT_CARD.transform}
-            fill="black"
-          />
-        </mask>
-      </defs>
-      <g mask={`url(#${backMask})`}>
-        <rect
-          x="3"
-          y="4"
-          width="11"
-          height="15"
-          rx="2"
-          transform="rotate(-14 8.5 11.5)"
-        />
-      </g>
-      <g mask={`url(#${frontMask})`}>
-        <rect {...FRONT_CARD} />
-      </g>
-    </svg>
+    <BlackjackPanel circleId={circleId} view={view} onViewChange={setView} />
   );
 }
 
-export const blackjackGame: ComingSoonGame = {
-  id: "blackjack",
+function TitleSuffix() {
+  const view = useBlackjackViewStore((s) => s.view);
+  return <> · {VIEW_LABELS[view]}</>;
+}
+
+export const blackjackGame: GameDefinition = {
+  id: BLACKJACK_GAME_ID,
   name: "Blackjack",
   tagline: "Beat the dealer to 21",
   category: "casino",
   Icon: BlackjackIcon,
+  Panel,
+  TitleSuffix,
 };
