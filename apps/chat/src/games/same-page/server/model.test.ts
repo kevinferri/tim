@@ -96,6 +96,33 @@ describe("opening the game after close with no round today", () => {
   });
 });
 
+describe("pickable members", () => {
+  it("lists everyone but you, with avatars to tell same-named members apart", async () => {
+    const me = await createUser("Me");
+    const josh1 = await createUser("Josh");
+    const josh2 = await createUser("Josh");
+    await prismaClient.user.update({
+      where: { id: josh1.id },
+      data: { imageUrl: "https://example.com/josh1.png" },
+    });
+    const circle = await createCircleWithMembers([me, josh1, josh2], me.id);
+
+    const state = await getSamePageState({
+      circleId: circle.id,
+      userId: me.id,
+      now: PLAY_NOW,
+    });
+
+    if (!state.enabled) throw new Error("expected Same Page enabled");
+    expect(state.members.map((m) => m.id).sort()).toEqual(
+      [josh1.id, josh2.id].sort(),
+    );
+    expect(state.members.find((m) => m.id === josh1.id)?.imageUrl).toBe(
+      "https://example.com/josh1.png",
+    );
+  });
+});
+
 describe("when Same Page is off for the circle", () => {
   it("is off by default and shows no game state or badge", async () => {
     const owner = await createUser("Owner");

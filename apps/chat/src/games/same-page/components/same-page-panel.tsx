@@ -23,6 +23,7 @@ import {
 import { SAME_PAGE_CLOSE_LABEL, SAME_PAGE_OPEN_LABEL } from "../lib/schedule";
 import { MAX_ANSWER_LENGTH } from "../lib/matching";
 import { EmptyState } from "./empty-state";
+import { MemberPill } from "./member-pill";
 import { SamePageIcon } from "./same-page-icon";
 import type { SamePageView } from "./view-store";
 
@@ -498,21 +499,12 @@ function PlayView({
                 {data.members.map((m) => {
                   const selected = calledUserId === m.id;
                   return (
-                    <button
+                    <MemberPill
                       key={m.id}
-                      type="button"
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        selected
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-background hover:bg-muted",
-                      )}
+                      member={m}
+                      selected={selected}
                       onClick={() => setCalledUserId(selected ? null : m.id)}
-                      aria-pressed={selected}
-                    >
-                      {m.displayName}
-                    </button>
+                    />
                   );
                 })}
               </div>
