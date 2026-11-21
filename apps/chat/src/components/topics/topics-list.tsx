@@ -711,9 +711,19 @@ export const TopicsList = ({
         </Button>
       </div>
 
-      {!isMinimized && (
-        <div className="px-3 pt-3">
-          <div className="relative">
+      {isMinimized ? (
+        <div className="flex justify-center px-3 pt-3">
+          <NewTopicButton
+            circleId={circle.id}
+            circleName={circle.name}
+            tooltipSide="right"
+            className="rounded-full"
+            variant="secondary"
+          />
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-3 pt-3">
+          <div className="relative flex-1">
             <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
             <Input
               value={searchQuery}
@@ -729,6 +739,12 @@ export const TopicsList = ({
               </button>
             )}
           </div>
+          <NewTopicButton
+            circleId={circle.id}
+            circleName={circle.name}
+            tooltipSide="bottom"
+            variant="outline"
+          />
         </div>
       )}
 
@@ -739,9 +755,29 @@ export const TopicsList = ({
             flatTopics.length === 0 &&
             searchQuery &&
             !isMinimized && (
-              <div className="text-center text-sm text-muted-foreground py-2">
-                No topics found for{" "}
-                <span className="font-medium">&quot;{searchQuery}&quot;</span>
+              <div className="flex flex-col items-center gap-2 py-2 text-center text-sm text-muted-foreground">
+                <div>
+                  No topics found for{" "}
+                  <span className="font-medium">&quot;{searchQuery}&quot;</span>
+                </div>
+                <UpsertTopicForm
+                  circleId={circle.id}
+                  circleName={circle.name}
+                  defaultName={searchQuery.trim()}
+                  onSaved={() => setSearchQuery("")}
+                  trigger={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full min-w-0 gap-2"
+                    >
+                      <PlusIcon className="shrink-0" />
+                      <span className="truncate">
+                        Create &quot;{searchQuery.trim()}&quot;
+                      </span>
+                    </Button>
+                  }
+                />
               </div>
             )}
 
@@ -916,30 +952,6 @@ export const TopicsList = ({
         </div>
       </ScrollArea>
       <div className="flex flex-col items-center mt-auto gap-3 p-3">
-        <UpsertTopicForm
-          circleId={circle.id ?? ""}
-          circleName={circle.name}
-          trigger={
-            isMinimized ? (
-              <TooltipProvider>
-                <Tooltip delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="rounded-full"
-                      >
-                        <PlusIcon />
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">New topic</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : undefined
-          }
-        />
         {circle.id && (
           <GameRoomButton circleId={circle.id} isMinimized={isMinimized} />
         )}
@@ -974,3 +986,44 @@ export const TopicsList = ({
     </div>
   );
 };
+
+function NewTopicButton({
+  circleId,
+  circleName,
+  tooltipSide,
+  variant,
+  className,
+}: {
+  circleId: string;
+  circleName: string;
+  tooltipSide: "right" | "bottom";
+  variant: "secondary" | "outline";
+  className?: string;
+}) {
+  return (
+    // UpsertTopicForm wraps its trigger in a w-full div; keep it icon-sized.
+    <div className="flex shrink-0 [&>div]:w-auto">
+      <UpsertTopicForm
+        circleId={circleId}
+        circleName={circleName}
+        trigger={
+          <TooltipProvider>
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={variant}
+                  size="icon"
+                  className={cn("shrink-0", className)}
+                  aria-label="New topic"
+                >
+                  <PlusIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side={tooltipSide}>New topic</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        }
+      />
+    </div>
+  );
+}
