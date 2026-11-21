@@ -24,6 +24,7 @@ import {
   PlayerAvatar,
   PlayerSpot,
   StatusLine,
+  TABLE_NOTICES,
   TableLayout,
   cardBox,
   handsFit,
@@ -156,7 +157,7 @@ export function BlackjackTable({
   circleName,
   circleImageUrl,
 }: Props) {
-  const { view, status, deadline, mySeat, sit, stand, act } = useTable<
+  const { view, status, deadline, notice, mySeat, sit, stand, act } = useTable<
     BlackjackTableView,
     BlackjackTableAction
   >({ circleId, game: "blackjack" });
@@ -431,6 +432,7 @@ export function BlackjackTable({
             ) : (
               <StatusLine
                 leading={
+                  !notice &&
                   live &&
                   view.phase === "players" &&
                   view.turn &&
@@ -450,7 +452,7 @@ export function BlackjackTable({
                       : null
                 }
               >
-                {statusText(view, me, live)}
+                {notice ? TABLE_NOTICES[notice] : statusText(view, me, live)}
               </StatusLine>
             )
           }
