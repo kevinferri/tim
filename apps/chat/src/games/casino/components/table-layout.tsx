@@ -29,8 +29,6 @@ type Props = {
   title: string;
   /** Embroidered into the felt beside the dealer, e.g. the circle's name. */
   logoName?: string;
-  /** The house rules printed on the felt, one on each side below the logos, e.g. what blackjack pays. */
-  feltRules?: [left: string[], right: string[]];
   /** The table's bet limits, printed on the felt just under the dealer's cards, a line each. */
   tableLimits?: string[];
   /** Shown before the title, e.g. the game's icon. */
@@ -43,7 +41,7 @@ type Props = {
   dealer?: ReactNode;
   /** Just above the dock: what's happening, over what you can do about it. */
   status?: ReactNode;
-  /** Seated players only; `seat` fixes where each sits. `node` goes on the felt (bet, cards), `rail` on the armrest (avatar). */
+  /** Seated players only, spread evenly around the table in `seat` order (see seatAngles). `node` goes on the felt (bet, cards), `rail` on the armrest (avatar). */
   players?: {
     key: string;
     seat: number;
@@ -62,17 +60,29 @@ type Props = {
   dock?: ReactNode;
 };
 
-// Each seat's direction from the dealer's side of the table (percent of the felt):
-// first base (seat 0) beside the dealer on the viewer's right, as on a real table,
-// around the bottom to the last seat beside the dealer on the left.
+// Each seat's direction from the dealer's side of the table (percent of the felt): angle 0 is first base,
+// beside the dealer on the viewer's right as on a real table, around the bottom to π on the left.
 const U = { cx: 50, cy: 22, rx: 40, ry: 56 };
+
+// A full table's spacing, the closest seats ever sit.
+const FULL_STEP = Math.PI / (SEAT_COUNT - 1);
+
+/** Where each of these seats sits: spread evenly around the middle of the U, in seat order, so a few players fill the table rather than leaving gaps. */
+export function seatAngles(seats: number[]) {
+  const sorted = [...seats].sort((a, b) => a - b);
+  const n = sorted.length;
+  // π/n leaves half a step free at each end; a full table reaches the ends.
+  const step = Math.max(FULL_STEP, Math.PI / n);
+  return new Map(
+    sorted.map((seat, k) => [seat, Math.PI / 2 + (k - (n - 1) / 2) * step]),
+  );
+}
 
 // Half the rail's width, so an avatar centers on the armrest rather than its inner edge.
 const RAIL_HALF_PX = 18;
 
-/** Where a seat meets the rail (felt-relative 0–1) and the rail's outward direction there. */
-function railPoint(seat: number) {
-  const a = (seat * Math.PI) / (SEAT_COUNT - 1);
+/** Where a seat at angle `a` meets the rail (felt-relative 0–1) and the rail's outward direction there. */
+function railPoint(a: number) {
   const o = { x: U.cx / 100, y: U.cy / 100 };
   const d = { x: (U.rx / 100) * Math.cos(a), y: (U.ry / 100) * Math.sin(a) };
   // The felt's inside edge: straight sides to half height, then a half-ellipse (rounded-b-[50%]),
@@ -104,8 +114,8 @@ const at = (
   }) as CSSProperties;
 
 /** The avatar, on the rail. */
-const railPosition = (seat: number) => {
-  const { p, n } = railPoint(seat);
+const railPosition = (angle: number) => {
+  const { p, n } = railPoint(angle);
   return at(p, n, RAIL_HALF_PX);
 };
 
@@ -122,8 +132,8 @@ export type Size = { w: number; h: number };
 type Vec = { x: number; y: number };
 
 /** A seat's avatar center and unit vector toward the dealer's cards, in px within the felt. */
-function seatLine(seat: number, felt: Size) {
-  const { p, n } = railPoint(seat);
+function seatLine(angle: number, felt: Size) {
+  const { p, n } = railPoint(angle);
   const avatar = {
     x: p.x * felt.w + n.x * RAIL_HALF_PX,
     y: p.y * felt.h + n.y * RAIL_HALF_PX,
@@ -150,15 +160,23 @@ const FeltSizeContext = createContext<{ felt: Size; spot: Size }>({
 });
 
 /** A seat's bet circle: a fixed spot just past a two-card hand, toward the dealer. It never moves. */
-function betCenter(seat: number, felt: Size, spot: Size) {
-  const { avatar, toDealer: u } = seatLine(seat, felt);
+function betCenter(angle: number, felt: Size, spot: Size) {
+  const { avatar, toDealer: u } = seatLine(angle, felt);
   const reach = cardsFarReach(u, spot) + CARDS_TO_BET_PX + BET_RADIUS_PX;
   return { x: avatar.x + u.x * reach, y: avatar.y + u.y * reach, u };
 }
 
-function SeatBet({ seat, children }: { seat: number; children: ReactNode }) {
+function SeatBet({
+  seat,
+  angle,
+  children,
+}: {
+  seat: number;
+  angle: number;
+  children: ReactNode;
+}) {
   const { felt, spot } = useContext(FeltSizeContext);
-  const { x, y, u } = betCenter(seat, felt, spot);
+  const { x, y, u } = betCenter(angle, felt, spot);
   return (
     <div
       data-bet-seat={seat}
@@ -179,7 +197,7 @@ const DEALER_GAP_PX = 20;
 const STATUS_DOCK_GAP_PX = 16;
 
 /** A seat's cards on the line to the dealer, with the dealer-side edge pinned. */
-function SeatSpot({ seat, children }: { seat: number; children: ReactNode }) {
+function SeatSpot({ angle, children }: { angle: number; children: ReactNode }) {
   const { felt, spot } = useContext(FeltSizeContext);
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<Size>({ w: 0, h: 0 });
@@ -201,7 +219,7 @@ function SeatSpot({ seat, children }: { seat: number; children: ReactNode }) {
     return () => observer.disconnect();
   }, [measure]);
 
-  const { avatar, toDealer: u } = seatLine(seat, felt);
+  const { avatar, toDealer: u } = seatLine(angle, felt);
   // The far edge sits at the fixed reach; the center is half the box back from it.
   const reach = cardsFarReach(u, spot) - extent(size, u) / 2;
   const center = { x: avatar.x + u.x * reach, y: avatar.y + u.y * reach };
@@ -221,8 +239,6 @@ const DEALER_SIDE_REACH_PX = 96;
 const LOGO_MAX_W_PX = 224;
 const LOGO_MIN_W_PX = 96;
 const LOGO_MARGIN_PX = 24;
-// Roughly half the logo's drawn height, for spacing things below it.
-const LOGO_HALF_H_PX = 30;
 
 /** The right-hand logo's center x and width: midway between the dealer (and shoe) and first base's bet circle, shrinking to fit. */
 function logoSpot(felt: Size, spot: Size) {
@@ -289,8 +305,9 @@ const FIT_GAP_PX = 8;
  * runs into another seat's bet circle, and none reaches the dealer's edge.
  */
 export function handsFit(felt: Size, seats: number[], spot: Size, hand: Size) {
-  const hands = seats.map((seat) => {
-    const { avatar, toDealer: u } = seatLine(seat, felt);
+  const angles = [...seatAngles(seats).values()];
+  const hands = angles.map((angle) => {
+    const { avatar, toDealer: u } = seatLine(angle, felt);
     // As SeatSpot places it: the dealer-side edge at a two-card hand's reach.
     const reach = cardsFarReach(u, spot) - extent(hand, u) / 2;
     return rectAt(
@@ -298,8 +315,8 @@ export function handsFit(felt: Size, seats: number[], spot: Size, hand: Size) {
       hand,
     );
   });
-  const bets = seats.map((seat) =>
-    rectAt(betCenter(seat, felt, spot), {
+  const bets = angles.map((angle) =>
+    rectAt(betCenter(angle, felt, spot), {
       w: 2 * BET_RADIUS_PX,
       h: 2 * BET_RADIUS_PX,
     }),
@@ -352,8 +369,8 @@ export function TableLayout(props: Props) {
     return () => observer.disconnect();
   }, [dealerEl, felt.h]);
   const spot = props.spotSize ?? { w: 0, h: 0 };
-  const playersTop =
-    betCenter(Math.floor(SEAT_COUNT / 2), felt, spot).y - BET_RADIUS_PX;
+  // The bottom of the U, whether or not anyone sits there.
+  const playersTop = betCenter(Math.PI / 2, felt, spot).y - BET_RADIUS_PX;
   const [statusEl, setStatusEl] = useState<HTMLDivElement | null>(null);
   const [dockEl, setDockEl] = useState<HTMLDivElement | null>(null);
   const statusH = useHeight(statusEl);
@@ -365,14 +382,7 @@ export function TableLayout(props: Props) {
 
   const logoName = props.logoName;
   const logo = logoName ? logoSpot(felt, spot) : null;
-  // The rules sit under the logos, centered in the open felt down to the next seats' bet circles.
-  const rulesSpot = props.feltRules ? logoSpot(felt, spot) : null;
-  const rulesY =
-    (DEALER_MIDDLE_PX +
-      LOGO_HALF_H_PX +
-      betCenter(1, felt, spot).y -
-      BET_RADIUS_PX) /
-    2;
+  const angles = seatAngles(props.players?.map((p) => p.seat) ?? []);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -443,19 +453,6 @@ export function TableLayout(props: Props) {
                           }}
                         />
                       ))}
-                    {rulesSpot &&
-                      props.feltRules!.map((lines, side) => (
-                        <FeltPrint
-                          key={side}
-                          lines={lines}
-                          className="pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 md:block"
-                          style={{
-                            // logoSpot is the right-hand side.
-                            left: side ? rulesSpot.x : felt.w - rulesSpot.x,
-                            top: rulesY,
-                          }}
-                        />
-                      ))}
                     {/* Rack, then dealer, DEALER_GAP_PX apart. */}
                     <div
                       className="flex flex-col items-center md:absolute md:inset-x-0 md:top-0"
@@ -481,25 +478,32 @@ export function TableLayout(props: Props) {
                       </div>
                     </div>
                     <div className="flex w-full flex-wrap justify-center gap-2 md:contents">
-                      {props.players?.map(({ key, seat, node, bet, rail }) => (
-                        // Phones: one stacked cell per player. Wide: felt and rail parts positioned separately.
-                        <div
-                          key={key}
-                          className="flex w-[calc((100%-1rem)/3)] min-w-0 flex-col items-center gap-2 md:contents"
-                        >
-                          {/* Positioned by wrappers so the parts' own animations keep `transform`. */}
-                          {bet && <SeatBet seat={seat}>{bet}</SeatBet>}
-                          <SeatSpot seat={seat}>{node}</SeatSpot>
+                      {props.players?.map(({ key, seat, node, bet, rail }) => {
+                        const angle = angles.get(seat)!;
+                        return (
+                          // Phones: one stacked cell per player. Wide: felt and rail parts positioned separately.
                           <div
-                            data-rail-seat={seat}
-                            // Phones: room for the up/down hung below the avatar (it's out of the flow).
-                            className="max-md:mb-7 md:absolute md:left-[var(--x)] md:top-[var(--y)] md:z-10 md:-translate-x-1/2 md:-translate-y-1/2"
-                            style={railPosition(seat)}
+                            key={key}
+                            className="flex w-[calc((100%-1rem)/3)] min-w-0 flex-col items-center gap-2 md:contents"
                           >
-                            {rail}
+                            {/* Positioned by wrappers so the parts' own animations keep `transform`. */}
+                            {bet && (
+                              <SeatBet seat={seat} angle={angle}>
+                                {bet}
+                              </SeatBet>
+                            )}
+                            <SeatSpot angle={angle}>{node}</SeatSpot>
+                            <div
+                              data-rail-seat={seat}
+                              // Phones: room for the up/down hung below the avatar (it's out of the flow).
+                              className="max-md:mb-7 md:absolute md:left-[var(--x)] md:top-[var(--y)] md:z-10 md:-translate-x-1/2 md:-translate-y-1/2"
+                              style={railPosition(angle)}
+                            >
+                              {rail}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     {/* Phones: after the players, over the controls. */}
                     {props.status && (

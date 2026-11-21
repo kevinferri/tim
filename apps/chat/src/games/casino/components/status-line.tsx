@@ -27,7 +27,8 @@ export function StatusLine({
     msLeft !== null && duration ? Math.min(1, msLeft / duration) : null;
 
   return (
-    <div className="flex h-14 w-80 items-center justify-center">
+    // Bottom-aligned, so the timer line sits STATUS_DOCK_GAP_PX above the dock like the dock's own rows.
+    <div className="flex h-14 w-80 items-end justify-center">
       {/* Keyed on the message so each new state fades in. */}
       <div
         key={typeof children === "string" ? children : undefined}

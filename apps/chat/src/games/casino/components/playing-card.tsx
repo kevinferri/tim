@@ -110,7 +110,7 @@ export function PlayingCard({
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-0 rounded-[4px] bg-emerald-950/30 transition-opacity duration-300",
+          "pointer-events-none absolute inset-0 rounded-[4px] bg-emerald-950/20 transition-opacity duration-300",
           !shaded && "opacity-0",
         )}
       />

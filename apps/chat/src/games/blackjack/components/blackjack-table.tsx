@@ -137,11 +137,6 @@ const DEAL_STAGGER_MS = 130;
 // A hit or double card waits a beat after the player's "Hit"/"Double" bubble, like a dealer reacting.
 // Visual only: the server's turn timer has already moved on.
 const HIT_PAUSE_MS = 160;
-// Printed on the felt like a real table's; the engine pays 3:2 and the dealer stands on soft 17.
-const FELT_RULES: [string[], string[]] = [
-  ["BLACKJACK", "PAYS 3 TO 2"],
-  ["DEALER MUST STAND", "ON ALL 17s"],
-];
 // How long your natural's payout holds the status before the turn status comes back.
 const NATURAL_RESULT_MS = 3_200;
 
@@ -255,7 +250,6 @@ export function BlackjackTable({
     backHref: `/circles/${circleId}`,
     backLabel: circleName,
     logoName: circleName,
-    feltRules: FELT_RULES,
     tableLimits: view
       ? [`MIN BET ${view.limits.minBet}`, `MAX BET ${view.limits.maxBet}`]
       : undefined,
@@ -883,7 +877,7 @@ function BetBuilder({
     <div className="flex flex-col items-center gap-4">
       <div className="flex items-start gap-4">
         {CHIPS.map((value, n) => (
-          <div key={value} className="flex flex-col items-center gap-3">
+          <div key={value} className="flex flex-col items-center gap-4">
             <ChipButton
               ref={(el) => {
                 chipRefs.current[n] = el;
