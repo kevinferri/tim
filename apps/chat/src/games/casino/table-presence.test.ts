@@ -6,6 +6,15 @@ import {
   type PresenceNotice,
 } from "./table-presence";
 
+/** Runs events from the start and returns the notice on the table after each one. */
+function shown(...events: PresenceEvent[]): PresenceNotice[] {
+  let state = initialPresence;
+  return events.map((event) => {
+    state = nextPresence(state, event).state;
+    return state.shown;
+  });
+}
+
 /** Runs events from the start and returns the notice each one produced. */
 function run(...events: PresenceEvent[]): PresenceNotice[] {
   let state = initialPresence;
@@ -39,6 +48,7 @@ const standing = (serverId: string): PresenceEvent => ({
 const disconnect: PresenceEvent = { type: "disconnect" };
 const closing: PresenceEvent = { type: "closing" };
 const stand: PresenceEvent = { type: "stand" };
+const expire: PresenceEvent = { type: "expire" };
 
 describe("table presence notices", () => {
   it("says the table restarted after a crash (new server, no closing)", () => {
@@ -47,10 +57,13 @@ describe("table presence notices", () => {
     );
   });
 
-  it("stays quiet after a deploy, which announced itself before closing", () => {
-    expect(
-      run(seated("s1"), closing, disconnect, standing("s2")).at(-1),
-    ).toBeNull();
+  it("says the table is restarting on a deploy, then that it restarted without your seat", () => {
+    expect(run(seated("s1"), closing, disconnect, standing("s2"))).toEqual([
+      null,
+      "restarting",
+      null,
+      "restarted",
+    ]);
   });
 
   it("says you were disconnected when only your connection dropped", () => {
@@ -128,6 +141,41 @@ describe("table presence notices", () => {
         disconnect,
         standing("s3"),
       ).at(-1),
+    ).toBe("restarted");
+  });
+});
+
+describe("the notice on the table", () => {
+  it("holds a seat-lost notice until it expires", () => {
+    expect(
+      shown(seated("s1"), disconnect, standing("s1"), standing("s1"), expire),
+    ).toEqual([null, null, "disconnected", "disconnected", null]);
+  });
+
+  it("clears a seat-lost notice once you sit again", () => {
+    expect(
+      shown(seated("s1"), disconnect, standing("s1"), seated("s1")).at(-1),
+    ).toBeNull();
+  });
+
+  it('holds "restarting" through expiry and the old server\'s last updates', () => {
+    expect(shown(standing("s1"), closing, expire, standing("s1"))).toEqual([
+      null,
+      "restarting",
+      "restarting",
+      "restarting",
+    ]);
+  });
+
+  it('clears "restarting" when the new server is up, if you had no seat to lose', () => {
+    expect(
+      shown(standing("s1"), closing, disconnect, standing("s2")).at(-1),
+    ).toBeNull();
+  });
+
+  it('swaps "restarting" for "restarted" when your seat didn\'t survive it', () => {
+    expect(
+      shown(seated("s1"), closing, disconnect, standing("s2")).at(-1),
     ).toBe("restarted");
   });
 });

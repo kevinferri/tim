@@ -23,7 +23,12 @@ export {
   cardOverlap,
   type CardSize,
 } from "./components/playing-card";
-export { useTable, type TableStatus } from "./use-table";
+export {
+  TABLE_NOTICES,
+  useTable,
+  type TableNotice,
+  type TableStatus,
+} from "./use-table";
 export {
   DealProvider,
   DealShoe,

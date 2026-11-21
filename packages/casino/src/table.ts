@@ -26,4 +26,5 @@ export type TableErrorPayload = TableRef & {
   code?: TableErrorCode;
 };
 /** Sent to every watcher when the server shuts down mid-game. */
-export type TableClosingPayload = TableRef & { message: string };
+/** The table is closing for a restart; the client says so on the felt, and works out any refund from its last snapshot. */
+export type TableClosingPayload = TableRef;

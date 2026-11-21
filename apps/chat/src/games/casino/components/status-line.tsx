@@ -27,7 +27,8 @@ export function StatusLine({
     msLeft !== null && duration ? Math.min(1, msLeft / duration) : null;
 
   return (
-    <div className="flex h-14 w-80 items-center justify-center">
+    // Only as tall as its content, so the timer line sits STATUS_DOCK_GAP_PX above the dock like the dock's own rows.
+    <div className="flex w-80 justify-center">
       {/* Keyed on the message so each new state fades in. */}
       <div
         key={typeof children === "string" ? children : undefined}
@@ -44,7 +45,7 @@ export function StatusLine({
           <p
             // The negative margin drops the spacing after the last letter, so the line ends with the text;
             // truncates rather than running off the felt, as a backstop for anything long.
-            className="-mr-[0.22em] truncate text-[15px] font-semibold uppercase tracking-[0.22em] text-white/85 [text-shadow:0_0_6px_rgba(255,255,255,0.2)]"
+            className="-mr-[0.22em] truncate text-[15px] font-semibold leading-tight uppercase tracking-[0.22em] text-white/85 [text-shadow:0_0_6px_rgba(255,255,255,0.2)]"
             aria-live="polite"
           >
             {children}

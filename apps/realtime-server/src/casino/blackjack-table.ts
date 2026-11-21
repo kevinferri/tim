@@ -145,14 +145,6 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     else this.enterWaiting();
   }
 
-  protected hasChipsInPlay() {
-    if (this.phase === "players" || this.phase === "dealer") return true;
-    return (
-      this.phase === "betting" &&
-      this.occupiedSeats().some(([, seat]) => seat.bet !== null)
-    );
-  }
-
   protected viewFor(): BlackjackTableView {
     const round = this.round;
     const turn = round?.turn ?? null;

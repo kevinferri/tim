@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BETTING_WINDOW_MS,
+  MAX_BET,
+  MIN_BET,
+  SEAT_COUNT,
   TURN_MS,
   type BlackjackPlayAction,
   type BlackjackSeatView,
@@ -24,6 +27,7 @@ import {
   PlayerAvatar,
   PlayerSpot,
   StatusLine,
+  TABLE_NOTICES,
   TableLayout,
   cardBox,
   handsFit,
@@ -42,7 +46,6 @@ import { useMessageSound } from "@/components/dashboard/use-message-sound";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { blackjackGame } from "./game";
 import { DealerBlackjackBadge, Hand, ScoredCards, TurnGlow } from "./hand";
 import { ActionBubble, JOINED, useActionBubbles } from "./action-bubbles";
@@ -50,6 +53,9 @@ import { useSettlement } from "./settlement";
 import { YourResult } from "./your-result";
 
 const CHIPS = [5, 25, 100];
+// The tallest dock, the bet builder: chips (36), gap, number keys (20), gap, Place bet / Clear (24).
+// Not measured: keep in step with BetBuilder's sizes, or the status and dock sit off-center.
+const BET_BUILDER_H_PX = 36 + 16 + 20 + 16 + 24;
 
 const PLAY_BUTTONS: {
   action: BlackjackPlayAction;
@@ -83,7 +89,10 @@ function useCardSize(
   view: BlackjackTableView | null,
   felt: Size | null,
 ): CardSize {
-  const seats = view?.seats.flatMap((s, i) => (s ? [i] : [])) ?? [];
+  // Before the first snapshot, sized for a full table: the real one then only grows the cards or leaves them.
+  const seats = view
+    ? view.seats.flatMap((s, i) => (s ? [i] : []))
+    : Array.from({ length: SEAT_COUNT }, (_, i) => i);
   const wide =
     typeof window !== "undefined" &&
     window.matchMedia("(min-width: 768px)").matches;
@@ -137,11 +146,6 @@ const DEAL_STAGGER_MS = 130;
 // A hit or double card waits a beat after the player's "Hit"/"Double" bubble, like a dealer reacting.
 // Visual only: the server's turn timer has already moved on.
 const HIT_PAUSE_MS = 160;
-// Printed on the felt like a real table's; the engine pays 3:2 and the dealer stands on soft 17.
-const FELT_RULES: [string[], string[]] = [
-  ["BLACKJACK", "PAYS 3 TO 2"],
-  ["DEALER MUST STAND", "ON ALL 17s"],
-];
 // How long your natural's payout holds the status before the turn status comes back.
 const NATURAL_RESULT_MS = 3_200;
 
@@ -162,10 +166,21 @@ export function BlackjackTable({
   circleName,
   circleImageUrl,
 }: Props) {
-  const { view, status, deadline, mySeat, sit, stand, act } = useTable<
-    BlackjackTableView,
-    BlackjackTableAction
-  >({ circleId, game: "blackjack" });
+  const {
+    view,
+    status,
+    deadline,
+    notice,
+    restartedFrom,
+    mySeat,
+    selfId,
+    sit,
+    stand,
+    act,
+  } = useTable<BlackjackTableView, BlackjackTableAction>({
+    circleId,
+    game: "blackjack",
+  });
   const [felt, setFelt] = useState<Size | null>(null);
   const cardSize = useCardSize(view, felt);
   // When a seat's second card lands in the opening deal (see dealDelay).
@@ -255,10 +270,11 @@ export function BlackjackTable({
     backHref: `/circles/${circleId}`,
     backLabel: circleName,
     logoName: circleName,
-    feltRules: FELT_RULES,
-    tableLimits: view
-      ? [`MIN BET ${view.limits.minBet}`, `MAX BET ${view.limits.maxBet}`]
-      : undefined,
+    // The house limits until the first snapshot, so the loading table's print matches.
+    tableLimits: [
+      `MIN BET ${view?.limits.minBet ?? MIN_BET}`,
+      `MAX BET ${view?.limits.maxBet ?? MAX_BET}`,
+    ],
     // Same look as the circle in the circles rail.
     backAvatar: (
       <Avatar className="size-5">
@@ -288,9 +304,23 @@ export function BlackjackTable({
   }
   if (!view) {
     return (
+      // The empty table, so the real one fills in where it stands.
       <TableLayout
         {...shell}
-        notice={<Skeleton className="h-full w-full rounded-3xl" />}
+        rack={<ChipRack />}
+        spotSize={cardSpot(cardSize, 2)}
+        onFeltSize={setFelt}
+        dealer={
+          <div
+            aria-hidden
+            className={cn(
+              cardBox(cardSize),
+              "rounded-md border-2 border-dashed border-white/20",
+            )}
+          />
+        }
+        status={<StatusLine>Joining table</StatusLine>}
+        dockReserveH={BET_BUILDER_H_PX}
       />
     );
   }
@@ -425,6 +455,7 @@ export function BlackjackTable({
             ) : (
               <StatusLine
                 leading={
+                  !notice &&
                   live &&
                   view.phase === "players" &&
                   view.turn &&
@@ -444,7 +475,11 @@ export function BlackjackTable({
                       : null
                 }
               >
-                {statusText(view, me, live)}
+                {notice
+                  ? hadChipsInPlay(restartedFrom, selfId)
+                    ? "Restarted, bet returned"
+                    : TABLE_NOTICES[notice]
+                  : statusText(view, me, live)}
               </StatusLine>
             )
           }
@@ -568,6 +603,8 @@ export function BlackjackTable({
             ];
           })}
           dock={live && controls}
+          dockReserveH={BET_BUILDER_H_PX}
+          holdSeats={playing}
         />
         {settlement.layer}
       </ChipLaunchProvider>
@@ -710,6 +747,14 @@ const splitDealDelay = (hand: number) => (cardIndex: number) =>
     : cardIndex === 1 && hand === 1
       ? HIT_PAUSE_MS + DEAL_MS
       : HIT_PAUSE_MS;
+
+/** Whether you had chips on the table in this snapshot: a cancelled round returns them. */
+function hadChipsInPlay(view: BlackjackTableView | null, selfId: string) {
+  const seat = view?.seats.find((s) => s?.occupant.userId === selfId);
+  if (!view || !seat) return false;
+  if (view.phase === "betting") return seat.bet !== null;
+  return (view.phase === "players" || view.phase === "dealer") && seat.inRound;
+}
 
 /** A natural's winnings (its payout less the bet). */
 function naturalNet(seat: BlackjackSeatView) {
@@ -883,7 +928,7 @@ function BetBuilder({
     <div className="flex flex-col items-center gap-4">
       <div className="flex items-start gap-4">
         {CHIPS.map((value, n) => (
-          <div key={value} className="flex flex-col items-center gap-3">
+          <div key={value} className="flex flex-col items-center gap-4">
             <ChipButton
               ref={(el) => {
                 chipRefs.current[n] = el;

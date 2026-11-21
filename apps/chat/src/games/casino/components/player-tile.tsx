@@ -65,7 +65,7 @@ export function PlayerAvatar({
       <div
         className={cn(
           "transition-opacity",
-          dimmedReason ? "opacity-50" : waiting && "opacity-75",
+          dimmedReason ? "opacity-50" : waiting && "opacity-85",
           joining && "animate-seat-snap motion-reduce:animate-none",
         )}
       >
@@ -133,7 +133,7 @@ export function PlayerSpot({
     <div
       className={cn(
         "flex w-full flex-col items-center gap-2 transition-opacity",
-        dimmed ? "opacity-50" : waiting && "opacity-75",
+        dimmed ? "opacity-50" : waiting && "opacity-85",
       )}
     >
       {children}
