@@ -102,6 +102,14 @@ News is off per circle until the circle's creator turns it on (`circles.newsEnab
 - File names: kebab-case; components: PascalCase named exports (default exports only where Next requires them, e.g. `page.tsx`, `layout.tsx`)
 - Merge Tailwind classes with `cn()` from `@/lib/utils`
 
+### UI and theming
+
+Every UI change has to look right in **both light and dark mode** (`darkMode: ["class"]`, toggled from the left rail). Check both before calling a UI change done; most issues only show up in light mode.
+
+- Use theme tokens (`bg-background`, `bg-sidebar`, `text-foreground`, `text-muted-foreground`, `border`), not raw colors. When a raw color is needed, pair it for both themes, e.g. `text-emerald-600 dark:text-emerald-400`.
+- In light mode, `bg-secondary`, `bg-muted`, and `bg-accent` are nearly the same color as `bg-sidebar`. They are fine for a passing hover, but a persistent state (selected, active) built from them disappears there. Use a tint of the foreground for those instead, e.g. `bg-foreground/[0.12]` for the selected tab in `src/components/topics/topic-side-bar.tsx`.
+- The `outline` Button variant fills with `bg-background`, which is white in light mode. Next to a transparent `Input` on the sidebar, add `bg-transparent` so the two match.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

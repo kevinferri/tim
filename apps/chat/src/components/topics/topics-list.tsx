@@ -55,6 +55,9 @@ import {
 } from "@radix-ui/react-icons";
 import { Prisma } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import { HEADER_ROW_HEIGHT } from "@/components/topics/header-row";
+import { GameRoomButton } from "@/games";
+import { NewsButton } from "@/components/news/news-button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipProvider } from "@radix-ui/react-tooltip";
 import { TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -69,8 +72,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
-import { GameRoomButton } from "@/games";
-import { NewsButton } from "@/components/news/news-button";
 
 type Props = {
   topics?: Topic[];
@@ -674,54 +675,52 @@ export const TopicsList = ({
     >
       <div
         className={cn(
-          `flex items-center p-3 border-b whitespace-nowrap text-ellipsis font-medium`,
+          `flex shrink-0 items-center px-3 border-b whitespace-nowrap text-ellipsis font-medium ${HEADER_ROW_HEIGHT}`,
           isMinimized ? "justify-center" : "",
         )}
       >
         {/* Minimized mode keeps settings as an icon in the bottom actions instead. */}
         {!isMinimized && (
-          <div className="flex min-w-0 items-center gap-1">
-            <span className="min-w-0 truncate">{circle.name}</span>
-            {/* Fixed width: UpsertCircleForm wraps its trigger in a w-full div. */}
-            <div className="flex w-6 shrink-0 items-center [&>div]:flex">
-              <UpsertCircleForm
-                existingCircle={circle ?? undefined}
-                trigger={
-                  <Button
-                    className="font-normal"
-                    size="iconSm"
-                    variant="ghost"
-                    aria-label="Circle settings"
-                    title="Circle settings"
-                  >
-                    <GearIcon />
-                  </Button>
-                }
-              />
-            </div>
+          <div className="flex min-w-0 flex-1 [&>div]:flex [&>div]:w-auto [&>div]:min-w-0">
+            <UpsertCircleForm
+              existingCircle={circle ?? undefined}
+              trigger={
+                <Button
+                  variant="ghost"
+                  className="-ml-2 h-8 min-w-0 justify-start px-2 text-base font-medium"
+                  title="Circle settings"
+                >
+                  <span className="min-w-0 truncate">{circle.name}</span>
+                </Button>
+              }
+            />
           </div>
         )}
-        <Button
-          className={cn("shrink-0 font-normal", isMinimized ? "" : "ml-auto")}
-          size="iconSm"
-          variant="ghost"
-          onClick={() => setIsMinimized(!isMinimized)}
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1",
+            isMinimized ? "" : "ml-auto",
+          )}
         >
-          {isMinimized ? <DoubleArrowRightIcon /> : <DoubleArrowLeftIcon />}
-        </Button>
+          {/* The topic side panel holds these at md and up; it's hidden below that. */}
+          {!isMinimized && (
+            <div className="flex items-center gap-1 md:hidden">
+              <GameRoomButton circleId={circle.id} placement="header" />
+              <NewsButton circleId={circle.id} placement="header" />
+            </div>
+          )}
+          <Button
+            className="shrink-0 font-normal"
+            size="iconSm"
+            variant="ghost"
+            onClick={() => setIsMinimized(!isMinimized)}
+          >
+            {isMinimized ? <DoubleArrowRightIcon /> : <DoubleArrowLeftIcon />}
+          </Button>
+        </div>
       </div>
 
-      {isMinimized ? (
-        <div className="flex justify-center px-3 pt-3">
-          <NewTopicButton
-            circleId={circle.id}
-            circleName={circle.name}
-            tooltipSide="right"
-            className="rounded-full"
-            variant="secondary"
-          />
-        </div>
-      ) : (
+      {!isMinimized && (
         <div className="flex items-center gap-2 px-3 pt-3">
           <div className="relative flex-1">
             <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
@@ -742,8 +741,19 @@ export const TopicsList = ({
           <NewTopicButton
             circleId={circle.id}
             circleName={circle.name}
-            tooltipSide="bottom"
-            variant="outline"
+            isMinimized={false}
+          />
+        </div>
+      )}
+
+      {isMinimized && (
+        <div className="flex flex-col items-center gap-3 px-3 pt-3">
+          <GameRoomButton circleId={circle.id} placement="rail" />
+          <NewsButton circleId={circle.id} placement="rail" />
+          <NewTopicButton
+            circleId={circle.id}
+            circleName={circle.name}
+            isMinimized
           />
         </div>
       )}
@@ -951,14 +961,8 @@ export const TopicsList = ({
           )}
         </div>
       </ScrollArea>
-      <div className="flex flex-col items-center mt-auto gap-3 p-3">
-        {circle.id && (
-          <GameRoomButton circleId={circle.id} isMinimized={isMinimized} />
-        )}
-        {circle.id && (
-          <NewsButton circleId={circle.id} isMinimized={isMinimized} />
-        )}
-        {isMinimized && (
+      {isMinimized && (
+        <div className="flex flex-col items-center mt-auto p-3">
           <UpsertCircleForm
             existingCircle={circle ?? undefined}
             trigger={
@@ -981,8 +985,8 @@ export const TopicsList = ({
               </TooltipProvider>
             }
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -990,15 +994,11 @@ export const TopicsList = ({
 function NewTopicButton({
   circleId,
   circleName,
-  tooltipSide,
-  variant,
-  className,
+  isMinimized,
 }: {
   circleId: string;
   circleName: string;
-  tooltipSide: "right" | "bottom";
-  variant: "secondary" | "outline";
-  className?: string;
+  isMinimized: boolean;
 }) {
   return (
     // UpsertTopicForm wraps its trigger in a w-full div; keep it icon-sized.
@@ -1011,15 +1011,21 @@ function NewTopicButton({
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
                 <Button
-                  variant={variant}
+                  variant="outline"
                   size="icon"
-                  className={cn("shrink-0", className)}
+                  className={cn(
+                    "shrink-0",
+                    // Transparent like the search input beside it (outline defaults to bg-background).
+                    isMinimized ? "rounded-full" : "bg-transparent",
+                  )}
                   aria-label="New topic"
                 >
                   <PlusIcon />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side={tooltipSide}>New topic</TooltipContent>
+              <TooltipContent side={isMinimized ? "right" : "bottom"}>
+                New topic
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         }

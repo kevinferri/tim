@@ -36,7 +36,8 @@ function Member(props: MemberProps) {
         props.isOnline ? "" : "text-muted-foreground"
       }`}
     >
-      <div className="relative">
+      {/* flex drops the inline button's line-box gap so the avatar centers on the text. */}
+      <div className="relative flex shrink-0">
         <UserAvatar
           id={props.id}
           topicId={topicId}
@@ -58,9 +59,11 @@ function Member(props: MemberProps) {
           </div>
         )}
       </div>
-      <div className="ml-auto">
-        <Badge variant="secondary">{props.isAdmin ? "Admin" : "Member"}</Badge>
-      </div>
+      {props.isAdmin && (
+        <div className="ml-auto">
+          <Badge variant="secondary">Admin</Badge>
+        </div>
+      )}
     </div>
   );
 }
@@ -99,7 +102,7 @@ export function CircleMembersList() {
 
   return (
     <div className="px-3 pb-3 flex flex-col gap-3">
-      <div className="text-sm flex items-center gap-1">
+      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Online ({sortedOnlineMembers.length})
       </div>
       {sortedOnlineMembers.map((user) => {
@@ -119,7 +122,9 @@ export function CircleMembersList() {
         );
       })}
 
-      <div className="text-sm mt-4">Offline ({offlineMembers.length})</div>
+      <div className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Offline ({offlineMembers.length})
+      </div>
       {offlineMembers.map((user) => {
         return (
           <Member

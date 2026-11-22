@@ -74,7 +74,7 @@ export function TopicActiveUsers(props: Props) {
 
         return (
           <UserAvatar
-            size="sm"
+            size="header"
             key={user.id}
             id={user.id}
             name={user.name}
