@@ -545,7 +545,7 @@ function SourcesView({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-8 px-5 py-6">
+        <div className="flex flex-col gap-8 p-3">
           <form
             className="flex flex-col gap-4"
             onSubmit={(e) => {
@@ -650,7 +650,7 @@ function SourcesView({
       </ScrollArea>
 
       {isAdmin && (
-        <section className="flex shrink-0 flex-col gap-3 border-t px-5 py-5 text-sm">
+        <section className="flex shrink-0 flex-col gap-3 border-t p-3 text-sm">
           <div className="flex flex-col gap-1.5">
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Turn off News
