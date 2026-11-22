@@ -46,28 +46,31 @@ export async function claimDueFeeds({
   return rows;
 }
 
-/** Makes a News-on circle's feeds due now, skipping any fetched in the last REFRESH_THROTTLE_MINUTES. */
+/**
+ * Makes a News-on circle's feeds due now, skipping any fetched in the last
+ * REFRESH_THROTTLE_MINUTES. Returns how many feeds are due because of it.
+ */
 export async function markCircleFeedsDue({
   circleId,
   now,
 }: {
   circleId: string;
   now: Date;
-}) {
+}): Promise<number> {
   const fetchedSince = new Date(
     now.getTime() - REFRESH_THROTTLE_MINUTES * 60_000,
   );
-  await pgClient.raw(
-    `UPDATE news_feeds SET "nextFetchAt" = ?
-     WHERE "nextFetchAt" > ?
-       AND ("lastFetchedAt" IS NULL OR "lastFetchedAt" < ?)
+  const { rowCount } = await pgClient.raw<{ rowCount: number | null }>(
+    `UPDATE news_feeds SET "nextFetchAt" = LEAST("nextFetchAt", ?)
+     WHERE ("lastFetchedAt" IS NULL OR "lastFetchedAt" < ?)
        AND id IN (
          SELECT s."feedId" FROM circle_news_sources s
          JOIN circles c ON c.id = s."circleId"
          WHERE s."circleId" = ? AND c."newsEnabled"
        )`,
-    [now, now, fetchedSince, circleId],
+    [now, fetchedSince, circleId],
   );
+  return rowCount ?? 0;
 }
 
 /** Circles with someone in one of their topics right now. */
@@ -132,10 +135,15 @@ export async function updateFeedAfterFetch(
   await pgClient<NewsFeed>("news_feeds").where({ id: feedId }).update(fields);
 }
 
+/** Circles that follow the feed and have News on, so they get its new stories. */
 export async function getCircleIdsForFeed(feedId: string): Promise<string[]> {
   const rows = await pgClient("circle_news_sources")
-    .select("circleId")
-    .where({ feedId });
+    .join("circles", "circles.id", "circle_news_sources.circleId")
+    .select("circle_news_sources.circleId")
+    .where({
+      "circle_news_sources.feedId": feedId,
+      "circles.newsEnabled": true,
+    });
   return rows.map((r: { circleId: string }) => r.circleId);
 }
 

@@ -63,9 +63,20 @@ describe("isEmojiOnly", () => {
 });
 
 describe("shortUrlLabel", () => {
-  it("drops the scheme, www, query and trailing slash", () => {
-    expect(shortUrlLabel("https://www.bbc.co.uk/news/?at_medium=RSS#top")).toBe(
-      "bbc.co.uk/news",
+  it("drops the scheme, www, tracking parameters and trailing slash", () => {
+    expect(
+      shortUrlLabel(
+        "https://www.bbc.co.uk/news/?at_medium=RSS&utm_source=x&fbclid=y#top",
+      ),
+    ).toBe("bbc.co.uk/news");
+  });
+
+  it("keeps query parameters that identify the page", () => {
+    expect(shortUrlLabel("https://www.youtube.com/watch?v=abc&si=share")).toBe(
+      "youtube.com/watch?v=abc",
+    );
+    expect(shortUrlLabel("https://www.youtube.com/watch?v=xyz")).not.toBe(
+      shortUrlLabel("https://www.youtube.com/watch?v=abc"),
     );
   });
 

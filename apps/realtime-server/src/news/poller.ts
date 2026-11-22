@@ -164,13 +164,16 @@ export function createNewsPoller({
     /** Someone opened the circle or its News panel: fetch its feeds now, at most once per feed per REFRESH_THROTTLE_MINUTES. */
     async refreshCircle(circleId: string) {
       if (stopping) return;
+      let due: number;
       try {
-        await markCircleFeedsDue({ circleId, now: now() });
-        refreshed.add(circleId);
+        due = await markCircleFeedsDue({ circleId, now: now() });
       } catch (err) {
         console.error("[news] refresh failed", err);
         return;
       }
+      // Topic joins (every reconnect re-joins) mostly land inside the throttle; skip the tick then.
+      if (due === 0) return;
+      refreshed.add(circleId);
       await runTick();
     },
     start() {

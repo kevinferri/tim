@@ -282,6 +282,65 @@ describe("news poller", () => {
     expect(emit.mock.calls[0][1].items).toHaveLength(1);
   });
 
+  it("pushes new stories only to following circles with News on", async () => {
+    const [on, off] = [
+      await createCircle(),
+      await createCircle({ newsEnabled: false }),
+    ];
+    await createFeed({ circleIds: [on, off] });
+    const { server, to } = mockServer();
+
+    await createNewsPoller({
+      server,
+      fetchFeed: vi.fn(async () => ok([item(1)])),
+      now: () => T0,
+    }).tick();
+
+    expect(to.mock.calls.map(([room]) => room)).toEqual([`circle::${on}`]);
+  });
+
+  it("doesn't run a tick for a refresh inside the throttle", async () => {
+    const circleId = await createCircle();
+    const feedId = await createFeed({
+      circleIds: [circleId],
+      nextFetchAt: new Date(T0.getTime() + 50 * 60_000),
+    });
+    await pgClient("news_feeds")
+      .where({ id: feedId })
+      .update({ lastFetchedAt: new Date(T0.getTime() - 5 * 60_000) });
+    const activeCircleIds = vi.fn(async () => [circleId]);
+    const fetchFeed = vi.fn();
+
+    await createNewsPoller({
+      server: mockServer().server,
+      fetchFeed,
+      now: () => T0,
+      activeCircleIds,
+    }).refreshCircle(circleId);
+
+    expect(activeCircleIds).not.toHaveBeenCalled();
+    expect(fetchFeed).not.toHaveBeenCalled();
+  });
+
+  it("fetches a feed that was already due when a refresh asks for it", async () => {
+    const circleId = await createCircle();
+    await createFeed({
+      circleIds: [circleId],
+      nextFetchAt: new Date(T0.getTime() - 60 * 60_000),
+    });
+    const fetchFeed = vi.fn(async () => ({ status: "not-modified" }) as const);
+
+    // Nobody has a topic open, so only the refresh gets it polled.
+    await createNewsPoller({
+      server: mockServer().server,
+      fetchFeed,
+      now: () => T0,
+      activeCircleIds: async () => [],
+    }).refreshCircle(circleId);
+
+    expect(fetchFeed).toHaveBeenCalledTimes(1);
+  });
+
   it("skips undated and future-dated stories", async () => {
     const circleId = await createCircle();
     const feedId = await createFeed({ circleIds: [circleId] });
