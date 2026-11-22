@@ -30,10 +30,11 @@ function GamesGlyph({ className }: { className?: string }) {
       className={className}
       aria-hidden
     >
-      <rect x="2" y="6" width="20" height="12" rx="3" />
-      <path d="M6 12h4M8 10v4" />
-      <circle cx="16.5" cy="10.5" r="0.75" fill="currentColor" stroke="none" />
-      <circle cx="18.5" cy="13.5" r="0.75" fill="currentColor" stroke="none" />
+      {/* 18×13 of the 24 grid, balanced against the News page. */}
+      <rect x="3" y="5.5" width="18" height="13" rx="3" />
+      <path d="M6.5 12h4M8.5 10v4" />
+      <circle cx="15.5" cy="10.5" r="0.75" fill="currentColor" stroke="none" />
+      <circle cx="17.5" cy="13.5" r="0.75" fill="currentColor" stroke="none" />
     </svg>
   );
 }

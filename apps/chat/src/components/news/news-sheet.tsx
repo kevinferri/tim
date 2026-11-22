@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatFeedTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
+import { HEADER_ROW_HEIGHT } from "@/components/topics/header-row";
 import {
   MAX_TOPIC_LENGTH,
   cleanTopic,
@@ -98,7 +99,12 @@ export function NewsSheet({ circleId }: { circleId: string }) {
       >
         <SheetTitle className="sr-only">News</SheetTitle>
         {/* Fixed height and a fixed-size leading slot, so switching views doesn't shift the header. */}
-        <div className="flex h-12 shrink-0 items-center gap-1.5 border-b px-3">
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 border-b px-3",
+            HEADER_ROW_HEIGHT,
+          )}
+        >
           <div className="flex size-6 shrink-0 items-center justify-center">
             {view !== "feed" ? (
               <Button

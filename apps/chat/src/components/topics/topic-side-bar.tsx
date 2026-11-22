@@ -31,7 +31,7 @@ type Tab = "highlights" | "media" | "members" | "notifications";
 
 // Each nav button fills its whole slot so the click target is the full cell, not just the icon.
 const NAV_BUTTON =
-  "h-full w-auto flex-1 rounded-none p-0 text-foreground hover:bg-transparent active:scale-100";
+  "h-full w-auto flex-1 rounded-none p-0 text-muted-foreground hover:bg-transparent hover:text-foreground active:scale-100";
 
 const TAB_LABELS: Record<Tab, string> = {
   members: "Circle members",
@@ -123,18 +123,13 @@ export function TopicSideBar() {
       aria-label={TAB_LABELS[tab]}
       className={cn(
         NAV_BUTTON,
-        "group data-[state=active]:bg-transparent data-[state=active]:shadow-none",
+        "group relative",
+        "data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none",
+        // The selected tab's underline sits on the row's bottom border, tying it to the panel below.
+        "after:absolute after:inset-x-2 after:-bottom-px after:h-px after:rounded-full data-[state=active]:after:bg-foreground",
       )}
     >
-      <span
-        className={cn(
-          NAV_ICON_CIRCLE,
-          // Not bg-accent: in light mode it nearly matches bg-sidebar.
-          "group-data-[state=active]:bg-foreground/[0.12]",
-        )}
-      >
-        {tabMap[tab].icon}
-      </span>
+      <span className={NAV_ICON_CIRCLE}>{tabMap[tab].icon}</span>
     </TabsTrigger>
   );
 
@@ -186,5 +181,8 @@ export function TopicSideBar() {
 }
 
 function RowDivider() {
-  return <div className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />;
+  // A foreground tint, not bg-border, which nearly vanishes beside the icon circles.
+  return (
+    <div className="mx-0.5 h-5 w-px shrink-0 bg-foreground/20" aria-hidden />
+  );
 }
