@@ -29,9 +29,9 @@ import { cn } from "@/lib/utils";
 
 type Tab = "highlights" | "media" | "members" | "notifications";
 
-// Each nav button fills its whole slot so the click target is the full cell, not just the icon.
+// Fills its whole slot as the click target. Only the icon presses: a button transform makes the underline jitter.
 const NAV_BUTTON =
-  "h-full w-auto flex-1 rounded-none p-0 text-muted-foreground hover:bg-transparent hover:text-foreground active:scale-100";
+  "h-full w-auto flex-1 rounded-none p-0 text-muted-foreground hover:bg-transparent hover:text-foreground active:transform-none";
 
 const TAB_LABELS: Record<Tab, string> = {
   members: "Circle members",
