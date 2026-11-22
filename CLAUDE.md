@@ -54,6 +54,12 @@ CI (`.github/workflows/ci.yml`) runs on every PR: `pnpm format:check`, `pnpm tes
 - The tsconfigs differ on purpose and shouldn't be unified: `apps/chat` is strict ESM with DOM libs (Next compiles it and emits nothing), `apps/realtime-server` is non-strict CommonJS and emits `dist/`, and each package has its own.
 - `.env.local` files are per app (`apps/chat/.env.local`, `apps/realtime-server/.env.local`) and gitignored.
 
+## Pull requests
+
+- Keep PRs small: one concern each, reviewable in one sitting. Don't bundle refactors, renames, or drive-by fixes with a feature.
+- If a change is getting big (roughly 400+ changed lines outside generated files and lockfiles, or it spans unrelated areas), split it before opening the PR: ship the first self-contained slice, and file Linear issues (team Tim) for the remaining slices, linked from the PR description.
+- Follow `.github/pull_request_template.md`: open with `Fixes TIM-<n>.` and a summary, and fill in **Proof**: how you know it works (screenshots or a recording for UI, test output, or the steps you ran and what you saw). "CI passes" alone isn't proof.
+
 ## Deployment
 
 Both apps are components (`tim-fe`, `tim-ws`) of one DigitalOcean App Platform app on one domain, so a push to `main` produces one coordinated deployment of both. Each component builds from its own Dockerfile (`apps/chat/Dockerfile`, `apps/realtime-server/Dockerfile`) with the repo root as build context, since buildpacks can't see the root lockfile from an app subdirectory.
