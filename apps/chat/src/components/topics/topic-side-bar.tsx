@@ -169,8 +169,8 @@ export function TopicSideBar() {
         </div>
 
         <div className="flex flex-1 flex-col overflow-y-hidden basis-full">
-          {/* Same title style as the Game room and News drawers. */}
-          <div className="p-3 text-center font-semibold">
+          {/* Same title style as the Game room and News drawers. No bottom padding: each list brings its own 12px top spacing. */}
+          <div className="px-3 pt-3 text-center font-semibold">
             {tabMap[activeTab].header}
           </div>
           <ScrollArea>{tabMap[activeTab].node}</ScrollArea>
