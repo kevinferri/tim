@@ -543,133 +543,137 @@ function SourcesView({
   }
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="flex flex-col gap-6 p-3">
-        <form
-          className="flex flex-col gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-        >
-          <label htmlFor="news-search" className="text-sm font-medium">
-            Add a source
-          </label>
-          <p className="-mt-1 text-xs text-muted-foreground">
-            Search for a site, or type a team, person, company, or subject to
-            follow it as a topic via Google News.
-          </p>
-          <Input
-            id="news-search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="The Verge, Knicks, AI…"
-            autoComplete="off"
-            maxLength={MAX_TOPIC_LENGTH}
-          />
-          <div className="flex flex-col gap-1.5">
-            {!topic && suggestions.length > 0 && (
-              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Popular
-              </h3>
-            )}
-            {suggestions.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {suggestions.map((p) => (
-                  <Button
-                    key={p.url}
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    className="gap-1"
-                    disabled={add.isPending}
-                    onClick={() => add.mutate({ preset: p.url })}
-                  >
-                    <PlusIcon />
-                    {p.name}
-                  </Button>
-                ))}
-              </div>
-            )}
-            {topic && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="justify-start gap-1.5 self-start"
-                disabled={add.isPending}
-                onClick={() => add.mutate({ topic })}
-              >
-                <PlusIcon />
-                <span className="truncate">
-                  Follow &ldquo;{topic}&rdquo; as a topic
-                </span>
-              </Button>
-            )}
-          </div>
-        </form>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-8 px-5 py-6">
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
+            }}
+          >
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="news-search" className="text-sm font-medium">
+                Add a source
+              </label>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Search for a site, or type a team, person, company, or subject
+                to follow it as a topic via Google News.
+              </p>
+            </div>
+            <Input
+              id="news-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="The Verge, Knicks, AI…"
+              autoComplete="off"
+              maxLength={MAX_TOPIC_LENGTH}
+            />
+            <div className="flex flex-col gap-2.5">
+              {!topic && suggestions.length > 0 && (
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Popular
+                </h3>
+              )}
+              {suggestions.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((p) => (
+                    <Button
+                      key={p.url}
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      className="gap-1"
+                      disabled={add.isPending}
+                      onClick={() => add.mutate({ preset: p.url })}
+                    >
+                      <PlusIcon />
+                      {p.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {topic && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="justify-start gap-1.5 self-start"
+                  disabled={add.isPending}
+                  onClick={() => add.mutate({ topic })}
+                >
+                  <PlusIcon />
+                  <span className="truncate">
+                    Follow &ldquo;{topic}&rdquo; as a topic
+                  </span>
+                </Button>
+              )}
+            </div>
+          </form>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-        {sources.length > 0 && (
-          <section className="flex flex-col gap-1">
-            <h3 className="mb-1 text-sm font-medium">Following</h3>
-            {sources.map((s) => (
-              <div
-                key={s.feedId}
-                className="flex items-center gap-2 rounded-md px-1 py-1.5"
-              >
-                <SourceMark source={s} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm">{s.title}</div>
-                  {s.siteUrl && (
-                    <div className="truncate text-xs text-muted-foreground">
-                      {new URL(s.siteUrl).hostname}
-                    </div>
+          {sources.length > 0 && (
+            <section className="flex flex-col gap-1">
+              <h3 className="mb-2 text-sm font-medium">Following</h3>
+              {sources.map((s) => (
+                <div
+                  key={s.feedId}
+                  className="flex items-center gap-3 rounded-md py-2"
+                >
+                  <SourceMark source={s} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm">{s.title}</div>
+                    {s.siteUrl && (
+                      <div className="truncate text-xs text-muted-foreground">
+                        {new URL(s.siteUrl).hostname}
+                      </div>
+                    )}
+                  </div>
+                  {s.canRemove && (
+                    <Button
+                      variant="ghost"
+                      size="iconSm"
+                      aria-label={`Remove ${s.title}`}
+                      disabled={remove.isPending}
+                      onClick={() => remove.mutate(s.feedId)}
+                    >
+                      <TrashIcon />
+                    </Button>
                   )}
                 </div>
-                {s.canRemove && (
-                  <Button
-                    variant="ghost"
-                    size="iconSm"
-                    aria-label={`Remove ${s.title}`}
-                    disabled={remove.isPending}
-                    onClick={() => remove.mutate(s.feedId)}
-                  >
-                    <TrashIcon />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </section>
-        )}
+              ))}
+            </section>
+          )}
+        </div>
+      </ScrollArea>
 
-        {isAdmin && (
-          <section className="flex flex-col gap-2 border-t pt-4 text-sm">
+      {isAdmin && (
+        <section className="flex shrink-0 flex-col gap-3 border-t px-5 py-5 text-sm">
+          <div className="flex flex-col gap-1.5">
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Turn off News
             </h3>
-            <p className="text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Stops new stories for everyone in this circle. Sources are kept,
               and you can turn it back on anytime.
             </p>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="self-start"
-              disabled={setEnabled.isPending}
-              onClick={() =>
-                setEnabled.mutate(false, { onSuccess: onTurnedOff })
-              }
-            >
-              Turn off News for this circle
-            </Button>
-            {setEnabled.error && (
-              <p className="text-destructive">{setEnabled.error.message}</p>
-            )}
-          </section>
-        )}
-      </div>
-    </ScrollArea>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="self-start"
+            disabled={setEnabled.isPending}
+            onClick={() => setEnabled.mutate(false, { onSuccess: onTurnedOff })}
+          >
+            Turn off News for this circle
+          </Button>
+          {setEnabled.error && (
+            <p className="text-destructive">{setEnabled.error.message}</p>
+          )}
+        </section>
+      )}
+    </div>
   );
 }
