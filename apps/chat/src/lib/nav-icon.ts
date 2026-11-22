@@ -5,4 +5,5 @@ import { GROUP_PRESS } from "./press";
 export const HEADER_CIRCLE_SIZE = "h-9 w-9";
 
 // The circle inside an icon nav button (its parent has `group`), styled like the left rail's ghost icon buttons; presses down like the circle avatars.
-export const NAV_ICON_CIRCLE = `flex ${HEADER_CIRCLE_SIZE} items-center justify-center rounded-full [&_svg]:h-4 [&_svg]:w-4 transition group-hover:bg-accent group-hover:text-accent-foreground ${GROUP_PRESS}`;
+// will-change: slots sit at fractional x, so a layer promoted only on press snaps the icon a subpixel.
+export const NAV_ICON_CIRCLE = `flex will-change-transform ${HEADER_CIRCLE_SIZE} items-center justify-center rounded-full [&_svg]:h-4 [&_svg]:w-4 transition group-hover:bg-accent group-hover:text-accent-foreground ${GROUP_PRESS}`;
