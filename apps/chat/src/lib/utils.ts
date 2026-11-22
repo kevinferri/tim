@@ -60,6 +60,13 @@ export function shortUrlLabel(url: string, max = 40) {
     return url;
   }
   const host = parsed.hostname.replace(/^www\./, "");
+  // News topic links are opaque Google redirects; name them once their stored preview has expired.
+  if (
+    host === "news.google.com" &&
+    /^\/(rss\/)?articles\//.test(parsed.pathname)
+  ) {
+    return "Google News story";
+  }
   let path = parsed.pathname;
   try {
     path = decodeURIComponent(path);

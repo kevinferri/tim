@@ -71,10 +71,22 @@ describe("shortUrlLabel", () => {
 
   it("cuts long links with an ellipsis", () => {
     const label = shortUrlLabel(
-      "https://news.google.com/rss/articles/CBMiiwFBVV95cUxOdU9UNW1Wd053ajBlNE5WSEl1VUQ2QzNVODdr?oc=5",
+      "https://example.com/articles/an-unusually-long-headline-slug-for-a-story",
     );
-    expect(label).toBe("news.google.com/rss/articles/CBMiiwFBVV…");
+    expect(label).toBe("example.com/articles/an-unusually-long-…");
     expect(label.length).toBe(40);
+  });
+
+  it("names Google News story links instead of showing their opaque path", () => {
+    for (const url of [
+      "https://news.google.com/rss/articles/CBMiiwFBVV95cUxOdU9UNW1Wd053ajBlNE5WSEl1VUQ2QzNVODdr?oc=5",
+      "https://news.google.com/articles/CBMiiwFBVV95cUxO",
+    ]) {
+      expect(shortUrlLabel(url)).toBe("Google News story");
+    }
+    expect(shortUrlLabel("https://news.google.com/topics/abc")).toBe(
+      "news.google.com/topics/abc",
+    );
   });
 
   it("keeps a path with a bare % instead of throwing", () => {

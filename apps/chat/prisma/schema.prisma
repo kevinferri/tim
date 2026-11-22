@@ -450,7 +450,7 @@ model NewsItem {
   link        String
   summary     String?
   imageUrl    String?
-  // Deleted 24 hours after this.
+  // Deleted STORY_LIFETIME_HOURS (in @tim/news) after this.
   publishedAt DateTime
 
   feed NewsFeed @relation("itemsInFeed", fields: [feedId], references: [id], onDelete: Cascade)

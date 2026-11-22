@@ -266,11 +266,11 @@ describe("news poller", () => {
     expect(fetchFeed.mock.calls[0][0]).toContain(stale);
   });
 
-  it("never stores stories older than 24 hours", async () => {
+  it("never stores stories past their 72-hour lifetime", async () => {
     const circleId = await createCircle();
     const feedId = await createFeed({ circleIds: [circleId] });
     const { server, emit } = mockServer();
-    const old = item(99, new Date(T0.getTime() - 25 * 3_600_000));
+    const old = item(99, new Date(T0.getTime() - 73 * 3_600_000));
     const fetchFeed = vi.fn(async () => ok([item(1), old]));
 
     await createNewsPoller({ server, fetchFeed, now: () => T0 }).tick();
@@ -301,7 +301,7 @@ describe("news poller", () => {
     expect(guids).toEqual(["guid-3"]);
   });
 
-  it("deletes a story after 24 hours and never stores it again", async () => {
+  it("deletes a story after 72 hours and never stores it again", async () => {
     const circleId = await createCircle();
     await createFeed({ circleIds: [circleId] });
     const { server, emit } = mockServer();
@@ -310,8 +310,8 @@ describe("news poller", () => {
     const poller = createNewsPoller({ server, fetchFeed, now: () => now });
 
     await poller.tick();
-    // The feed still lists it a day later.
-    now = new Date(T0.getTime() + 25 * 3_600_000);
+    // The feed still lists it three days later.
+    now = new Date(T0.getTime() + 73 * 3_600_000);
     await poller.tick();
 
     expect(fetchFeed).toHaveBeenCalledTimes(2);

@@ -193,9 +193,9 @@ test("publicLookup refuses names that resolve to private addresses", async () =>
   }
 });
 
-test("stories live 24 hours", () => {
+test("stories live 72 hours", () => {
   const now = new Date("2026-11-19T12:00:00Z");
-  assert.equal(storyCutoff(now).toISOString(), "2026-11-18T12:00:00.000Z");
+  assert.equal(storyCutoff(now).toISOString(), "2026-11-16T12:00:00.000Z");
 });
 
 test("selectFreshItems keeps the newest 50 unexpired, dated, deduped stories", () => {

@@ -25,7 +25,7 @@ const CLAIM_BATCH = 20;
 const CONCURRENCY = 10;
 // A tick keeps claiming batches until nothing is due, but hands over to the next tick before overlapping it.
 const TICK_BUDGET_MS = 25_000;
-// Deletion keeps up with the 24-hour story lifetime; the feed API also hides expired stories on read.
+// Deletion keeps up with the story lifetime; the feed API also hides expired stories on read.
 const PRUNE_EVERY_MS = 15 * 60_000;
 
 export type NewsPollerDeps = {

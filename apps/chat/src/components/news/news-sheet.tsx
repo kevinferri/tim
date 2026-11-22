@@ -271,7 +271,7 @@ function FeedList({
   if (items.length === 0) {
     return (
       <p className="p-6 text-center text-sm text-muted-foreground">
-        Nothing from the last 24 hours yet. New stories show up here as
+        Nothing from the last 3 days yet. New stories show up here as
         they&apos;re published.
       </p>
     );

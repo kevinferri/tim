@@ -10,7 +10,7 @@ export const POLL_INTERVAL_MINUTES = 60;
 export const REFRESH_THROTTLE_MINUTES = 15;
 
 /** How long the feed hosts a story, counted from its publish date. */
-export const STORY_LIFETIME_HOURS = 24;
+export const STORY_LIFETIME_HOURS = 72;
 
 /** Stories published before this have expired: they're hidden, deleted, and never stored. */
 export function storyCutoff(now: Date): Date {

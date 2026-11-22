@@ -266,7 +266,7 @@ describe("getCircleNews", () => {
     expect(res.newestCreatedAt).toBe(late.createdAt.toISOString());
   });
 
-  it("only lists stories from the last 24 hours", async () => {
+  it("only lists stories from the last 72 hours", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
     const source = await follow({
@@ -281,7 +281,7 @@ describe("getCircleNews", () => {
         guid: "yesterday",
         title: "Yesterday",
         link: "https://example.com/yesterday",
-        publishedAt: new Date(Date.now() - 25 * 3_600_000),
+        publishedAt: new Date(Date.now() - 73 * 3_600_000),
       },
     });
 

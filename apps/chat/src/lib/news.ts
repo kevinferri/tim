@@ -117,7 +117,7 @@ export async function getCircleNews({
 
   const live = {
     feedId: { in: feedIds },
-    // The feed hosts a story for 24 hours; this hides it on time even before the poller deletes it.
+    // Hides a story on time at the end of its lifetime, even before the poller deletes it.
     publishedAt: { gte: storyCutoff(new Date()) },
   };
   const after = cursor ? decodeCursor(cursor) : null;

@@ -140,7 +140,7 @@ export async function getCircleIdsForFeed(feedId: string): Promise<string[]> {
 }
 
 /**
- * The feed hosts a story for 24 hours, then it's deleted. It can't come back
+ * A story is deleted at the end of its lifetime (STORY_LIFETIME_HOURS). It can't come back
  * as new, because nothing published before the cutoff is ever stored. Feeds
  * nobody follows are kept (they're tiny) and simply not polled.
  */
