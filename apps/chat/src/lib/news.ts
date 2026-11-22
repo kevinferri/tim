@@ -1,17 +1,15 @@
-import {
-  FeedError,
-  nextFetchDelayMinutes,
-  resolveFeed,
-  selectFreshItems,
-  storyCutoff,
-  toNewsItemDto,
-  type NewsItemDto,
-  type ResolvedFeed,
-} from "@tim/news";
+import { storyCutoff, toNewsItemDto, type NewsItemDto } from "@tim/news/shared";
 import { Prisma } from "@prisma/client";
 import { getDomain } from "tldts";
 import { prismaClient } from "@/lib/prisma/client";
 import { ApiError } from "@/lib/api";
+import {
+  NEWS_PRESETS,
+  cleanTopic,
+  googleNewsTopicUrl,
+  topicTitle,
+  type NewsSourceRequest,
+} from "@/lib/news-sources";
 
 export const MAX_SOURCES_PER_CIRCLE = 20;
 const PAGE_SIZE = 30;
@@ -29,6 +27,10 @@ export type NewsSourceDto = {
 };
 
 export type NewsResponse = {
+  /** Off by default; while off, nothing is listed or polled. */
+  enabled: boolean;
+  /** The circle's creator, the only one who can turn News on or off. */
+  isAdmin: boolean;
   sources: NewsSourceDto[];
   items: NewsItemDto[];
   /** Pass back as `cursor` for the next (older) page; null when there is none. */
@@ -68,9 +70,14 @@ export async function getCircleNews({
 }): Promise<NewsResponse> {
   const circle = await prismaClient.circle.findUnique({
     where: { id: circleId },
-    select: { userId: true },
+    select: { userId: true, newsEnabled: true },
   });
   const isCreator = circle?.userId === userId;
+  const enabled = circle?.newsEnabled ?? false;
+  const empty = { items: [], nextCursor: null, newestCreatedAt: null };
+  if (!enabled) {
+    return { enabled, isAdmin: isCreator, sources: [], ...empty };
+  }
   const sourceRows = await prismaClient.circleNewsSource.findMany({
     where: { circleId },
     orderBy: { createdAt: "asc" },
@@ -105,14 +112,13 @@ export async function getCircleNews({
       : []
     : sources.map((s) => s.feedId);
   if (feedIds.length === 0) {
-    return { sources, items: [], nextCursor: null, newestCreatedAt: null };
+    return { enabled, isAdmin: isCreator, sources, ...empty };
   }
 
   const live = {
     feedId: { in: feedIds },
-    // The feed hosts a story for 24 hours; this hides it on time even before the poller erases it.
+    // The feed hosts a story for 24 hours; this hides it on time even before the poller deletes it.
     publishedAt: { gte: storyCutoff(new Date()) },
-    expiredAt: null,
   };
   const after = cursor ? decodeCursor(cursor) : null;
   const [rows, newest] = await Promise.all([
@@ -133,6 +139,8 @@ export async function getCircleNews({
   ]);
   const page = rows.slice(0, PAGE_SIZE);
   return {
+    enabled,
+    isAdmin: isCreator,
     sources,
     items: page.map(toNewsItemDto),
     nextCursor:
@@ -141,28 +149,47 @@ export async function getCircleNews({
   };
 }
 
-const FEED_ERROR_MESSAGES: Record<FeedError["code"], string> = {
-  "invalid-url": "That doesn't look like a web address.",
-  blocked: "That address can't be used as a news source.",
-  "fetch-failed": "Couldn't reach that site. Check the address and try again.",
-  "too-large": "That feed is too large to read.",
-  "not-a-feed":
-    "Couldn't find a news feed at that address. Try the site's RSS feed URL.",
-};
+/** Only presets and Google News topics can be followed, so the server builds every feed URL itself. */
+export function feedForSourceRequest(request: NewsSourceRequest): {
+  url: string;
+  title: string;
+} {
+  if ("preset" in request) {
+    const preset = NEWS_PRESETS.find((p) => p.url === request.preset);
+    if (!preset) throw new ApiError(400, "That isn't one of the sources.");
+    return { url: preset.url, title: preset.name };
+  }
+  if (!cleanTopic(request.topic)) throw new ApiError(400, "Enter a topic.");
+  return {
+    url: googleNewsTopicUrl(request.topic),
+    title: topicTitle(request.topic),
+  };
+}
 
-/** Resolves what the user pasted to a feed, stores it (once across all circles), and follows it from this circle. */
+/**
+ * Follows a feed from this circle, creating it (once across all circles) if
+ * it's new. Nothing is fetched here: the browser asks the realtime server to
+ * refresh the circle next, and its poller stores and pushes the stories.
+ */
 export async function addCircleNewsSource({
   circleId,
   userId,
   url,
+  title,
 }: {
   circleId: string;
   userId: string;
   url: string;
+  title: string;
 }): Promise<NewsSourceDto> {
-  const count = await prismaClient.circleNewsSource.count({
-    where: { circleId },
-  });
+  const [circle, count] = await Promise.all([
+    prismaClient.circle.findUnique({
+      where: { id: circleId },
+      select: { newsEnabled: true },
+    }),
+    prismaClient.circleNewsSource.count({ where: { circleId } }),
+  ]);
+  if (!circle?.newsEnabled) throw new ApiError(400, "News is off.");
   if (count >= MAX_SOURCES_PER_CIRCLE) {
     throw new ApiError(
       400,
@@ -170,124 +197,52 @@ export async function addCircleNewsSource({
     );
   }
 
-  let resolved;
+  // Feeds are never deleted, so the feed can be found or created first, then followed.
+  const feed = await prismaClient.newsFeed.upsert({
+    where: { url },
+    create: { url, title },
+    update: {},
+  });
   try {
-    resolved = await resolveFeed(url);
+    const source = await prismaClient.circleNewsSource.create({
+      data: { circleId, feedId: feed.id, addedById: userId },
+    });
+    return {
+      feedId: feed.id,
+      url: feed.url,
+      title: feed.title,
+      siteUrl: feed.siteUrl,
+      imageUrl: feed.imageUrl,
+      addedById: source.addedById,
+      createdAt: source.createdAt.toISOString(),
+      canRemove: true,
+    };
   } catch (err) {
-    if (err instanceof FeedError)
-      throw new ApiError(400, FEED_ERROR_MESSAGES[err.code]);
-    throw err;
-  }
-
-  // The poller's hourly prune deletes feeds nobody follows, and could do so between
-  // finding a feed and following it; that shows up as one of these, so try again.
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await followFeed({ circleId, userId, resolved, now: new Date() });
-    } catch (err) {
-      if (!(err instanceof Prisma.PrismaClientKnownRequestError)) throw err;
-      const target = String(err.meta?.target ?? "");
-      if (err.code === "P2002" && !target.includes("url")) {
-        throw new ApiError(409, "This circle already follows that source.");
-      }
-      const raced =
-        err.code === "P2003" || // the feed was pruned before the follow was written
-        err.code === "P2025" || // ...or before its backoff reset
-        err.code === "P2002"; // another request created the same feed first
-      if (!raced || attempt >= 2) throw err;
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      throw new ApiError(409, "This circle already follows that source.");
     }
+    throw err;
   }
 }
 
-async function followFeed({
+/** Caller must have checked the user is the circle's creator. Turning News off keeps its sources. */
+export async function setNewsEnabled({
   circleId,
   userId,
-  resolved,
-  now,
+  enabled,
 }: {
   circleId: string;
   userId: string;
-  resolved: ResolvedFeed;
-  now: Date;
-}): Promise<NewsSourceDto> {
-  const { feed: parsed } = resolved;
-  const toDto = (
-    feed: {
-      id: string;
-      url: string;
-      title: string;
-      siteUrl: string | null;
-      imageUrl: string | null;
-    },
-    source: { addedById: string | null; createdAt: Date },
-  ): NewsSourceDto => ({
-    feedId: feed.id,
-    url: feed.url,
-    title: feed.title,
-    siteUrl: feed.siteUrl,
-    imageUrl: feed.imageUrl,
-    addedById: source.addedById,
-    createdAt: source.createdAt.toISOString(),
-    canRemove: true,
+  enabled: boolean;
+}) {
+  const { count } = await prismaClient.circle.updateMany({
+    where: { id: circleId, userId },
+    data: { newsEnabled: enabled },
   });
-
-  const existing = await prismaClient.newsFeed.findUnique({
-    where: { url: resolved.url },
-  });
-  if (existing) {
-    // Stories stay with the poller, so its new ones reach every following circle live.
-    // The feed was just fetched successfully, so any failure backoff left from earlier is stale.
-    const [, source] = await prismaClient.$transaction([
-      prismaClient.newsFeed.update({
-        where: { id: existing.id },
-        data: {
-          failureCount: 0,
-          nextFetchAt: existing.nextFetchAt > now ? now : existing.nextFetchAt,
-        },
-      }),
-      prismaClient.circleNewsSource.create({
-        data: { circleId, feedId: existing.id, addedById: userId },
-      }),
-    ]);
-    return toDto(existing, source);
-  }
-
-  // A brand-new feed is created, seeded, and followed in one write.
-  const feed = await prismaClient.newsFeed.create({
-    data: {
-      url: resolved.url,
-      title: parsed.title || new URL(resolved.url).hostname,
-      siteUrl: parsed.siteUrl,
-      imageUrl: parsed.imageUrl,
-      ttlMinutes: parsed.ttlMinutes,
-      etag: resolved.etag,
-      lastModified: resolved.lastModified,
-      lastFetchedAt: now,
-      nextFetchAt: new Date(
-        now.getTime() +
-          nextFetchDelayMinutes({
-            ttlMinutes: parsed.ttlMinutes,
-            failureCount: 0,
-          }) *
-            60_000,
-      ),
-      items: {
-        create: selectFreshItems(parsed.items, now).map((item) => ({
-          guid: item.guid,
-          title: item.title,
-          link: item.link,
-          summary: item.summary,
-          imageUrl: item.imageUrl,
-          publishedAt:
-            item.publishedAt && item.publishedAt < now ? item.publishedAt : now,
-          createdAt: now,
-        })),
-      },
-      sources: { create: { circleId, addedById: userId } },
-    },
-    include: { sources: { where: { circleId } } },
-  });
-  return toDto(feed, feed.sources[0]);
+  if (count === 0) throw new ApiError(403);
 }
 
 /** Whoever added a source, or the circle's creator, can remove it. */
@@ -358,7 +313,6 @@ export async function getNewsLinkPreview({
     where: {
       link: url,
       publishedAt: { gte: storyCutoff(new Date()) },
-      expiredAt: null,
       feed: { sources: { some: { circleId: topic.circleId } } },
     },
     orderBy: { createdAt: "desc" },

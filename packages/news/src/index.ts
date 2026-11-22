@@ -1,6 +1,5 @@
 export {
   parseFeed,
-  discoverFeedUrls,
   toPlainText,
   NotAFeedError,
   type FeedItem,
@@ -8,7 +7,6 @@ export {
 } from "./parse";
 export {
   fetchFeed,
-  resolveFeed,
   safeFetch,
   normalizeUrl,
   isPublicAddress,
@@ -16,16 +14,14 @@ export {
   FeedError,
   type FeedErrorCode,
   type FetchFeedResult,
-  type ResolvedFeed,
 } from "./fetch";
 export {
-  nextFetchDelayMinutes,
+  POLL_INTERVAL_MINUTES,
+  REFRESH_THROTTLE_MINUTES,
   storyCutoff,
   selectFreshItems,
-  seenMarkerCutoff,
   MAX_ITEMS_PER_FETCH,
   STORY_LIFETIME_HOURS,
-  SEEN_MARKER_DAYS,
 } from "./schedule";
 export {
   toNewsItemDto,

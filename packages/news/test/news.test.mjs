@@ -2,16 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   FeedError,
-  discoverFeedUrls,
   isPublicAddress,
   publicLookup,
-  nextFetchDelayMinutes,
-  seenMarkerCutoff,
   selectFreshItems,
   storyCutoff,
   normalizeUrl,
   parseFeed,
-  resolveFeed,
+  fetchFeed,
   toPlainText,
 } from "../dist/index.js";
 
@@ -46,7 +43,6 @@ test("parses RSS 2.0 channel and items", () => {
   assert.equal(feed.title, "BBC News");
   assert.equal(feed.siteUrl, "https://www.bbc.co.uk/news");
   assert.equal(feed.imageUrl, "https://news.bbcimg.co.uk/logo.gif");
-  assert.equal(feed.ttlMinutes, 15);
   assert.equal(feed.items.length, 2);
 
   const [first, second] = feed.items;
@@ -128,22 +124,6 @@ test("drops non-http links and images", () => {
   assert.equal(feed.items[0].imageUrl, null);
 });
 
-test("discovers advertised feed URLs from HTML", () => {
-  const urls = discoverFeedUrls(
-    `<head>
-      <link rel="stylesheet" href="/s.css">
-      <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
-      <link type='application/atom+xml' rel='alternate' href='https://cdn.example.com/atom'>
-      <link rel="alternate" type="application/rss+xml" href="/feed.xml">
-    </head>`,
-    "https://example.com/news/",
-  );
-  assert.deepEqual(urls, [
-    "https://example.com/feed.xml",
-    "https://cdn.example.com/atom",
-  ]);
-});
-
 test("toPlainText strips tags, decodes entities, truncates on a word", () => {
   assert.equal(
     toPlainText("<b>Hi</b>&nbsp;there &#8217;s &#x2014;"),
@@ -191,35 +171,17 @@ test("normalizeUrl adds https and rejects other schemes", () => {
   }
 });
 
-test("resolveFeed refuses local addresses without fetching", async () => {
+test("fetchFeed refuses local addresses without fetching", async () => {
   for (const url of [
     "http://127.0.0.1:3000/feed",
     "http://localhost/feed",
     "http://[::1]/x",
   ]) {
     await assert.rejects(
-      resolveFeed(url),
+      fetchFeed(url),
       (err) => err instanceof FeedError && err.code === "blocked",
     );
   }
-});
-
-test("nextFetchDelayMinutes honors ttl within bounds and backs off on failure", () => {
-  assert.equal(nextFetchDelayMinutes({ ttlMinutes: null, failureCount: 0 }), 5);
-  assert.equal(nextFetchDelayMinutes({ ttlMinutes: 15, failureCount: 0 }), 15);
-  assert.equal(nextFetchDelayMinutes({ ttlMinutes: 1, failureCount: 0 }), 5);
-  assert.equal(
-    nextFetchDelayMinutes({ ttlMinutes: 1440, failureCount: 0 }),
-    60,
-  );
-  assert.equal(
-    nextFetchDelayMinutes({ ttlMinutes: null, failureCount: 1 }),
-    10,
-  );
-  assert.equal(
-    nextFetchDelayMinutes({ ttlMinutes: null, failureCount: 20 }),
-    360,
-  );
 });
 
 test("publicLookup refuses names that resolve to private addresses", async () => {
@@ -231,13 +193,12 @@ test("publicLookup refuses names that resolve to private addresses", async () =>
   }
 });
 
-test("stories live 24 hours; seen markers 7 days", () => {
+test("stories live 24 hours", () => {
   const now = new Date("2026-11-19T12:00:00Z");
   assert.equal(storyCutoff(now).toISOString(), "2026-11-18T12:00:00.000Z");
-  assert.equal(seenMarkerCutoff(now).toISOString(), "2026-11-12T12:00:00.000Z");
 });
 
-test("selectFreshItems keeps the newest 50 unexpired, deduped stories", () => {
+test("selectFreshItems keeps the newest 50 unexpired, dated, deduped stories", () => {
   const now = new Date("2026-11-19T12:00:00Z");
   const at = (minutesAgo) => new Date(now.getTime() - minutesAgo * 60_000);
   const story = (guid, publishedAt) => ({
@@ -254,14 +215,16 @@ test("selectFreshItems keeps the newest 50 unexpired, deduped stories", () => {
     ...Array.from({ length: 60 }, (_, i) => story(`s${i}`, at(100 + i))),
     story("s0", at(1)),
     story("undated", null),
+    story("future", at(-60)),
     story("newest", at(5)),
   ];
   const picked = selectFreshItems(items, now);
   assert.equal(picked.length, 50);
   assert.deepEqual(
     picked.slice(0, 3).map((i) => i.guid),
-    ["undated", "newest", "s0"],
+    ["newest", "s0", "s1"],
   );
+  assert.ok(!picked.some((i) => i.guid === "undated" || i.guid === "future"));
   assert.ok(!picked.some((i) => i.guid === "week-old"));
   assert.equal(picked.filter((i) => i.guid === "s0").length, 1);
 });

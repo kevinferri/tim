@@ -3,12 +3,7 @@ import http, { type IncomingHttpHeaders } from "node:http";
 import https from "node:https";
 import zlib from "node:zlib";
 import { BlockList, isIP, type LookupFunction } from "node:net";
-import {
-  NotAFeedError,
-  discoverFeedUrls,
-  parseFeed,
-  type ParsedFeed,
-} from "./parse";
+import { NotAFeedError, parseFeed, type ParsedFeed } from "./parse";
 
 export type FeedErrorCode =
   "invalid-url" | "blocked" | "fetch-failed" | "too-large" | "not-a-feed";
@@ -23,8 +18,6 @@ export class FeedError extends Error {
 }
 
 const TIMEOUT_MS = 10_000;
-/** Whole budget for resolving a pasted address, across every request and redirect. */
-export const RESOLVE_TIMEOUT_MS = 20_000;
 const MAX_BYTES = 3 * 1024 * 1024;
 const MAX_REDIRECTS = 4;
 const USER_AGENT = "TimNews/1.0 (feed reader)";
@@ -286,50 +279,4 @@ export async function fetchFeed(
     if (err instanceof NotAFeedError) throw new FeedError("not-a-feed");
     throw err;
   }
-}
-
-export type ResolvedFeed = {
-  /** The feed's own URL after redirects, which is what gets stored and polled. */
-  url: string;
-  feed: ParsedFeed;
-  etag: string | null;
-  lastModified: string | null;
-};
-
-/** Turns whatever a user pasted (a feed URL or a site's address) into a parsed feed. */
-export async function resolveFeed(
-  input: string,
-  timeoutMs = RESOLVE_TIMEOUT_MS,
-): Promise<ResolvedFeed> {
-  const signal = AbortSignal.timeout(timeoutMs);
-  const first = await safeFetch(normalizeUrl(input), {}, signal);
-  if (first.status !== "ok") throw new FeedError("fetch-failed");
-
-  try {
-    return {
-      url: first.url,
-      feed: parseFeed(first.body),
-      etag: first.etag,
-      lastModified: first.lastModified,
-    };
-  } catch (err) {
-    if (!(err instanceof NotAFeedError)) throw err;
-  }
-
-  for (const candidate of discoverFeedUrls(first.body, first.url).slice(0, 3)) {
-    try {
-      const res = await safeFetch(normalizeUrl(candidate), {}, signal);
-      if (res.status !== "ok") continue;
-      return {
-        url: res.url,
-        feed: parseFeed(res.body),
-        etag: res.etag,
-        lastModified: res.lastModified,
-      };
-    } catch (err) {
-      if (err instanceof FeedError && err.code === "blocked") throw err;
-      if (signal.aborted) throw err;
-    }
-  }
-  throw new FeedError("not-a-feed");
 }

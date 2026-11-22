@@ -1,26 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ResolvedFeed } from "@tim/news";
+import { beforeEach, describe, expect, it } from "vitest";
 import { prismaClient, resetDb } from "@/test/db";
-
-const resolveFeed = vi.fn<(url: string) => Promise<ResolvedFeed>>();
-vi.mock("@tim/news", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@tim/news")>()),
-  resolveFeed: (url: string) => resolveFeed(url),
-}));
-
-const { FeedError } = await import("@tim/news");
-const {
+import {
   addCircleNewsSource,
+  feedForSourceRequest,
   getCircleNews,
   getNewsLinkPreview,
   removeCircleNewsSource,
+  setNewsEnabled,
   siteOf,
-} = await import("./news");
+} from "./news";
+import { NEWS_PRESETS } from "./news-sources";
 
-beforeEach(async () => {
-  await resetDb();
-  resolveFeed.mockReset();
-});
+beforeEach(resetDb);
 
 async function createUser(name: string) {
   return prismaClient.user.create({
@@ -33,191 +24,166 @@ async function createUser(name: string) {
   });
 }
 
-async function createCircle(ownerId: string) {
+async function createCircle(ownerId: string, { newsEnabled = true } = {}) {
   return prismaClient.circle.create({
     data: {
       name: "Circle",
       userId: ownerId,
+      newsEnabled,
       members: { connect: [{ id: ownerId }] },
     },
   });
 }
 
-function feed(url: string, count: number, title = "Example"): ResolvedFeed {
-  return {
-    url,
-    etag: null,
-    lastModified: null,
-    feed: {
-      title,
-      siteUrl: "https://example.com/",
-      imageUrl: null,
-      ttlMinutes: null,
-      items: Array.from({ length: count }, (_, n) => ({
-        guid: `${url}#${n}`,
-        title: `Story ${n}`,
-        link: `https://example.com/${n}`,
-        summary: null,
-        imageUrl: null,
-        publishedAt: new Date(Date.now() - (n + 1) * 60_000),
-      })),
-    },
-  };
+/** Follows a feed, then stores `count` stories in it the way the realtime server's poller would. */
+async function follow({
+  circleId,
+  userId,
+  url,
+  count = 0,
+  title = "Example",
+}: {
+  circleId: string;
+  userId: string;
+  url: string;
+  count?: number;
+  title?: string;
+}) {
+  const source = await addCircleNewsSource({ circleId, userId, url, title });
+  await prismaClient.newsItem.createMany({
+    data: Array.from({ length: count }, (_, n) => ({
+      feedId: source.feedId,
+      guid: `${url}#${n}`,
+      title: `Story ${n}`,
+      link: `https://example.com/${n}`,
+      publishedAt: new Date(Date.now() - (n + 1) * 60_000),
+    })),
+  });
+  return source;
 }
 
+describe("feedForSourceRequest", () => {
+  it("accepts a preset, by its feed URL", () => {
+    const [preset] = NEWS_PRESETS;
+    expect(feedForSourceRequest({ preset: preset.url })).toEqual({
+      url: preset.url,
+      title: preset.name,
+    });
+  });
+
+  it("turns a topic into its Google News feed", () => {
+    expect(feedForSourceRequest({ topic: " Knicks " })).toEqual({
+      url: "https://news.google.com/rss/search?q=knicks&hl=en-US&gl=US&ceid=US:en",
+      title: "Knicks · Google News",
+    });
+  });
+
+  it("rejects any other address and blank topics", () => {
+    for (const request of [
+      { preset: "https://evil.test/rss" },
+      { topic: "   " },
+    ]) {
+      expect(() => feedForSourceRequest(request)).toThrow(
+        expect.objectContaining({ status: 400 }),
+      );
+    }
+  });
+});
+
 describe("addCircleNewsSource", () => {
-  it("stores the feed and its items once, however many circles follow it", async () => {
+  it("stores a feed once, however many circles follow it", async () => {
     const user = await createUser("Ann");
     const [a, b] = [await createCircle(user.id), await createCircle(user.id)];
-    resolveFeed.mockResolvedValue(feed("https://example.com/rss", 3));
 
-    const source = await addCircleNewsSource({
+    const source = await follow({
       circleId: a.id,
       userId: user.id,
-      url: "example.com",
+      url: "https://example.com/rss",
     });
-    await addCircleNewsSource({
+    await follow({
       circleId: b.id,
       userId: user.id,
-      url: "example.com",
+      url: "https://example.com/rss",
+      title: "Ignored",
     });
 
     expect(source.title).toBe("Example");
     expect(await prismaClient.newsFeed.count()).toBe(1);
-    expect(await prismaClient.newsItem.count()).toBe(3);
     expect(await prismaClient.circleNewsSource.count()).toBe(2);
-  });
-
-  it("leaves a feed that's already followed to the poller", async () => {
-    const user = await createUser("Ann");
-    const [a, b] = [await createCircle(user.id), await createCircle(user.id)];
-    resolveFeed.mockResolvedValueOnce(feed("https://example.com/rss", 2));
-    await addCircleNewsSource({ circleId: a.id, userId: user.id, url: "x" });
-    // By the time a second circle adds it, the feed has a newer story.
-    resolveFeed.mockResolvedValueOnce(feed("https://example.com/rss", 3));
-    await addCircleNewsSource({ circleId: b.id, userId: user.id, url: "x" });
-
-    expect(await prismaClient.newsItem.count()).toBe(2);
-  });
-
-  it("clears an existing feed's failure backoff when a circle follows it", async () => {
-    const user = await createUser("Ann");
-    const [a, b] = [await createCircle(user.id), await createCircle(user.id)];
-    resolveFeed.mockResolvedValue(feed("https://example.com/rss", 1));
-    const source = await addCircleNewsSource({
-      circleId: a.id,
-      userId: user.id,
-      url: "x",
-    });
-    await prismaClient.newsFeed.update({
-      where: { id: source.feedId },
-      data: {
-        failureCount: 6,
-        nextFetchAt: new Date(Date.now() + 6 * 3_600_000),
-      },
-    });
-
-    await addCircleNewsSource({ circleId: b.id, userId: user.id, url: "x" });
-
-    const updated = await prismaClient.newsFeed.findUniqueOrThrow({
+    // Nothing is fetched here; the poller loads it as soon as it's refreshed.
+    const feed = await prismaClient.newsFeed.findUniqueOrThrow({
       where: { id: source.feedId },
     });
-    expect(updated.failureCount).toBe(0);
-    expect(updated.nextFetchAt.getTime()).toBeLessThanOrEqual(Date.now());
-  });
-
-  it("still follows a feed that's pruned mid-add", async () => {
-    const user = await createUser("Ann");
-    const [a, b] = [await createCircle(user.id), await createCircle(user.id)];
-    resolveFeed.mockResolvedValue(feed("https://example.com/rss", 1));
-    const first = await addCircleNewsSource({
-      circleId: a.id,
-      userId: user.id,
-      url: "x",
-    });
-    await prismaClient.circleNewsSource.deleteMany();
-    // The poller's prune deletes the now-unfollowed feed right after the add finds it.
-    const findUnique = prismaClient.newsFeed.findUnique;
-    const spy = vi
-      .spyOn(prismaClient.newsFeed, "findUnique")
-      .mockImplementationOnce((async (
-        args: Parameters<typeof findUnique>[0],
-      ) => {
-        const found = await findUnique(args);
-        await prismaClient.newsFeed.delete({ where: { id: first.feedId } });
-        return found;
-      }) as typeof findUnique);
-
-    const source = await addCircleNewsSource({
-      circleId: b.id,
-      userId: user.id,
-      url: "x",
-    });
-    spy.mockRestore();
-
-    expect(source.feedId).not.toBe(first.feedId);
-    expect(
-      await prismaClient.circleNewsSource.count({ where: { circleId: b.id } }),
-    ).toBe(1);
-  });
-
-  it("skips stories older than the retention window and duplicate guids", async () => {
-    const user = await createUser("Ann");
-    const circle = await createCircle(user.id);
-    const resolved = feed("https://example.com/rss", 2);
-    resolved.feed.items.push(
-      { ...resolved.feed.items[0] },
-      {
-        ...resolved.feed.items[1],
-        guid: "old",
-        publishedAt: new Date(Date.now() - 30 * 86_400_000),
-      },
-    );
-    resolveFeed.mockResolvedValue(resolved);
-    await addCircleNewsSource({
-      circleId: circle.id,
-      userId: user.id,
-      url: "x",
-    });
-
-    expect(await prismaClient.newsItem.count()).toBe(2);
+    expect(feed.lastFetchedAt).toBeNull();
+    expect(feed.nextFetchAt.getTime()).toBeLessThanOrEqual(Date.now());
   });
 
   it("rejects a source the circle already follows", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
-    resolveFeed.mockResolvedValue(feed("https://example.com/rss", 1));
-    await addCircleNewsSource({
-      circleId: circle.id,
-      userId: user.id,
-      url: "example.com",
-    });
-
-    await expect(
-      addCircleNewsSource({
+    const add = () =>
+      follow({
         circleId: circle.id,
         userId: user.id,
-        url: "example.com",
-      }),
-    ).rejects.toMatchObject({ status: 409 });
+        url: "https://example.com/rss",
+      });
+    await add();
+
+    await expect(add()).rejects.toMatchObject({ status: 409 });
   });
 
-  it("turns feed errors into a readable 400", async () => {
+  it("rejects sources while News is off", async () => {
     const user = await createUser("Ann");
-    const circle = await createCircle(user.id);
-    resolveFeed.mockRejectedValue(new FeedError("not-a-feed"));
+    const circle = await createCircle(user.id, { newsEnabled: false });
 
     await expect(
-      addCircleNewsSource({
+      follow({
         circleId: circle.id,
         userId: user.id,
-        url: "example.com",
+        url: "https://example.com/rss",
       }),
-    ).rejects.toMatchObject({
-      status: 400,
-      message: expect.stringMatching(/news feed/),
-    });
+    ).rejects.toMatchObject({ status: 400 });
     expect(await prismaClient.newsFeed.count()).toBe(0);
+  });
+});
+
+describe("setNewsEnabled", () => {
+  it("lets only the circle's creator turn News on or off, keeping its sources", async () => {
+    const owner = await createUser("Owner");
+    const member = await createUser("Member");
+    const circle = await createCircle(owner.id);
+    await follow({
+      circleId: circle.id,
+      userId: owner.id,
+      url: "https://example.com/rss",
+      count: 2,
+    });
+
+    await expect(
+      setNewsEnabled({
+        circleId: circle.id,
+        userId: member.id,
+        enabled: false,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+    await setNewsEnabled({
+      circleId: circle.id,
+      userId: owner.id,
+      enabled: false,
+    });
+
+    const off = await getCircleNews({ circleId: circle.id, userId: owner.id });
+    expect(off).toMatchObject({ enabled: false, isAdmin: true, items: [] });
+    expect(await prismaClient.circleNewsSource.count()).toBe(1);
+
+    await setNewsEnabled({
+      circleId: circle.id,
+      userId: owner.id,
+      enabled: true,
+    });
+    const on = await getCircleNews({ circleId: circle.id, userId: member.id });
+    expect(on).toMatchObject({ enabled: true, isAdmin: false });
+    expect(on.items).toHaveLength(2);
   });
 });
 
@@ -226,23 +192,26 @@ describe("getCircleNews", () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
     const other = await createCircle(user.id);
-    resolveFeed.mockResolvedValueOnce(feed("https://a.com/rss", 20, "A"));
-    resolveFeed.mockResolvedValueOnce(feed("https://b.com/rss", 20, "B"));
-    resolveFeed.mockResolvedValueOnce(feed("https://c.com/rss", 5, "C"));
-    const a = await addCircleNewsSource({
+    const a = await follow({
       circleId: circle.id,
       userId: user.id,
-      url: "a.com",
+      url: "https://a.com/rss",
+      count: 20,
+      title: "A",
     });
-    await addCircleNewsSource({
+    await follow({
       circleId: circle.id,
       userId: user.id,
-      url: "b.com",
+      url: "https://b.com/rss",
+      count: 20,
+      title: "B",
     });
-    await addCircleNewsSource({
+    await follow({
       circleId: other.id,
       userId: user.id,
-      url: "c.com",
+      url: "https://c.com/rss",
+      count: 5,
+      title: "C",
     });
 
     const first = await getCircleNews({ circleId: circle.id, userId: user.id });
@@ -274,11 +243,11 @@ describe("getCircleNews", () => {
   it("reports the newest arrival even when it's not on page 1", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
-    resolveFeed.mockResolvedValue(feed("https://a.com/rss", 40));
-    const source = await addCircleNewsSource({
+    const source = await follow({
       circleId: circle.id,
       userId: user.id,
-      url: "a.com",
+      url: "https://a.com/rss",
+      count: 40,
     });
     // Stored just now but published hours ago, so it sorts past the first 30.
     const late = await prismaClient.newsItem.create({
@@ -300,11 +269,11 @@ describe("getCircleNews", () => {
   it("only lists stories from the last 24 hours", async () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
-    resolveFeed.mockResolvedValue(feed("https://a.com/rss", 2));
-    const source = await addCircleNewsSource({
+    const source = await follow({
       circleId: circle.id,
       userId: user.id,
-      url: "a.com",
+      url: "https://a.com/rss",
+      count: 2,
     });
     await prismaClient.newsItem.create({
       data: {
@@ -324,11 +293,11 @@ describe("getCircleNews", () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
     const other = await createCircle(user.id);
-    resolveFeed.mockResolvedValue(feed("https://c.com/rss", 5));
-    const c = await addCircleNewsSource({
+    const c = await follow({
       circleId: other.id,
       userId: user.id,
-      url: "c.com",
+      url: "https://c.com/rss",
+      count: 5,
     });
 
     const res = await getCircleNews({
@@ -346,11 +315,11 @@ describe("removeCircleNewsSource", () => {
     const adder = await createUser("Adder");
     const bystander = await createUser("Bystander");
     const circle = await createCircle(owner.id);
-    resolveFeed.mockResolvedValue(feed("https://a.com/rss", 1));
-    const source = await addCircleNewsSource({
+    const source = await follow({
       circleId: circle.id,
       userId: adder.id,
-      url: "a.com",
+      url: "https://a.com/rss",
+      count: 1,
     });
 
     await expect(
@@ -387,13 +356,12 @@ describe("getNewsLinkPreview", () => {
     const user = await createUser("Ann");
     const circle = await createCircle(user.id);
     const topic = await createTopic(circle.id, user.id);
-    resolveFeed.mockResolvedValue(
-      feed("https://feeds.example.com/rss", 2, "A"),
-    );
-    await addCircleNewsSource({
+    await follow({
       circleId: circle.id,
       userId: user.id,
-      url: "x",
+      url: "https://feeds.example.com/rss",
+      count: 2,
+      title: "A",
     });
 
     const preview = (url: string) =>
@@ -412,11 +380,11 @@ describe("getNewsLinkPreview", () => {
     const following = await createCircle(user.id);
     const other = await createCircle(user.id);
     const topic = await createTopic(other.id, user.id);
-    resolveFeed.mockResolvedValue(feed("https://feeds.example.com/rss", 2));
-    await addCircleNewsSource({
+    await follow({
       circleId: following.id,
       userId: user.id,
-      url: "x",
+      url: "https://feeds.example.com/rss",
+      count: 2,
     });
 
     expect(
@@ -433,11 +401,12 @@ describe("getNewsLinkPreview", () => {
     const circle = await createCircle(user.id);
     const topic = await createTopic(circle.id, user.id);
     // Claims example.com links (and siteUrl) but was fetched from evil.test.
-    resolveFeed.mockResolvedValue(feed("https://evil.test/rss", 2, "Fake"));
-    await addCircleNewsSource({
+    await follow({
       circleId: circle.id,
       userId: user.id,
-      url: "x",
+      url: "https://evil.test/rss",
+      count: 2,
+      title: "Fake",
     });
 
     expect(
@@ -454,11 +423,11 @@ describe("getNewsLinkPreview", () => {
     const outsider = await createUser("Eve");
     const circle = await createCircle(member.id);
     const topic = await createTopic(circle.id, member.id);
-    resolveFeed.mockResolvedValue(feed("https://feeds.example.com/rss", 2));
-    await addCircleNewsSource({
+    await follow({
       circleId: circle.id,
       userId: member.id,
-      url: "x",
+      url: "https://feeds.example.com/rss",
+      count: 2,
     });
 
     expect(

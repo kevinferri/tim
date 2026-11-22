@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import type { NewsItemDto } from "./news-api";
 
 const SEEN_KEY = (circleId: string) => `news-seen:${circleId}`;
 
@@ -15,68 +14,25 @@ function readSeen(circleId: string): string | null {
 
 type NewsState = {
   open: boolean;
-  /** Live items that arrived while the panel was open, held back until the reader asks for them. */
-  pending: Record<string, NewsItemDto[]>;
-  /** The source filter selected in each circle's panel (null = All); live updates are judged against it. */
+  /** The source filter selected in each circle's panel (null = All). */
   filter: Record<string, string | null>;
-  /** Newest createdAt among live stories pushed this session, per circle; they may not be in any loaded page. */
-  liveNewest: Record<string, string>;
-  noteLive: (circleId: string, items: NewsItemDto[]) => void;
-  /** Replaces the circle's live newest, e.g. after a refetch, from the live stories still relevant. */
-  resetLive: (circleId: string, items: NewsItemDto[]) => void;
   setFilter: (circleId: string, feedId: string | null) => void;
   /** Newest createdAt the viewer has seen, per circle (mirrored to localStorage). */
   seen: Record<string, string | null>;
   openPanel: () => void;
   close: () => void;
-  addPending: (circleId: string, items: NewsItemDto[]) => void;
-  takePending: (circleId: string) => NewsItemDto[];
   getSeen: (circleId: string) => string | null;
   markSeen: (circleId: string, createdAt: string | null) => void;
 };
 
 export const useNewsStore = create<NewsState>((set, get) => ({
   open: false,
-  pending: {},
   filter: {},
-  liveNewest: {},
-  noteLive: (circleId, items) =>
-    set((s) => {
-      let newest = s.liveNewest[circleId] ?? "";
-      for (const i of items) if (i.createdAt > newest) newest = i.createdAt;
-      return newest
-        ? { liveNewest: { ...s.liveNewest, [circleId]: newest } }
-        : {};
-    }),
-  resetLive: (circleId, items) =>
-    set((s) => {
-      const rest = { ...s.liveNewest };
-      delete rest[circleId];
-      let newest = "";
-      for (const i of items) if (i.createdAt > newest) newest = i.createdAt;
-      return { liveNewest: newest ? { ...rest, [circleId]: newest } : rest };
-    }),
   setFilter: (circleId, feedId) =>
     set((s) => ({ filter: { ...s.filter, [circleId]: feedId } })),
   seen: {},
   openPanel: () => set({ open: true }),
   close: () => set({ open: false }),
-  addPending: (circleId, items) =>
-    set((s) => {
-      const existing = s.pending[circleId] ?? [];
-      const known = new Set(existing.map((i) => i.id));
-      return {
-        pending: {
-          ...s.pending,
-          [circleId]: [...items.filter((i) => !known.has(i.id)), ...existing],
-        },
-      };
-    }),
-  takePending: (circleId) => {
-    const items = get().pending[circleId] ?? [];
-    set((s) => ({ pending: { ...s.pending, [circleId]: [] } }));
-    return items;
-  },
   getSeen: (circleId) =>
     circleId in get().seen ? get().seen[circleId] : readSeen(circleId),
   markSeen: (circleId, createdAt) => {

@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { REFRESH_THROTTLE_MINUTES } from "@tim/news/shared";
 import {
-  ArrowUpIcon,
   ChevronLeftIcon,
   Cross2Icon,
   ExternalLinkIcon,
-  InfoCircledIcon,
   PlusIcon,
   Share1Icon,
   TrashIcon,
@@ -17,29 +16,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { formatFeedTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import {
-  NEWS_PRESETS,
-  VISIBLE_PRESETS,
+  MAX_TOPIC_LENGTH,
+  cleanTopic,
+  exactPreset,
+  suggestPresets,
+  type NewsSourceRequest,
+} from "@/lib/news-sources";
+import {
   addNewsSource,
-  googleNewsTopicUrl,
-  looksLikeUrl,
-  prependNewsItems,
   removeNewsSource,
+  setNewsEnabled,
   type NewsItemDto,
   type NewsSourceDto,
 } from "./news-api";
 import { NewsGlyph } from "./news-glyph";
 import { useNewsStore } from "./news-store";
 import { NewsShare } from "./news-share";
-import { useNewestArrival, useNewsFeed, useNewsLiveUpdates } from "./use-news";
+import {
+  useNewestArrival,
+  useNewsChanged,
+  useNewsFeed,
+  useNewsLiveUpdates,
+  useNewsRefresh,
+} from "./use-news";
 
 type View = "feed" | "sources" | "share";
 
@@ -48,34 +50,29 @@ type Sharing = { item: NewsItemDto; source?: NewsSourceDto };
 /** Mounted once in the circle layout, so live updates land even while the panel is closed. */
 export function NewsSheet({ circleId }: { circleId: string }) {
   useNewsLiveUpdates(circleId);
-  const queryClient = useQueryClient();
-  const { open, close, takePending, markSeen } = useNewsStore();
-  const held = useNewsStore((s) => s.pending[circleId]);
+  const { open, close, markSeen } = useNewsStore();
   const [view, setView] = useState<View>("feed");
   const feedId = useNewsStore((s) => s.filter[circleId] ?? null);
-  const storeSetFilter = useNewsStore((s) => s.setFilter);
-  // Held stories were judged against the old view, so place them before switching.
-  const setFeedId = (next: string | null) => {
-    prependNewsItems(queryClient, circleId, takePending(circleId));
-    storeSetFilter(circleId, next);
-  };
+  const setFilter = useNewsStore((s) => s.setFilter);
   const [sharing, setSharing] = useState<Sharing | null>(null);
-  const listTopRef = useRef<HTMLDivElement>(null);
 
   const all = useNewsFeed(circleId);
   const sources = all.data?.pages[0]?.sources ?? [];
+  const enabled = all.data?.pages[0]?.enabled ?? false;
+  const isAdmin = all.data?.pages[0]?.isAdmin ?? false;
   const newest = useNewestArrival(circleId);
-  // A refetch (reconnect, another member changing sources) may already have listed some held stories.
-  // Counted against the view on screen; held stories were already picked for it.
-  const visible = useNewsFeed(circleId, feedId);
-  const listedIds = new Set(
-    visible.data?.pages.flatMap((p) => p.items.map((i) => i.id)) ?? [],
-  );
-  const pending = (held ?? []).filter((i) => !listedIds.has(i.id));
 
   useEffect(() => {
     if (open) markSeen(circleId, newest);
   }, [open, circleId, newest, markSeen]);
+
+  const refresh = useNewsRefresh(circleId);
+  useEffect(() => {
+    if (!open) return;
+    refresh();
+    const timer = setInterval(refresh, REFRESH_THROTTLE_MINUTES * 60_000);
+    return () => clearInterval(timer);
+  }, [open, refresh]);
 
   // A filter for a source someone just removed would show an empty list forever.
   const filterIsStale =
@@ -83,16 +80,10 @@ export function NewsSheet({ circleId }: { circleId: string }) {
     Boolean(all.data) &&
     !sources.some((s) => s.feedId === feedId);
   useEffect(() => {
-    if (filterIsStale) storeSetFilter(circleId, null);
-  }, [filterIsStale, storeSetFilter, circleId]);
-
-  function showPending() {
-    prependNewsItems(queryClient, circleId, takePending(circleId));
-    listTopRef.current?.scrollIntoView({ behavior: "smooth" });
-  }
+    if (filterIsStale) setFilter(circleId, null);
+  }, [filterIsStale, setFilter, circleId]);
 
   function handleClose() {
-    prependNewsItems(queryClient, circleId, takePending(circleId));
     setView("feed");
     setSharing(null);
     close();
@@ -105,36 +96,30 @@ export function NewsSheet({ circleId }: { circleId: string }) {
         className="flex w-3/4 flex-col gap-0 p-0 sm:max-w-md [&>button]:hidden"
       >
         <SheetTitle className="sr-only">News</SheetTitle>
-        <div className="flex shrink-0 items-center gap-1.5 border-b px-3 py-3">
-          {view !== "feed" ? (
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={() => setView("feed")}
-              aria-label="Back to news"
-            >
-              <ChevronLeftIcon />
-            </Button>
-          ) : (
-            <NewsGlyph className="size-4 shrink-0 text-muted-foreground" />
-          )}
+        {/* Fixed height and a fixed-size leading slot, so switching views doesn't shift the header. */}
+        <div className="flex h-12 shrink-0 items-center gap-1.5 border-b px-3">
+          <div className="flex size-6 shrink-0 items-center justify-center">
+            {view !== "feed" ? (
+              <Button
+                variant="ghost"
+                size="iconSm"
+                onClick={() => setView("feed")}
+                aria-label="Back to news"
+              >
+                <ChevronLeftIcon />
+              </Button>
+            ) : (
+              <NewsGlyph className="size-4 text-muted-foreground" />
+            )}
+          </div>
           <div className="min-w-0 flex-1 truncate font-semibold">
             {view === "sources"
               ? "Sources"
               : view === "share"
                 ? "Share story"
                 : "News"}
-            {view === "feed" && sources.length > 0 && (
-              <span className="ml-2 inline-flex items-center gap-1 align-middle text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                <span
-                  className="size-1.5 rounded-full bg-emerald-500"
-                  aria-hidden
-                />
-                Live
-              </span>
-            )}
           </div>
-          {view === "feed" && (
+          {view === "feed" && enabled && (
             <Button
               variant="ghost"
               size="sm"
@@ -156,12 +141,19 @@ export function NewsSheet({ circleId }: { circleId: string }) {
         </div>
 
         {view === "sources" ? (
-          <SourcesView circleId={circleId} sources={sources} />
+          <SourcesView
+            circleId={circleId}
+            sources={sources}
+            isAdmin={isAdmin}
+            onTurnedOff={() => setView("feed")}
+          />
         ) : (
           // The feed stays mounted under the share form so cancelling returns to the same scroll position.
           <div className="relative flex min-h-0 flex-1 flex-col">
             {all.isPending ? (
               <FeedSkeleton />
+            ) : !enabled ? (
+              <NewsOff circleId={circleId} isAdmin={isAdmin} />
             ) : sources.length === 0 ? (
               <EmptyState onAdd={() => setView("sources")} />
             ) : (
@@ -169,35 +161,19 @@ export function NewsSheet({ circleId }: { circleId: string }) {
                 <SourceChips
                   sources={sources}
                   feedId={feedId}
-                  onSelect={setFeedId}
+                  onSelect={(next) => setFilter(circleId, next)}
                 />
-                <div className="relative flex min-h-0 flex-1 flex-col">
-                  {pending.length > 0 && (
-                    <div className="pointer-events-none absolute inset-x-0 top-2 z-10 flex justify-center">
-                      <Button
-                        size="xs"
-                        className="pointer-events-auto gap-1 rounded-full shadow-sm"
-                        onClick={showPending}
-                      >
-                        <ArrowUpIcon />
-                        {pending.length} new{" "}
-                        {pending.length === 1 ? "story" : "stories"}
-                      </Button>
-                    </div>
-                  )}
-                  <ScrollArea className="flex-1">
-                    <div ref={listTopRef} />
-                    <FeedList
-                      circleId={circleId}
-                      feedId={feedId}
-                      sources={sources}
-                      onShare={(item, source) => {
-                        setSharing({ item, source });
-                        setView("share");
-                      }}
-                    />
-                  </ScrollArea>
-                </div>
+                <ScrollArea className="flex-1">
+                  <FeedList
+                    circleId={circleId}
+                    feedId={feedId}
+                    sources={sources}
+                    onShare={(item, source) => {
+                      setSharing({ item, source });
+                      setView("share");
+                    }}
+                  />
+                </ScrollArea>
               </>
             )}
             {view === "share" && sharing && (
@@ -443,6 +419,53 @@ function FeedSkeleton() {
   );
 }
 
+function useSetNewsEnabled(circleId: string) {
+  const changed = useNewsChanged(circleId);
+  const refresh = useNewsRefresh(circleId);
+  return useMutation({
+    mutationFn: (enabled: boolean) => setNewsEnabled(circleId, enabled),
+    onSuccess: async (_, enabled) => {
+      await changed();
+      if (enabled) refresh();
+    },
+  });
+}
+
+function NewsOff({
+  circleId,
+  isAdmin,
+}: {
+  circleId: string;
+  isAdmin: boolean;
+}) {
+  const setEnabled = useSetNewsEnabled(circleId);
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+      <NewsGlyph className="size-8 text-muted-foreground" />
+      <div>
+        <p className="font-medium">News is off for this circle</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {isAdmin
+            ? "Turn it on to follow news sites or topics, with new stories showing up here for everyone in the circle."
+            : "The circle’s creator can turn it on."}
+        </p>
+      </div>
+      {isAdmin && (
+        <Button
+          size="sm"
+          onClick={() => setEnabled.mutate(true)}
+          disabled={setEnabled.isPending}
+        >
+          Turn on News
+        </Button>
+      )}
+      {setEnabled.error && (
+        <p className="text-sm text-destructive">{setEnabled.error.message}</p>
+      )}
+    </div>
+  );
+}
+
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
@@ -464,30 +487,29 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 function SourcesView({
   circleId,
   sources,
+  isAdmin,
+  onTurnedOff,
 }: {
   circleId: string;
   sources: NewsSourceDto[];
+  isAdmin: boolean;
+  onTurnedOff: () => void;
 }) {
-  const queryClient = useQueryClient();
-  const { emit: pingSourcesChanged } = useSocketEmit<{ circleId: string }>(
-    SocketEvent.NewsSourcesChanged,
-  );
-  const [siteUrl, setSiteUrl] = useState("");
-  const [topic, setTopic] = useState("");
+  const changed = useNewsChanged(circleId);
+  const refreshNews = useNewsRefresh(circleId);
+  const setEnabled = useSetNewsEnabled(circleId);
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function refresh() {
-    await queryClient.invalidateQueries({ queryKey: ["news", circleId] });
-    pingSourcesChanged({ circleId });
-  }
-
   const add = useMutation({
-    mutationFn: (url: string) => addNewsSource(circleId, url),
+    mutationFn: (request: NewsSourceRequest) =>
+      addNewsSource(circleId, request),
     onMutate: () => setError(null),
     onSuccess: async () => {
-      setSiteUrl("");
-      setTopic("");
-      await refresh();
+      setQuery("");
+      await changed();
+      // The realtime server fetches the new source and pushes its stories.
+      refreshNews();
     },
     onError: (err) => setError(err.message),
   });
@@ -495,15 +517,21 @@ function SourcesView({
   const remove = useMutation({
     mutationFn: (feedId: string) => removeNewsSource(circleId, feedId),
     onMutate: () => setError(null),
-    onSuccess: refresh,
+    onSuccess: changed,
     onError: (err) => setError(err.message),
   });
 
   const followed = new Set(sources.map((s) => s.url));
-  const presets = NEWS_PRESETS.filter((p) => !followed.has(p.url)).slice(
-    0,
-    VISIBLE_PRESETS,
-  );
+  const suggestions = suggestPresets(query, followed);
+  const topic = cleanTopic(query);
+
+  function submit() {
+    if (!topic || add.isPending) return;
+    const preset = exactPreset(topic);
+    add.mutate(
+      preset && !followed.has(preset.url) ? { preset: preset.url } : { topic },
+    );
+  }
 
   return (
     <ScrollArea className="flex-1">
@@ -512,125 +540,71 @@ function SourcesView({
           className="flex flex-col gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (siteUrl.trim()) add.mutate(siteUrl);
+            submit();
           }}
         >
-          <div className="flex items-center gap-1.5">
-            <label htmlFor="news-site" className="text-sm font-medium">
-              Add a site or feed
-            </label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Help finding a feed"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <InfoCircledIcon />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                side="bottom"
-                align="start"
-                className="w-64 text-sm"
-              >
-                Can&apos;t find a site&apos;s feed? Search for it on{" "}
-                <a
-                  href="https://feeder.co/discover"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-primary underline underline-offset-2"
-                >
-                  Feeder
-                </a>
-                , then paste the feed URL here.
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="flex gap-2">
-            <Input
-              id="news-site"
-              value={siteUrl}
-              onChange={(e) => setSiteUrl(e.target.value)}
-              placeholder="theverge.com"
-              autoComplete="off"
-              disabled={add.isPending}
-            />
-            <Button type="submit" disabled={add.isPending || !siteUrl.trim()}>
-              Add
-            </Button>
-          </div>
-        </form>
-
-        <form
-          className="flex flex-col gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const value = topic.trim();
-            if (!value) return;
-            // A pasted link (e.g. a Google News feed URL) is a source, not a search term.
-            add.mutate(looksLikeUrl(value) ? value : googleNewsTopicUrl(value));
-          }}
-        >
-          <label htmlFor="news-topic" className="text-sm font-medium">
-            Follow a topic
+          <label htmlFor="news-search" className="text-sm font-medium">
+            Add a source
           </label>
           <p className="-mt-1 text-xs text-muted-foreground">
-            Type a team, person, company, or subject. You&apos;ll get the latest
-            headlines about it from news sites everywhere, via Google News.
+            Search for a site, or type a team, person, company, or subject to
+            follow it as a topic via Google News.
           </p>
-          <div className="flex gap-2">
-            <Input
-              id="news-topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="Knicks, Taylor Swift, AI…"
-              autoComplete="off"
-              disabled={add.isPending}
-            />
-            <Button
-              type="submit"
-              variant="secondary"
-              disabled={add.isPending || !topic.trim()}
-            >
-              Follow
-            </Button>
+          <Input
+            id="news-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="The Verge, Knicks, AI…"
+            autoComplete="off"
+            maxLength={MAX_TOPIC_LENGTH}
+          />
+          <div className="flex flex-col gap-1.5">
+            {!topic && suggestions.length > 0 && (
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Popular
+              </h3>
+            )}
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.map((p) => (
+                  <Button
+                    key={p.url}
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    className="gap-1"
+                    disabled={add.isPending}
+                    onClick={() => add.mutate({ preset: p.url })}
+                  >
+                    <PlusIcon />
+                    {p.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {topic && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="justify-start gap-1.5 self-start"
+                disabled={add.isPending}
+                onClick={() => add.mutate({ topic })}
+              >
+                <PlusIcon />
+                <span className="truncate">
+                  Follow &ldquo;{topic}&rdquo; as a topic
+                </span>
+              </Button>
+            )}
           </div>
         </form>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
-        {add.isPending && (
-          <p className="text-sm text-muted-foreground">Finding the feed…</p>
-        )}
-
-        {presets.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Popular
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {presets.map((p) => (
-                <Button
-                  key={p.url}
-                  variant="outline"
-                  size="xs"
-                  className="gap-1"
-                  disabled={add.isPending}
-                  onClick={() => add.mutate(p.url)}
-                >
-                  <PlusIcon />
-                  {p.name}
-                </Button>
-              ))}
-            </div>
-          </section>
-        )}
 
         {sources.length > 0 && (
           <section className="flex flex-col gap-1">
-            <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Following
-            </h3>
+            <h3 className="mb-1 text-sm font-medium">Following</h3>
             {sources.map((s) => (
               <div
                 key={s.feedId}
@@ -658,6 +632,32 @@ function SourcesView({
                 )}
               </div>
             ))}
+          </section>
+        )}
+
+        {isAdmin && (
+          <section className="flex flex-col gap-2 border-t pt-4 text-sm">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Turn off News
+            </h3>
+            <p className="text-muted-foreground">
+              Stops new stories for everyone in this circle. Sources are kept,
+              and you can turn it back on anytime.
+            </p>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="self-start"
+              disabled={setEnabled.isPending}
+              onClick={() =>
+                setEnabled.mutate(false, { onSuccess: onTurnedOff })
+              }
+            >
+              Turn off News for this circle
+            </Button>
+            {setEnabled.error && (
+              <p className="text-destructive">{setEnabled.error.message}</p>
+            )}
           </section>
         )}
       </div>

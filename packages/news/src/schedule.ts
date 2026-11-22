@@ -1,67 +1,46 @@
 import type { FeedItem } from "./parse";
 
-const BASE_MINUTES = 5;
-const MAX_TTL_MINUTES = 60;
-const MAX_BACKOFF_MINUTES = 6 * 60;
-
 /** Newest items kept from one fetch; feeds can list hundreds and only the latest matter. */
 export const MAX_ITEMS_PER_FETCH = 50;
 
-/**
- * Minutes until a feed is due again. Honors the feed's own <ttl> (capped so a
- * huge one can't stall it), and backs off exponentially while fetches fail.
- */
-export function nextFetchDelayMinutes({
-  ttlMinutes,
-  failureCount,
-}: {
-  ttlMinutes: number | null;
-  failureCount: number;
-}): number {
-  if (failureCount > 0) {
-    return Math.min(BASE_MINUTES * 2 ** failureCount, MAX_BACKOFF_MINUTES);
-  }
-  return Math.max(BASE_MINUTES, Math.min(ttlMinutes ?? 0, MAX_TTL_MINUTES));
-}
+/** Background poll interval, for feeds of circles with News on and someone connected. Also the retry delay after a failure. */
+export const POLL_INTERVAL_MINUTES = 60;
 
-/** How long the feed hosts a story, counted from its publish date (or when first seen, if undated). */
+/** A circle opening News (or the circle) refetches its feeds, but no feed more often than this. */
+export const REFRESH_THROTTLE_MINUTES = 15;
+
+/** How long the feed hosts a story, counted from its publish date. */
 export const STORY_LIFETIME_HOURS = 24;
 
-/** Stories published before this have expired: they're hidden, their content is deleted, and they're never stored. */
+/** Stories published before this have expired: they're hidden, deleted, and never stored. */
 export function storyCutoff(now: Date): Date {
   return new Date(now.getTime() - STORY_LIFETIME_HOURS * 60 * 60_000);
 }
 
-/**
- * An expired story keeps an empty "already seen" row while its feed still
- * lists it, so it can't be stored again as new. The row goes once the feed
- * has stopped listing it for this long.
- */
-export const SEEN_MARKER_DAYS = 7;
-
-export function seenMarkerCutoff(now: Date): Date {
-  return new Date(now.getTime() - SEEN_MARKER_DAYS * 24 * 60 * 60_000);
-}
+// Tolerates small clock differences; anything dated further ahead would sit at the top of every feed.
+const MAX_FUTURE_MS = 10 * 60_000;
 
 /**
- * The stories worth storing from one fetch: unexpired, one per guid, newest
- * first, at most MAX_ITEMS_PER_FETCH. Feeds aren't always newest-first
- * (Google News search feeds are ranked by relevance), so this sorts before
- * cutting. Undated stories count as published now.
+ * The stories worth storing from one fetch: dated within the story lifetime,
+ * one per guid, newest first, at most MAX_ITEMS_PER_FETCH. Feeds aren't always
+ * newest-first (Google News search feeds are ranked by relevance), so this
+ * sorts before cutting. Undated stories are skipped: since nothing older than
+ * the cutoff is ever stored, deleting a story at the cutoff can't make it come
+ * back as new, but an undated one would.
  */
-export function selectFreshItems(items: FeedItem[], now: Date): FeedItem[] {
+export function selectFreshItems(
+  items: FeedItem[],
+  now: Date,
+): (FeedItem & { publishedAt: Date })[] {
   const cutoff = storyCutoff(now);
+  const latest = now.getTime() + MAX_FUTURE_MS;
   const seen = new Set<string>();
   return items
-    .filter((item) => {
-      if (seen.has(item.guid)) return false;
+    .filter((item): item is FeedItem & { publishedAt: Date } => {
+      if (!item.publishedAt || seen.has(item.guid)) return false;
       seen.add(item.guid);
-      return !item.publishedAt || item.publishedAt >= cutoff;
+      return item.publishedAt >= cutoff && item.publishedAt.getTime() <= latest;
     })
-    .sort(
-      (a, b) =>
-        (b.publishedAt?.getTime() ?? now.getTime()) -
-        (a.publishedAt?.getTime() ?? now.getTime()),
-    )
+    .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
     .slice(0, MAX_ITEMS_PER_FETCH);
 }

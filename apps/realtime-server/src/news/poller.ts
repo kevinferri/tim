@@ -1,7 +1,7 @@
 import {
   FeedError,
   fetchFeed as defaultFetchFeed,
-  nextFetchDelayMinutes,
+  POLL_INTERVAL_MINUTES,
   selectFreshItems,
   toNewsItemDto,
   type NewsItemsCreatedPayload,
@@ -9,12 +9,13 @@ import {
 import { SocketEvent } from "@tim/socket-types";
 import type { NewsFeed } from "@tim/db-types";
 import type { AppServer } from "../lib/socket";
-import { RoomType, toRoomKey } from "../event-handlers/rooms";
+import { RoomType, parseRoomKey, toRoomKey } from "../event-handlers/rooms";
 import {
   claimDueFeeds,
   getCircleIdsForFeed,
+  getCircleIdsForTopics,
   insertNewItems,
-  markItemsSeen,
+  markCircleFeedsDue,
   pruneNews,
   updateFeedAfterFetch,
 } from "../db/news";
@@ -24,29 +25,50 @@ const CLAIM_BATCH = 20;
 const CONCURRENCY = 10;
 // A tick keeps claiming batches until nothing is due, but hands over to the next tick before overlapping it.
 const TICK_BUDGET_MS = 25_000;
-// Expiry has to keep up with the 24-hour story lifetime; the feed API also hides expired stories on read.
+// Deletion keeps up with the 24-hour story lifetime; the feed API also hides expired stories on read.
 const PRUNE_EVERY_MS = 15 * 60_000;
 
 export type NewsPollerDeps = {
   server: AppServer;
   fetchFeed?: typeof defaultFetchFeed;
   now?: () => Date;
+  /** Circles with someone in the chat; only their feeds are polled. */
+  activeCircleIds?: () => Promise<string[]>;
 };
+
+/** Topic rooms are only joined while a topic is open, unlike circle rooms, which every open tab joins for all its circles. */
+function activeCircleIdsFrom(server: AppServer) {
+  return () => {
+    const topicIds: string[] = [];
+    for (const [key, sockets] of server.sockets.adapter.rooms) {
+      if (sockets.size === 0) continue;
+      const { roomType, id } = parseRoomKey(key);
+      if (roomType === RoomType.Topic && id) topicIds.push(id);
+    }
+    return getCircleIdsForTopics(topicIds);
+  };
+}
 
 /** Fetches due feeds on a timer and pushes new items to every circle following them. */
 export function createNewsPoller({
   server,
   fetchFeed = defaultFetchFeed,
   now = () => new Date(),
+  activeCircleIds = activeCircleIdsFrom(server),
 }: NewsPollerDeps) {
   let timer: NodeJS.Timeout | null = null;
   let running: Promise<void> | null = null;
+  // A refresh that arrives mid-tick runs another tick right after, instead of waiting for the timer.
+  let rerun = false;
+  // Refreshed circles are polled on the next tick even if nobody has a topic open (e.g. only the News panel).
+  const refreshed = new Set<string>();
   let lastPruneAt = 0;
   // Set by stop(): the claim loop finishes its current batch and claims no more.
   let stopping = false;
 
   async function pollFeed(feed: NewsFeed) {
     const startedAt = now();
+    const nextFetchAt = addMinutes(startedAt, POLL_INTERVAL_MINUTES);
     try {
       const result = await fetchFeed(feed.url, {
         etag: feed.etag,
@@ -54,17 +76,9 @@ export function createNewsPoller({
       });
 
       if (result.status === "not-modified") {
-        await markItemsSeen({ feedId: feed.id, now: startedAt });
         await updateFeedAfterFetch(feed.id, {
           lastFetchedAt: startedAt,
-          failureCount: 0,
-          nextFetchAt: addMinutes(
-            startedAt,
-            nextFetchDelayMinutes({
-              ttlMinutes: feed.ttlMinutes,
-              failureCount: 0,
-            }),
-          ),
+          nextFetchAt,
         });
         return;
       }
@@ -75,27 +89,14 @@ export function createNewsPoller({
         items: selectFreshItems(parsed.items, startedAt),
         now: startedAt,
       });
-      await markItemsSeen({
-        feedId: feed.id,
-        guids: parsed.items.map((i) => i.guid),
-        now: startedAt,
-      });
+      // The title stays as set when the source was added (a preset's name, or the topic as typed).
       await updateFeedAfterFetch(feed.id, {
-        title: parsed.title || feed.title,
         siteUrl: parsed.siteUrl ?? feed.siteUrl,
         imageUrl: parsed.imageUrl ?? feed.imageUrl,
-        ttlMinutes: parsed.ttlMinutes,
         etag: result.etag,
         lastModified: result.lastModified,
         lastFetchedAt: startedAt,
-        failureCount: 0,
-        nextFetchAt: addMinutes(
-          startedAt,
-          nextFetchDelayMinutes({
-            ttlMinutes: parsed.ttlMinutes,
-            failureCount: 0,
-          }),
-        ),
+        nextFetchAt,
       });
 
       if (created.length === 0) return;
@@ -109,16 +110,11 @@ export function createNewsPoller({
           .emit(SocketEvent.NewsItemsCreated, payload);
       }
     } catch (err) {
-      const failureCount = feed.failureCount + 1;
       if (!(err instanceof FeedError))
         console.error("[news] poll failed", feed.url, err);
       await updateFeedAfterFetch(feed.id, {
         lastFetchedAt: startedAt,
-        failureCount,
-        nextFetchAt: addMinutes(
-          startedAt,
-          nextFetchDelayMinutes({ ttlMinutes: feed.ttlMinutes, failureCount }),
-        ),
+        nextFetchAt,
       }).catch((updateErr) => console.error("[news] update failed", updateErr));
     }
   }
@@ -129,9 +125,17 @@ export function createNewsPoller({
       lastPruneAt = at.getTime();
       await pruneNews({ now: at });
     }
+    const circleIds = [
+      ...new Set([...(await activeCircleIds()), ...refreshed]),
+    ];
+    refreshed.clear();
     const startedAt = Date.now();
     while (!stopping) {
-      const feeds = await claimDueFeeds({ now: at, limit: CLAIM_BATCH });
+      const feeds = await claimDueFeeds({
+        now: at,
+        limit: CLAIM_BATCH,
+        circleIds,
+      });
       for (let i = 0; i < feeds.length; i += CONCURRENCY) {
         await Promise.all(feeds.slice(i, i + CONCURRENCY).map(pollFeed));
       }
@@ -140,18 +144,35 @@ export function createNewsPoller({
     }
   }
 
-  function runTick() {
-    if (running) return running;
+  function runTick(): Promise<void> {
+    if (running) {
+      rerun = true;
+      return running;
+    }
+    rerun = false;
     running = tick()
       .catch((err) => console.error("[news] tick failed", err))
       .finally(() => {
         running = null;
+        if (rerun && !stopping) void runTick();
       });
     return running;
   }
 
   return {
     tick: runTick,
+    /** Someone opened the circle or its News panel: fetch its feeds now, at most once per feed per REFRESH_THROTTLE_MINUTES. */
+    async refreshCircle(circleId: string) {
+      if (stopping) return;
+      try {
+        await markCircleFeedsDue({ circleId, now: now() });
+        refreshed.add(circleId);
+      } catch (err) {
+        console.error("[news] refresh failed", err);
+        return;
+      }
+      await runTick();
+    },
     start() {
       if (timer) return;
       stopping = false;

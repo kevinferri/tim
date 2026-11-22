@@ -59,6 +59,8 @@ model Circle {
   imageUrl       String?
   userId         String
   defaultTopicId String? @unique
+  // Off by default, like games; turning it off stops polling the circle's feeds but keeps its sources.
+  newsEnabled    Boolean @default(false)
 
   // Relations
   createdBy    User    @relation("circlesCreatedByUser", fields: [userId], references: [id])
@@ -409,13 +411,11 @@ model NewsFeed {
   title         String
   siteUrl       String?
   imageUrl      String?
-  ttlMinutes    Int?
   // HTTP validators from the last response, sent back so unchanged feeds return 304.
   etag          String?
   lastModified  String?
   lastFetchedAt DateTime?
   nextFetchAt   DateTime  @default(now())
-  failureCount  Int       @default(0)
 
   sources CircleNewsSource[] @relation("sourcesForFeed")
   items   NewsItem[]         @relation("itemsInFeed")
@@ -450,17 +450,13 @@ model NewsItem {
   link        String
   summary     String?
   imageUrl    String?
+  // Deleted 24 hours after this.
   publishedAt DateTime
-  // Last time the feed still listed it. The row (as an empty marker, once expired) is kept while the feed lists it, so it can't be re-inserted as new.
-  lastSeenAt  DateTime @default(now())
-  // Set when the story passes its 24-hour lifetime and its content (title, link, summary, image) is erased.
-  expiredAt   DateTime?
 
   feed NewsFeed @relation("itemsInFeed", fields: [feedId], references: [id], onDelete: Cascade)
 
   @@unique([feedId, guid])
   @@index([feedId, publishedAt(sort: Desc)])
-  @@index([lastSeenAt])
   @@index([publishedAt])
   // Link previews in chat look stories up by URL.
   @@index([link])

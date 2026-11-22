@@ -4,6 +4,16 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./shared": {
+      "types": "./dist/shared.d.ts",
+      "default": "./dist/shared.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "test": "tsc && node --test test/*.test.mjs"

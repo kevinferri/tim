@@ -1,44 +1,90 @@
 import { randomUUID } from "crypto";
 import type { NewsFeed, NewsItem } from "@tim/db-types";
-import { seenMarkerCutoff, storyCutoff, type FeedItem } from "@tim/news";
+import {
+  REFRESH_THROTTLE_MINUTES,
+  storyCutoff,
+  type FeedItem,
+} from "@tim/news";
 import { pgClient } from "./client";
 
 // How long a claimed feed stays out of other ticks' reach while its fetch runs.
 const CLAIM_MINUTES = 2;
 
 /**
- * Claims up to `limit` due feeds that at least one circle still follows, by
- * pushing their nextFetchAt forward. SKIP LOCKED keeps two server instances
+ * Claims up to `limit` due feeds followed by one of `circleIds` with News on,
+ * by pushing their nextFetchAt forward. SKIP LOCKED keeps two server instances
  * from fetching the same feed at once.
  */
 export async function claimDueFeeds({
   now,
   limit,
+  circleIds,
 }: {
   now: Date;
   limit: number;
+  circleIds: string[];
 }): Promise<NewsFeed[]> {
+  if (circleIds.length === 0) return [];
   const claimUntil = new Date(now.getTime() + CLAIM_MINUTES * 60_000);
   const { rows } = await pgClient.raw<{ rows: NewsFeed[] }>(
     `UPDATE news_feeds SET "nextFetchAt" = ?
      WHERE id IN (
        SELECT f.id FROM news_feeds f
        WHERE f."nextFetchAt" <= ?
-         AND EXISTS (SELECT 1 FROM circle_news_sources s WHERE s."feedId" = f.id)
+         AND EXISTS (
+           SELECT 1 FROM circle_news_sources s
+           JOIN circles c ON c.id = s."circleId"
+           WHERE s."feedId" = f.id AND c."newsEnabled" AND s."circleId" = ANY(?)
+         )
        ORDER BY f."nextFetchAt"
        LIMIT ?
        FOR UPDATE SKIP LOCKED
      )
      RETURNING *`,
-    [claimUntil, now, limit],
+    [claimUntil, now, circleIds, limit],
   );
   return rows;
 }
 
+/** Makes a News-on circle's feeds due now, skipping any fetched in the last REFRESH_THROTTLE_MINUTES. */
+export async function markCircleFeedsDue({
+  circleId,
+  now,
+}: {
+  circleId: string;
+  now: Date;
+}) {
+  const fetchedSince = new Date(
+    now.getTime() - REFRESH_THROTTLE_MINUTES * 60_000,
+  );
+  await pgClient.raw(
+    `UPDATE news_feeds SET "nextFetchAt" = ?
+     WHERE "nextFetchAt" > ?
+       AND ("lastFetchedAt" IS NULL OR "lastFetchedAt" < ?)
+       AND id IN (
+         SELECT s."feedId" FROM circle_news_sources s
+         JOIN circles c ON c.id = s."circleId"
+         WHERE s."circleId" = ? AND c."newsEnabled"
+       )`,
+    [now, now, fetchedSince, circleId],
+  );
+}
+
+/** Circles with someone in one of their topics right now. */
+export async function getCircleIdsForTopics(
+  topicIds: string[],
+): Promise<string[]> {
+  if (topicIds.length === 0) return [];
+  const rows = await pgClient("topics")
+    .distinct("circleId")
+    .whereIn("id", topicIds);
+  return rows.map((r: { circleId: string }) => r.circleId);
+}
+
 /**
  * Inserts items not seen before (by feed + guid) and returns only the new
- * rows. Callers pass what `selectFreshItems` picked, so nothing expired is
- * stored.
+ * rows. Callers pass what `selectFreshItems` picked: dated, and within the
+ * story lifetime.
  */
 export async function insertNewItems({
   feedId,
@@ -46,7 +92,7 @@ export async function insertNewItems({
   now,
 }: {
   feedId: string;
-  items: FeedItem[];
+  items: (FeedItem & { publishedAt: Date })[];
   now: Date;
 }): Promise<NewsItem[]> {
   if (items.length === 0) return [];
@@ -60,11 +106,8 @@ export async function insertNewItems({
         link: item.link,
         summary: item.summary,
         imageUrl: item.imageUrl,
-        // A future date would pin the item to the top of every feed.
-        publishedAt:
-          item.publishedAt && item.publishedAt < now ? item.publishedAt : now,
+        publishedAt: item.publishedAt,
         createdAt: now,
-        lastSeenAt: now,
       })),
     )
     .onConflict(["feedId", "guid"])
@@ -72,38 +115,17 @@ export async function insertNewItems({
     .returning("*");
 }
 
-/** Records that the feed still lists these stories (all of them when `guids` is omitted, i.e. a 304). */
-export async function markItemsSeen({
-  feedId,
-  guids,
-  now,
-}: {
-  feedId: string;
-  guids?: string[];
-  now: Date;
-}) {
-  const query = pgClient<NewsItem>("news_items").where({ feedId });
-  if (guids) {
-    if (guids.length === 0) return;
-    query.whereIn("guid", guids);
-  }
-  await query.update({ lastSeenAt: now });
-}
-
 export async function updateFeedAfterFetch(
   feedId: string,
   fields: Partial<
     Pick<
       NewsFeed,
-      | "title"
       | "siteUrl"
       | "imageUrl"
-      | "ttlMinutes"
       | "etag"
       | "lastModified"
       | "lastFetchedAt"
       | "nextFetchAt"
-      | "failureCount"
     >
   >,
 ) {
@@ -118,30 +140,12 @@ export async function getCircleIdsForFeed(feedId: string): Promise<string[]> {
 }
 
 /**
- * The feed hosts a story for 24 hours. After that its content is erased and
- * only an empty "already seen" row stays, while the feed still lists it, so
- * it can't be stored again as new. Rows the feed stopped listing a week ago,
- * and feeds no circle follows, are deleted.
+ * The feed hosts a story for 24 hours, then it's deleted. It can't come back
+ * as new, because nothing published before the cutoff is ever stored. Feeds
+ * nobody follows are kept (they're tiny) and simply not polled.
  */
 export async function pruneNews({ now }: { now: Date }) {
   await pgClient<NewsItem>("news_items")
-    .whereNull("expiredAt")
     .where("publishedAt", "<", storyCutoff(now))
-    .update({
-      title: "",
-      link: "",
-      summary: null,
-      imageUrl: null,
-      expiredAt: now,
-    });
-  await pgClient<NewsItem>("news_items")
-    .where("lastSeenAt", "<", seenMarkerCutoff(now))
-    .del();
-  await pgClient("news_feeds")
-    .whereNotExists(
-      pgClient("circle_news_sources")
-        .select(pgClient.raw("1"))
-        .whereRaw('circle_news_sources."feedId" = news_feeds.id'),
-    )
     .del();
 }

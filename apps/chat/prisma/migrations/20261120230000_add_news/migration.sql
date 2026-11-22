@@ -1,3 +1,6 @@
+-- AlterTable
+ALTER TABLE "circles" ADD COLUMN     "newsEnabled" BOOLEAN NOT NULL DEFAULT false;
+
 -- CreateTable
 CREATE TABLE "news_feeds" (
     "id" TEXT NOT NULL,
@@ -6,12 +9,10 @@ CREATE TABLE "news_feeds" (
     "title" TEXT NOT NULL,
     "siteUrl" TEXT,
     "imageUrl" TEXT,
-    "ttlMinutes" INTEGER,
     "etag" TEXT,
     "lastModified" TEXT,
     "lastFetchedAt" TIMESTAMP(3),
     "nextFetchAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "failureCount" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "news_feeds_pkey" PRIMARY KEY ("id")
 );
@@ -37,8 +38,6 @@ CREATE TABLE "news_items" (
     "summary" TEXT,
     "imageUrl" TEXT,
     "publishedAt" TIMESTAMP(3) NOT NULL,
-    "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiredAt" TIMESTAMP(3),
 
     CONSTRAINT "news_items_pkey" PRIMARY KEY ("id")
 );
@@ -57,9 +56,6 @@ CREATE INDEX "circle_news_sources_addedById_idx" ON "circle_news_sources"("added
 
 -- CreateIndex
 CREATE INDEX "news_items_feedId_publishedAt_idx" ON "news_items"("feedId", "publishedAt" DESC);
-
--- CreateIndex
-CREATE INDEX "news_items_lastSeenAt_idx" ON "news_items"("lastSeenAt");
 
 -- CreateIndex
 CREATE INDEX "news_items_publishedAt_idx" ON "news_items"("publishedAt");

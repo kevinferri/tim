@@ -33,8 +33,8 @@ const wsServer = new Server<
 });
 
 wsServer.use(middleware);
-registerEventHandlers(wsServer);
 const newsPoller = createNewsPoller({ server: wsServer });
+registerEventHandlers(wsServer, { news: newsPoller });
 newsPoller.start();
 registerShutdown({ stopNews: newsPoller.stop });
 

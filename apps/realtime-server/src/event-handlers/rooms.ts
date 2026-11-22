@@ -4,6 +4,7 @@ import { getParentCircleIdForTopic, isUserInTopic } from "../db/topics";
 import { SocketEvent, HandlerArgs } from "./main";
 import { markTopicRead } from "../db/topic-read-state";
 import { ActiveUserState, AppSocket } from "../lib/socket";
+import { refreshNewsForTopic, type NewsRefresher } from "./news";
 
 export { RoomType };
 
@@ -155,7 +156,10 @@ export function enqueueRoomOp(socket: AppSocket, op: () => Promise<void>) {
   return next;
 }
 
-export function handleJoinRoom({ socket, server }: HandlerArgs) {
+export function handleJoinRoom(
+  { socket, server }: HandlerArgs,
+  news?: NewsRefresher,
+) {
   socket.on(
     SocketEvent.JoinRoom,
     (payload: { id: string; roomType: RoomType }) =>
@@ -177,6 +181,7 @@ export function handleJoinRoom({ socket, server }: HandlerArgs) {
         if (roomType === RoomType.Topic) {
           // Not marked read here: useRoomResyncOnConnect re-joins on every reconnect (sleep/wake, deploys), which would clear unread the user never saw.
           await emitUserChangeInTopic({ server, socket, topicId: id });
+          await refreshNewsForTopic(news, id);
         }
 
         if (roomType === RoomType.Circle) {

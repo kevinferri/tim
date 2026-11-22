@@ -13,8 +13,6 @@ export type ParsedFeed = {
   title: string;
   siteUrl: string | null;
   imageUrl: string | null;
-  /** The feed's own requested minimum refresh interval (RSS <ttl>), if any. */
-  ttlMinutes: number | null;
   items: FeedItem[];
 };
 
@@ -197,7 +195,6 @@ function finishItem(
 
 function parseRss(channel: Node, items: unknown[]): ParsedFeed {
   const siteUrl = httpUrl(text(channel["link"]));
-  const ttl = parseInt(text(channel["ttl"]), 10);
   return {
     title: feedTitle(text(channel["title"])),
     siteUrl,
@@ -206,7 +203,6 @@ function parseRss(channel: Node, items: unknown[]): ParsedFeed {
         attr(channel["itunes:image"], "href"),
       siteUrl ?? undefined,
     ),
-    ttlMinutes: Number.isFinite(ttl) && ttl > 0 ? ttl : null,
     items: items
       .map(asNode)
       .filter((n): n is Node => n !== null)
@@ -253,7 +249,6 @@ function parseAtom(feed: Node): ParsedFeed {
       text(feed["icon"]) || text(feed["logo"]),
       siteUrl ?? undefined,
     ),
-    ttlMinutes: null,
     items: asArray(feed["entry"])
       .map(asNode)
       .filter((n): n is Node => n !== null)
@@ -298,17 +293,4 @@ export function parseFeed(xml: string): ParsedFeed {
   if (atom) return parseAtom(atom);
 
   throw new NotAFeedError();
-}
-
-/** Feed URLs a page advertises with <link rel="alternate" type="application/rss+xml|atom+xml">. */
-export function discoverFeedUrls(html: string, pageUrl: string): string[] {
-  const urls: string[] = [];
-  for (const [tag] of html.matchAll(/<link\b[^>]*>/gi)) {
-    if (!/rel=["']?alternate/i.test(tag)) continue;
-    if (!/type=["']?application\/(rss|atom)\+xml/i.test(tag)) continue;
-    const href = /href=["']([^"']+)["']/i.exec(tag)?.[1];
-    const url = href ? httpUrl(href, pageUrl) : null;
-    if (url && !urls.includes(url)) urls.push(url);
-  }
-  return urls;
 }
