@@ -56,6 +56,7 @@ import {
 } from "@radix-ui/react-icons";
 import { Prisma } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import { PRESS } from "@/lib/press";
 import { HEADER_ROW_HEIGHT } from "@/components/topics/header-row";
 import { GameRoomButton } from "@/games";
 import { NewsButton } from "@/components/news/news-button";
@@ -728,7 +729,10 @@ export const TopicsList = ({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground",
+                  PRESS,
+                )}
               >
                 <CrossCircledIcon width={16} height={16} />
               </button>
@@ -927,7 +931,10 @@ export const TopicsList = ({
                       setIsMutedSectionCollapsed(!isMutedSectionCollapsed)
                     }
                     aria-expanded={!isMutedSectionCollapsed}
-                    className="flex items-center gap-1 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                    className={cn(
+                      "flex items-center gap-1 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground transition hover:text-foreground",
+                      PRESS,
+                    )}
                   >
                     {isMutedSectionCollapsed ? (
                       <ChevronRightIcon />

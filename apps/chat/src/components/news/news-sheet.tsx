@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatFeedTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
+import { PRESS } from "@/lib/press";
 import { HEADER_ROW_HEIGHT } from "@/components/topics/header-row";
 import {
   MAX_TOPIC_LENGTH,
@@ -212,7 +213,8 @@ function SourceChips({
 }) {
   const chip = (active: boolean) =>
     cn(
-      "shrink-0 rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+      "shrink-0 rounded-full border px-2.5 py-0.5 text-xs transition",
+      PRESS,
       active
         ? "border-primary bg-primary text-primary-foreground"
         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",

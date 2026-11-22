@@ -46,6 +46,7 @@ import { useMessageSound } from "@/components/dashboard/use-message-sound";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
+import { PRESS } from "@/lib/press";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { BlackjackIcon } from "./icon";
@@ -994,7 +995,10 @@ function BetBuilder({
               disabled={total + value > cap}
               onClick={() => chipRefs.current[n]?.click()}
               // Lit like the other keys while you can add that chip.
-              className="text-white/85 transition-[color,text-shadow] duration-300 [text-shadow:0_0_6px_rgba(255,255,255,0.2)] hover:text-white disabled:cursor-default disabled:text-white/20 disabled:[text-shadow:none]"
+              className={cn(
+                "text-white/85 transition-[color,text-shadow] duration-300 [text-shadow:0_0_6px_rgba(255,255,255,0.2)] hover:text-white disabled:cursor-default disabled:text-white/20 disabled:[text-shadow:none]",
+                PRESS,
+              )}
             >
               <kbd className="flex size-5 items-center justify-center rounded-[3px] border border-current font-sans text-[11px] font-bold shadow-[0_0_6px_rgba(255,255,255,0.12)] transition-shadow duration-300 [:disabled>&]:shadow-none">
                 {n + 1}
@@ -1080,6 +1084,7 @@ function PrintedKey({
       onClick={onClick}
       className={cn(
         "flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold uppercase tracking-[0.18em] transition-[color,text-shadow] duration-300",
+        PRESS,
         on
           ? "text-white/85 [text-shadow:0_0_6px_rgba(255,255,255,0.2)] hover:text-white"
           : "cursor-default text-white/20",

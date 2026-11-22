@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { PRESS } from "@/lib/press";
 import type { LetterScore } from "../lib/rules";
 import { SCORE_CLASSES } from "./tiles";
 
@@ -35,7 +36,8 @@ export function Keyboard({
         disabled={disabled}
         onClick={() => onKey(k)}
         className={cn(
-          "flex h-11 items-center justify-center rounded-md border text-sm font-bold uppercase transition-colors disabled:opacity-50",
+          "flex h-11 items-center justify-center rounded-md border text-sm font-bold uppercase transition disabled:opacity-50",
+          PRESS,
           wide ? "flex-[1.5] text-xs" : "flex-1",
           state
             ? SCORE_CLASSES[state]

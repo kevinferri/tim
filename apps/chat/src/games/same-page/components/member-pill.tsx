@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
+import { PRESS } from "@/lib/press";
 
 type Props = {
   member: {
@@ -20,7 +21,8 @@ export function MemberPill({ member, selected, onClick }: Props) {
     <button
       type="button"
       className={cn(
-        "flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm transition-colors",
+        "flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm transition",
+        PRESS,
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected
           ? "border-foreground bg-foreground text-background"

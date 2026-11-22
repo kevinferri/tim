@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { GROUP_PRESS } from "@/lib/press";
 import { BadgeDot, useGameBadges } from "./badges";
 import { useMarkRoomSeen } from "./room-seen";
 import { useGameRoomStore } from "./store";
@@ -161,10 +162,15 @@ function GameCard({
     >
       <button
         type="button"
-        className="flex w-full items-start gap-3 px-3 py-3 pr-10 text-left focus-visible:outline-none"
+        className="group flex w-full items-start gap-3 px-3 py-3 pr-10 text-left focus-visible:outline-none"
         onClick={onOpen}
       >
-        <div className="relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border bg-background">
+        <div
+          className={cn(
+            "relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border bg-background transition",
+            GROUP_PRESS,
+          )}
+        >
           <game.Icon className="size-5" />
           <BadgeDot badge={badge} className="-right-1 -top-1" />
         </div>
