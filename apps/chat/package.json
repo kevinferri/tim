@@ -51,6 +51,7 @@
     "@tim/casino": "workspace:*",
     "@tim/commands": "workspace:*",
     "@tim/crypto": "workspace:*",
+    "@tim/news": "workspace:*",
     "@tim/socket-types": "workspace:*",
     "@tim/user-display": "workspace:*",
     "@types/lodash.keyby": "^4.6.9",
@@ -79,6 +80,7 @@
     "socket.io-client": "^4.7.4",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
+    "tldts": "^7.5.4",
     "zod": "^3.22.4",
     "zustand": "^4.5.5"
   },

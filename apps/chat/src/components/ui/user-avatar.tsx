@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MessageData } from "@/components/topics/message";
 import { cn } from "@/lib/utils";
 import { VariantProps, cva } from "class-variance-authority";
+import { HEADER_CIRCLE_SIZE } from "@/lib/nav-icon";
 import {
   Sheet,
   SheetContent,
@@ -81,6 +82,8 @@ const variants = cva("", {
       // Spans a message's name line plus its first line of text.
       md: "h-10 w-10",
       sm: "h-8 w-8",
+      // Matches the nav icon circles in the header rows.
+      header: HEADER_CIRCLE_SIZE,
       xs: "h-6 w-6",
       lg: "h-12 w-12",
       xl: "h-16 w-16",

@@ -39,7 +39,8 @@ export function GameRoomSheetHost({ circleId }: { circleId: string }) {
 
 export function GameRoomButton(props: {
   circleId: string;
-  isMinimized: boolean;
+  placement: "header" | "rail";
+  className?: string;
 }) {
   return <GameRoomButtonBase {...props} games={GAMES} />;
 }

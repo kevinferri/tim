@@ -31,6 +31,9 @@ type Props = {
   circleName?: string;
   trigger?: React.ReactNode;
   isDefaultTopic?: boolean;
+  /** Prefills the name when creating, e.g. from a search with no matches. */
+  defaultName?: string;
+  onSaved?: () => void;
 };
 
 export const UpsertTopicForm = ({
@@ -39,6 +42,8 @@ export const UpsertTopicForm = ({
   circleName,
   trigger,
   isDefaultTopic,
+  defaultName,
+  onSaved,
 }: Props) => {
   const self = useSelf();
   const [open, setOpen] = useState(false);
@@ -48,18 +53,23 @@ export const UpsertTopicForm = ({
   const upsertedTopic = useSocketEmit(SocketEvent.UpsertedTopic);
   const deletedTopic = useSocketEmit(SocketEvent.DeletedTopic);
   const isCreator = !existingTopic || existingTopic.userId === self.id;
+  const initialName = existingTopic?.name ?? defaultName ?? "";
+  const openDialog = () => {
+    setNameCheck(initialName);
+    setOpen(true);
+  };
 
   return (
     <>
       {trigger ? (
-        <div className="w-full" onClick={() => setOpen(true)}>
+        <div className="w-full" onClick={openDialog}>
           {trigger}
         </div>
       ) : (
         <Button
           variant="ghost"
           className="flex gap-3 flex-1 w-full"
-          onClick={() => setOpen(true)}
+          onClick={openDialog}
         >
           <span>New topic </span>
           <PlusIcon />
@@ -182,6 +192,7 @@ export const UpsertTopicForm = ({
                     createdBy,
                     isEdit,
                   });
+                  onSaved?.();
                 }
               }}
             >
@@ -192,7 +203,7 @@ export const UpsertTopicForm = ({
                     id="name"
                     name="name"
                     disabled={!isCreator}
-                    defaultValue={existingTopic?.name}
+                    defaultValue={initialName}
                     onChange={(e) => setNameCheck(e.target.value)}
                   />
                 </div>

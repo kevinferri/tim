@@ -20,10 +20,28 @@ import { NotificationPanel } from "@/components/notifications/notification-panel
 import { useUnreadNotificationCount } from "@/components/notifications/use-unread-notification-count";
 import { useMarkAllNotificationsRead } from "@/components/notifications/use-mark-all-notifications-read";
 import { SocketEvent, useSocketHandler } from "@/components/socket/use-socket";
+import { HEADER_ROW_HEIGHT } from "@/components/topics/header-row";
+import { useTopicMetaContext } from "@/components/topics/current-topic-provider";
+import { GameRoomButton } from "@/games";
+import { NewsButton } from "@/components/news/news-button";
+import { NAV_ICON_CIRCLE } from "@/lib/nav-icon";
+import { cn } from "@/lib/utils";
 
 type Tab = "highlights" | "media" | "members" | "notifications";
 
+// Each nav button fills its whole slot so the click target is the full cell, not just the icon.
+const NAV_BUTTON =
+  "h-full w-auto flex-1 rounded-none p-0 text-muted-foreground hover:bg-transparent hover:text-foreground active:scale-100";
+
+const TAB_LABELS: Record<Tab, string> = {
+  members: "Circle members",
+  highlights: "Top highlights",
+  media: "Media",
+  notifications: "Notifications",
+};
+
 export function TopicSideBar() {
+  const { circleId } = useTopicMetaContext();
   const [activeTab, setActiveTab] = useState<Tab>("members");
   const unreadCount = useUnreadNotificationCount();
   const { mutate: markAllRead, isPending: isMarkingAllRead } =
@@ -99,6 +117,22 @@ export function TopicSideBar() {
     },
   } as const;
 
+  const tabTrigger = (tab: Tab) => (
+    <TabsTrigger
+      value={tab}
+      aria-label={TAB_LABELS[tab]}
+      className={cn(
+        NAV_BUTTON,
+        "group relative",
+        "data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none",
+        // The selected tab's underline sits on the row's bottom border, tying it to the panel below.
+        "after:absolute after:inset-x-2 after:-bottom-px after:h-px after:rounded-full data-[state=active]:after:bg-foreground",
+      )}
+    >
+      <span className={NAV_ICON_CIRCLE}>{tabMap[tab].icon}</span>
+    </TabsTrigger>
+  );
+
   return (
     <div className="relative hidden w-sidebar-detail shrink-0 flex-col border-l bg-sidebar shadow-md md:flex lg:w-sidebar-detail-lg">
       <Tabs
@@ -112,23 +146,43 @@ export function TopicSideBar() {
           }
         }}
       >
-        <div className="p-3">
-          <TabsList className="grid w-full grid-cols-4 h-[38px]">
-            {Object.keys(tabMap).map((tabKey) => {
-              return (
-                <TabsTrigger key={tabKey} value={tabKey}>
-                  {tabMap[tabKey as Tab].icon}
-                </TabsTrigger>
-              );
-            })}
+        {/* Fills the header cell; same height as the topic header so the lines meet. */}
+        <div className={`flex shrink-0 border-b ${HEADER_ROW_HEIGHT}`}>
+          {/* Each icon gets an equal slot across the row. */}
+          <TabsList className="flex h-full w-full items-center rounded-none bg-transparent p-0">
+            {tabTrigger("members")}
+            {tabTrigger("highlights")}
+            {tabTrigger("media")}
+            {tabTrigger("notifications")}
+            <RowDivider />
+            <GameRoomButton
+              circleId={circleId}
+              placement="header"
+              className={NAV_BUTTON}
+            />
+            <NewsButton
+              circleId={circleId}
+              placement="header"
+              className={NAV_BUTTON}
+            />
           </TabsList>
         </div>
 
         <div className="flex flex-1 flex-col overflow-y-hidden basis-full">
-          <div className="text-center py-1">{tabMap[activeTab].header}</div>
+          {/* Same title style as the Game room and News drawers. */}
+          <div className="p-3 text-center font-semibold">
+            {tabMap[activeTab].header}
+          </div>
           <ScrollArea>{tabMap[activeTab].node}</ScrollArea>
         </div>
       </Tabs>
     </div>
+  );
+}
+
+function RowDivider() {
+  // A foreground tint, not bg-border, which nearly vanishes beside the icon circles.
+  return (
+    <div className="mx-0.5 h-5 w-px shrink-0 bg-foreground/20" aria-hidden />
   );
 }

@@ -1,4 +1,4 @@
-import { cn, isEmojiOnly } from "@/lib/utils";
+import { cn, isEmojiOnly, shortUrlLabel } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo } from "react";
 import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
@@ -166,6 +166,7 @@ export function MessageText(props: Props) {
           url: ({ attributes, content }) => (
             <Link
               href={attributes.href}
+              title={attributes.href}
               target="_blank"
               className="underline text-mention underline-offset-4 hover:opacity-80"
               onClick={() => {
@@ -175,7 +176,7 @@ export function MessageText(props: Props) {
                 });
               }}
             >
-              {content}
+              {shortUrlLabel(content)}
             </Link>
           ),
         },

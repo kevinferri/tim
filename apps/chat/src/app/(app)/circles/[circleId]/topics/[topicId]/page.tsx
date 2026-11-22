@@ -132,9 +132,9 @@ export default async function TopicPage({ params }: Props) {
           existingTopHighlights={topHighlights}
           existingMediaMessages={mediaMessages}
         >
-          <TopicHeader topic={topic} />
           <div className="flex flex-1 flex-row overflow-y-hidden">
             <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
+              <TopicHeader topic={topic} />
               <MessageModal />
               <ReplyThreadSheet topicId={topic.id} />
               <TopicChat />

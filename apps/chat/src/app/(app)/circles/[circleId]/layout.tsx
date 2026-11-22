@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { TopicsNav } from "@/components/topics/topics-nav";
 import { TopicsNavSkeleton } from "@/components/topics/topics-nav-skeleton";
 import { GameRoomSheetHost } from "@/games";
+import { NewsSheet } from "@/components/news/news-sheet";
 
 type Props = {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export default async function CircleLayout(props: Props) {
       </Suspense>
       {props.children}
       <GameRoomSheetHost circleId={params.circleId} />
+      <NewsSheet circleId={params.circleId} />
     </>
   );
 }

@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { GearIcon } from "@radix-ui/react-icons";
 import { UpsertTopicForm } from "@/components/topics/upsert-topic-form";
 import { Topic } from "@prisma/client";
 import { TopicActiveUsers } from "@/components/topics/topic-active-users";
+import { HEADER_ROW_HEIGHT } from "@/components/topics/header-row";
+import { cn } from "@/lib/utils";
 
 type Props = {
   topic: Pick<Topic, "id" | "name" | "userId" | "description"> & {
@@ -16,9 +17,13 @@ type Props = {
 
 export function TopicHeader(props: Props) {
   return (
-    <div className="relative flex flex-row justify-left p-3 border-b items-center gap-1">
-      <div className="font-medium truncate min-w-0">{props.topic.name}</div>
-      <div>
+    <div
+      className={cn(
+        "flex flex-row shrink-0 px-3 border-b items-center gap-3",
+        HEADER_ROW_HEIGHT,
+      )}
+    >
+      <div className="flex min-w-0 flex-1 [&>div]:flex [&>div]:w-auto [&>div]:min-w-0">
         <UpsertTopicForm
           existingTopic={props.topic}
           circleId={props.topic.parentCircle.id}
@@ -29,17 +34,15 @@ export function TopicHeader(props: Props) {
           trigger={
             <Button
               variant="ghost"
-              size="iconSm"
-              className="absolute top-[12px]"
-              aria-label="Topic settings"
+              className="-ml-2 h-8 min-w-0 justify-start px-2 text-base font-medium"
               title="Topic settings"
             >
-              <GearIcon className="h-4 w-4" />
+              <span className="min-w-0 truncate">{props.topic.name}</span>
             </Button>
           }
         />
       </div>
-      <div className="absolute right-3">
+      <div className="flex shrink-0 items-center">
         <TopicActiveUsers topicId={props.topic.id} />
       </div>
     </div>

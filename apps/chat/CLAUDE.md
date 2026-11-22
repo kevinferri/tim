@@ -91,12 +91,24 @@ Each game is self-contained under `src/games/<game>/` (`lib/`, `server/`, `compo
 
 Same Page's scheduled work (6am prompt, 2pm nudge, 4pm reveal, weekdays, Eastern time; defined once in `src/games/same-page/lib/schedule.ts`) runs from a cron started in `src/instrumentation.ts`, which also runs once on startup to catch up on anything missed. Alerts are saved as circle-level notifications (`Notification.circleId`, no message or actor) with no socket push. Open tabs pick them up from a refresh timer at each alert time and when the tab becomes visible again. The realtime server has no Same Page code apart from the `/samepage sock` command.
 
+### News
+
+News is off per circle until the circle's creator turns it on (`circles.newsEnabled`); turning it off stops polling and keeps the circle's sources. Circles follow a preset site or a Google News topic, nothing else: both are defined in `src/lib/news-sources.ts`, which the UI and the server share, and the server builds every feed URL itself (topics are lowercased so they share one feed). A feed URL is stored once in `news_feeds` and shared by every circle that follows it (`circle_news_sources`). This app never fetches feeds: adding a source only saves it, and the browser then sends `NewsRefresh`, so `apps/realtime-server`'s poller fetches it and pushes its stories over Socket.IO. The feed hosts a story for 72 hours from its publish date (`STORY_LIFETIME_HOURS`, `storyCutoff` in `@tim/news`); reads filter on that directly, and the realtime server deletes expired stories. Links already shared into chat stay. `src/lib/news.ts` holds the server side (listing items, adding and removing sources, turning News on or off, and `getNewsLinkPreview`, which `/api/link-metadata` uses so shared stories preview from stored data, only from feeds the viewing topic's circle follows and only for links on the feed's own site), with routes under `src/app/api/circles/[circleId]/news/`. The UI is `src/components/news/`: the sidebar button beside the Game room, and a panel mounted once in the circle layout (feed, sources screen, share form). Opening the panel sends `NewsRefresh`, and again every 15 minutes while it stays open. When stories arrive (`NewsItemsCreated`), sources change, or the socket reconnects, the circle's news queries are simply refetched. The unread dot compares the newest item's `createdAt` with what the viewer last saw (localStorage). Browser code imports only from `@tim/news/shared`, the package's entry point without Node built-ins.
+
 ### Path aliases & conventions
 
 - `@/*` → `src/*`
 - Client components need `"use client"`; everything else defaults to Server Component
 - File names: kebab-case; components: PascalCase named exports (default exports only where Next requires them, e.g. `page.tsx`, `layout.tsx`)
 - Merge Tailwind classes with `cn()` from `@/lib/utils`
+
+### UI and theming
+
+Every UI change has to look right in **both light and dark mode** (`darkMode: ["class"]`, toggled from the left rail). Check both before calling a UI change done; most issues only show up in light mode.
+
+- Use theme tokens (`bg-background`, `bg-sidebar`, `text-foreground`, `text-muted-foreground`, `border`), not raw colors. When a raw color is needed, pair it for both themes, e.g. `text-emerald-600 dark:text-emerald-400`.
+- In light mode, `bg-secondary`, `bg-muted`, and `bg-accent` are nearly the same color as `bg-sidebar`. They are fine for a passing hover, but a persistent state (selected, active) built from them disappears there. Use a tint of the foreground for those instead, e.g. `bg-foreground/[0.12]` for the selected tab in `src/components/topics/topic-side-bar.tsx`.
+- The `outline` Button variant fills with `bg-background`, which is white in light mode. Next to a transparent `Input` on the sidebar, add `bg-transparent` so the two match.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

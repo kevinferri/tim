@@ -17,6 +17,7 @@ import { handleToggleHighlight } from "./highlights";
 import { handleDeletedCircle, handleUpsertedCircle } from "./circles";
 import { handleCircleNotificationsChanged } from "./notifications";
 import { handleCasino } from "./casino";
+import { handleNews, type NewsRefresher } from "./news";
 import {
   handleUserClickedLink,
   handleUserExpandedImage,
@@ -37,7 +38,10 @@ export type HandlerArgs = {
   socket: AppSocket;
 };
 
-export function registerEventHandlers(server: AppServer) {
+export function registerEventHandlers(
+  server: AppServer,
+  { news }: { news?: NewsRefresher } = {},
+) {
   server.on(SocketEvent.Connection, (socket) => {
     socket.use((_, next) => {
       if (!socket.data.user) {
@@ -54,7 +58,7 @@ export function registerEventHandlers(server: AppServer) {
     handleClientDisconnecting({ socket, server });
     handleClientDisconnected({ socket, server });
 
-    handleJoinRoom({ socket, server });
+    handleJoinRoom({ socket, server }, news);
     handleLeaveRoom({ socket, server });
 
     handleSendMessage({ socket, server });
@@ -73,6 +77,8 @@ export function registerEventHandlers(server: AppServer) {
     handleCircleNotificationsChanged({ socket, server });
 
     handleCasino({ socket, server });
+
+    handleNews({ socket, server }, news);
 
     handleUserTabFocused({ socket, server });
     handleUserTabBlurred({ socket, server });

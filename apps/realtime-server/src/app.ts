@@ -8,6 +8,7 @@ import { middleware } from "./middleware";
 import { parse } from "url";
 import { SocketData } from "./lib/socket";
 import { registerShutdown } from "./shutdown";
+import { createNewsPoller } from "./news/poller";
 
 const port = process.env.WS_PORT;
 const httpServer = createServer((req, res) => {
@@ -32,8 +33,10 @@ const wsServer = new Server<
 });
 
 wsServer.use(middleware);
-registerEventHandlers(wsServer);
-registerShutdown();
+const newsPoller = createNewsPoller({ server: wsServer });
+registerEventHandlers(wsServer, { news: newsPoller });
+newsPoller.start();
+registerShutdown({ stopNews: newsPoller.stop });
 
 httpServer.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
