@@ -101,7 +101,7 @@ export function CircleMembersList() {
   });
 
   return (
-    <div className="px-3 pb-3 flex flex-col gap-3">
+    <div className="p-3 flex flex-col gap-3">
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Online ({sortedOnlineMembers.length})
       </div>
