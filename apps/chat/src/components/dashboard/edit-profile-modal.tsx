@@ -26,6 +26,7 @@ import { SocketEvent, useSocketEmit } from "@/components/socket/use-socket";
 import { updateProfile } from "@/actions/profile";
 import { cropToAvatar } from "@/lib/crop-image";
 import { cn } from "@/lib/utils";
+import { PRESS } from "@/lib/press";
 
 // Decoding a huge photo into a canvas can stall low-end phones; anything a camera produces fits.
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
@@ -211,7 +212,8 @@ export function EditProfileModal(props: Props) {
                   pickFile(e.dataTransfer.files?.[0]);
                 }}
                 className={cn(
-                  "group relative shrink-0 rounded-full ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  "group relative shrink-0 rounded-full ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  PRESS,
                   isDragging && "ring-2 ring-primary ring-offset-2",
                 )}
               >

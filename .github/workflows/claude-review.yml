@@ -2,7 +2,7 @@ name: Claude PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review]
+    types: [opened, synchronize, ready_for_review, unlabeled]
 
 # A newer push supersedes an in-flight review of the same PR.
 concurrency:
@@ -11,7 +11,11 @@ concurrency:
 
 jobs:
   review:
-    if: github.event.pull_request.draft == false
+    # The `skip-review` label skips the review; removing it starts one.
+    if: |
+      github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-review') &&
+      (github.event.action != 'unlabeled' || github.event.label.name == 'skip-review')
     runs-on: ubuntu-latest
     permissions:
       contents: read

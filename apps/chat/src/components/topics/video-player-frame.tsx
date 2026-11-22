@@ -2,6 +2,7 @@ import { PlayIcon, VideoIcon } from "@radix-ui/react-icons";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { GROUP_PRESS } from "@/lib/press";
 import { useLazyVisible } from "@/lib/hooks/use-lazy-visible";
 
 type OembedResponse = { title?: string; author_name?: string };
@@ -97,7 +98,12 @@ export function VideoPlayerFrame({
             )}
           </span>
         )}
-        <span className="absolute inset-0 m-auto flex size-14 items-center justify-center rounded-full bg-black/60 text-white transition-colors group-hover:bg-black/80">
+        <span
+          className={cn(
+            "absolute inset-0 m-auto flex size-14 items-center justify-center rounded-full bg-black/60 text-white transition group-hover:bg-black/80",
+            GROUP_PRESS,
+          )}
+        >
           <PlayIcon className="size-6" />
         </span>
       </button>
