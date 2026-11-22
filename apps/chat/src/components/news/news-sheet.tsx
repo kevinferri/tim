@@ -70,7 +70,8 @@ export function NewsSheet({ circleId }: { circleId: string }) {
   useEffect(() => {
     if (!open) return;
     refresh();
-    const timer = setInterval(refresh, REFRESH_THROTTLE_MINUTES * 60_000);
+    // A minute past the server's throttle, so each refresh lands after the last fetch's 15 minutes are up.
+    const timer = setInterval(refresh, (REFRESH_THROTTLE_MINUTES + 1) * 60_000);
     return () => clearInterval(timer);
   }, [open, refresh]);
 
