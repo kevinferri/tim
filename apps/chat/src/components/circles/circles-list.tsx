@@ -68,8 +68,12 @@ export function CirclesList(props: Props) {
     useUnreadCircles();
 
   useEffect(() => {
-    hydrateUnreadCircles(props.unreadCircleIds);
-  }, [props.unreadCircleIds, hydrateUnreadCircles]);
+    hydrateUnreadCircles(
+      props.unreadCircleIds,
+      params.circleId as string | undefined,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.unreadCircleIds]);
 
   useSocketHandler<MessageProps & { circleId?: string }>(
     SocketEvent.SendMessage,

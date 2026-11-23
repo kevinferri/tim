@@ -375,6 +375,13 @@ export const TopicsList = ({
   useEffect(() => {
     if (showTopics) setCircleUnread(circle.id, hasUnreadTopics);
   }, [showTopics, circle.id, hasUnreadTopics, setCircleUnread]);
+  // Re-stamped on leave so the circle's flag outlives a refresh rendered before this visit's read state was saved.
+  const hasUnreadTopicsRef = useRef(hasUnreadTopics);
+  hasUnreadTopicsRef.current = hasUnreadTopics;
+  useEffect(
+    () => () => setCircleUnread(circle.id, hasUnreadTopicsRef.current),
+    [circle.id, setCircleUnread],
+  );
 
   async function handleToggleMute(topic: TopicWithMeta) {
     const nextMuted = !isMutedFor(topic.id);
