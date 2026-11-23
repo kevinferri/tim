@@ -244,7 +244,7 @@ describe("news poller", () => {
     expect(fetchFeed.mock.calls[0][0]).toContain(activeFeed);
   });
 
-  it("refreshes a circle's feeds on demand, at most once per 15 minutes each", async () => {
+  it("refreshes a circle's feeds on demand, at most once an hour each", async () => {
     const circleId = await createCircle();
     const stale = await createFeed({
       circleIds: [circleId],
@@ -256,10 +256,10 @@ describe("news poller", () => {
     });
     await pgClient("news_feeds")
       .where({ id: stale })
-      .update({ lastFetchedAt: new Date(T0.getTime() - 20 * 60_000) });
+      .update({ lastFetchedAt: new Date(T0.getTime() - 70 * 60_000) });
     await pgClient("news_feeds")
       .where({ id: recent })
-      .update({ lastFetchedAt: new Date(T0.getTime() - 10 * 60_000) });
+      .update({ lastFetchedAt: new Date(T0.getTime() - 50 * 60_000) });
     const fetchFeed = vi.fn(async () => ({ status: "not-modified" }) as const);
 
     // Nobody has a topic open: the refresh alone (e.g. the News panel) still fetches.

@@ -7,7 +7,7 @@ export const MAX_ITEMS_PER_FETCH = 50;
 export const POLL_INTERVAL_MINUTES = 60;
 
 /** A circle opening News (or the circle) refetches its feeds, but no feed more often than this. */
-export const REFRESH_THROTTLE_MINUTES = 15;
+export const REFRESH_THROTTLE_MINUTES = 60;
 
 /** How long the feed hosts a story, counted from its publish date. */
 export const STORY_LIFETIME_HOURS = 72;
