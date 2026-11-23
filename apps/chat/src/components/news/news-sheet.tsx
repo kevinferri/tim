@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { REFRESH_THROTTLE_MINUTES } from "@tim/news/shared";
 import {
   ChevronLeftIcon,
   Cross2Icon,
@@ -69,12 +68,9 @@ export function NewsSheet({ circleId }: { circleId: string }) {
   }, [open, circleId, newest, markSeen]);
 
   const refresh = useNewsRefresh(circleId);
+  // Only on open: while it stays open, the hourly background poll pushes new stories.
   useEffect(() => {
-    if (!open) return;
-    refresh();
-    // A minute past the server's throttle, so each refresh lands after the throttle is up.
-    const timer = setInterval(refresh, (REFRESH_THROTTLE_MINUTES + 1) * 60_000);
-    return () => clearInterval(timer);
+    if (open) refresh();
   }, [open, refresh]);
 
   // A filter for a source someone just removed would show an empty list forever.
