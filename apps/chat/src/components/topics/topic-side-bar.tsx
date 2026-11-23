@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   BellIcon,
   ImageIcon,
@@ -117,6 +117,38 @@ export function TopicSideBar() {
     },
   } as const;
 
+  const tabsListRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{
+    left: number;
+    width: number;
+    animate: boolean;
+  } | null>(null);
+
+  // Measured so it can slide between tabs; the first placement and resizes snap instead.
+  const placeIndicator = (animate: boolean) => {
+    const tab = tabsListRef.current?.querySelector<HTMLElement>(
+      '[role="tab"][data-state="active"]',
+    );
+    if (!tab) return;
+    setIndicator((prev) => ({
+      left: tab.offsetLeft + 8,
+      width: tab.offsetWidth - 16,
+      animate: animate && prev !== null,
+    }));
+  };
+
+  useLayoutEffect(() => {
+    placeIndicator(true);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const list = tabsListRef.current;
+    if (!list) return;
+    const observer = new ResizeObserver(() => placeIndicator(false));
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, []);
+
   const tabTrigger = (tab: Tab) => (
     <TabsTrigger
       value={tab}
@@ -125,8 +157,6 @@ export function TopicSideBar() {
         NAV_BUTTON,
         "group relative",
         "data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none",
-        // The selected tab's underline sits on the row's bottom border, tying it to the panel below.
-        "after:absolute after:inset-x-2 after:-bottom-px after:h-px after:rounded-full data-[state=active]:after:bg-foreground",
       )}
     >
       <span className={NAV_ICON_CIRCLE}>{tabMap[tab].icon}</span>
@@ -149,7 +179,28 @@ export function TopicSideBar() {
         {/* Fills the header cell; same height as the topic header so the lines meet. */}
         <div className={`flex shrink-0 border-b ${HEADER_ROW_HEIGHT}`}>
           {/* Each icon gets an equal slot across the row. */}
-          <TabsList className="flex h-full w-full items-center rounded-none bg-transparent p-0">
+          <TabsList
+            ref={tabsListRef}
+            className="relative flex h-full w-full items-center rounded-none bg-transparent p-0"
+          >
+            {/* The selected tab's underline sits on the row's bottom border and slides between tabs. */}
+            <span
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute -bottom-px left-0 h-px rounded-full bg-foreground",
+                indicator?.animate &&
+                  "transition-[transform,width] duration-200 ease-out motion-reduce:transition-none",
+                !indicator && "invisible",
+              )}
+              style={
+                indicator
+                  ? {
+                      width: indicator.width,
+                      transform: `translateX(${indicator.left}px)`,
+                    }
+                  : undefined
+              }
+            />
             {tabTrigger("members")}
             {tabTrigger("highlights")}
             {tabTrigger("media")}
