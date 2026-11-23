@@ -8,6 +8,7 @@ export enum CommandName {
   SamePage = "samepage",
   GameRoom = "gameroom",
   Wordsmith = "wordsmith",
+  Blackjack = "blackjack",
 }
 
 // Every token a user can type after "/", mapped to the canonical command it resolves to.
@@ -22,6 +23,7 @@ export const COMMAND_ALIASES: Record<string, CommandName> = {
   samepage: CommandName.SamePage,
   gameroom: CommandName.GameRoom,
   wordsmith: CommandName.Wordsmith,
+  blackjack: CommandName.Blackjack,
 };
 
 export type ParsedCommand = {
@@ -68,6 +70,7 @@ const COMMAND_DESCRIPTIONS: Record<CommandName, string> = {
     "Same Page daily game (play, results, standings, sock)",
   [CommandName.GameRoom]: "Open the Game room",
   [CommandName.Wordsmith]: "Wordsmith daily word (play, results, stats)",
+  [CommandName.Blackjack]: "Open the blackjack table (play, standings)",
 };
 
 // Kept separate from COMMAND_DESCRIPTIONS so usage examples aren't crammed into descriptive prose.
@@ -80,6 +83,7 @@ const COMMAND_USAGE: Record<CommandName, string> = {
   [CommandName.SamePage]: "/samepage play",
   [CommandName.GameRoom]: "/gameroom",
   [CommandName.Wordsmith]: "/wordsmith",
+  [CommandName.Blackjack]: "/blackjack",
 };
 
 export type SamePageSubcommand =

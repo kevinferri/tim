@@ -1,10 +1,11 @@
 "use client";
 
+import { CommandName } from "@tim/commands";
 import type { GameDefinition } from "@/games/game-room";
 import { BLACKJACK_GAME_ID } from "../lib/game-id";
 import { BlackjackIcon } from "./icon";
 import { BlackjackPanel } from "./blackjack-panel";
-import { useBlackjackViewStore } from "./view-store";
+import { openBlackjack, useBlackjackViewStore } from "./view-store";
 
 const VIEW_LABELS = {
   play: "Play",
@@ -37,4 +38,12 @@ export const blackjackGame: GameDefinition = {
   Icon: BlackjackIcon,
   Panel,
   TitleSuffix,
+  command: {
+    name: CommandName.Blackjack,
+    run: (prompt) => {
+      const token = prompt.trim().split(/\s+/)[0]?.toLowerCase();
+      openBlackjack(token === "standings" ? "standings" : "play");
+      return true;
+    },
+  },
 };
