@@ -51,6 +51,39 @@ export const topicReadStateModel = {
     return Object.fromEntries(rows.map(({ topicId }) => [topicId, true]));
   },
 
+  // Same unread rule as getUnreadTopicIds, rolled up per circle; muted topics never make a circle unread.
+  async getUnreadCircleIds({
+    userId,
+    circleIds,
+  }: {
+    userId?: string;
+    circleIds: string[];
+  }): Promise<Record<string, boolean>> {
+    if (!userId || !circleIds.length) return {};
+
+    const rows = await prismaClient.$queryRaw<{ circleId: string }[]>`
+      SELECT DISTINCT t."circleId"
+      FROM "topic_read_states" h
+      JOIN "topics" t ON t."id" = h."topicId"
+      WHERE h."userId" = ${userId}
+        AND t."circleId" IN (${Prisma.join(circleIds)})
+        AND NOT EXISTS (
+          SELECT 1 FROM "topic_preferences" p
+          WHERE p."topicId" = h."topicId"
+            AND p."userId" = h."userId"
+            AND p."isMuted"
+        )
+        AND EXISTS (
+          SELECT 1 FROM "messages" m
+          WHERE m."topicId" = h."topicId"
+            AND m."createdAt" > h."lastReadAt"
+            AND m."userId" <> h."userId"
+        )
+    `;
+
+    return Object.fromEntries(rows.map(({ circleId }) => [circleId, true]));
+  },
+
   // Pass `client` to run inside a transaction; otherwise it would silently escape it.
   async createManyForUsers({
     topicId,

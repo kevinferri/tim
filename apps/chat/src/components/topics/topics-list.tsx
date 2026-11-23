@@ -63,7 +63,10 @@ import { NewsButton } from "@/components/news/news-button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipProvider } from "@radix-ui/react-tooltip";
 import { TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useUnreadTopics } from "@/components/dashboard/unread-topics-store";
+import {
+  useUnreadCircles,
+  useUnreadTopics,
+} from "@/components/dashboard/unread-topics-store";
 import { useMutedTopics } from "@/components/topics/muted-topics-store";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -287,6 +290,7 @@ export const TopicsList = ({
   const { getActiveMembersInTopic } = useActiveCircleMembers();
   const [showTopics, setShowTopics] = useState(false);
   const { unreadTopics, hydrateUnreadTopics } = useUnreadTopics();
+  const { setCircleUnread } = useUnreadCircles();
   const [isMinimized, setIsMinimized] = useLocalStorage(
     `tim:topics-nav-minimized:${self.id}`,
     false,
@@ -361,6 +365,16 @@ export const TopicsList = ({
   function isMutedFor(topicId: string) {
     return muteOverrides[topicId] ?? mutedTopicIds[topicId] ?? false;
   }
+
+  // Keeps the circle's marker in sync for when you leave; the topic you're in doesn't count, it's read on leave.
+  const hasUnreadTopics = Boolean(
+    topics?.some(
+      ({ id }) => id !== params.topicId && unreadTopics[id] && !isMutedFor(id),
+    ),
+  );
+  useEffect(() => {
+    if (showTopics) setCircleUnread(circle.id, hasUnreadTopics);
+  }, [showTopics, circle.id, hasUnreadTopics, setCircleUnread]);
 
   async function handleToggleMute(topic: TopicWithMeta) {
     const nextMuted = !isMutedFor(topic.id);

@@ -11,9 +11,15 @@ import { MessageSoundToggle } from "@/components/dashboard/message-sound-toggle"
 
 type Props = {
   circles?: Circle[];
+  unreadCircleIds: Record<string, boolean>;
+  mutedTopicIds: Record<string, boolean>;
 };
 
-export const CirclesNav = async ({ circles }: Props) => {
+export const CirclesNav = async ({
+  circles,
+  unreadCircleIds,
+  mutedTopicIds,
+}: Props) => {
   return (
     <div className="flex flex-col border-r bg-sidebar">
       <div className="flex flex-col items-center px-3 py-2">
@@ -26,7 +32,11 @@ export const CirclesNav = async ({ circles }: Props) => {
 
       <ScrollArea>
         <div className="flex flex-col gap-3 p-3">
-          <CirclesList existingCircles={circles} />
+          <CirclesList
+            existingCircles={circles}
+            unreadCircleIds={unreadCircleIds}
+            mutedTopicIds={mutedTopicIds}
+          />
           <UpsertCircleForm />
         </div>
       </ScrollArea>
