@@ -1,6 +1,8 @@
 "use client";
 
 import { create } from "zustand";
+import { useGameRoomStore } from "@/games/game-room";
+import { BLACKJACK_GAME_ID } from "../lib/game-id";
 
 export type BlackjackView = "play" | "standings" | "settings";
 
@@ -17,3 +19,8 @@ export const useBlackjackViewStore = create<{
   shown: null,
   setShown: (shown) => set({ shown }),
 }));
+
+export function openBlackjack(view: BlackjackView = "play") {
+  useBlackjackViewStore.getState().setView(view);
+  useGameRoomStore.getState().openGame(BLACKJACK_GAME_ID);
+}

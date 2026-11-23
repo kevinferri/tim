@@ -109,6 +109,7 @@ const commandExecutors: Record<CommandName, CommandExecutor> = {
   [CommandName.GameRoom]: async () =>
     "🎮 Type /gameroom to open the Game room.",
   [CommandName.Wordsmith]: async () => "🪶 Type /wordsmith to open Wordsmith.",
+  [CommandName.Blackjack]: async () => "🃏 Type /blackjack to open Blackjack.",
   [CommandName.Tim]: async (prompt, { socket, server, payload }) => {
     const topicKey = toRoomKey({
       id: payload.topicId,
