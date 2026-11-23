@@ -23,9 +23,14 @@ import { getInitials, UserAvatar } from "@/components/ui/user-avatar";
 import { useActiveCircleMembers } from "@/components/dashboard/active-circle-members-store";
 import { Routes } from "@/routes";
 import { useCoalescedRefresh } from "@/lib/hooks/use-coalesced-refresh";
+import { useUnreadCircles } from "@/components/dashboard/unread-topics-store";
+import { MessageProps } from "@/components/topics/message";
+import { useEffect } from "react";
 
 type Props = {
   existingCircles?: Circle[];
+  unreadCircleIds: Record<string, boolean>;
+  mutedTopicIds: Record<string, boolean>;
 };
 
 type NewCircleHandlerProps = {
@@ -59,6 +64,32 @@ export function CirclesList(props: Props) {
   const joinRoom = useSocketEmit(SocketEvent.JoinRoom);
   const leaveRoom = useSocketEmit(SocketEvent.LeaveRoom);
   const { getActiveMembersInCircle } = useActiveCircleMembers();
+  const { unreadCircles, hydrateUnreadCircles, setCircleUnread } =
+    useUnreadCircles();
+
+  useEffect(() => {
+    hydrateUnreadCircles(
+      props.unreadCircleIds,
+      params.circleId as string | undefined,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.unreadCircleIds]);
+
+  useSocketHandler<MessageProps & { circleId?: string }>(
+    SocketEvent.SendMessage,
+    (message) => {
+      if (
+        !message.circleId ||
+        message.circleId === params.circleId ||
+        message.sentBy?.id === self.id ||
+        props.mutedTopicIds[message.topicId!]
+      ) {
+        return;
+      }
+
+      setCircleUnread(message.circleId, true);
+    },
+  );
 
   useSocketHandler<NewCircleHandlerProps>(
     SocketEvent.UpsertedCircle,
@@ -124,6 +155,8 @@ export function CirclesList(props: Props) {
     <>
       {props.existingCircles?.map((circle) => {
         const activeUsers = getActiveMembersInCircle(circle.id);
+        const isCurrentCircle = params.circleId === circle.id;
+        const showUnread = unreadCircles[circle.id] && !isCurrentCircle;
 
         return (
           <TooltipProvider key={circle.id}>
@@ -135,7 +168,7 @@ export function CirclesList(props: Props) {
                 >
                   <Avatar
                     className={`active:border ${
-                      params.circleId === circle.id
+                      isCurrentCircle
                         ? "border shadow-glow"
                         : "shadow-lg hover:opacity-80"
                     }`}
@@ -161,6 +194,12 @@ export function CirclesList(props: Props) {
                     >
                       {activeUsers.length}
                     </div>
+                  )}
+                  {showUnread && (
+                    <div
+                      aria-label="Unread messages"
+                      className="absolute right-0 bottom-0 inline-flex h-3 w-3 rounded-full border bg-mention"
+                    />
                   )}
                 </Link>
               </TooltipTrigger>

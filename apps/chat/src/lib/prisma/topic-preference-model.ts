@@ -25,6 +25,21 @@ export const topicPreferenceModel = {
     });
   },
 
+  async getMutedTopicIdsForUser({
+    userId,
+  }: {
+    userId?: string;
+  }): Promise<Record<string, boolean>> {
+    if (!userId) return {};
+
+    const rows = await prismaClient.topicPreference.findMany({
+      where: { userId, isMuted: true },
+      select: { topicId: true },
+    });
+
+    return Object.fromEntries(rows.map(({ topicId }) => [topicId, true]));
+  },
+
   // Persists the user's manual sidebar order for a circle's topics. Takes
   // the full visible order rather than a single moved item -- simpler than
   // fractional-index bookkeeping and cheap at per-circle topic counts.

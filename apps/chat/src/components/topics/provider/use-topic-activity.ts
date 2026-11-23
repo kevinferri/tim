@@ -37,7 +37,8 @@ export function useTopicActivity({ topicId, circleId }: UseTopicActivityProps) {
   useSocketHandler<MessageProps & { circleId?: string }>(
     SocketEvent.SendMessage,
     (message) => {
-      if (message.topicId !== topicId) {
+      // Your own messages (from another tab or device) never make a topic unread, same as the server rule.
+      if (message.topicId !== topicId && message.sentBy?.id !== self.id) {
         markTopicAsUnread(message.topicId!);
       }
 
