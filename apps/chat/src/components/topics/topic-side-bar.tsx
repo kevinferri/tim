@@ -189,7 +189,7 @@ export function TopicSideBar() {
               className={cn(
                 "pointer-events-none absolute -bottom-px left-0 h-px rounded-full bg-foreground",
                 indicator?.animate &&
-                  "transition-[transform,width] duration-300 ease-out motion-reduce:transition-none",
+                  "transition-[transform,width] duration-200 ease-out motion-reduce:transition-none",
                 !indicator && "invisible",
               )}
               style={
