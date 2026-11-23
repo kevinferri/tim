@@ -17,7 +17,6 @@ export {
 } from "./fetch";
 export {
   POLL_INTERVAL_MINUTES,
-  REFRESH_THROTTLE_MINUTES,
   storyCutoff,
   selectFreshItems,
   MAX_ITEMS_PER_FETCH,

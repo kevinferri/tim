@@ -110,7 +110,7 @@ describe("addCircleNewsSource", () => {
     expect(source.title).toBe("Example");
     expect(await prismaClient.newsFeed.count()).toBe(1);
     expect(await prismaClient.circleNewsSource.count()).toBe(2);
-    // Nothing is fetched here; the poller loads it as soon as it's refreshed.
+    // Nothing is fetched here; the poller loads it on its next tick.
     const feed = await prismaClient.newsFeed.findUniqueOrThrow({
       where: { id: source.feedId },
     });

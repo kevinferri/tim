@@ -15,7 +15,6 @@ import {
   getCircleIdsForFeed,
   getCircleIdsForTopics,
   insertNewItems,
-  markCircleFeedsDue,
   pruneNews,
   updateFeedAfterFetch,
 } from "../db/news";
@@ -58,10 +57,6 @@ export function createNewsPoller({
 }: NewsPollerDeps) {
   let timer: NodeJS.Timeout | null = null;
   let running: Promise<void> | null = null;
-  // A refresh that arrives mid-tick runs another tick right after, instead of waiting for the timer.
-  let rerun = false;
-  // Refreshed circles are polled on the next tick even if nobody has a topic open (e.g. only the News panel).
-  const refreshed = new Set<string>();
   let lastPruneAt = 0;
   // Set by stop(): the claim loop finishes its current batch and claims no more.
   let stopping = false;
@@ -126,10 +121,7 @@ export function createNewsPoller({
       lastPruneAt = at.getTime();
       await pruneNews({ now: at });
     }
-    const circleIds = [
-      ...new Set([...(await activeCircleIds()), ...refreshed]),
-    ];
-    refreshed.clear();
+    const circleIds = await activeCircleIds();
     const startedAt = Date.now();
     while (!stopping) {
       const feeds = await claimDueFeeds({
@@ -146,37 +138,17 @@ export function createNewsPoller({
   }
 
   function runTick(): Promise<void> {
-    if (running) {
-      rerun = true;
-      return running;
-    }
-    rerun = false;
+    if (running) return running;
     running = tick()
       .catch((err) => console.error("[news] tick failed", err))
       .finally(() => {
         running = null;
-        if (rerun && !stopping) void runTick();
       });
     return running;
   }
 
   return {
     tick: runTick,
-    /** Someone opened the circle or its News panel: fetch its feeds now, at most once per feed per REFRESH_THROTTLE_MINUTES. */
-    async refreshCircle(circleId: string) {
-      if (stopping) return;
-      let due: number;
-      try {
-        due = await markCircleFeedsDue({ circleId, now: now() });
-      } catch (err) {
-        console.error("[news] refresh failed", err);
-        return;
-      }
-      // Topic joins (every reconnect re-joins) mostly land inside the throttle; skip the tick then.
-      if (due === 0) return;
-      refreshed.add(circleId);
-      await runTick();
-    },
     start() {
       if (timer) return;
       stopping = false;

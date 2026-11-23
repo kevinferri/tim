@@ -168,8 +168,8 @@ export function feedForSourceRequest(request: NewsSourceRequest): {
 
 /**
  * Follows a feed from this circle, creating it (once across all circles) if
- * it's new. Nothing is fetched here: the browser asks the realtime server to
- * refresh the circle next, and its poller stores and pushes the stories.
+ * it's new. Nothing is fetched here: a new feed is due at once, so the realtime
+ * server's poller fetches it on its next tick and pushes the stories.
  */
 export async function addCircleNewsSource({
   circleId,

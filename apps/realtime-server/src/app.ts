@@ -34,7 +34,7 @@ const wsServer = new Server<
 
 wsServer.use(middleware);
 const newsPoller = createNewsPoller({ server: wsServer });
-registerEventHandlers(wsServer, { news: newsPoller });
+registerEventHandlers(wsServer);
 newsPoller.start();
 registerShutdown({ stopNews: newsPoller.stop });
 

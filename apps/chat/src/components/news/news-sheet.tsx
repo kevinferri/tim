@@ -41,7 +41,6 @@ import {
   useNewsChanged,
   useNewsFeed,
   useNewsLiveUpdates,
-  useNewsRefresh,
 } from "./use-news";
 
 type View = "feed" | "sources" | "share";
@@ -66,12 +65,6 @@ export function NewsSheet({ circleId }: { circleId: string }) {
   useEffect(() => {
     if (open) markSeen(circleId, newest);
   }, [open, circleId, newest, markSeen]);
-
-  const refresh = useNewsRefresh(circleId);
-  // Only on open: while it stays open, the hourly background poll pushes new stories.
-  useEffect(() => {
-    if (open) refresh();
-  }, [open, refresh]);
 
   // A filter for a source someone just removed would show an empty list forever.
   const filterIsStale =
@@ -426,13 +419,9 @@ function FeedSkeleton() {
 
 function useSetNewsEnabled(circleId: string) {
   const changed = useNewsChanged(circleId);
-  const refresh = useNewsRefresh(circleId);
   return useMutation({
     mutationFn: (enabled: boolean) => setNewsEnabled(circleId, enabled),
-    onSuccess: async (_, enabled) => {
-      await changed();
-      if (enabled) refresh();
-    },
+    onSuccess: changed,
   });
 }
 
@@ -501,7 +490,6 @@ function SourcesView({
   onTurnedOff: () => void;
 }) {
   const changed = useNewsChanged(circleId);
-  const refreshNews = useNewsRefresh(circleId);
   const setEnabled = useSetNewsEnabled(circleId);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -512,9 +500,8 @@ function SourcesView({
     onMutate: () => setError(null),
     onSuccess: async () => {
       setQuery("");
+      // The background poll fetches the new source within 30 s and pushes its stories.
       await changed();
-      // The realtime server fetches the new source and pushes its stories.
-      refreshNews();
     },
     onError: (err) => setError(err.message),
   });
