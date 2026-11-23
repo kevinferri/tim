@@ -6,6 +6,8 @@ import { useShallow } from "zustand/react/shallow";
 type Store = {
   unreadTopics: Record<string, boolean>;
   unreadCircles: Record<string, boolean>;
+  // Circles flagged on the client (lit live or visited); server snapshots can lag them, so hydrating skips them.
+  clientOwnedCircles: Record<string, boolean>;
   markTopicAsUnread: (topicId: string) => void;
   markTopicAsRead: (topicId: string) => void;
   hydrateUnreadTopics: (unreadTopics: Record<string, boolean>) => void;
@@ -13,25 +15,36 @@ type Store = {
   setCircleUnread: (circleId: string, isUnread: boolean) => void;
 };
 
-const useStore = create<Store>((set) => ({
+export const useUnreadStore = create<Store>((set) => ({
   unreadTopics: {},
   unreadCircles: {},
+  clientOwnedCircles: {},
   hydrateUnreadTopics: (unreadTopics: Record<string, boolean>) =>
     set(() => ({
       unreadTopics,
     })),
-  hydrateUnreadCircles: (unreadCircles: Record<string, boolean>) =>
-    set(() => ({
-      unreadCircles,
-    })),
+  hydrateUnreadCircles: (serverUnread: Record<string, boolean>) =>
+    set((state) => {
+      const unreadCircles: Record<string, boolean> = {};
+      for (const circleId of Object.keys(serverUnread)) {
+        if (!state.clientOwnedCircles[circleId]) unreadCircles[circleId] = true;
+      }
+      for (const circleId of Object.keys(state.clientOwnedCircles)) {
+        if (state.unreadCircles[circleId]) unreadCircles[circleId] = true;
+      }
+
+      return { unreadCircles };
+    }),
   setCircleUnread: (circleId: string, isUnread: boolean) =>
     set((state) => {
-      if (Boolean(state.unreadCircles[circleId]) === isUnread) return state;
-      const tmp = { ...state.unreadCircles };
-      if (isUnread) tmp[circleId] = true;
-      else delete tmp[circleId];
+      const unreadCircles = { ...state.unreadCircles };
+      if (isUnread) unreadCircles[circleId] = true;
+      else delete unreadCircles[circleId];
 
-      return { unreadCircles: tmp };
+      return {
+        unreadCircles,
+        clientOwnedCircles: { ...state.clientOwnedCircles, [circleId]: true },
+      };
     }),
   markTopicAsUnread: (topicId: string) =>
     set((state) => ({
@@ -49,10 +62,14 @@ const useStore = create<Store>((set) => ({
 }));
 
 export function useUnreadTopics() {
-  const unreadTopics = useStore(useShallow((state) => state.unreadTopics));
-  const markTopicAsRead = useStore((state) => state.markTopicAsRead);
-  const markTopicAsUnread = useStore((state) => state.markTopicAsUnread);
-  const hydrateUnreadTopics = useStore((state) => state.hydrateUnreadTopics);
+  const unreadTopics = useUnreadStore(
+    useShallow((state) => state.unreadTopics),
+  );
+  const markTopicAsRead = useUnreadStore((state) => state.markTopicAsRead);
+  const markTopicAsUnread = useUnreadStore((state) => state.markTopicAsUnread);
+  const hydrateUnreadTopics = useUnreadStore(
+    (state) => state.hydrateUnreadTopics,
+  );
 
   return {
     unreadTopics,
@@ -63,9 +80,13 @@ export function useUnreadTopics() {
 }
 
 export function useUnreadCircles() {
-  const unreadCircles = useStore(useShallow((state) => state.unreadCircles));
-  const hydrateUnreadCircles = useStore((state) => state.hydrateUnreadCircles);
-  const setCircleUnread = useStore((state) => state.setCircleUnread);
+  const unreadCircles = useUnreadStore(
+    useShallow((state) => state.unreadCircles),
+  );
+  const hydrateUnreadCircles = useUnreadStore(
+    (state) => state.hydrateUnreadCircles,
+  );
+  const setCircleUnread = useUnreadStore((state) => state.setCircleUnread);
 
   return { unreadCircles, hydrateUnreadCircles, setCircleUnread };
 }

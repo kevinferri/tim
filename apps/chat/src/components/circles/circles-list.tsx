@@ -67,17 +67,9 @@ export function CirclesList(props: Props) {
   const { unreadCircles, hydrateUnreadCircles, setCircleUnread } =
     useUnreadCircles();
 
-  // The current circle's flag is kept live by its TopicsList; the server's copy can count the topic you're sitting in.
   useEffect(() => {
-    const currentCircleId = params.circleId as string | undefined;
-    const next = { ...props.unreadCircleIds };
-    if (currentCircleId) {
-      if (unreadCircles[currentCircleId]) next[currentCircleId] = true;
-      else delete next[currentCircleId];
-    }
-    hydrateUnreadCircles(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.unreadCircleIds]);
+    hydrateUnreadCircles(props.unreadCircleIds);
+  }, [props.unreadCircleIds, hydrateUnreadCircles]);
 
   useSocketHandler<MessageProps & { circleId?: string }>(
     SocketEvent.SendMessage,
