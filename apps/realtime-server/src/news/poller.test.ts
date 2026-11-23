@@ -197,12 +197,13 @@ describe("news poller", () => {
     expect(fetchFeed).not.toHaveBeenCalled();
   });
 
-  it("retries a failed fetch an hour later", async () => {
+  it("logs a failed fetch and retries it an hour later", async () => {
     const circleId = await createCircle();
     const feedId = await createFeed({ circleIds: [circleId] });
     const fetchFeed = vi.fn(async () => {
-      throw new FeedError("fetch-failed");
+      throw new FeedError("fetch-failed", "example.com returned 403");
     });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await createNewsPoller({
       server: mockServer().server,
@@ -212,6 +213,13 @@ describe("news poller", () => {
 
     const feed = await pgClient("news_feeds").where({ id: feedId }).first();
     expect(feed.nextFetchAt.toISOString()).toBe("2026-11-18T13:00:00.000Z");
+    expect(warn).toHaveBeenCalledWith(
+      "[news] fetch failed",
+      feed.url,
+      "fetch-failed",
+      "example.com returned 403",
+    );
+    warn.mockRestore();
   });
 
   it("only polls feeds of circles with News on and someone in the chat", async () => {

@@ -110,8 +110,9 @@ export function createNewsPoller({
           .emit(SocketEvent.NewsItemsCreated, payload);
       }
     } catch (err) {
-      if (!(err instanceof FeedError))
-        console.error("[news] poll failed", feed.url, err);
+      if (err instanceof FeedError)
+        console.warn("[news] fetch failed", feed.url, err.code, err.message);
+      else console.error("[news] poll failed", feed.url, err);
       await updateFeedAfterFetch(feed.id, {
         lastFetchedAt: startedAt,
         nextFetchAt,
