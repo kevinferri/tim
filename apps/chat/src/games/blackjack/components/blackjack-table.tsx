@@ -101,9 +101,7 @@ function useCardSize(
   const seats = view
     ? view.seats.flatMap((s, i) => (s ? [i] : []))
     : Array.from({ length: SEAT_COUNT }, (_, i) => i);
-  const wide =
-    typeof window !== "undefined" &&
-    window.matchMedia("(min-width: 768px)").matches;
+  const wide = isWide();
   // One size below the largest that fits: the deck's large corner index reads well a size down,
   // and it leaves the felt some air.
   const fits = CARD_SIZES.filter((size) =>
@@ -148,6 +146,8 @@ function ignoreKey(e: KeyboardEvent) {
 
 // The hand's padding (p-1 on both sides), part of a two-card hand's size.
 const HAND_PAD_PX = 8;
+// Between a seat's hands (gap-2).
+const HANDS_GAP_PX = 8;
 
 // Gap between cards in the opening deal, dealt one at a time like a real dealer.
 const DEAL_STAGGER_MS = 130;
@@ -162,6 +162,34 @@ const AUTO_PLACE_LEAD_MS = 400;
 
 const shrink = (size: CardSize, steps: number) =>
   CARD_SIZES[Math.max(0, CARD_SIZES.indexOf(size) - Math.max(0, steps))];
+
+// Phones lay seats out in a grid, where a seat's hands wrap in its cell; wider screens place seats around the felt.
+const isWide = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(min-width: 768px)").matches;
+
+/**
+ * A seat's card size for its number of hands: a split steps down one size, and each resplit another, but past
+ * two hands only as large as a row of them fits between the seats (checked at full hands, so a hit never resizes).
+ */
+function seatCardSize(
+  hands: number,
+  cardSize: CardSize,
+  felt: Size | null,
+  seats: number[],
+): CardSize {
+  const start = shrink(cardSize, hands - 1);
+  if (hands <= 2 || !felt || !isWide()) return start;
+  const one = (size: CardSize) => cardSpot(size, FIT_HAND_CARDS);
+  const row = (size: CardSize) => ({
+    w: hands * one(size).w + (hands - 1) * HANDS_GAP_PX,
+    h: one(size).h,
+  });
+  const fits = CARD_SIZES.slice(0, CARD_SIZES.indexOf(start) + 1).filter(
+    (size) => handsFit(felt, seats, cardSpot(cardSize, 2), row(size)),
+  );
+  return fits.length ? fits[fits.length - 1] : CARD_SIZES[0];
+}
 
 type Props = {
   circleId: string;
@@ -595,7 +623,12 @@ function LiveTable(props: Props) {
                           : undefined
                       }
                       // A split seat steps down a size so both hands fit, and another for each resplit.
-                      size={shrink(cardSize, seat.hands.length - 1)}
+                      size={seatCardSize(
+                        seat.hands.length,
+                        cardSize,
+                        felt,
+                        view.seats.flatMap((s, j) => (s ? [j] : [])),
+                      )}
                     />
                   </PlayerSpot>
                 ),
@@ -785,7 +818,7 @@ function SeatHands({
       : null;
   const hands = seat.hands.length ? seat.hands : [null];
   return (
-    <div className="relative flex justify-center gap-2">
+    <div className="relative flex flex-wrap justify-center gap-2">
       {hands.map((hand, h) => (
         <Hand
           key={h}
