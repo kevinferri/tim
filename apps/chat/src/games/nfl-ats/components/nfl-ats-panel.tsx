@@ -25,6 +25,7 @@ import {
   type PickableGame,
 } from "./api";
 import { EmptyState } from "./empty-state";
+import { LastWeekView } from "./last-week-view";
 import { NflAtsIcon } from "./nfl-ats-icon";
 import { StandingsView } from "./standings-view";
 import type { NflAtsView } from "./view-store";
@@ -99,6 +100,7 @@ export function NflAtsPanel({ circleId, view, onViewChange }: Props) {
 
   const tabs: [NflAtsView, string][] = [
     ["picks", "Picks"],
+    ["last-week", "Last week"],
     ["standings", "Standings"],
     ...(data.isAdmin ? [["settings", "Settings"] as [NflAtsView, string]] : []),
   ];
@@ -125,6 +127,7 @@ export function NflAtsPanel({ circleId, view, onViewChange }: Props) {
           {activeView === "picks" && (
             <PicksView circleId={circleId} data={data} />
           )}
+          {activeView === "last-week" && <LastWeekView circleId={circleId} />}
           {activeView === "standings" && <StandingsView circleId={circleId} />}
           {activeView === "settings" && (
             <SettingsView

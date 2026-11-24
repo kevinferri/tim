@@ -45,7 +45,7 @@ export type NflAtsStandings = {
   rows: StandingsRow[];
 };
 
-type View = "badge" | "standings";
+type View = "badge" | "standings" | "last-week";
 
 const url = (circleId: string, view?: View) =>
   `/api/circles/${circleId}/nfl-ats${view ? `?view=${view}` : ""}`;
@@ -68,6 +68,39 @@ export async function fetchNflAts<T = NflAtsState>(
 
 export const fetchStandings = (circleId: string) =>
   fetchNflAts<NflAtsStandings>(circleId, "standings");
+
+export type LastWeekPick = {
+  userId: string;
+  side: PickSide;
+  result: PickResult | null;
+};
+
+export type LastWeekGame = {
+  id: string;
+  awayTeam: string;
+  homeTeam: string;
+  spread: number;
+  homeScore: number;
+  awayScore: number;
+  kickoffAt: string;
+  coveringSide: PickSide | "push";
+  picks: LastWeekPick[];
+};
+
+export type LastWeekResults = {
+  startsOn: string;
+  members: StandingsMember[];
+  games: LastWeekGame[];
+};
+
+export const nflAtsLastWeekQueryKey = (circleId: string) => [
+  "nfl-ats-last-week",
+  circleId,
+];
+
+/** Null when there's no finished week behind us yet. */
+export const fetchLastWeek = (circleId: string) =>
+  fetchNflAts<LastWeekResults | null>(circleId, "last-week");
 
 /** Throws the route's own error message (e.g. "That game has already kicked off"). */
 export async function postNflAts<T = unknown>(

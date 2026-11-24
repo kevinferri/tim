@@ -12,7 +12,7 @@ import {
   setNflAtsEnabled,
   submitPick,
 } from "./picks";
-import { getStandings } from "./standings";
+import { getLastWeekResults, getStandings } from "./standings";
 
 export const GET = apiRoute(
   async (request: Request, context: CircleRouteContext) => {
@@ -23,6 +23,9 @@ export const GET = apiRoute(
     }
     if (view === "standings") {
       return NextResponse.json(await getStandings({ circleId, userId }));
+    }
+    if (view === "last-week") {
+      return NextResponse.json(await getLastWeekResults({ circleId }));
     }
     return NextResponse.json(await getNflAtsState({ circleId, userId }));
   },

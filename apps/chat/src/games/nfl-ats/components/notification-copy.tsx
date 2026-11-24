@@ -16,6 +16,6 @@ export const nflAtsNotificationCopy = {
   [NotificationType.NflAtsResults]: {
     text: "Last week’s Pick ’em is final",
     icon,
-    onOpen: open("standings"),
+    onOpen: open("last-week"),
   },
 } satisfies Partial<Record<NotificationType, NotificationCopy>>;
