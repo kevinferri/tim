@@ -1,5 +1,5 @@
 import { Card, Rank, Rng, createShoe } from "../cards";
-import { SHOE_DECKS, RESHUFFLE_BELOW } from "./constants";
+import { MAX_SPLIT_HANDS, SHOE_DECKS, RESHUFFLE_BELOW } from "./constants";
 
 export type BlackjackPlayAction = "hit" | "stand" | "double" | "split";
 export type BlackjackOutcome = "blackjack" | "win" | "push" | "lose" | "bust";
@@ -232,7 +232,7 @@ export function legalActions(
   if (twoCards) actions.push("double");
   if (
     twoCards &&
-    player.hands.length === 1 &&
+    player.hands.length < MAX_SPLIT_HANDS &&
     cardValue(hand.cards[0].rank) === cardValue(hand.cards[1].rank)
   ) {
     actions.push("split");
@@ -286,11 +286,12 @@ export function applyAction(
     case "split": {
       wagered = hand.bet;
       const aces = hand.cards[0].rank === "A";
-      const split = [hand.cards[0], hand.cards[1]].map((card) => {
+      const [stays, moves] = [hand.cards[0], hand.cards[1]].map((card) => {
         const h = resolveHandTotal(newHand([card, take()], hand.bet, true));
         return aces ? { ...h, done: true } : h;
       });
-      hands = split;
+      // The new hand goes last, so hands already on the table keep their index (the client keys by it).
+      hands = [...replaceAt(player.hands, handIndex, stays), moves];
       break;
     }
   }
