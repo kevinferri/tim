@@ -117,7 +117,7 @@ describe("sit announcement", () => {
     ]);
   });
 
-  it("posts once per circle every two hours", async () => {
+  it("posts once per circle an hour", async () => {
     const userId = await createUser();
     const { circleId, topicId } = await createCircle(userId);
     const other = await createCircle(userId);

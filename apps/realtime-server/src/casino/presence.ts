@@ -8,7 +8,7 @@ import { decrypt } from "../lib/encryption";
 import { AppServer, SocketUser } from "../lib/socket";
 import { RoomType, toRoomKey } from "../event-handlers/rooms";
 
-export const ANNOUNCE_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+export const ANNOUNCE_COOLDOWN_MS = 60 * 60 * 1000;
 
 // The command whose result renderer draws the game's table invite.
 const GAME_COMMANDS: Record<TableGame, CommandName> = {
