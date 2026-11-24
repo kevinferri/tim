@@ -1,4 +1,4 @@
-// Server entry point for NFL ATS. Outside this folder, import only from here.
-// The picks route and the client entry arrive with the panel.
+// Server entry point for NFL ATS. Outside this folder, import only from here or ../index.ts.
+export { GET, POST } from "./route";
 export { startNflAtsCron } from "./cron";
 export { runNflAtsJobs } from "./jobs";

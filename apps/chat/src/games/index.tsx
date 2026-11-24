@@ -9,11 +9,17 @@ import {
   type GameDefinition,
 } from "@/games/game-room";
 import { blackjackGame } from "@/games/blackjack";
+import { nflAtsGame } from "@/games/nfl-ats";
 import { samePageGame, samePageNotificationCopy } from "@/games/same-page";
 import { texasHoldemGame } from "@/games/texas-holdem";
 import { wordsmithGame, wordsmithNotificationCopy } from "@/games/wordsmith";
 
-const GAMES: GameDefinition[] = [samePageGame, wordsmithGame, blackjackGame];
+const GAMES: GameDefinition[] = [
+  samePageGame,
+  wordsmithGame,
+  nflAtsGame,
+  blackjackGame,
+];
 const COMING_SOON: ComingSoonGame[] = [texasHoldemGame];
 
 /** Runs a game's slash command in the browser; false means send it as a normal message. */
