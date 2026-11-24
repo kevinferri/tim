@@ -114,18 +114,26 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
     const last = lastAnnounced.get(key);
     if (last !== undefined && now() - last < ANNOUNCE_COOLDOWN_MS) return;
     // Claimed before any await so two quick sits can't both post.
-    lastAnnounced.set(key, now());
+    const claimedAt = now();
+    lastAnnounced.set(key, claimedAt);
 
-    const topicId = await getDefaultTopicId({ circleId });
-    if (!topicId) return;
-    const saved = await writeMessage({
-      userId: user.id,
-      topicId,
-      // No text: the chat app draws the whole invite from mediaUrl.
-      text: "",
-      mediaUrl: tablePath(circleId, game),
-      command: GAME_COMMANDS[game],
-    });
+    let saved: Awaited<ReturnType<typeof writeMessage>>;
+    try {
+      const topicId = await getDefaultTopicId({ circleId });
+      if (!topicId) return;
+      saved = await writeMessage({
+        userId: user.id,
+        topicId,
+        // No text: the chat app draws the whole invite from mediaUrl.
+        text: "",
+        mediaUrl: tablePath(circleId, game),
+        command: GAME_COMMANDS[game],
+      });
+    } catch (err) {
+      // Nothing was posted, so the next sit may try again (unless a newer claim replaced this one).
+      if (lastAnnounced.get(key) === claimedAt) lastAnnounced.delete(key);
+      throw err;
+    }
     server
       .to(toRoomKey({ id: circleId, roomType: RoomType.Circle }))
       .emit(SocketEvent.SendMessage, {

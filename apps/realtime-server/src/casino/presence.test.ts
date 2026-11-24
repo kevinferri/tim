@@ -1,14 +1,21 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SocketEvent } from "@tim/socket-types";
 import { casinoStatus } from "@tim/casino";
 import { pgClient, resetDb } from "../test/db";
 import { createMockServer, createMockSocket } from "../test/socket-mocks";
 import { decrypt } from "../lib/encryption";
+import { writeMessage } from "../db/messages";
 import {
   ANNOUNCE_COOLDOWN_MS,
   createTablePresence,
   tablePath,
 } from "./presence";
+
+// A pass-through spy, so a test can make one write fail.
+vi.mock("../db/messages", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../db/messages")>();
+  return { ...actual, writeMessage: vi.fn(actual.writeMessage) };
+});
 
 beforeEach(resetDb);
 
@@ -131,6 +138,27 @@ describe("sit announcement", () => {
     advance(1);
     await seat(presence, server, circleId, userId);
     expect(await pgClient("messages").where({ topicId })).toHaveLength(2);
+  });
+
+  it("tries again on the next sit if posting failed", async () => {
+    const userId = await createUser();
+    const { circleId, topicId } = await createCircle(userId);
+    const server = createMockServer();
+    const { presence } = setup();
+    vi.mocked(writeMessage).mockRejectedValueOnce(new Error("db blip"));
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await seat(presence, server, circleId, userId);
+    expect(await pgClient("messages").where({ topicId })).toHaveLength(0);
+    expect(logged).toHaveBeenCalledWith(
+      "casino: sit announcement failed",
+      expect.any(Error),
+    );
+    logged.mockRestore();
+
+    await presence.stood({ circleId, game: "blackjack", userId });
+    await seat(presence, server, circleId, userId);
+    expect(await pgClient("messages").where({ topicId })).toHaveLength(1);
   });
 
   it("skips a circle without a default topic", async () => {
