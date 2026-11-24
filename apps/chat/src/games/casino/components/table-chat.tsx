@@ -25,6 +25,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
@@ -178,14 +179,14 @@ export function TableChatPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div
+      <ScrollArea
         ref={listRef}
         onScroll={(e) => {
           const el = e.currentTarget;
           atBottom.current =
             el.scrollHeight - el.scrollTop - el.clientHeight < 24;
         }}
-        className="min-h-0 flex-1 overflow-y-auto px-3 [overflow-anchor:none]"
+        className="min-h-0 flex-1 px-3 [overflow-anchor:none]"
       >
         <ul className="flex flex-col pb-2 pt-3">
           {lines.map((line, i) => {
@@ -209,7 +210,7 @@ export function TableChatPanel({
             );
           })}
         </ul>
-      </div>
+      </ScrollArea>
       <form onSubmit={submit} className="p-3">
         <Input
           value={text}
