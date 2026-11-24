@@ -112,6 +112,38 @@ describe("getMemberStats", () => {
   });
 });
 
+describe("getMemberStats with casino sit-down invites", () => {
+  it("doesn't count them as messages, active days or commands", async () => {
+    const me = await createUser();
+    const topic = await createTopic(me.id);
+    const day = 24 * 60 * 60 * 1000;
+    const sitDown = (createdAt: Date) =>
+      message(me.id, topic.id, {
+        command: "blackjack",
+        mediaUrl: `/circles/${topic.circleId}/casino/blackjack`,
+        createdAt,
+      });
+
+    const written = await message(me.id, topic.id, {
+      createdAt: new Date(Date.now() - 3 * day),
+    });
+    await sitDown(new Date(Date.now() - 2 * day));
+    await sitDown(new Date(Date.now() - day));
+
+    const stats = await getMemberStats({
+      circleId: topic.circleId,
+      userId: me.id,
+    });
+    expect(stats).toMatchObject({
+      messages: 1,
+      activeDaysTotal: 1,
+      lastMessageAt: written.createdAt,
+    });
+    expect(stats.recentActiveDays).toHaveLength(1);
+    expect(stats.commandCounts).toEqual({});
+  });
+});
+
 describe("getMemberStats activity", () => {
   it("summarises the member's own activity in the circle", async () => {
     const me = await createUser();
