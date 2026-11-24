@@ -12,6 +12,14 @@ export const dbChatStore: ChatStore = {
   recent: recentTableChatLines,
 };
 
+/** One table's chat, kept by the registry so writes in flight outlive the table. */
+export type TableChatLog = {
+  /** Saves the line after the table's earlier ones. */
+  write(line: TableChatSay): void;
+  /** The recent lines, once every write in flight has landed. */
+  recent(): Promise<TableChatSay[]>;
+};
+
 /** For unit tests. */
 export class InMemoryChatStore implements ChatStore {
   private lines = new Map<string, TableChatSay[]>();

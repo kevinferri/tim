@@ -1151,6 +1151,63 @@ describe("table chat", () => {
     expect(chats(b)[0].recent.map((l: any) => l.text)).toEqual(["hi"]);
   });
 
+  function gatedWrites() {
+    const store = new InMemoryChatStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const chatStore: ChatStore = {
+      add: async (ref, line) => {
+        await gate;
+        await store.add(ref, line);
+      },
+      recent: (ref) => store.recent(ref),
+    };
+    return { chatStore, release };
+  }
+
+  it("has a newcomer at a recreated table wait for a line still being written", async () => {
+    const { chatStore, release } = gatedWrites();
+    const { connect, registry } = setup(undefined, chatStore);
+    const a = connect("a");
+    await watch(a);
+    await say(a, "bye");
+    await a.trigger(SocketEvent.TableUnwatch, REF);
+    expect(registry.tableCount()).toBe(0);
+
+    const b = connect("b");
+    await watch(b);
+    await Promise.resolve();
+    expect(chats(b)).toEqual([]);
+
+    release();
+    await vi.waitFor(() => expect(chats(b)).toHaveLength(1));
+    expect(chats(b)[0].recent.map((l: any) => l.text)).toEqual(["bye"]);
+  });
+
+  it("waits for chat writes in flight on shutdown", async () => {
+    const { chatStore, release } = gatedWrites();
+    const { connect, registry } = setup(undefined, chatStore);
+    const a = connect("a");
+    await watch(a);
+    await say(a, "last words");
+
+    const order: string[] = [];
+    const done = shutdown({
+      registry,
+      destroyDb: async () => {
+        order.push("destroyDb");
+      },
+      exit: () => {},
+    });
+    await Promise.resolve();
+    expect(order).toEqual([]);
+
+    order.push("written");
+    release();
+    await done;
+    expect(order).toEqual(["written", "destroyDb"]);
+  });
+
   it("saves only what people said: joins and leaves are live only", async () => {
     const { connect } = setup();
     const a = connect("a");

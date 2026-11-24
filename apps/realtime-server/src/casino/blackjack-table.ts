@@ -1,4 +1,4 @@
-import { ChatStore } from "./chat-store";
+import { TableChatLog } from "./chat-store";
 import {
   BETTING_WINDOW_MS,
   BlackjackPlayAction,
@@ -47,7 +47,7 @@ const person = ({ userId, name, displayName, imageUrl }: SeatOccupant) => ({
 
 export type BlackjackTableDeps = {
   netStore: NetStore;
-  chatStore: ChatStore;
+  chatLog: TableChatLog;
   rng: Rng;
   /** Lets shutdown, and the user's next sit, await up/down writes already in flight. */
   trackSettle: (userId: string, write: Promise<void>) => void;
@@ -70,7 +70,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     circleId: string,
     private deps: BlackjackTableDeps,
   ) {
-    super(circleId, "blackjack", deps.onIdle, deps.chatStore);
+    super(circleId, "blackjack", deps.onIdle, deps.chatLog);
   }
 
   sit(occupant: SeatOccupant, seat: number, net: number): string | null {

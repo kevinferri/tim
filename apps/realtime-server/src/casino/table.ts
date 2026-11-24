@@ -13,7 +13,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { SocketEvent } from "@tim/socket-types";
 import { AppSocket } from "../lib/socket";
-import { ChatStore } from "./chat-store";
+import { TableChatLog } from "./chat-store";
 
 export type BaseSeat = {
   occupant: SeatOccupant;
@@ -45,8 +45,6 @@ export abstract class Table<Seat extends BaseSeat, View> {
   protected seats: (Seat | null)[] = Array(SEAT_COUNT).fill(null);
   protected closed = false;
   private watchers = new Map<string, Watcher>();
-  // Each line is written after the one before, and a watch's load waits for them.
-  private chatWrites: Promise<void> = Promise.resolve();
   private chatSentAt = new Map<string, number[]>();
   private timer: { handle: NodeJS.Timeout; deadline: number } | null = null;
 
@@ -54,7 +52,7 @@ export abstract class Table<Seat extends BaseSeat, View> {
     readonly circleId: string,
     readonly game: TableGame,
     private onIdle: () => void,
-    private chatStore: ChatStore,
+    private chatLog: TableChatLog,
   ) {}
 
   /** The state as `userId` should see it (poker will hide others' cards). */
@@ -79,8 +77,7 @@ export abstract class Table<Seat extends BaseSeat, View> {
     const ref = { circleId: this.circleId, game: this.game };
     let recent: TableChatSay[] | null = null;
     try {
-      await this.chatWrites;
-      recent = await this.chatStore.recent(ref);
+      recent = await this.chatLog.recent();
     } catch (err) {
       console.error("casino: table chat load failed", err);
     }
@@ -132,13 +129,8 @@ export abstract class Table<Seat extends BaseSeat, View> {
   }
 
   private pushLine(line: TableChatLine) {
-    const ref = { circleId: this.circleId, game: this.game };
     // Joins and leaves only matter to whoever's here now, so only what people say is saved.
-    if (line.kind === "say") {
-      this.chatWrites = this.chatWrites
-        .then(() => this.chatStore.add(ref, line))
-        .catch((err) => console.error("casino: table chat write failed", err));
-    }
+    if (line.kind === "say") this.chatLog.write(line);
     for (const w of this.watchers.values()) {
       if (w.spectator) continue;
       if (w.held) w.held.push(line);
