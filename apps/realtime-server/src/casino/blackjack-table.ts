@@ -43,6 +43,7 @@ export type BlackjackTableDeps = {
   /** Lets shutdown, and the user's next sit, await up/down writes already in flight. */
   trackSettle: (userId: string, write: Promise<void>) => void;
   onIdle: () => void;
+  onStand?: (userId: string) => void;
 };
 
 const ROUND_FAILED =
@@ -69,7 +70,9 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
   }
 
   stand(userId: string): string | null {
-    return this.guard(null, () => this.tryStand(userId));
+    const error = this.guard(null, () => this.tryStand(userId));
+    if (!error) this.deps.onStand?.(userId);
+    return error;
   }
 
   act(userId: string, action: BlackjackTableAction): string | null {

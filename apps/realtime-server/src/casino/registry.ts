@@ -2,12 +2,17 @@ import { randomInt } from "crypto";
 import { Rng, TableGame } from "@tim/casino";
 import { BlackjackTable } from "./blackjack-table";
 import { NetStore, dbNetStore } from "./net-store";
+import { TablePresence, createTablePresence, noopPresence } from "./presence";
 
 export const cryptoRng: Rng = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
 const tableKey = (circleId: string, game: TableGame) => `${game}:${circleId}`;
 
-export type CasinoRegistryDeps = { netStore: NetStore; rng: Rng };
+export type CasinoRegistryDeps = {
+  netStore: NetStore;
+  rng: Rng;
+  presence?: TablePresence;
+};
 
 // Tables live in this process's memory: scaling tim-ws past one instance needs Redis or sticky routing.
 export class CasinoRegistry {
@@ -16,7 +21,11 @@ export class CasinoRegistry {
   private pendingByUser = new Map<string, Set<Promise<void>>>();
   closing = false;
 
-  constructor(readonly deps: CasinoRegistryDeps) {}
+  readonly presence: TablePresence;
+
+  constructor(readonly deps: CasinoRegistryDeps) {
+    this.presence = deps.presence ?? noopPresence;
+  }
 
   get(circleId: string, game: TableGame) {
     return this.tables.get(tableKey(circleId, game));
@@ -29,6 +38,7 @@ export class CasinoRegistry {
       netStore: this.deps.netStore,
       rng: this.deps.rng,
       trackSettle: (userId, write) => this.track(circleId, userId, write),
+      onStand: (userId) => void this.presence.stood({ circleId, game, userId }),
       onIdle: () => {
         if (this.get(circleId, game) !== table) return;
         table.dispose();
@@ -68,13 +78,13 @@ export class CasinoRegistry {
     }
   }
 
-  /** Cancels every round in progress and waits (capped) for settle writes already started. */
+  /** Cancels every round in progress and waits (capped) for settle writes already started and statuses to come back. */
   async shutdown(capMs = 5_000) {
     this.closing = true;
     for (const table of this.tables.values()) table.close();
     let cap: NodeJS.Timeout | undefined;
     await Promise.race([
-      Promise.allSettled([...this.pendingSettles]),
+      Promise.allSettled([...this.pendingSettles, this.presence.restoreAll()]),
       new Promise((resolve) => {
         cap = setTimeout(resolve, capMs);
       }),
@@ -86,4 +96,5 @@ export class CasinoRegistry {
 export const casinoRegistry = new CasinoRegistry({
   netStore: dbNetStore,
   rng: cryptoRng,
+  presence: createTablePresence(),
 });

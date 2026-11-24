@@ -1,4 +1,4 @@
-import { Topic } from "@tim/db-types";
+import { Circle, Topic } from "@tim/db-types";
 import { pgClient } from "./client";
 
 // Duplicates the membership check in apps/chat/src/lib/prisma/circle-model.ts's `isUserInCircle` (a raw join-table query here vs. Prisma nested-where there) -- if circle-membership semantics ever change in schema.prisma, update both.
@@ -32,4 +32,19 @@ export async function getCircleMembers({ circleId }: { circleId: string }) {
       .join("users", "_circleMembershipsForUser.B", "users.id");
 
   return members;
+}
+
+export async function getDefaultTopicId({ circleId }: { circleId: string }) {
+  const circle = await pgClient<Circle>("circles")
+    .select("defaultTopicId")
+    .where("id", circleId)
+    .first();
+  return circle?.defaultTopicId ?? null;
+}
+
+export async function getCircleIdsForUser({ userId }: { userId: string }) {
+  const rows: { A: string }[] = await pgClient("_circleMembershipsForUser")
+    .select("A")
+    .where("B", userId);
+  return rows.map((r) => r.A);
 }

@@ -53,7 +53,7 @@ export function handleCasino(args: HandlerArgs) {
 }
 
 export function registerCasinoHandlers(
-  { socket }: HandlerArgs,
+  { socket, server }: HandlerArgs,
   registry: CasinoRegistry,
 ) {
   const user = () => socket.data.user;
@@ -174,15 +174,13 @@ export function registerCasinoHandlers(
     // Picked after the await so two joins at once don't race for one seat.
     const target = anySeat ? current.nextFreeSeat() : seat;
     if (target === null) return emitError(socket, ref, "Table is full");
-    emitError(
-      socket,
-      ref,
-      current.sit(
-        { userId: id, name, displayName, imageUrl, createdAt },
-        target,
-        net,
-      ),
+    const error = current.sit(
+      { userId: id, name, displayName, imageUrl, createdAt },
+      target,
+      net,
     );
+    if (error) return emitError(socket, ref, error);
+    await registry.presence.seated({ server, ...ref, user: user() });
   });
 
   on(SocketEvent.TableStand, (payload: unknown) => {

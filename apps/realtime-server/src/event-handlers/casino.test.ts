@@ -18,6 +18,7 @@ import { InMemoryNetStore, NetStore } from "../casino/net-store";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
 import { shutdown } from "../shutdown";
+import { TablePresence } from "../casino/presence";
 
 vi.mock("../db/circles", () => ({ isUserInCircle: vi.fn() }));
 vi.mock("../db/circle-games", () => ({ isGameEnabled: vi.fn() }));
@@ -43,8 +44,15 @@ function seededRng(seed = 1) {
   };
 }
 
-function setup(netStore: NetStore = new InMemoryNetStore()) {
-  const registry = new CasinoRegistry({ netStore, rng: seededRng() });
+function setup(
+  netStore: NetStore = new InMemoryNetStore(),
+  presence?: TablePresence,
+) {
+  const registry = new CasinoRegistry({
+    netStore,
+    rng: seededRng(),
+    presence,
+  });
   const connect = (userId: string) => {
     const socket = createMockSocket({
       id: userId,
@@ -676,6 +684,59 @@ describe("up/down", () => {
 
     await sit(a, 0);
     expect(state(a).seats[0]!.net).toBe(0);
+  });
+});
+
+describe("presence", () => {
+  const fakePresence = () => ({
+    seated: vi.fn(async () => {}),
+    stood: vi.fn(async () => {}),
+    restoreAll: vi.fn(async () => {}),
+  });
+
+  it("tells presence about a sit, but not a rejected one", async () => {
+    const presence = fakePresence();
+    const { connect } = setup(undefined, presence);
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    await sit(a, 0);
+    await sit(b, 0);
+
+    expect(presence.seated).toHaveBeenCalledTimes(1);
+    expect(presence.seated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...REF,
+        user: expect.objectContaining({ id: "a" }),
+      }),
+    );
+  });
+
+  it("tells presence when a player stands, mid-round too, or disconnects", async () => {
+    const presence = fakePresence();
+    const { connect } = setup(undefined, presence);
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    await sit(a, 0);
+    await sit(b, 1);
+
+    await bet(a, 10);
+    vi.advanceTimersByTime(BETTING_WINDOW_MS);
+    await standUp(a);
+    expect(presence.stood).toHaveBeenCalledWith({ ...REF, userId: "a" });
+
+    await b.trigger(SocketEvent.Disconnecting);
+    expect(presence.stood).toHaveBeenCalledWith({ ...REF, userId: "b" });
+  });
+
+  it("restores statuses on shutdown", async () => {
+    const presence = fakePresence();
+    const { registry } = setup(undefined, presence);
+    await registry.shutdown();
+    expect(presence.restoreAll).toHaveBeenCalled();
   });
 });
 
