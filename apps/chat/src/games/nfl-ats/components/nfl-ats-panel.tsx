@@ -19,12 +19,14 @@ import type { PickSide } from "../lib/grade";
 import {
   fetchNflAts,
   nflAtsQueryKey,
+  nflAtsStandingsQueryKey,
   postNflAts,
   type NflAtsState,
   type PickableGame,
 } from "./api";
 import { EmptyState } from "./empty-state";
 import { NflAtsIcon } from "./nfl-ats-icon";
+import { StandingsView } from "./standings-view";
 import type { NflAtsView } from "./view-store";
 
 type EnabledState = Extract<NflAtsState, { enabled: true }>;
@@ -46,6 +48,9 @@ function useSetEnabled(circleId: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nflAtsQueryKey(circleId) });
+      queryClient.invalidateQueries({
+        queryKey: nflAtsStandingsQueryKey(circleId),
+      });
       queryClient.invalidateQueries({
         queryKey: gameRoomBadgeQueryKey(circleId),
       });
@@ -94,6 +99,7 @@ export function NflAtsPanel({ circleId, view, onViewChange }: Props) {
 
   const tabs: [NflAtsView, string][] = [
     ["picks", "Picks"],
+    ["standings", "Standings"],
     ...(data.isAdmin ? [["settings", "Settings"] as [NflAtsView, string]] : []),
   ];
   const activeView = view === "settings" && !data.isAdmin ? "picks" : view;
@@ -119,6 +125,7 @@ export function NflAtsPanel({ circleId, view, onViewChange }: Props) {
           {activeView === "picks" && (
             <PicksView circleId={circleId} data={data} />
           )}
+          {activeView === "standings" && <StandingsView circleId={circleId} />}
           {activeView === "settings" && (
             <SettingsView
               circleId={circleId}

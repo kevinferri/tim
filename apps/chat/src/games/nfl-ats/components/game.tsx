@@ -7,7 +7,11 @@ import { NflAtsIcon } from "./nfl-ats-icon";
 import { NflAtsPanel } from "./nfl-ats-panel";
 import { useNflAtsViewStore } from "./view-store";
 
-const VIEW_LABELS = { picks: "Picks", settings: "Settings" } as const;
+const VIEW_LABELS = {
+  picks: "Picks",
+  standings: "Standings",
+  settings: "Settings",
+} as const;
 
 function Panel({ circleId }: { circleId: string }) {
   const { view, setView } = useNflAtsViewStore();
@@ -29,7 +33,7 @@ async function fetchBadge(circleId: string): Promise<GameBadge> {
   const { badge, nextChangeAt } = await fetchNflAts<{
     badge: GameBadge;
     nextChangeAt: string | null;
-  }>(circleId, true);
+  }>(circleId, "badge");
   nextKickoffAt = nextChangeAt ? new Date(nextChangeAt).getTime() : null;
   return badge;
 }

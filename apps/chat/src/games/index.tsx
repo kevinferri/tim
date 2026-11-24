@@ -9,7 +9,7 @@ import {
   type GameDefinition,
 } from "@/games/game-room";
 import { blackjackGame } from "@/games/blackjack";
-import { nflAtsGame } from "@/games/nfl-ats";
+import { nflAtsGame, nflAtsNotificationCopy } from "@/games/nfl-ats";
 import { samePageGame, samePageNotificationCopy } from "@/games/same-page";
 import { texasHoldemGame } from "@/games/texas-holdem";
 import { wordsmithGame, wordsmithNotificationCopy } from "@/games/wordsmith";
@@ -35,6 +35,7 @@ export function runGameCommand(
 export const gameNotificationCopy = {
   ...samePageNotificationCopy,
   ...wordsmithNotificationCopy,
+  ...nflAtsNotificationCopy,
 };
 
 export function GameRoomSheetHost({ circleId }: { circleId: string }) {

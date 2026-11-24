@@ -4,6 +4,8 @@ import {
   getCoveringSide,
   gradePick,
   tallyResults,
+  winPercentage,
+  formatWinPercentage,
 } from "./grade";
 
 describe("getCoveringSide", () => {
@@ -90,5 +92,38 @@ describe("formatRecord", () => {
 
   it("appends pushes when there are some", () => {
     expect(formatRecord({ wins: 7, losses: 3, pushes: 1 })).toBe("7-3-1");
+  });
+});
+
+describe("winPercentage", () => {
+  it("is wins over decided picks", () => {
+    expect(winPercentage({ wins: 7, losses: 3, pushes: 0 })).toBeCloseTo(0.7);
+  });
+
+  it("leaves pushes out of the denominator", () => {
+    expect(winPercentage({ wins: 7, losses: 3, pushes: 5 })).toBeCloseTo(0.7);
+  });
+
+  it("is null when nothing has been decided", () => {
+    expect(winPercentage({ wins: 0, losses: 0, pushes: 2 })).toBeNull();
+  });
+});
+
+describe("formatWinPercentage", () => {
+  it("drops the leading zero", () => {
+    expect(formatWinPercentage({ wins: 7, losses: 3, pushes: 0 })).toBe(".700");
+    expect(formatWinPercentage({ wins: 2, losses: 1, pushes: 0 })).toBe(".667");
+  });
+
+  it("shows a dash rather than .000 before anything is decided", () => {
+    expect(formatWinPercentage({ wins: 0, losses: 0, pushes: 0 })).toBe(
+      "\u2014",
+    );
+  });
+
+  it("keeps a perfect record readable", () => {
+    expect(formatWinPercentage({ wins: 3, losses: 0, pushes: 0 })).toBe(
+      "1.000",
+    );
   });
 });
