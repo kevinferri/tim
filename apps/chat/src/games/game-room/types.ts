@@ -7,6 +7,7 @@ export type GameBadge = "play" | "results" | null;
 /** Sections of the Game room list, in display order. */
 export const GAME_CATEGORIES = [
   { id: "daily", label: "Daily" },
+  { id: "weekly", label: "Weekly" },
   { id: "casino", label: "Casino" },
 ] as const;
 
