@@ -14,6 +14,7 @@ import {
   MIN_BET,
   RESULTS_MS,
   Rng,
+  dealerBlackjackHoldMs,
   SEAT_COUNT,
   SeatOccupant,
   TURN_MS,
@@ -336,6 +337,11 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
 
   private settleRound() {
     if (this.closed) return;
+    // Still "betting" only when the dealer's blackjack ended the round at the deal: hold for the peek and flip.
+    const hold =
+      this.phase === "betting"
+        ? dealerBlackjackHoldMs(this.round!.players.length)
+        : 0;
     const round = settle(this.round!);
     this.round = round;
     this.shoe = round.shoe;
@@ -354,7 +360,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
 
     this.phase = "results";
     this.broadcast();
-    this.setTimer(RESULTS_MS, () => this.endResults());
+    this.setTimer(RESULTS_MS + hold, () => this.endResults());
   }
 
   // A synchronous throw becomes a rejection so it can't stop the payout loop halfway.

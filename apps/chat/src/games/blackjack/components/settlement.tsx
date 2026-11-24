@@ -2,7 +2,13 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { RESULTS_MS, type BlackjackTableView } from "@tim/casino";
+import {
+  RESULTS_MS,
+  DEALER_PEEK_MS,
+  dealerBlackjackHoldMs,
+  dealerRevealMs,
+  type BlackjackTableView,
+} from "@tim/casino";
 import { ChipStack, breakdown, playTableSound } from "@/games/casino";
 import { TALLY_MAX_MS } from "./your-result";
 
@@ -163,6 +169,10 @@ export function useSettlement(
   const [naturalClaimed, setNaturalClaimed] = useState<Set<number>>(new Set());
   // Busts whose sweep is scheduled but hasn't taken the chips yet.
   const [sweeping, setSweeping] = useState<Set<string>>(new Set());
+  // A dealer blackjack that ended the round at the deal: its hole card stays down until the peek's flip.
+  const [peek, setPeek] = useState<"dealing" | "peeking" | "revealed" | null>(
+    null,
+  );
   const viewPhase = useRef(view?.phase);
   const dealtLive = useRef(false);
   const claimed = useRef(new Set<string>());
@@ -326,6 +336,7 @@ export function useSettlement(
       setNaturalClaimed(new Set());
       setSweeping(new Set());
     }
+    if (phase !== "results") setPeek(null);
     if (phase !== "results") {
       setSettledSeats("all");
       setStampedSeats("all");
@@ -338,6 +349,16 @@ export function useSettlement(
     setStampedSeats(new Set());
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+    // Straight from betting to results is a dealer blackjack at the deal: the bets wait for its flip.
+    const players = view.seats.filter((s) => s?.inRound).length;
+    let t0 = 0;
+    const { cards, total } = view.dealer;
+    if (prev === "betting" && cards.length === 2 && total === 21) {
+      setPeek("dealing");
+      at(dealerRevealMs(players) - DEALER_PEEK_MS, () => setPeek("peeking"));
+      at(dealerRevealMs(players), () => setPeek("revealed"));
+      t0 = dealerBlackjackHoldMs(players);
+    }
     const add = (seat: number) => (s: Set<number> | "all") =>
       s === "all" ? s : new Set(s).add(seat);
     const settle = (seat: number) => setSettledSeats(add(seat));
@@ -365,7 +386,7 @@ export function useSettlement(
     for (const seat of view.seats) {
       if (!seat?.inRound || !seat.hands.length) continue;
       const busy = isBusy(seat);
-      const start = busy ? k++ * stagger : 0;
+      const start = t0 + (busy ? k++ * stagger : 0);
       let shown = start;
       // A win stamps as its winnings land on the bet; anything else as the dealer reaches the seat.
       let stamped = start;
@@ -417,6 +438,8 @@ export function useSettlement(
     /** This hand busted and its chips are about to be swept. */
     isSweeping: (seat: number, hand: number) =>
       sweeping.has(handKey(seat, hand)),
+    /** A dealer blackjack at the deal, live: its cards are landing, the dealer is peeking, or the hole card just turned over. */
+    peek,
     /** The results are playing out live, seat by seat (not on a load, reconnect, or with reduced motion). */
     animatingResults: stampedSeats !== "all",
     /** This seat's hands can show their win/loss stamps; a natural paid during play waits for its payout. */

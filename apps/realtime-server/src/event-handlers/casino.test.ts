@@ -9,6 +9,7 @@ import {
   TURN_MS,
   applyAction,
   dealerDraw,
+  dealerBlackjackHoldMs,
 } from "@tim/casino";
 import { SocketEvent } from "@tim/socket-types";
 import { createMockSocket } from "../test/socket-mocks";
@@ -423,6 +424,23 @@ describe("a round", () => {
       hands: [],
     });
     expect(view.dealer).toEqual({ cards: [], total: null });
+  });
+
+  it("holds a dealer blackjack's results longer, for the peek", async () => {
+    const { connect, stackShoe } = setup();
+    const a = connect("a");
+    await watch(a);
+    stackShoe("10", "A", "9", "K"); // player 19, dealer A + K
+    await sit(a, 0);
+    await bet(a, 100);
+    const view = state(a);
+    expect(view.phase).toBe("results");
+    expect(view.seats[0]!.hands[0]).toMatchObject({ outcome: "lose" });
+
+    vi.advanceTimersByTime(RESULTS_MS);
+    expect(state(a).phase).toBe("results");
+    vi.advanceTimersByTime(dealerBlackjackHoldMs(1));
+    expect(state(a).phase).toBe("betting");
   });
 
   it("plays two players in seat order and rejects out-of-turn actions", async () => {
