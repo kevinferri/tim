@@ -39,7 +39,7 @@ export function UserDropDown() {
   useSocketHandler<UserUpdatedStatusPayload>(
     SocketEvent.UserUpdatedStatus,
     (payload) => {
-      if (payload.user.id === self.id) return;
+      if (payload.user.id === self.id || payload.automatic) return;
 
       if (payload.user.status) {
         toast({

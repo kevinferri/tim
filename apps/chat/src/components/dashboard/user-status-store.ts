@@ -15,6 +15,8 @@ export type UserUpdatedStatusPayload = {
     status: string | null;
     lastStatusUpdate: Date | null;
   };
+  /** Set by the server (e.g. sitting at a casino table), not the user: update it, but don't toast. */
+  automatic?: boolean;
 };
 
 type Store = {

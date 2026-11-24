@@ -165,6 +165,7 @@ describe("casino status", () => {
     expect(emitted(server, SocketEvent.UserUpdatedStatus)).toEqual([
       {
         user: expect.objectContaining({ id: userId, status: STATUS }),
+        automatic: true,
       },
     ]);
 
@@ -183,6 +184,7 @@ describe("casino status", () => {
           status: "🌴 On vacation",
           lastStatusUpdate: SET_AT,
         }),
+        automatic: true,
       },
     ]);
   });

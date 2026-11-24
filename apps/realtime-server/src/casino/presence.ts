@@ -98,6 +98,8 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
           status: user.status,
           lastStatusUpdate,
         },
+        // Not something they set: the chat app updates it without the "updated their status" toast.
+        automatic: true,
       });
   };
 
