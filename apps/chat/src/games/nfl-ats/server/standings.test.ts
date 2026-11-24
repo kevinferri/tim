@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { prismaClient, resetDb } from "@/test/db";
-import { getStandings } from "./standings";
+import { getLastWeekResults, getStandings } from "./standings";
 
 // Tue Dec 1, 2026, 6am Eastern: this week starts Mon Nov 30, last week Nov 23.
 const THIS_WEEK = new Date("2026-12-01T11:00:00.000Z");
@@ -245,5 +245,114 @@ describe("getStandings", () => {
       "Bo",
       "Ann",
     ]);
+  });
+});
+
+describe("getLastWeekResults", () => {
+  it("is null before there's a finished week behind us", async () => {
+    const { circle } = await createCircle(["Ann"]);
+
+    expect(
+      await getLastWeekResults({ circleId: circle.id, now: THIS_WEEK }),
+    ).toBeNull();
+  });
+
+  it("is null when last week's games haven't finished", async () => {
+    const { circle } = await createCircle(["Ann"]);
+    const week = await prismaClient.nflAtsWeek.create({
+      data: { season: 2026, startsOn: "2026-11-23" },
+    });
+    await prismaClient.nflAtsGame.create({
+      data: {
+        weekId: week.id,
+        eventId: "evt-unfinished",
+        homeTeam: "Home",
+        awayTeam: "Away",
+        kickoffAt: new Date("2026-11-26T01:15:00.000Z"),
+        spread: -3,
+      },
+    });
+
+    expect(
+      await getLastWeekResults({ circleId: circle.id, now: THIS_WEEK }),
+    ).toBeNull();
+  });
+
+  it("returns last week's games with who took each side", async () => {
+    const { circle, users } = await createCircle(["Ann", "Bo"]);
+    const [ann, bo] = users;
+    const game = await gradedGame("2026-11-23", []);
+    await prismaClient.nflAtsPick.create({
+      data: { userId: ann.id, gameId: game.id, side: "home", result: "win" },
+    });
+    await prismaClient.nflAtsPick.create({
+      data: { userId: bo.id, gameId: game.id, side: "away", result: "loss" },
+    });
+
+    const result = await getLastWeekResults({
+      circleId: circle.id,
+      now: THIS_WEEK,
+    });
+
+    expect(result?.startsOn).toBe("2026-11-23");
+    expect(result?.members.map((m) => m.displayName).sort()).toEqual([
+      "Ann",
+      "Bo",
+    ]);
+    expect(result?.games).toHaveLength(1);
+    expect(result?.games[0].picks).toEqual(
+      expect.arrayContaining([
+        { userId: ann.id, side: "home", result: "win" },
+        { userId: bo.id, side: "away", result: "loss" },
+      ]),
+    );
+  });
+
+  it("works out which side covered", async () => {
+    const { circle } = await createCircle(["Ann"]);
+    // Home -3.5 wins 24-17: covers by 3.5.
+    await gradedGame("2026-11-23", []);
+
+    const result = await getLastWeekResults({
+      circleId: circle.id,
+      now: THIS_WEEK,
+    });
+
+    expect(result?.games[0].coveringSide).toBe("home");
+  });
+
+  it("leaves out picks by people outside the circle", async () => {
+    const { circle } = await createCircle(["Ann"]);
+    const outsider = await createUser("Zed");
+    const game = await gradedGame("2026-11-23", []);
+    await prismaClient.nflAtsPick.create({
+      data: {
+        userId: outsider.id,
+        gameId: game.id,
+        side: "home",
+        result: "win",
+      },
+    });
+
+    const result = await getLastWeekResults({
+      circleId: circle.id,
+      now: THIS_WEEK,
+    });
+
+    expect(result?.games[0].picks).toEqual([]);
+  });
+
+  it("shows this week's games under this week, not last", async () => {
+    const { circle, users } = await createCircle(["Ann"]);
+    await gradedGame("2026-11-23", [{ userId: users[0].id, result: "win" }]);
+    await gradedGame("2026-11-30", [{ userId: users[0].id, result: "loss" }]);
+
+    const result = await getLastWeekResults({
+      circleId: circle.id,
+      now: THIS_WEEK,
+    });
+
+    expect(result?.games).toHaveLength(1);
+    expect(result?.games[0].picks[0].result).toBe("win");
   });
 });

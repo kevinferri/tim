@@ -1,9 +1,12 @@
 import { prismaClient } from "@/lib/prisma/client";
 import {
+  getCoveringSide,
+  isPickSide,
   tallyResults,
   winPercentage,
   type PickRecord,
   type PickResult,
+  type PickSide,
 } from "../lib/grade";
 import { getPreviousWeekStart, getSeason } from "../lib/week";
 
@@ -127,4 +130,111 @@ function compareRows(a: StandingsRow, b: StandingsRow): number {
   }
   if (a.season.wins !== b.season.wins) return b.season.wins - a.season.wins;
   return a.user.displayName.localeCompare(b.user.displayName);
+}
+
+export type LastWeekPick = {
+  userId: string;
+  side: PickSide;
+  result: PickResult | null;
+};
+
+export type LastWeekGame = {
+  id: string;
+  awayTeam: string;
+  homeTeam: string;
+  spread: number;
+  homeScore: number;
+  awayScore: number;
+  kickoffAt: string;
+  /** Which side beat the number, or "push" when the adjusted score was level. */
+  coveringSide: PickSide | "push";
+  picks: LastWeekPick[];
+};
+
+export type LastWeekResults = {
+  startsOn: string;
+  /** Everyone in the circle, so the view can render a picker without a second fetch. */
+  members: StandingsMember[];
+  games: LastWeekGame[];
+};
+
+/**
+ * Last week's finished games with every member's pick on each. Null when
+ * there's nothing to look back at yet -- no such week, or none of it final.
+ */
+export async function getLastWeekResults({
+  circleId,
+  now = new Date(),
+}: {
+  circleId: string;
+  now?: Date;
+}): Promise<LastWeekResults | null> {
+  const startsOn = getPreviousWeekStart(now);
+  const week = await prismaClient.nflAtsWeek.findUnique({
+    where: { season_startsOn: { season: getSeason(now), startsOn } },
+    select: { id: true },
+  });
+  if (!week) return null;
+
+  const circle = await prismaClient.circle.findUnique({
+    where: { id: circleId },
+    select: {
+      members: {
+        select: { id: true, displayName: true, name: true, imageUrl: true },
+      },
+    },
+  });
+  const members = circle?.members ?? [];
+  const memberIds = members.map((m) => m.id);
+
+  const games = await prismaClient.nflAtsGame.findMany({
+    where: { weekId: week.id, completedAt: { not: null } },
+    orderBy: [{ kickoffAt: "asc" }, { awayTeam: "asc" }],
+    select: {
+      id: true,
+      awayTeam: true,
+      homeTeam: true,
+      spread: true,
+      homeScore: true,
+      awayScore: true,
+      kickoffAt: true,
+      picks: {
+        where: { userId: { in: memberIds } },
+        select: { userId: true, side: true, result: true },
+      },
+    },
+  });
+  if (games.length === 0) return null;
+
+  return {
+    startsOn,
+    members,
+    games: games.flatMap((game) => {
+      // completedAt is set with both scores, so this only skips a malformed row.
+      if (game.homeScore === null || game.awayScore === null) return [];
+      const scores = { homeScore: game.homeScore, awayScore: game.awayScore };
+      return [
+        {
+          id: game.id,
+          awayTeam: game.awayTeam,
+          homeTeam: game.homeTeam,
+          spread: game.spread,
+          ...scores,
+          kickoffAt: game.kickoffAt.toISOString(),
+          coveringSide: getCoveringSide({ spread: game.spread, ...scores }),
+          picks: game.picks.flatMap((pick) =>
+            isPickSide(pick.side)
+              ? [
+                  {
+                    userId: pick.userId,
+                    side: pick.side,
+                    result: (pick.result as PickResult | null) ?? null,
+                  },
+                ]
+              : [],
+          ),
+        },
+      ];
+    }),
+  };
 }

@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { useGameRoomStore } from "@/games/game-room";
 import { NFL_ATS_GAME_ID } from "../lib/game-id";
 
-export type NflAtsView = "picks" | "standings" | "settings";
+export type NflAtsView = "picks" | "last-week" | "standings" | "settings";
 
 export const useNflAtsViewStore = create<{
   view: NflAtsView;

@@ -9,6 +9,7 @@ import { useNflAtsViewStore } from "./view-store";
 
 const VIEW_LABELS = {
   picks: "Picks",
+  "last-week": "Last week",
   standings: "Standings",
   settings: "Settings",
 } as const;
