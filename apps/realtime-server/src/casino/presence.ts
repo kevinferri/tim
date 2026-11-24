@@ -56,6 +56,8 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
   const lastAnnounced = new Map<string, number>();
   // Per user, so a stand can't overtake the sit whose status it restores.
   const queues = new Map<string, Promise<void>>();
+  // Set by restoreAll: a sit queued after shutdown starts must not write a status nothing will restore.
+  let closing = false;
 
   const enqueue = (userId: string, op: () => Promise<void>) => {
     const next = (queues.get(userId) ?? Promise.resolve())
@@ -105,6 +107,7 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
     game: TableGame,
     user: SocketUser,
   ) => {
+    if (closing) return;
     const key = `${circleId}:${user.id}`;
     const last = lastAnnounced.get(key);
     if (last !== undefined && now() - last < ANNOUNCE_COOLDOWN_MS) return;
@@ -156,6 +159,7 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
           console.error("casino: sit announcement failed", err),
         ),
         enqueue(user.id, async () => {
+          if (closing) return;
           const existing = seatedUsers.get(user.id);
           if (existing) {
             existing.tables.add(tableKey);
@@ -199,6 +203,9 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
     },
 
     async restoreAll() {
+      closing = true;
+      // A sit already past the closing check finishes first, so it's restored too.
+      await Promise.allSettled([...queues.values()]);
       await Promise.all(
         [...seatedUsers.keys()].map((userId) =>
           enqueue(userId, async () => {

@@ -247,4 +247,30 @@ describe("casino status", () => {
     await presence.stood({ circleId, game: "blackjack", userId });
     expect((await statusOf(userId)).status).toBe("🎧 Focusing");
   });
+
+  it("restores a sit whose status write was still in flight when shutdown began", async () => {
+    const userId = await createUser("🎧 Focusing");
+    const { circleId } = await createCircle(userId);
+    const server = createMockServer();
+    const { presence } = setup();
+
+    const sitting = seat(presence, server, circleId, userId);
+    await presence.restoreAll();
+    await sitting;
+
+    expect((await statusOf(userId)).status).toBe("🎧 Focusing");
+  });
+
+  it("ignores a sit once shutdown has begun", async () => {
+    const userId = await createUser("🎧 Focusing");
+    const { circleId, topicId } = await createCircle(userId);
+    const server = createMockServer();
+    const { presence } = setup();
+
+    await presence.restoreAll();
+    await seat(presence, server, circleId, userId);
+
+    expect((await statusOf(userId)).status).toBe("🎧 Focusing");
+    expect(await pgClient("messages").where({ topicId })).toHaveLength(0);
+  });
 });
