@@ -49,3 +49,5 @@ export {
   playTwentyOne,
 } from "./sounds";
 export { useTableSeats } from "./use-table-seats";
+export { useTableChat, useChatBubbles } from "./use-table-chat";
+export { ChatBubble } from "./components/table-chat";

@@ -15,6 +15,7 @@ import { createMockSocket } from "../test/socket-mocks";
 import { registerCasinoHandlers } from "./casino";
 import { CasinoRegistry } from "../casino/registry";
 import { InMemoryNetStore, NetStore } from "../casino/net-store";
+import { InMemoryChatStore } from "../casino/chat-store";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
 import { shutdown } from "../shutdown";
@@ -44,7 +45,11 @@ function seededRng(seed = 1) {
 }
 
 function setup(netStore: NetStore = new InMemoryNetStore()) {
-  const registry = new CasinoRegistry({ netStore, rng: seededRng() });
+  const registry = new CasinoRegistry({
+    netStore,
+    chatStore: new InMemoryChatStore(),
+    rng: seededRng(),
+  });
   const connect = (userId: string) => {
     const socket = createMockSocket({
       id: userId,
@@ -967,5 +972,147 @@ describe("unexpected errors", () => {
         expect.any(Error),
       ),
     );
+  });
+});
+
+describe("table chat", () => {
+  const say = (s: MockSocket, text: unknown) =>
+    s.trigger(SocketEvent.TableChatSend, { ...REF, text });
+  const chats = (s: MockSocket) => emitted(s, SocketEvent.TableChat) as any[];
+  const lines = (s: MockSocket) =>
+    chats(s)
+      .filter((c) => c.line)
+      .map((c) => c.line);
+
+  it("sends a line to everyone at the table, seated or not, but not to spectators", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    const b = connect("b");
+    const room = connect("c");
+    await watch(a);
+    await watch(b);
+    await spectate(room);
+    await sit(a, 0);
+
+    await say(a, "  nice   hand ");
+
+    const line = {
+      id: expect.any(String),
+      kind: "say",
+      userId: "a",
+      name: "a",
+      displayName: "a",
+      imageUrl: null,
+      text: "nice hand",
+    };
+    expect(chats(a).at(-1)).toEqual({ ...REF, line });
+    expect(chats(b).at(-1)).toEqual({ ...REF, line });
+    expect(chats(room)).toEqual([]);
+  });
+
+  it("sends the recent lines on watch, keeping only the last 50", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    await watch(a);
+    expect(chats(a).at(-1)).toEqual({ ...REF, recent: [] });
+    for (let i = 0; i < 55; i++) {
+      await say(a, `line ${i}`);
+      vi.advanceTimersByTime(1_000);
+    }
+
+    const b = connect("b");
+    await watch(b);
+    const recent = chats(b).at(-1).recent;
+    expect(recent).toHaveLength(50);
+    expect(recent[0].text).toBe("line 5");
+    expect(recent.at(-1).text).toBe("line 54");
+  });
+
+  it("keeps the chat for whoever comes back after the table went idle", async () => {
+    const { connect, registry } = setup();
+    const a = connect("a");
+    await watch(a);
+    await say(a, "hi");
+    await a.trigger(SocketEvent.TableUnwatch, REF);
+    expect(registry.tableCount()).toBe(0);
+
+    await watch(a);
+    expect(
+      chats(a)
+        .at(-1)
+        .recent.map((l: any) => l.text),
+    ).toEqual(["hi"]);
+  });
+
+  it("rejects spectators, blank, long, and too-fast lines", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    const room = connect("b");
+    await watch(a);
+    await spectate(room);
+
+    await say(room, "hi");
+    expect(lastError(room)).toBe("You're not at this table");
+
+    await say(a, "   ");
+    await say(a, 42);
+    expect(lastError(a)).toBe("Invalid message");
+    await say(a, "x".repeat(201));
+    expect(lastError(a)).toBe("That message is too long");
+    expect(chats(a).filter((c) => c.line)).toEqual([]);
+
+    for (let i = 0; i < 6; i++) await say(a, `${i}`);
+    expect(lastError(a)).toBe("Slow down a little");
+    expect(chats(a).filter((c) => c.line)).toHaveLength(5);
+    vi.advanceTimersByTime(5_000);
+    await say(a, "again");
+    expect(chats(a).at(-1).line.text).toBe("again");
+  });
+
+  it("posts joins and leaves, but not round results", async () => {
+    const { connect, stackShoe } = setup();
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    stackShoe("10", "9", "8", "10", "7", "8");
+    await sit(a, 0);
+    await sit(b, 1);
+    await bet(a, 100);
+    await bet(b, 50);
+    await act(a, { type: "stand" });
+    await act(b, { type: "stand" });
+    vi.advanceTimersByTime(DEALER_DRAW_MS * 3);
+    expect(state(a).phase).toBe("results");
+    await standUp(b);
+
+    expect(lines(a).map((l) => [l.kind, l.userId])).toEqual([
+      ["joined", "a"],
+      ["joined", "b"],
+      ["left", "b"],
+    ]);
+    expect(lines(a)[0]).toMatchObject({
+      name: "a",
+      displayName: "a",
+      imageUrl: null,
+    });
+  });
+
+  it("saves only what people said: joins and leaves are live only", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    await watch(a);
+    await sit(a, 0);
+    await say(a, "hi");
+    await standUp(a);
+    expect(lines(a).map((l) => l.kind)).toEqual(["joined", "say", "left"]);
+
+    const b = connect("b");
+    await watch(b);
+    expect(
+      chats(b)
+        .at(-1)
+        .recent.map((l: any) => l.text),
+    ).toEqual(["hi"]);
   });
 });

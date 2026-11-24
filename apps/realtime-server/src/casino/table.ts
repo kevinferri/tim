@@ -1,6 +1,10 @@
 import {
   SEAT_COUNT,
   SeatOccupant,
+  TABLE_CHAT_MAX_LENGTH,
+  TableChatEvent,
+  TableChatLine,
+  TableChatPayload,
   TableClosingPayload,
   TableErrorPayload,
   TableGame,
@@ -8,6 +12,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { SocketEvent } from "@tim/socket-types";
 import { AppSocket } from "../lib/socket";
+import { ChatStore } from "./chat-store";
 
 export type BaseSeat = {
   occupant: SeatOccupant;
@@ -19,6 +24,10 @@ export type BaseSeat = {
 
 type Watcher = { socket: AppSocket; userId: string; spectator: boolean };
 
+// Chat rate limit: lines per user per window.
+const CHAT_LINES_PER_WINDOW = 5;
+const CHAT_WINDOW_MS = 5_000;
+
 /** Game-agnostic table: seats, watchers, one phase timer, and broadcast. */
 // One per server process, sent in views: it changes only on a restart (tables are dropped and recreated whenever they go idle).
 const SERVER_ID = randomUUID();
@@ -29,12 +38,16 @@ export abstract class Table<Seat extends BaseSeat, View> {
   protected seats: (Seat | null)[] = Array(SEAT_COUNT).fill(null);
   protected closed = false;
   private watchers = new Map<string, Watcher>();
+  // Each line is written after the one before, and a watch's load waits for them.
+  private chatWrites: Promise<void> = Promise.resolve();
+  private chatSentAt = new Map<string, number[]>();
   private timer: { handle: NodeJS.Timeout; deadline: number } | null = null;
 
   constructor(
     readonly circleId: string,
     readonly game: TableGame,
     private onIdle: () => void,
+    private chatStore: ChatStore,
   ) {}
 
   /** The state as `userId` should see it (poker will hide others' cards). */
@@ -44,13 +57,76 @@ export abstract class Table<Seat extends BaseSeat, View> {
   /** Puts the table back in a safe state after an unexpected error. */
   protected abstract recover(): void;
 
-  addWatcher(socket: AppSocket, { spectator = false } = {}) {
+  /** Resolves once the newcomer has the recent chat too. */
+  async addWatcher(socket: AppSocket, { spectator = false } = {}) {
     this.watchers.set(socket.id, {
       socket,
       userId: socket.data.user.id,
       spectator,
     });
     socket.emit(SocketEvent.TableState, this.viewFor(socket.data.user.id));
+    // Spectators (the Game room) don't show the chat.
+    if (spectator) return;
+    const ref = { circleId: this.circleId, game: this.game };
+    try {
+      await this.chatWrites;
+      const recent = await this.chatStore.recent(ref);
+      if (!this.watchers.has(socket.id)) return;
+      const payload: TableChatPayload = { ...ref, recent };
+      socket.emit(SocketEvent.TableChat, payload);
+    } catch (err) {
+      console.error("casino: table chat load failed", err);
+    }
+  }
+
+  /** Adds a line from a watching player and sends it to everyone at the table; returns an error message, if any. */
+  chat(socketId: string, text: string): string | null {
+    const watcher = this.watchers.get(socketId);
+    if (!watcher || watcher.spectator) return "You're not at this table";
+    const clean = text.replace(/\s+/g, " ").trim();
+    if (!clean) return null;
+    if (clean.length > TABLE_CHAT_MAX_LENGTH) return "That message is too long";
+    const now = Date.now();
+    const sent = (this.chatSentAt.get(watcher.userId) ?? []).filter(
+      (at) => now - at < CHAT_WINDOW_MS,
+    );
+    if (sent.length >= CHAT_LINES_PER_WINDOW) return "Slow down a little";
+    this.chatSentAt.set(watcher.userId, [...sent, now]);
+
+    const { id, name, displayName, imageUrl } = watcher.socket.data.user;
+    this.pushLine({
+      id: randomUUID(),
+      kind: "say",
+      userId: id,
+      name: name ?? null,
+      displayName,
+      imageUrl: imageUrl ?? null,
+      text: clean,
+    });
+    return null;
+  }
+
+  /** Posts a table event (someone joined or left) to the chat. */
+  protected announce(event: Omit<TableChatEvent, "id">) {
+    this.pushLine({ ...event, id: randomUUID() });
+  }
+
+  private pushLine(line: TableChatLine) {
+    const ref = { circleId: this.circleId, game: this.game };
+    // Joins and leaves only matter to whoever's here now, so only what people say is saved.
+    if (line.kind === "say") {
+      this.chatWrites = this.chatWrites
+        .then(() => this.chatStore.add(ref, line))
+        .catch((err) => console.error("casino: table chat write failed", err));
+    }
+    const payload: TableChatPayload = {
+      circleId: this.circleId,
+      game: this.game,
+      line,
+    };
+    for (const w of this.watchers.values()) {
+      if (!w.spectator) w.socket.emit(SocketEvent.TableChat, payload);
+    }
   }
 
   /** Watching as a player, so allowed to sit, stand and act; spectators aren't. */

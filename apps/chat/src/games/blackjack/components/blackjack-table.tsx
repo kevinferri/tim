@@ -15,6 +15,7 @@ import {
 import {
   BetSpot,
   CARD_PX,
+  ChatBubble,
   breakdown,
   CARD_SIZES,
   ChipRack,
@@ -33,7 +34,9 @@ import {
   handsFit,
   playTableSound,
   playYourTurn,
+  useChatBubbles,
   useTable,
+  useTableChat,
   type BetStack,
   type CardSize,
   type Size,
@@ -237,6 +240,9 @@ function LiveTable(props: Props) {
     circleId,
     game: "blackjack",
   });
+  const chat = useTableChat({ circleId, game: "blackjack" });
+  const chatBubbles = useChatBubbles(chat.latest);
+  const tableChat = { ...chat, selfId, disabled: status !== "live" };
   const [felt, setFelt] = useState<Size | null>(null);
   const cardSize = useCardSize(view, felt);
   // When a seat's second card lands in the opening deal (see dealDelay).
@@ -352,6 +358,7 @@ function LiveTable(props: Props) {
       // The empty table, so the real one fills in where it stands.
       <TableLayout
         {...shell}
+        chat={tableChat}
         rack={<ChipRack />}
         spotSize={cardSpot(cardSize, 2)}
         onFeltSize={setFelt}
@@ -409,6 +416,7 @@ function LiveTable(props: Props) {
       <ChipLaunchProvider>
         <TableLayout
           {...shell}
+          chat={tableChat}
           titleAction={<SoundToggle />}
           headerRight={
             <>
@@ -624,13 +632,23 @@ function LiveTable(props: Props) {
                     net={liveNet(seat, i)}
                     holdNet={seat.inRound}
                     bubble={
-                      bubbles.get(i) && (
-                        // Keyed so each new action pops in afresh.
+                      // Keyed so each new one pops in afresh; a game call takes the spot over a chat line.
+                      bubbles.get(i) ? (
                         <ActionBubble
                           key={bubbles.get(i)!.id}
                           text={bubbles.get(i)!.text}
                           ms={bubbles.get(i)!.ms}
                         />
+                      ) : (
+                        chatBubbles.get(seat.occupant.userId) && (
+                          <ChatBubble
+                            key={chatBubbles.get(seat.occupant.userId)!.line.id}
+                            text={
+                              chatBubbles.get(seat.occupant.userId)!.line.text
+                            }
+                            ms={chatBubbles.get(seat.occupant.userId)!.ms}
+                          />
+                        )
                       )
                     }
                     joining={bubbles.get(i)?.text === JOINED}

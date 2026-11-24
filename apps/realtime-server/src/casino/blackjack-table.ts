@@ -1,3 +1,4 @@
+import { ChatStore } from "./chat-store";
 import {
   BETTING_WINDOW_MS,
   BlackjackPlayAction,
@@ -37,8 +38,16 @@ type BlackjackSeat = BaseSeat & {
   lastNet: number | null;
 };
 
+const person = ({ userId, name, displayName, imageUrl }: SeatOccupant) => ({
+  userId,
+  name,
+  displayName,
+  imageUrl,
+});
+
 export type BlackjackTableDeps = {
   netStore: NetStore;
+  chatStore: ChatStore;
   rng: Rng;
   /** Lets shutdown, and the user's next sit, await up/down writes already in flight. */
   trackSettle: (userId: string, write: Promise<void>) => void;
@@ -61,7 +70,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     circleId: string,
     private deps: BlackjackTableDeps,
   ) {
-    super(circleId, "blackjack", deps.onIdle);
+    super(circleId, "blackjack", deps.onIdle, deps.chatStore);
   }
 
   sit(occupant: SeatOccupant, seat: number, net: number): string | null {
@@ -98,6 +107,7 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
       inRound: false,
       lastNet: null,
     };
+    this.announce({ kind: "joined", ...person(occupant) });
     if (this.phase === "waiting") this.enterBetting();
     else this.broadcast();
     return null;
@@ -108,6 +118,9 @@ export class BlackjackTable extends Table<BlackjackSeat, BlackjackTableView> {
     const index = this.seatIndexOf(userId);
     if (index === null) return "You don't have a seat";
     const seat = this.seats[index]!;
+    if (!seat.leaving) {
+      this.announce({ kind: "left", ...person(seat.occupant) });
+    }
 
     if (!seat.inRound) {
       // Nothing is written until settle, so leaving before the deal costs nothing.

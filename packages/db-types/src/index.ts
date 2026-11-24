@@ -13,4 +13,5 @@ export type {
   NewsItem,
   CircleNewsSource,
   CasinoPlayerStats,
+  TableChatLine,
 } from "@prisma/client";

@@ -2,12 +2,17 @@ import { randomInt } from "crypto";
 import { Rng, TableGame } from "@tim/casino";
 import { BlackjackTable } from "./blackjack-table";
 import { NetStore, dbNetStore } from "./net-store";
+import { ChatStore, dbChatStore } from "./chat-store";
 
 export const cryptoRng: Rng = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
 const tableKey = (circleId: string, game: TableGame) => `${game}:${circleId}`;
 
-export type CasinoRegistryDeps = { netStore: NetStore; rng: Rng };
+export type CasinoRegistryDeps = {
+  netStore: NetStore;
+  chatStore: ChatStore;
+  rng: Rng;
+};
 
 // Tables live in this process's memory: scaling tim-ws past one instance needs Redis or sticky routing.
 export class CasinoRegistry {
@@ -27,6 +32,7 @@ export class CasinoRegistry {
     if (existing) return existing;
     const table = new BlackjackTable(circleId, {
       netStore: this.deps.netStore,
+      chatStore: this.deps.chatStore,
       rng: this.deps.rng,
       trackSettle: (userId, write) => this.track(circleId, userId, write),
       onIdle: () => {
@@ -85,5 +91,6 @@ export class CasinoRegistry {
 
 export const casinoRegistry = new CasinoRegistry({
   netStore: dbNetStore,
+  chatStore: dbChatStore,
   rng: cryptoRng,
 });

@@ -59,6 +59,8 @@ export enum SocketEvent {
   TableState = "table:state",
   TableError = "table:error",
   TableClosing = "table:closing",
+  TableChatSend = "table:chatSend",
+  TableChat = "table:chat",
 }
 
 // Carried in JoinRoom/LeaveRoom payloads -- shared here so both sides use the exact same values.

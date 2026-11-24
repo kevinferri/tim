@@ -191,7 +191,13 @@ function PlayView({ circleId }: { circleId: string }) {
       </div>
       <AtTheTable circleId={circleId} />
       <Button asChild size="sm">
-        <Link href={tableHref(circleId)} onClick={close}>
+        {/* Its own tab, so the chat stays open beside it. */}
+        <Link
+          href={tableHref(circleId)}
+          target="_blank"
+          rel="noopener"
+          onClick={close}
+        >
           Go to the table
         </Link>
       </Button>

@@ -113,7 +113,7 @@ export function registerCasinoHandlers(
       );
     }
     if (registry.closing) return emitError(socket, ref, "Table is closing");
-    registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket, {
+    await registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket, {
       spectator: (payload as TableWatchPayload).spectate === true,
     });
   });
@@ -199,6 +199,16 @@ export function registerCasinoHandlers(
     if (!action) return emitError(socket, ref, "Invalid action");
     const table = watchedTable(ref);
     if (table) emitError(socket, ref, table.act(user().id, action));
+  });
+
+  on(SocketEvent.TableChatSend, (payload: any) => {
+    const ref = parseRef(payload);
+    if (!ref) return;
+    if (typeof payload.text !== "string") {
+      return emitError(socket, ref, "Invalid message");
+    }
+    const table = watchedTable(ref);
+    if (table) emitError(socket, ref, table.chat(socket.id, payload.text));
   });
 
   on(SocketEvent.Disconnecting, () => {

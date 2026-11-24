@@ -42,6 +42,7 @@ model User {
   wordsmithPlays       WordsmithPlay[]      @relation("wordsmithPlaysByUser")
   gameRoomSeen          GameRoomSeen[]        @relation("gameRoomSeenByUser")
   casinoStats           CasinoPlayerStats[]   @relation("casinoStatsForUser")
+  tableChatLines        TableChatLine[]       @relation("tableChatForUser")
   newsSourcesAdded      CircleNewsSource[]    @relation("newsSourcesAddedByUser")
 
   @@map(name: "users")
@@ -73,6 +74,7 @@ model Circle {
   games               CircleGame[]          @relation("gamesForCircle")
   gameRoomSeen        GameRoomSeen[]        @relation("gameRoomSeenInCircle")
   casinoStats         CasinoPlayerStats[]   @relation("casinoStatsForCircle")
+  tableChatLines      TableChatLine[]       @relation("tableChatForCircle")
   notifications       Notification[]        @relation("notificationsForCircle")
   newsSources         CircleNewsSource[]    @relation("newsSourcesForCircle")
 
@@ -307,6 +309,25 @@ model CasinoPlayerStats {
   @@index([circleId])
   @@index([userId])
   @@map(name: "casino_player_stats")
+}
+
+// What players said at a casino table (text encrypted like messages). Joins and leaves aren't saved.
+// Only the last 24 hours are read; older rows are swept.
+model TableChatLine {
+  id        String   @id
+  createdAt DateTime @default(now())
+  circleId  String
+  game      String
+  userId    String
+  text      String
+
+  circle Circle @relation("tableChatForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  user   User   @relation("tableChatForUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([circleId, game, createdAt])
+  @@index([createdAt])
+  @@index([userId])
+  @@map(name: "table_chat_lines")
 }
 
 // Badges the Game room button already showed a user today, so it only lights up for new ones.
