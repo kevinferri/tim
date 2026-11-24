@@ -3,6 +3,7 @@ import http, { type IncomingHttpHeaders } from "node:http";
 import https from "node:https";
 import zlib from "node:zlib";
 import { BlockList, isIP, type LookupFunction } from "node:net";
+import { isEspnNewsUrl, parseEspnNews } from "./espn";
 import { NotAFeedError, parseFeed, type ParsedFeed } from "./parse";
 
 export type FeedErrorCode =
@@ -271,7 +272,7 @@ export async function fetchFeed(
   try {
     return {
       status: "ok",
-      feed: parseFeed(res.body),
+      feed: (isEspnNewsUrl(res.url) ? parseEspnNews : parseFeed)(res.body),
       etag: res.etag,
       lastModified: res.lastModified,
     };

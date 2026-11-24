@@ -165,7 +165,7 @@ function mediaImage(node: Node): string {
   return attr(node["itunes:image"], "href");
 }
 
-function finishItem(
+export function finishItem(
   fields: {
     guid: string;
     title: string;
