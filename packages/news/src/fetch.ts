@@ -276,7 +276,18 @@ export async function fetchFeed(
       lastModified: res.lastModified,
     };
   } catch (err) {
-    if (err instanceof NotAFeedError) throw new FeedError("not-a-feed");
+    if (err instanceof NotAFeedError)
+      throw new FeedError("not-a-feed", describeNonFeed(res));
     throw err;
   }
+}
+
+// So the log shows what a 2xx non-feed actually was (a bot-check page, an empty body, a redirect elsewhere).
+export function describeNonFeed(res: {
+  url: string;
+  contentType: string;
+  body: string;
+}): string {
+  const start = res.body.trim().replace(/\s+/g, " ").slice(0, 120);
+  return `${res.contentType || "no content-type"}, ${res.body.length} bytes from ${res.url}: ${JSON.stringify(start)}`;
 }

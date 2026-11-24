@@ -8,6 +8,7 @@ export {
 export {
   fetchFeed,
   safeFetch,
+  describeNonFeed,
   normalizeUrl,
   isPublicAddress,
   publicLookup,

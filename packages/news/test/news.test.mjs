@@ -9,6 +9,7 @@ import {
   normalizeUrl,
   parseFeed,
   fetchFeed,
+  describeNonFeed,
   toPlainText,
 } from "../dist/index.js";
 
@@ -227,4 +228,19 @@ test("selectFreshItems keeps the newest 50 unexpired, dated, deduped stories", (
   assert.ok(!picked.some((i) => i.guid === "undated" || i.guid === "future"));
   assert.ok(!picked.some((i) => i.guid === "week-old"));
   assert.equal(picked.filter((i) => i.guid === "s0").length, 1);
+});
+
+test("describeNonFeed shows what came back instead of a feed", () => {
+  assert.equal(
+    describeNonFeed({
+      url: "https://www.espn.com/espn/rss/news",
+      contentType: "text/html; charset=utf-8",
+      body: "\n  <!DOCTYPE html>\n<html>\n  <title>Access Denied</title>",
+    }),
+    'text/html; charset=utf-8, 56 bytes from https://www.espn.com/espn/rss/news: "<!DOCTYPE html> <html> <title>Access Denied</title>"',
+  );
+  assert.equal(
+    describeNonFeed({ url: "https://example.com/", contentType: "", body: "" }),
+    'no content-type, 0 bytes from https://example.com/: ""',
+  );
 });
