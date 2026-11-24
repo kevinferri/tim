@@ -197,12 +197,13 @@ describe("news poller", () => {
     expect(fetchFeed).not.toHaveBeenCalled();
   });
 
-  it("retries a failed fetch an hour later", async () => {
+  it("logs a failed fetch and retries it an hour later", async () => {
     const circleId = await createCircle();
     const feedId = await createFeed({ circleIds: [circleId] });
     const fetchFeed = vi.fn(async () => {
-      throw new FeedError("fetch-failed");
+      throw new FeedError("fetch-failed", "example.com returned 403");
     });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await createNewsPoller({
       server: mockServer().server,
@@ -212,6 +213,13 @@ describe("news poller", () => {
 
     const feed = await pgClient("news_feeds").where({ id: feedId }).first();
     expect(feed.nextFetchAt.toISOString()).toBe("2026-11-18T13:00:00.000Z");
+    expect(warn).toHaveBeenCalledWith(
+      "[news] fetch failed",
+      feed.url,
+      "fetch-failed",
+      "example.com returned 403",
+    );
+    warn.mockRestore();
   });
 
   it("only polls feeds of circles with News on and someone in the chat", async () => {
@@ -234,36 +242,6 @@ describe("news poller", () => {
 
     expect(fetchFeed).toHaveBeenCalledTimes(1);
     expect(fetchFeed.mock.calls[0][0]).toContain(activeFeed);
-  });
-
-  it("refreshes a circle's feeds on demand, at most once per 15 minutes each", async () => {
-    const circleId = await createCircle();
-    const stale = await createFeed({
-      circleIds: [circleId],
-      nextFetchAt: new Date(T0.getTime() + 40 * 60_000),
-    });
-    const recent = await createFeed({
-      circleIds: [circleId],
-      nextFetchAt: new Date(T0.getTime() + 50 * 60_000),
-    });
-    await pgClient("news_feeds")
-      .where({ id: stale })
-      .update({ lastFetchedAt: new Date(T0.getTime() - 20 * 60_000) });
-    await pgClient("news_feeds")
-      .where({ id: recent })
-      .update({ lastFetchedAt: new Date(T0.getTime() - 10 * 60_000) });
-    const fetchFeed = vi.fn(async () => ({ status: "not-modified" }) as const);
-
-    // Nobody has a topic open: the refresh alone (e.g. the News panel) still fetches.
-    await createNewsPoller({
-      server: mockServer().server,
-      fetchFeed,
-      now: () => T0,
-      activeCircleIds: async () => [],
-    }).refreshCircle(circleId);
-
-    expect(fetchFeed).toHaveBeenCalledTimes(1);
-    expect(fetchFeed.mock.calls[0][0]).toContain(stale);
   });
 
   it("never stores stories past their 72-hour lifetime", async () => {
@@ -297,48 +275,6 @@ describe("news poller", () => {
     }).tick();
 
     expect(to.mock.calls.map(([room]) => room)).toEqual([`circle::${on}`]);
-  });
-
-  it("doesn't run a tick for a refresh inside the throttle", async () => {
-    const circleId = await createCircle();
-    const feedId = await createFeed({
-      circleIds: [circleId],
-      nextFetchAt: new Date(T0.getTime() + 50 * 60_000),
-    });
-    await pgClient("news_feeds")
-      .where({ id: feedId })
-      .update({ lastFetchedAt: new Date(T0.getTime() - 5 * 60_000) });
-    const activeCircleIds = vi.fn(async () => [circleId]);
-    const fetchFeed = vi.fn();
-
-    await createNewsPoller({
-      server: mockServer().server,
-      fetchFeed,
-      now: () => T0,
-      activeCircleIds,
-    }).refreshCircle(circleId);
-
-    expect(activeCircleIds).not.toHaveBeenCalled();
-    expect(fetchFeed).not.toHaveBeenCalled();
-  });
-
-  it("fetches a feed that was already due when a refresh asks for it", async () => {
-    const circleId = await createCircle();
-    await createFeed({
-      circleIds: [circleId],
-      nextFetchAt: new Date(T0.getTime() - 60 * 60_000),
-    });
-    const fetchFeed = vi.fn(async () => ({ status: "not-modified" }) as const);
-
-    // Nobody has a topic open, so only the refresh gets it polled.
-    await createNewsPoller({
-      server: mockServer().server,
-      fetchFeed,
-      now: () => T0,
-      activeCircleIds: async () => [],
-    }).refreshCircle(circleId);
-
-    expect(fetchFeed).toHaveBeenCalledTimes(1);
   });
 
   it("skips undated and future-dated stories", async () => {

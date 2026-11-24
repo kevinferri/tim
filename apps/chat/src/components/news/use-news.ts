@@ -46,12 +46,6 @@ export function useHasUnreadNews(circleId: string) {
 
 const noopSubscribe = () => () => {};
 
-/** Asks the realtime server to fetch the circle's feeds now; it skips any fetched in the last 15 minutes. */
-export function useNewsRefresh(circleId: string) {
-  const { emit } = useSocketEmit<{ circleId: string }>(SocketEvent.NewsRefresh);
-  return useCallback(() => emit({ circleId }), [emit, circleId]);
-}
-
 /** Refetches the circle's news here, and tells its other members' tabs to do the same. */
 export function useNewsChanged(circleId: string) {
   const queryClient = useQueryClient();
