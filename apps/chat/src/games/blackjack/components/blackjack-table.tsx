@@ -172,6 +172,26 @@ const isWide = () =>
  * A seat's card size for its number of hands: a split steps down one size, and each resplit another, but past
  * two hands only as large as a row of them fits between the seats (checked at full hands, so a hit never resizes).
  */
+/** The felt and occupied seats that resplit seats are fitted to, held still during a round like useCardSize. */
+function useFitBasis(view: BlackjackTableView | null, felt: Size | null) {
+  const seats = view ? view.seats.flatMap((s, i) => (s ? [i] : [])) : [];
+  const [basis, setBasis] = useState<{
+    felt: Size | null;
+    seats: number[];
+  } | null>(null);
+  const betweenRounds = view?.phase === "waiting" || view?.phase === "betting";
+  const changed =
+    !basis ||
+    basis.felt?.w !== felt?.w ||
+    basis.felt?.h !== felt?.h ||
+    basis.seats.join() !== seats.join();
+  // Taken once on a mid-round load, and once the felt is first measured, as useCardSize does.
+  if (view && changed && (!basis || betweenRounds || !basis.felt)) {
+    setBasis({ felt, seats });
+  }
+  return basis ?? { felt, seats };
+}
+
 function seatCardSize(
   hands: number,
   cardSize: CardSize,
@@ -273,6 +293,7 @@ function LiveTable(props: Props) {
   const tableChat = { ...chat, selfId, disabled: status !== "live" };
   const [felt, setFelt] = useState<Size | null>(null);
   const cardSize = useCardSize(view, felt);
+  const fitBasis = useFitBasis(view, felt);
   // When a seat's second card lands in the opening deal (see dealDelay).
   const dealtInMs = (seat: number) => {
     const dealt = view?.seats.flatMap((s, i) => (s?.inRound ? [i] : [])) ?? [];
@@ -626,8 +647,8 @@ function LiveTable(props: Props) {
                       size={seatCardSize(
                         seat.hands.length,
                         cardSize,
-                        felt,
-                        view.seats.flatMap((s, j) => (s ? [j] : [])),
+                        fitBasis.felt,
+                        fitBasis.seats,
                       )}
                     />
                   </PlayerSpot>
