@@ -6,6 +6,7 @@ vi.mock("./odds-api", () => ({
   OddsApiError: class OddsApiError extends Error {},
 }));
 
+import { NotificationType } from "@tim/socket-types";
 import { prismaClient, resetDb } from "@/test/db";
 import { setGameEnabled } from "@/games/game-room/server";
 import { NFL_ATS_GAME_ID } from "../lib/game-id";
@@ -53,6 +54,10 @@ async function createCircle({ enabled }: { enabled: boolean }) {
   });
   if (enabled) await setGameEnabled(circle.id, NFL_ATS_GAME_ID, true);
   return circle;
+}
+
+function notificationsFor(circleId: string, type: NotificationType) {
+  return prismaClient.notification.count({ where: { circleId, type } });
 }
 
 describe("runNflAtsJobs", () => {
@@ -124,5 +129,78 @@ describe("runNflAtsJobs", () => {
       where: { eventId: "evt-1" },
     });
     expect(game.completedAt).not.toBeNull();
+  });
+
+  it("tells the circle once when the slate goes up", async () => {
+    const circle = await createCircle({ enabled: true });
+    vi.mocked(fetchSlate).mockResolvedValue([slateGame()]);
+
+    await runNflAtsJobs(MONDAY);
+    await runNflAtsJobs(new Date("2026-11-23T19:00:00.000Z"));
+
+    expect(
+      await notificationsFor(circle.id, NotificationType.NflAtsSlatePosted),
+    ).toBe(1);
+  });
+
+  it("holds the results notice until the week's last game is in", async () => {
+    const circle = await createCircle({ enabled: true });
+    vi.mocked(fetchSlate).mockResolvedValue([
+      slateGame(),
+      slateGame({ eventId: "evt-2", homeTeam: "Chicago Bears" }),
+    ]);
+    await runNflAtsJobs(MONDAY);
+
+    // One of two games final: nothing yet.
+    vi.mocked(fetchFinalScores).mockResolvedValue([
+      { eventId: "evt-1", homeScore: 24, awayScore: 17 },
+    ]);
+    await runNflAtsJobs(FRIDAY);
+    expect(
+      await notificationsFor(circle.id, NotificationType.NflAtsResults),
+    ).toBe(0);
+
+    vi.mocked(fetchFinalScores).mockResolvedValue([
+      { eventId: "evt-2", homeScore: 10, awayScore: 31 },
+    ]);
+    await runNflAtsJobs(FRIDAY);
+    expect(
+      await notificationsFor(circle.id, NotificationType.NflAtsResults),
+    ).toBe(1);
+  });
+
+  it("notifies every member of the circle", async () => {
+    const circle = await createCircle({ enabled: true });
+    const extra = await prismaClient.user.create({
+      data: {
+        googleId: `google-${crypto.randomUUID()}`,
+        name: "Bo",
+        displayName: "Bo",
+        email: `${crypto.randomUUID()}@example.com`,
+      },
+    });
+    await prismaClient.circle.update({
+      where: { id: circle.id },
+      data: { members: { connect: { id: extra.id } } },
+    });
+    vi.mocked(fetchSlate).mockResolvedValue([slateGame()]);
+
+    await runNflAtsJobs(MONDAY);
+
+    expect(
+      await notificationsFor(circle.id, NotificationType.NflAtsSlatePosted),
+    ).toBe(2);
+  });
+
+  it("sends nothing to a circle that hasn't turned the game on", async () => {
+    const off = await createCircle({ enabled: false });
+    await createCircle({ enabled: true });
+    vi.mocked(fetchSlate).mockResolvedValue([slateGame()]);
+
+    await runNflAtsJobs(MONDAY);
+
+    expect(
+      await notificationsFor(off.id, NotificationType.NflAtsSlatePosted),
+    ).toBe(0);
   });
 });

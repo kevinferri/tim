@@ -12,12 +12,17 @@ import {
   setNflAtsEnabled,
   submitPick,
 } from "./picks";
+import { getStandings } from "./standings";
 
 export const GET = apiRoute(
   async (request: Request, context: CircleRouteContext) => {
     const { userId, circleId } = await requireCircleMember(context);
-    if (new URL(request.url).searchParams.get("view") === "badge") {
+    const view = new URL(request.url).searchParams.get("view");
+    if (view === "badge") {
       return NextResponse.json(await getNflAtsBadge({ circleId, userId }));
+    }
+    if (view === "standings") {
+      return NextResponse.json(await getStandings({ circleId, userId }));
     }
     return NextResponse.json(await getNflAtsState({ circleId, userId }));
   },

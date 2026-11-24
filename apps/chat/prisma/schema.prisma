@@ -19,27 +19,27 @@ model User {
   name             String?
   // Seeded from the first word of `name` at sign-up; user-editable after that.
   displayName      String
-  email            String? @unique
+  email            String?   @unique
   imageUrl         String?
-  googleId         String  @unique
+  googleId         String    @unique
   status           String?
   lastStatusUpdate DateTime?
 
   // Relations
-  createdCircles    Circle[]          @relation("circlesCreatedByUser")
-  createdTopics     Topic[]           @relation("topicsCreatedByUser")
-  circleMemberships Circle[]          @relation("circleMembershipsForUser")
-  messages          Message[]         @relation("messagesSentByUser")
-  highlights        Highlight[]       @relation("highlightsByUser")
-  topicReadStates   TopicReadState[]  @relation("topicReadStatesForUser")
-  topicPreferences  TopicPreference[] @relation("topicPreferencesForUser")
-  notificationsReceived Notification[] @relation("notificationsForUser")
-  notificationsSent     Notification[] @relation("notificationsByActor")
-  samePageAnswers       SamePageAnswer[] @relation("samePageAnswersByUser")
-  samePageCalls         SamePageAnswer[] @relation("samePageCallsByUser")
-  samePageSocksHeld     SamePageSock[]   @relation("samePageSockHolder")
+  createdCircles        Circle[]              @relation("circlesCreatedByUser")
+  createdTopics         Topic[]               @relation("topicsCreatedByUser")
+  circleMemberships     Circle[]              @relation("circleMembershipsForUser")
+  messages              Message[]             @relation("messagesSentByUser")
+  highlights            Highlight[]           @relation("highlightsByUser")
+  topicReadStates       TopicReadState[]      @relation("topicReadStatesForUser")
+  topicPreferences      TopicPreference[]     @relation("topicPreferencesForUser")
+  notificationsReceived Notification[]        @relation("notificationsForUser")
+  notificationsSent     Notification[]        @relation("notificationsByActor")
+  samePageAnswers       SamePageAnswer[]      @relation("samePageAnswersByUser")
+  samePageCalls         SamePageAnswer[]      @relation("samePageCallsByUser")
+  samePageSocksHeld     SamePageSock[]        @relation("samePageSockHolder")
   samePagePlayerStats   SamePagePlayerStats[] @relation("samePageStatsForUser")
-  wordsmithPlays       WordsmithPlay[]      @relation("wordsmithPlaysByUser")
+  wordsmithPlays        WordsmithPlay[]       @relation("wordsmithPlaysByUser")
   nflAtsPicks           NflAtsPick[]          @relation("nflAtsPicksByUser")
   gameRoomSeen          GameRoomSeen[]        @relation("gameRoomSeenByUser")
   casinoStats           CasinoPlayerStats[]   @relation("casinoStatsForUser")
@@ -65,12 +65,12 @@ model Circle {
   newsEnabled    Boolean @default(false)
 
   // Relations
-  createdBy    User    @relation("circlesCreatedByUser", fields: [userId], references: [id])
-  members      User[]  @relation("circleMembershipsForUser")
-  topics       Topic[] @relation("topicsInCircle")
-  defaultTopic Topic?  @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
-  samePageRounds SamePageRound[] @relation("samePageRoundsForCircle")
-  samePageSock   SamePageSock?   @relation("samePageSockForCircle")
+  createdBy           User                  @relation("circlesCreatedByUser", fields: [userId], references: [id])
+  members             User[]                @relation("circleMembershipsForUser")
+  topics              Topic[]               @relation("topicsInCircle")
+  defaultTopic        Topic?                @relation("defaultTopicForCircle", fields: [defaultTopicId], references: [id])
+  samePageRounds      SamePageRound[]       @relation("samePageRoundsForCircle")
+  samePageSock        SamePageSock?         @relation("samePageSockForCircle")
   samePagePlayerStats SamePagePlayerStats[] @relation("samePageStatsForCircle")
   games               CircleGame[]          @relation("gamesForCircle")
   gameRoomSeen        GameRoomSeen[]        @relation("gameRoomSeenInCircle")
@@ -78,9 +78,9 @@ model Circle {
   tableChatLines      TableChatLine[]       @relation("tableChatForCircle")
   notifications       Notification[]        @relation("notificationsForCircle")
   newsSources         CircleNewsSource[]    @relation("newsSourcesForCircle")
+  nflAtsNotices       NflAtsNotice[]        @relation("nflAtsNoticesForCircle")
 
   @@index([userId])
-
   @@map(name: "circles")
 }
 
@@ -106,7 +106,6 @@ model Topic {
 
   // circleId first: topics are looked up by circle, alone or with their creator.
   @@index([circleId, userId])
-
   @@map(name: "topics")
 }
 
@@ -130,23 +129,23 @@ model Message {
   command      String?
 
   // Relations
-  sentBy     User        @relation("messagesSentByUser", fields: [userId], references: [id])
-  topic      Topic       @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
-  highlights Highlight[] @relation("highlightsForMessage")
+  sentBy        User           @relation("messagesSentByUser", fields: [userId], references: [id])
+  topic         Topic          @relation("messagesInTopic", fields: [topicId], references: [id], onDelete: Cascade)
+  highlights    Highlight[]    @relation("highlightsForMessage")
   // SetNull rather than Cascade: deleting the original message shouldn't
   // delete replies to it. Note this clears replyToId itself, not just the
   // relation -- once the original is gone there's no record the message
   // was ever a reply, so it silently renders as a plain message.
-  replyTo    Message?    @relation("messageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies    Message[]   @relation("messageReplies")
+  replyTo       Message?       @relation("messageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies       Message[]      @relation("messageReplies")
   // Also SetNull, with a wider blast radius: deleting a root nulls threadRootId
   // on every message in the thread, including reply-to-replies whose own
   // replyToId chain is still intact. Those keep their quote preview but leave
   // the thread, and replying to one starts a fresh thread rooted there.
   // Accepted -- re-deriving threadRootId from the surviving chain would need a
   // cascade the schema can't express.
-  threadRoot Message?    @relation("messageThread", fields: [threadRootId], references: [id], onDelete: SetNull)
-  threadReplies Message[] @relation("messageThread")
+  threadRoot    Message?       @relation("messageThread", fields: [threadRootId], references: [id], onDelete: SetNull)
+  threadReplies Message[]      @relation("messageThread")
   notifications Notification[] @relation("notificationsForMessage")
 
   @@index([topicId, createdAt(sort: Desc)])
@@ -154,7 +153,6 @@ model Message {
   @@index([replyToId])
   @@index([threadRootId, createdAt])
   @@index([userId, command])
-
   @@map(name: "messages")
 }
 
@@ -169,13 +167,12 @@ model Highlight {
   messageId String
 
   // Relations
-  createdBy     User    @relation("highlightsByUser", fields: [userId], references: [id])
-  message       Message @relation("highlightsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("highlightsByUser", fields: [userId], references: [id])
+  message   Message @relation("highlightsForMessage", fields: [messageId], references: [id], onDelete: Cascade)
 
   // No separate @@index([userId]): the unique index covers it as its leftmost prefix.
   @@unique([userId, messageId])
   @@index([messageId])
-
   @@map(name: "highlights")
 }
 
@@ -186,12 +183,11 @@ model TopicReadState {
   lastReadAt DateTime @default(now())
 
   // Relations
-  user     User    @relation("topicReadStatesForUser", fields: [userId], references: [id], onDelete: Cascade)
-  topic    Topic   @relation("readStatesForTopic", fields: [topicId], references: [id], onDelete: Cascade)
+  user  User  @relation("topicReadStatesForUser", fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation("readStatesForTopic", fields: [topicId], references: [id], onDelete: Cascade)
 
   @@id([userId, topicId])
   @@index([userId, lastReadAt(sort: Desc)])
-
   @@map(name: "topic_read_states")
 }
 
@@ -206,22 +202,21 @@ model TopicPreference {
   updatedAt DateTime @default(now()) @updatedAt
 
   // Specific
-  userId    String
-  topicId   String
+  userId  String
+  topicId String
   // Sparse: only set once a circle's topics have been manually reordered at
   // least once -- null sorts after any explicitly-ordered topics (new/never-
   // dragged topics land at the end, same as most chat apps).
-  order     Float?
-  isMuted   Boolean @default(false)
+  order   Float?
+  isMuted Boolean @default(false)
 
   // Relations
-  user     User    @relation("topicPreferencesForUser", fields: [userId], references: [id], onDelete: Cascade)
-  topic    Topic   @relation("userPreferencesForTopic", fields: [topicId], references: [id], onDelete: Cascade)
+  user  User  @relation("topicPreferencesForUser", fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation("userPreferencesForTopic", fields: [topicId], references: [id], onDelete: Cascade)
 
   // No separate @@index([userId]): the unique index on (userId, topicId)
   // already covers userId-only lookups via its leftmost prefix.
   @@unique([userId, topicId])
-
   @@map(name: "topic_preferences")
 }
 
@@ -253,19 +248,18 @@ model Notification {
   @@index([messageId])
   @@index([actorId])
   @@index([circleId])
-
   @@map(name: "notifications")
 }
 
 // Weekday Same Page round for a circle. gameDate is America/New_York YYYY-MM-DD.
 model SamePageRound {
-  id         String    @id @default(uuid())
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @default(now()) @updatedAt
-  circleId   String
-  gameDate   String
-  prompt     String
-  revealedAt DateTime?
+  id               String    @id @default(uuid())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+  circleId         String
+  gameDate         String
+  prompt           String
+  revealedAt       DateTime?
   // Claimed atomically so each alert is sent once per round.
   promptNotifiedAt DateTime?
   nudgeNotifiedAt  DateTime?
@@ -433,7 +427,8 @@ model NflAtsWeek {
   season    Int
   startsOn  String
 
-  games NflAtsGame[] @relation("nflAtsGamesForWeek")
+  games   NflAtsGame[]   @relation("nflAtsGamesForWeek")
+  notices NflAtsNotice[] @relation("nflAtsNoticesForWeek")
 
   @@unique([season, startsOn])
   @@map(name: "nfl_ats_weeks")
@@ -481,6 +476,26 @@ model NflAtsPick {
   @@unique([userId, gameId])
   @@index([gameId])
   @@map(name: "nfl_ats_picks")
+}
+
+// A week's slate is global, but each circle gets told about it separately, so
+// the "already notified" claim can't live on the week. Inserting the row is
+// the claim: the unique key means a second run (or a second instance) adds
+// nothing and sends nothing.
+model NflAtsNotice {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  weekId    String
+  circleId  String
+  // "slate" when the week's games went up, "results" when every one is graded.
+  kind      String
+
+  week   NflAtsWeek @relation("nflAtsNoticesForWeek", fields: [weekId], references: [id], onDelete: Cascade)
+  circle Circle     @relation("nflAtsNoticesForCircle", fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@unique([weekId, circleId, kind])
+  @@index([circleId])
+  @@map(name: "nfl_ats_notices")
 }
 
 // One row per distinct feed URL, shared by every circle that follows it, so a

@@ -82,4 +82,6 @@ export enum NotificationType {
   SamePageReveal = "samepage:reveal",
   SamePageAnswered = "samepage:answered",
   WordsmithFinished = "wordsmith:finished",
+  NflAtsSlatePosted = "nflats:slate",
+  NflAtsResults = "nflats:results",
 }

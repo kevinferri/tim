@@ -55,3 +55,20 @@ export function formatRecord(record: PickRecord): string {
   const base = `${record.wins}-${record.losses}`;
   return record.pushes > 0 ? `${base}-${record.pushes}` : base;
 }
+
+/**
+ * Wins over decided picks. Pushes don't count either way, which is how an
+ * against-the-spread record is read. Null until something has been decided,
+ * so an unplayed week reads as "--" rather than .000.
+ */
+export function winPercentage(record: PickRecord): number | null {
+  const decided = record.wins + record.losses;
+  return decided === 0 ? null : record.wins / decided;
+}
+
+/** ".700", leading zero dropped the way a percentage is shown in standings. */
+export function formatWinPercentage(record: PickRecord): string {
+  const pct = winPercentage(record);
+  if (pct === null) return "—";
+  return pct.toFixed(3).replace(/^0/, "");
+}

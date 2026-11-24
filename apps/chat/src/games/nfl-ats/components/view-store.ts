@@ -1,16 +1,21 @@
 "use client";
 
 import { create } from "zustand";
+import { useGameRoomStore } from "@/games/game-room";
+import { NFL_ATS_GAME_ID } from "../lib/game-id";
 
-export type NflAtsView = "picks" | "settings";
+export type NflAtsView = "picks" | "standings" | "settings";
 
-type State = {
+export const useNflAtsViewStore = create<{
   view: NflAtsView;
   setView: (view: NflAtsView) => void;
-};
-
-/** Which tab the panel is on, kept outside the panel so the sheet title can read it. */
-export const useNflAtsViewStore = create<State>((set) => ({
+}>((set) => ({
   view: "picks",
   setView: (view) => set({ view }),
 }));
+
+/** Opens Pick 'em on a given view; pass circleId when navigating to another circle. */
+export function openNflAts(view: NflAtsView = "picks", circleId?: string) {
+  useNflAtsViewStore.getState().setView(view);
+  useGameRoomStore.getState().openGame(NFL_ATS_GAME_ID, circleId);
+}
