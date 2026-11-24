@@ -137,6 +137,16 @@ module.exports = {
           "80%": { transform: "translateY(0) scale(1)", opacity: "1" },
           "100%": { transform: "translateY(-2px) scale(1)", opacity: "0" },
         },
+        // action-bubble's pop-in and fade-out at its 1.5s pace, split so a longer bubble only holds longer.
+        "bubble-in": {
+          "0%": { transform: "translateY(14px) scale(0.6)", opacity: "0" },
+          "60%": { transform: "translateY(-2px) scale(1.06)", opacity: "1" },
+          "100%": { transform: "translateY(0) scale(1)", opacity: "1" },
+        },
+        "bubble-out": {
+          "0%": { transform: "translateY(0) scale(1)", opacity: "1" },
+          "100%": { transform: "translateY(-2px) scale(1)", opacity: "0" },
+        },
         // A won amount landing: up from small, a little past full size, then settling.
         "result-pop": {
           "0%": { transform: "scale(0.8)", opacity: "0" },
@@ -318,6 +328,9 @@ module.exports = {
         "turn-pulse": "turn-pulse 1s ease-in-out infinite",
         "result-pop": "result-pop 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both",
         "action-bubble": "action-bubble 1.5s ease-out both",
+        // Fades out after --bubble-hold; forwards only, so it doesn't override the pop-in while waiting.
+        "chat-bubble":
+          "bubble-in 0.3s ease-out both, bubble-out 0.3s ease-out var(--bubble-hold, 0s) forwards",
         "seat-snap": "seat-snap 0.45s cubic-bezier(0.3, 0.7, 0.4, 1) both",
         "total-slam": "total-slam 0.42s cubic-bezier(0.3, 0.7, 0.4, 1) both",
       },

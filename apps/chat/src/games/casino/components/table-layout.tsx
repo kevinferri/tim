@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { StackDirectionContext } from "./chips";
 import { placeSeats, seatAngles } from "../seat-layout";
 import { FeltLogo, FeltPrint } from "./table-dressing";
+import { useTableChatPanel, type TableChatProps } from "./table-chat";
 
 type Props = {
   backHref: string;
@@ -62,6 +63,8 @@ type Props = {
   dockReserveH?: number;
   /** A round is on: seated players keep their spots, and anyone who sits down takes the widest open gap. */
   holdSeats?: boolean;
+  /** The table's chat, beside the felt (a sheet on phones). */
+  chat?: TableChatProps;
 };
 
 // Each seat's direction from the dealer's side of the table (percent of the felt): angle 0 is first base,
@@ -362,161 +365,170 @@ export function TableLayout(props: Props) {
   useLayoutEffect(() => {
     placed.current = angles;
   });
+  const chat = useTableChatPanel(props.notice ? undefined : props.chat);
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-dvh w-full min-w-0 flex-col">
-        <header className="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b px-2">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="justify-self-start"
-          >
-            <Link href={props.backHref}>
-              <ChevronLeftIcon />
-              {props.backAvatar}
-              <span className="max-w-32 truncate text-sm">
-                {props.backLabel}
-              </span>
-            </Link>
-          </Button>
-          <div className="flex items-center gap-1">
-            <h1 className="flex items-center gap-1.5 text-sm font-medium">
-              {props.titleIcon}
-              {props.title}
-            </h1>
-            {props.titleAction}
-          </div>
-          <div className="flex items-center gap-2 justify-self-end">
-            {props.headerRight}
-          </div>
-        </header>
-
-        {props.notice ? (
-          <div className="flex flex-1 items-center justify-center p-4">
-            {props.notice}
-          </div>
-        ) : (
-          <>
-            <div className="flex min-h-0 flex-1 px-2 pt-2 sm:px-6 sm:pt-6 md:px-24 md:pt-10">
-              {/* On wide screens the border is the padded armrest: thick and black on the sides and curve, thin along the dealer's edge. */}
-              <div
-                ref={setFeltEl}
-                className="relative flex-1 overflow-y-auto rounded-3xl border-4 border-amber-900/70 bg-emerald-800 shadow-inner dark:border-amber-950 dark:bg-[#123a2f] md:overflow-visible md:rounded-b-[50%] md:border-[36px] md:border-neutral-950 md:border-t-[10px] md:border-t-amber-950 md:shadow-[inset_0_0_24px_rgba(0,0,0,0.45),inset_0_0_6px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.5)] dark:md:border-zinc-900"
-              >
-                {/* Shading over the armrest so it reads as padded: dark at its outer edge, a soft highlight along its crown. Matches the border box. */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute -bottom-[36px] -left-[36px] -right-[36px] -top-[10px] hidden rounded-t-3xl rounded-b-[50%] shadow-[inset_0_0_10px_2px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)] md:block"
-                />
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute -bottom-[19px] -left-[19px] -right-[19px] -top-[5px] hidden rounded-t-[20px] rounded-b-[50%] border-[5px] border-t-0 border-white/[0.11] blur-[5px] md:block"
-                />
-                <FeltSizeContext.Provider value={{ felt, spot }}>
-                  {/* The felt is dark in both themes, so its contents use dark tokens. */}
-                  <div className="dark flex min-h-full w-full flex-col items-center gap-6 p-4 text-emerald-50 md:block md:h-full md:p-0">
-                    {/* The house name, embroidered into the open felt on either side of the dealer. */}
-                    {logo &&
-                      logoName &&
-                      [logo.x, felt.w - logo.x].map((x) => (
-                        <FeltLogo
-                          name={logoName}
-                          key={x}
-                          className="pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 opacity-25 md:block"
-                          style={{
-                            left: x,
-                            top: DEALER_MIDDLE_PX,
-                            width: logo.w,
-                          }}
-                        />
-                      ))}
-                    {/* Rack, then dealer, DEALER_GAP_PX apart. */}
-                    <div
-                      className="flex flex-col items-center md:absolute md:inset-x-0 md:top-0"
-                      style={{ gap: DEALER_GAP_PX }}
-                    >
-                      {props.rack && (
-                        <div className="hidden md:block">{props.rack}</div>
-                      )}
-                      {/* The limits print sits inside the dealer's box, so the status below starts under it. */}
-                      <div
-                        ref={setDealerEl}
-                        className="flex flex-col items-center"
-                      >
-                        <div className="flex min-h-16 items-center justify-center">
-                          {props.dealer}
-                        </div>
-                        {props.tableLimits && (
-                          <FeltPrint
-                            lines={props.tableLimits}
-                            className="mt-3 hidden md:block"
-                          />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex w-full flex-wrap justify-center gap-2 md:contents">
-                      {props.players?.map(({ key, seat, node, bet, rail }) => {
-                        const angle = angles.get(seat)!;
-                        return (
-                          // Phones: one stacked cell per player. Wide: felt and rail parts positioned separately.
-                          <div
-                            key={key}
-                            className="flex w-[calc((100%-1rem)/3)] min-w-0 flex-col items-center gap-2 md:contents"
-                          >
-                            {/* Positioned by wrappers so the parts' own animations keep `transform`. */}
-                            {bet && (
-                              <SeatBet seat={seat} angle={angle}>
-                                {bet}
-                              </SeatBet>
-                            )}
-                            <SeatSpot angle={angle}>{node}</SeatSpot>
-                            <div
-                              data-rail-seat={seat}
-                              // Phones: room for the up/down hung below the avatar (it's out of the flow).
-                              className="max-md:mb-7 md:absolute md:left-[var(--x)] md:top-[var(--y)] md:z-10 md:-translate-x-1/2 md:-translate-y-1/2"
-                              style={railPosition(angle)}
-                            >
-                              {rail}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {/* Phones: after the players, over the controls. */}
-                    {props.status && (
-                      <div
-                        // Pinned by its bottom, so a taller status grows upward.
-                        className={cn(
-                          "flex justify-center md:absolute md:inset-x-0 md:-translate-y-full",
-                          middle === null && "md:invisible",
-                        )}
-                        style={{ top: middle?.statusBottom }}
-                      >
-                        {props.status}
-                      </div>
-                    )}
-                    {/* Your controls, hanging below the status in the open middle of the felt. */}
-                    {props.dock && (
-                      <div
-                        className={cn(
-                          "flex justify-center md:absolute md:inset-x-0 md:z-40",
-                          middle === null && "md:invisible",
-                        )}
-                        style={{ top: middle?.dockTop }}
-                      >
-                        {props.dock}
-                      </div>
-                    )}
-                  </div>
-                </FeltSizeContext.Provider>
-              </div>
+      <div className="flex h-dvh w-full min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b px-2">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="justify-self-start"
+            >
+              <Link href={props.backHref}>
+                <ChevronLeftIcon />
+                {props.backAvatar}
+                <span className="max-w-32 truncate text-sm">
+                  {props.backLabel}
+                </span>
+              </Link>
+            </Button>
+            <div className="flex items-center gap-1">
+              <h1 className="flex items-center gap-1.5 text-sm font-medium">
+                {props.titleIcon}
+                {props.title}
+              </h1>
+              {props.titleAction}
             </div>
-            {/* Room below the table for the bottom seats' avatars and up/down, which overhang the rail. */}
-            <div className="h-6 shrink-0 md:h-20" />
-          </>
-        )}
+            <div className="flex items-center gap-2 justify-self-end">
+              {props.headerRight}
+              {chat.headerToggle}
+            </div>
+          </header>
+
+          {props.notice ? (
+            <div className="flex flex-1 items-center justify-center p-4">
+              {props.notice}
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1 px-2 pt-2 sm:px-6 sm:pt-6 md:px-24 md:pt-10">
+                {/* On wide screens the border is the padded armrest: thick and black on the sides and curve, thin along the dealer's edge. */}
+                <div
+                  ref={setFeltEl}
+                  className="relative flex-1 overflow-y-auto rounded-3xl border-4 border-amber-900/70 bg-emerald-800 shadow-inner dark:border-amber-950 dark:bg-[#123a2f] md:overflow-visible md:rounded-b-[50%] md:border-[36px] md:border-neutral-950 md:border-t-[10px] md:border-t-amber-950 md:shadow-[inset_0_0_24px_rgba(0,0,0,0.45),inset_0_0_6px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.5)] dark:md:border-zinc-900"
+                >
+                  {/* Shading over the armrest so it reads as padded: dark at its outer edge, a soft highlight along its crown. Matches the border box. */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -bottom-[36px] -left-[36px] -right-[36px] -top-[10px] hidden rounded-t-3xl rounded-b-[50%] shadow-[inset_0_0_10px_2px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.08)] md:block"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -bottom-[19px] -left-[19px] -right-[19px] -top-[5px] hidden rounded-t-[20px] rounded-b-[50%] border-[5px] border-t-0 border-white/[0.11] blur-[5px] md:block"
+                  />
+                  <FeltSizeContext.Provider value={{ felt, spot }}>
+                    {/* The felt is dark in both themes, so its contents use dark tokens. */}
+                    <div className="dark flex min-h-full w-full flex-col items-center gap-6 p-4 text-emerald-50 md:block md:h-full md:p-0">
+                      {/* The house name, embroidered into the open felt on either side of the dealer. */}
+                      {logo &&
+                        logoName &&
+                        [logo.x, felt.w - logo.x].map((x) => (
+                          <FeltLogo
+                            name={logoName}
+                            key={x}
+                            className="pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 opacity-25 md:block"
+                            style={{
+                              left: x,
+                              top: DEALER_MIDDLE_PX,
+                              width: logo.w,
+                            }}
+                          />
+                        ))}
+                      {/* Rack, then dealer, DEALER_GAP_PX apart. */}
+                      <div
+                        className="flex flex-col items-center md:absolute md:inset-x-0 md:top-0"
+                        style={{ gap: DEALER_GAP_PX }}
+                      >
+                        {props.rack && (
+                          <div className="hidden md:block">{props.rack}</div>
+                        )}
+                        {/* The limits print sits inside the dealer's box, so the status below starts under it. */}
+                        <div
+                          ref={setDealerEl}
+                          className="flex flex-col items-center"
+                        >
+                          <div className="flex min-h-16 items-center justify-center">
+                            {props.dealer}
+                          </div>
+                          {props.tableLimits && (
+                            <FeltPrint
+                              lines={props.tableLimits}
+                              className="mt-3 hidden md:block"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex w-full flex-wrap justify-center gap-2 md:contents">
+                        {props.players?.map(
+                          ({ key, seat, node, bet, rail }) => {
+                            const angle = angles.get(seat)!;
+                            return (
+                              // Phones: one stacked cell per player. Wide: felt and rail parts positioned separately.
+                              <div
+                                key={key}
+                                className="flex w-[calc((100%-1rem)/3)] min-w-0 flex-col items-center gap-2 md:contents"
+                              >
+                                {/* Positioned by wrappers so the parts' own animations keep `transform`. */}
+                                {bet && (
+                                  <SeatBet seat={seat} angle={angle}>
+                                    {bet}
+                                  </SeatBet>
+                                )}
+                                <SeatSpot angle={angle}>{node}</SeatSpot>
+                                <div
+                                  data-rail-seat={seat}
+                                  // Phones: room for the up/down hung below the avatar (it's out of the flow).
+                                  className="max-md:mb-7 md:absolute md:left-[var(--x)] md:top-[var(--y)] md:z-10 md:-translate-x-1/2 md:-translate-y-1/2"
+                                  style={railPosition(angle)}
+                                >
+                                  {rail}
+                                </div>
+                              </div>
+                            );
+                          },
+                        )}
+                      </div>
+                      {/* Phones: after the players, over the controls. */}
+                      {props.status && (
+                        <div
+                          // Pinned by its bottom, so a taller status grows upward.
+                          className={cn(
+                            "flex justify-center md:absolute md:inset-x-0 md:-translate-y-full",
+                            middle === null && "md:invisible",
+                          )}
+                          style={{ top: middle?.statusBottom }}
+                        >
+                          {props.status}
+                        </div>
+                      )}
+                      {/* Your controls, hanging below the status in the open middle of the felt. */}
+                      {props.dock && (
+                        <div
+                          className={cn(
+                            "flex justify-center md:absolute md:inset-x-0 md:z-40",
+                            middle === null && "md:invisible",
+                          )}
+                          style={{ top: middle?.dockTop }}
+                        >
+                          {props.dock}
+                        </div>
+                      )}
+                    </div>
+                  </FeltSizeContext.Provider>
+                </div>
+              </div>
+              {/* Room below the table for the bottom seats' avatars and up/down, which overhang the rail. */}
+              <div className="h-6 shrink-0 md:h-20" />
+            </div>
+          )}
+        </div>
+        {/* Full height beside the table column, so the header ends where the chat begins. */}
+        {chat.side}
+        {chat.sheet}
       </div>
     </TooltipProvider>
   );
