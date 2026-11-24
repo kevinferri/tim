@@ -40,6 +40,7 @@ model User {
   samePageSocksHeld     SamePageSock[]   @relation("samePageSockHolder")
   samePagePlayerStats   SamePagePlayerStats[] @relation("samePageStatsForUser")
   wordsmithPlays       WordsmithPlay[]      @relation("wordsmithPlaysByUser")
+  nflAtsPicks           NflAtsPick[]          @relation("nflAtsPicksByUser")
   gameRoomSeen          GameRoomSeen[]        @relation("gameRoomSeenByUser")
   casinoStats           CasinoPlayerStats[]   @relation("casinoStatsForUser")
   tableChatLines        TableChatLine[]       @relation("tableChatForUser")
@@ -420,6 +421,66 @@ model WordsmithPlay {
 
   @@unique([userId, gameDate])
   @@map(name: "wordsmith_plays")
+}
+
+// A week's slate of NFL games to pick against the spread, published on the
+// Monday that starts it. startsOn is that Monday's America/New_York date; the
+// slate itself is global, and circle_games only decides who can see it.
+model NflAtsWeek {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  season    Int
+  startsOn  String
+
+  games NflAtsGame[] @relation("nflAtsGamesForWeek")
+
+  @@unique([season, startsOn])
+  @@map(name: "nfl_ats_weeks")
+}
+
+// One game in a week's slate. `spread` is the home team's line as it stood
+// when the slate was published (-3.5 = home favored by 3.5) and never moves
+// after that, so everyone picks against the same number. eventId is The Odds
+// API's id, which is shared by its odds and scores responses.
+model NflAtsGame {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  weekId      String
+  eventId     String    @unique
+  homeTeam    String
+  awayTeam    String
+  kickoffAt   DateTime
+  spread      Float
+  homeScore   Int?
+  awayScore   Int?
+  completedAt DateTime?
+
+  week  NflAtsWeek   @relation("nflAtsGamesForWeek", fields: [weekId], references: [id], onDelete: Cascade)
+  picks NflAtsPick[] @relation("nflAtsPicksForGame")
+
+  @@index([weekId])
+  @@map(name: "nfl_ats_games")
+}
+
+// A player's side in one game. Global per user like WordsmithPlay, since the
+// slate is the same everywhere. `result` is null until the game is graded.
+model NflAtsPick {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  userId    String
+  gameId    String
+  side      String
+  result    String?
+
+  user User       @relation("nflAtsPicksByUser", fields: [userId], references: [id], onDelete: Cascade)
+  game NflAtsGame @relation("nflAtsPicksForGame", fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([gameId])
+  @@map(name: "nfl_ats_picks")
 }
 
 // One row per distinct feed URL, shared by every circle that follows it, so a
