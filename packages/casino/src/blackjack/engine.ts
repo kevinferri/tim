@@ -1,5 +1,5 @@
 import { Card, Rank, Rng, createShoe } from "../cards";
-import { SHOE_DECKS, RESHUFFLE_BELOW } from "./constants";
+import { MAX_SPLIT_HANDS, SHOE_DECKS, RESHUFFLE_BELOW } from "./constants";
 
 export type BlackjackPlayAction = "hit" | "stand" | "double" | "split";
 export type BlackjackOutcome = "blackjack" | "win" | "push" | "lose" | "bust";
@@ -232,7 +232,7 @@ export function legalActions(
   if (twoCards) actions.push("double");
   if (
     twoCards &&
-    player.hands.length === 1 &&
+    player.hands.length < MAX_SPLIT_HANDS &&
     cardValue(hand.cards[0].rank) === cardValue(hand.cards[1].rank)
   ) {
     actions.push("split");
@@ -290,7 +290,11 @@ export function applyAction(
         const h = resolveHandTotal(newHand([card, take()], hand.bet, true));
         return aces ? { ...h, done: true } : h;
       });
-      hands = split;
+      hands = [
+        ...player.hands.slice(0, handIndex),
+        ...split,
+        ...player.hands.slice(handIndex + 1),
+      ];
       break;
     }
   }

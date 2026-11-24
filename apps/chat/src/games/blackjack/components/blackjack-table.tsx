@@ -256,7 +256,8 @@ function LiveTable(props: Props) {
     mySeat !== null && settlement.natural(mySeat).stamped;
   const [naturalShowing, setNaturalShowing] = useState(false);
   useEffect(() => {
-    if (!myNaturalStamped) return;
+    // A new round can clear the stamp before the timer below fires, which would leave it showing.
+    if (!myNaturalStamped) return setNaturalShowing(false);
     setNaturalShowing(true);
     const t = setTimeout(() => setNaturalShowing(false), NATURAL_RESULT_MS);
     return () => clearTimeout(t);

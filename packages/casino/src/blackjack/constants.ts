@@ -7,6 +7,8 @@ export const BETTING_WINDOW_MS = 10_000;
 export const TURN_MS = 20_000;
 
 export const SHOE_DECKS = 6;
+/** Resplits allowed up to this many hands; split aces take one card each, so they never resplit. */
+export const MAX_SPLIT_HANDS = 4;
 /** Reshuffle before a round when fewer than 25% of the shoe remains. */
 export const RESHUFFLE_BELOW = (SHOE_DECKS * 52) / 4;
 
