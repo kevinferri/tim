@@ -15,6 +15,7 @@ import { createMockSocket } from "../test/socket-mocks";
 import { registerCasinoHandlers } from "./casino";
 import { CasinoRegistry } from "../casino/registry";
 import { InMemoryNetStore, NetStore } from "../casino/net-store";
+import { ChatStore, InMemoryChatStore } from "../casino/chat-store";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
 import { shutdown } from "../shutdown";
@@ -43,8 +44,15 @@ function seededRng(seed = 1) {
   };
 }
 
-function setup(netStore: NetStore = new InMemoryNetStore()) {
-  const registry = new CasinoRegistry({ netStore, rng: seededRng() });
+function setup(
+  netStore: NetStore = new InMemoryNetStore(),
+  chatStore: ChatStore = new InMemoryChatStore(),
+) {
+  const registry = new CasinoRegistry({
+    netStore,
+    chatStore,
+    rng: seededRng(),
+  });
   const connect = (userId: string) => {
     const socket = createMockSocket({
       id: userId,
@@ -967,5 +975,254 @@ describe("unexpected errors", () => {
         expect.any(Error),
       ),
     );
+  });
+});
+
+describe("table chat", () => {
+  const say = (s: MockSocket, text: unknown) =>
+    s.trigger(SocketEvent.TableChatSend, { ...REF, text });
+  const chats = (s: MockSocket) => emitted(s, SocketEvent.TableChat) as any[];
+  const lines = (s: MockSocket) =>
+    chats(s)
+      .filter((c) => c.line)
+      .map((c) => c.line);
+
+  it("sends a line to everyone at the table, seated or not, but not to spectators", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    const b = connect("b");
+    const room = connect("c");
+    await watch(a);
+    await watch(b);
+    await spectate(room);
+    await sit(a, 0);
+
+    await say(a, "  nice   hand ");
+
+    const line = {
+      id: expect.any(String),
+      kind: "say",
+      userId: "a",
+      name: "a",
+      displayName: "a",
+      imageUrl: null,
+      text: "nice hand",
+    };
+    expect(chats(a).at(-1)).toEqual({ ...REF, line });
+    expect(chats(b).at(-1)).toEqual({ ...REF, line });
+    expect(chats(room)).toEqual([]);
+  });
+
+  it("sends the recent lines on watch, keeping only the last 50", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    await watch(a);
+    expect(chats(a).at(-1)).toEqual({ ...REF, recent: [] });
+    for (let i = 0; i < 55; i++) {
+      await say(a, `line ${i}`);
+      vi.advanceTimersByTime(1_000);
+    }
+
+    const b = connect("b");
+    await watch(b);
+    // The watch doesn't wait for the 55 queued writes and the load.
+    await vi.waitFor(() => expect(chats(b).at(-1)?.recent).toBeDefined());
+    const recent = chats(b).at(-1).recent;
+    expect(recent).toHaveLength(50);
+    expect(recent[0].text).toBe("line 5");
+    expect(recent.at(-1).text).toBe("line 54");
+  });
+
+  it("keeps the chat for whoever comes back after the table went idle", async () => {
+    const { connect, registry } = setup();
+    const a = connect("a");
+    await watch(a);
+    await say(a, "hi");
+    await a.trigger(SocketEvent.TableUnwatch, REF);
+    expect(registry.tableCount()).toBe(0);
+
+    await watch(a);
+    expect(
+      chats(a)
+        .at(-1)
+        .recent.map((l: any) => l.text),
+    ).toEqual(["hi"]);
+  });
+
+  it("rejects spectators, blank, long, and too-fast lines", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    const room = connect("b");
+    await watch(a);
+    await spectate(room);
+
+    await say(room, "hi");
+    expect(lastError(room)).toBe("You're not at this table");
+
+    await say(a, "   ");
+    await say(a, 42);
+    expect(lastError(a)).toBe("Invalid message");
+    await say(a, "x".repeat(201));
+    expect(lastError(a)).toBe("That message is too long");
+    expect(chats(a).filter((c) => c.line)).toEqual([]);
+
+    for (let i = 0; i < 6; i++) await say(a, `${i}`);
+    expect(lastError(a)).toBe("Slow down a little");
+    expect(chats(a).filter((c) => c.line)).toHaveLength(5);
+    vi.advanceTimersByTime(5_000);
+    await say(a, "again");
+    expect(chats(a).at(-1).line.text).toBe("again");
+  });
+
+  it("posts joins and leaves, but not round results", async () => {
+    const { connect, stackShoe } = setup();
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    stackShoe("10", "9", "8", "10", "7", "8");
+    await sit(a, 0);
+    await sit(b, 1);
+    await bet(a, 100);
+    await bet(b, 50);
+    await act(a, { type: "stand" });
+    await act(b, { type: "stand" });
+    vi.advanceTimersByTime(DEALER_DRAW_MS * 3);
+    expect(state(a).phase).toBe("results");
+    await standUp(b);
+
+    expect(lines(a).map((l) => [l.kind, l.userId])).toEqual([
+      ["joined", "a"],
+      ["joined", "b"],
+      ["left", "b"],
+    ]);
+    expect(lines(a)[0]).toMatchObject({
+      name: "a",
+      displayName: "a",
+      imageUrl: null,
+    });
+  });
+
+  it("holds lines said while a newcomer's history loads until it's sent", async () => {
+    const store = new InMemoryChatStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const loadRecent = store.recent.bind(store);
+    const { connect } = setup(undefined, {
+      add: (ref, line) => store.add(ref, line),
+      recent: async (ref) => {
+        const lines = await loadRecent(ref);
+        await gate;
+        return lines;
+      },
+    });
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    await say(a, "during the load");
+    expect(chats(b)).toEqual([]);
+
+    release();
+    await vi.waitFor(() => expect(chats(b)).toHaveLength(2));
+    expect(chats(b)[0]).toEqual({ ...REF, recent: [] });
+    expect(chats(b)[1].line.text).toBe("during the load");
+  });
+
+  it("doesn't send a held line twice when the load already has it", async () => {
+    const store = new InMemoryChatStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const { connect } = setup(undefined, {
+      add: (ref, line) => store.add(ref, line),
+      recent: async (ref) => {
+        await gate;
+        return store.recent(ref);
+      },
+    });
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    await say(a, "hi");
+
+    release();
+    await vi.waitFor(() => expect(chats(b)).toHaveLength(1));
+    expect(chats(b)[0].recent.map((l: any) => l.text)).toEqual(["hi"]);
+  });
+
+  function gatedWrites() {
+    const store = new InMemoryChatStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const chatStore: ChatStore = {
+      add: async (ref, line) => {
+        await gate;
+        await store.add(ref, line);
+      },
+      recent: (ref) => store.recent(ref),
+    };
+    return { chatStore, release };
+  }
+
+  it("has a newcomer at a recreated table wait for a line still being written", async () => {
+    const { chatStore, release } = gatedWrites();
+    const { connect, registry } = setup(undefined, chatStore);
+    const a = connect("a");
+    await watch(a);
+    await say(a, "bye");
+    await a.trigger(SocketEvent.TableUnwatch, REF);
+    expect(registry.tableCount()).toBe(0);
+
+    const b = connect("b");
+    await watch(b);
+    await Promise.resolve();
+    expect(chats(b)).toEqual([]);
+
+    release();
+    await vi.waitFor(() => expect(chats(b)).toHaveLength(1));
+    expect(chats(b)[0].recent.map((l: any) => l.text)).toEqual(["bye"]);
+  });
+
+  it("waits for chat writes in flight on shutdown", async () => {
+    const { chatStore, release } = gatedWrites();
+    const { connect, registry } = setup(undefined, chatStore);
+    const a = connect("a");
+    await watch(a);
+    await say(a, "last words");
+
+    const order: string[] = [];
+    const done = shutdown({
+      registry,
+      destroyDb: async () => {
+        order.push("destroyDb");
+      },
+      exit: () => {},
+    });
+    await Promise.resolve();
+    expect(order).toEqual([]);
+
+    order.push("written");
+    release();
+    await done;
+    expect(order).toEqual(["written", "destroyDb"]);
+  });
+
+  it("saves only what people said: joins and leaves are live only", async () => {
+    const { connect } = setup();
+    const a = connect("a");
+    await watch(a);
+    await sit(a, 0);
+    await say(a, "hi");
+    await standUp(a);
+    expect(lines(a).map((l) => l.kind)).toEqual(["joined", "say", "left"]);
+
+    const b = connect("b");
+    await watch(b);
+    expect(
+      chats(b)
+        .at(-1)
+        .recent.map((l: any) => l.text),
+    ).toEqual(["hi"]);
   });
 });
