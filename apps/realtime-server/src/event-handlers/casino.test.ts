@@ -15,7 +15,7 @@ import { createMockSocket } from "../test/socket-mocks";
 import { registerCasinoHandlers } from "./casino";
 import { CasinoRegistry } from "../casino/registry";
 import { InMemoryNetStore, NetStore } from "../casino/net-store";
-import { InMemoryChatStore } from "../casino/chat-store";
+import { ChatStore, InMemoryChatStore } from "../casino/chat-store";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
 import { shutdown } from "../shutdown";
@@ -44,10 +44,13 @@ function seededRng(seed = 1) {
   };
 }
 
-function setup(netStore: NetStore = new InMemoryNetStore()) {
+function setup(
+  netStore: NetStore = new InMemoryNetStore(),
+  chatStore: ChatStore = new InMemoryChatStore(),
+) {
   const registry = new CasinoRegistry({
     netStore,
-    chatStore: new InMemoryChatStore(),
+    chatStore,
     rng: seededRng(),
   });
   const connect = (userId: string) => {
@@ -1022,6 +1025,8 @@ describe("table chat", () => {
 
     const b = connect("b");
     await watch(b);
+    // The watch doesn't wait for the 55 queued writes and the load.
+    await vi.waitFor(() => expect(chats(b).at(-1)?.recent).toBeDefined());
     const recent = chats(b).at(-1).recent;
     expect(recent).toHaveLength(50);
     expect(recent[0].text).toBe("line 5");
@@ -1096,6 +1101,54 @@ describe("table chat", () => {
       displayName: "a",
       imageUrl: null,
     });
+  });
+
+  it("holds lines said while a newcomer's history loads until it's sent", async () => {
+    const store = new InMemoryChatStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const loadRecent = store.recent.bind(store);
+    const { connect } = setup(undefined, {
+      add: (ref, line) => store.add(ref, line),
+      recent: async (ref) => {
+        const lines = await loadRecent(ref);
+        await gate;
+        return lines;
+      },
+    });
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    await say(a, "during the load");
+    expect(chats(b)).toEqual([]);
+
+    release();
+    await vi.waitFor(() => expect(chats(b)).toHaveLength(2));
+    expect(chats(b)[0]).toEqual({ ...REF, recent: [] });
+    expect(chats(b)[1].line.text).toBe("during the load");
+  });
+
+  it("doesn't send a held line twice when the load already has it", async () => {
+    const store = new InMemoryChatStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const { connect } = setup(undefined, {
+      add: (ref, line) => store.add(ref, line),
+      recent: async (ref) => {
+        await gate;
+        return store.recent(ref);
+      },
+    });
+    const a = connect("a");
+    const b = connect("b");
+    await watch(a);
+    await watch(b);
+    await say(a, "hi");
+
+    release();
+    await vi.waitFor(() => expect(chats(b)).toHaveLength(1));
+    expect(chats(b)[0].recent.map((l: any) => l.text)).toEqual(["hi"]);
   });
 
   it("saves only what people said: joins and leaves are live only", async () => {

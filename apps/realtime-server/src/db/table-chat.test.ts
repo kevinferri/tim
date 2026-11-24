@@ -134,7 +134,9 @@ describe("table chat", () => {
       ...person(a, "Ada"),
       text: "new",
     });
-    const ids = await pgClient("table_chat_lines").pluck("id");
-    expect(ids).toEqual(["2"]);
+    // The sweep isn't awaited by the insert.
+    await vi.waitFor(async () =>
+      expect(await pgClient("table_chat_lines").pluck("id")).toEqual(["2"]),
+    );
   });
 });

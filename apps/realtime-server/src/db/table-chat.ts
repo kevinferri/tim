@@ -23,7 +23,11 @@ export async function addTableChatLine(
   });
   if (Date.now() - lastSweep > SWEEP_EVERY_MS) {
     lastSweep = Date.now();
-    await pgClient("table_chat_lines").where("createdAt", "<", cutoff()).del();
+    // Not awaited, so the per-table write chain (and the loads behind it) never wait on it.
+    pgClient("table_chat_lines")
+      .where("createdAt", "<", cutoff())
+      .del()
+      .catch((err) => console.error("casino: table chat sweep failed", err));
   }
 }
 

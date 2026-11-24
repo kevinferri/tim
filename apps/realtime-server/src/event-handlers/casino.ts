@@ -113,9 +113,13 @@ export function registerCasinoHandlers(
       );
     }
     if (registry.closing) return emitError(socket, ref, "Table is closing");
-    await registry.getOrCreate(ref.circleId, ref.game).addWatcher(socket, {
-      spectator: (payload as TableWatchPayload).spectate === true,
-    });
+    // Not awaited: the chat history load shouldn't hold up this socket's room-op queue.
+    registry
+      .getOrCreate(ref.circleId, ref.game)
+      .addWatcher(socket, {
+        spectator: (payload as TableWatchPayload).spectate === true,
+      })
+      .catch((err) => console.error("casino: table watch failed", err));
   });
 
   queued(SocketEvent.TableUnwatch, (payload: unknown) => {

@@ -5,6 +5,7 @@ import {
   TableChatEvent,
   TableChatLine,
   TableChatPayload,
+  TableChatSay,
   TableClosingPayload,
   TableErrorPayload,
   TableGame,
@@ -22,7 +23,13 @@ export type BaseSeat = {
   leaving: boolean;
 };
 
-type Watcher = { socket: AppSocket; userId: string; spectator: boolean };
+type Watcher = {
+  socket: AppSocket;
+  userId: string;
+  spectator: boolean;
+  // Live lines held until the recent ones are sent, so they don't get wiped by them.
+  held: TableChatLine[] | null;
+};
 
 // Chat rate limit: lines per user per window.
 const CHAT_LINES_PER_WINDOW = 5;
@@ -59,23 +66,36 @@ export abstract class Table<Seat extends BaseSeat, View> {
 
   /** Resolves once the newcomer has the recent chat too. */
   async addWatcher(socket: AppSocket, { spectator = false } = {}) {
-    this.watchers.set(socket.id, {
+    const watcher: Watcher = {
       socket,
       userId: socket.data.user.id,
       spectator,
-    });
+      held: spectator ? null : [],
+    };
+    this.watchers.set(socket.id, watcher);
     socket.emit(SocketEvent.TableState, this.viewFor(socket.data.user.id));
     // Spectators (the Game room) don't show the chat.
     if (spectator) return;
     const ref = { circleId: this.circleId, game: this.game };
+    let recent: TableChatSay[] | null = null;
     try {
       await this.chatWrites;
-      const recent = await this.chatStore.recent(ref);
-      if (!this.watchers.has(socket.id)) return;
-      const payload: TableChatPayload = { ...ref, recent };
-      socket.emit(SocketEvent.TableChat, payload);
+      recent = await this.chatStore.recent(ref);
     } catch (err) {
       console.error("casino: table chat load failed", err);
+    }
+    // Left, or watched again (that newer load sends the chat instead).
+    if (this.watchers.get(socket.id) !== watcher) return;
+    const held = watcher.held ?? [];
+    watcher.held = null;
+    if (recent) {
+      const payload: TableChatPayload = { ...ref, recent };
+      socket.emit(SocketEvent.TableChat, payload);
+    }
+    // A held line can already be in `recent` if its write landed before the load read.
+    const loaded = new Set((recent ?? []).map((l) => l.id));
+    for (const line of held) {
+      if (!loaded.has(line.id)) this.emitLine(socket, line);
     }
   }
 
@@ -119,14 +139,20 @@ export abstract class Table<Seat extends BaseSeat, View> {
         .then(() => this.chatStore.add(ref, line))
         .catch((err) => console.error("casino: table chat write failed", err));
     }
+    for (const w of this.watchers.values()) {
+      if (w.spectator) continue;
+      if (w.held) w.held.push(line);
+      else this.emitLine(w.socket, line);
+    }
+  }
+
+  private emitLine(socket: AppSocket, line: TableChatLine) {
     const payload: TableChatPayload = {
       circleId: this.circleId,
       game: this.game,
       line,
     };
-    for (const w of this.watchers.values()) {
-      if (!w.spectator) w.socket.emit(SocketEvent.TableChat, payload);
-    }
+    socket.emit(SocketEvent.TableChat, payload);
   }
 
   /** Watching as a player, so allowed to sit, stand and act; spectators aren't. */
