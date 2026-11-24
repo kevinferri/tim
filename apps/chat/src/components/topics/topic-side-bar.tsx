@@ -105,14 +105,15 @@ export function TopicSideBar() {
       header: "Notifications",
       node: <NotificationPanel />,
       icon: (
-        <div className="flex items-center gap-1.5">
+        <>
           <BellIcon />
+          {/* Pinned to the icon circle's corner so the circle stays centred on the bell. */}
           {activeTab !== "notifications" && unreadCount > 0 && (
-            <Badge className="flex font-normal text-xs rounded-xl hover:bg-purple-500 px-2 bg-purple-500 min-w-7 justify-center">
-              {unreadCount}
+            <Badge className="absolute -right-1 -top-0.5 h-4 min-w-4 justify-center rounded-full border-0 bg-purple-500 px-1 text-[10px] font-medium leading-none text-white shadow-none ring-2 ring-sidebar hover:bg-purple-500">
+              {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
           )}
-        </div>
+        </>
       ),
     },
   } as const;
@@ -159,7 +160,9 @@ export function TopicSideBar() {
         "data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none",
       )}
     >
-      <span className={NAV_ICON_CIRCLE}>{tabMap[tab].icon}</span>
+      <span className={cn(NAV_ICON_CIRCLE, "relative")}>
+        {tabMap[tab].icon}
+      </span>
     </TabsTrigger>
   );
 
@@ -220,7 +223,7 @@ export function TopicSideBar() {
         </div>
 
         <div className="flex flex-1 flex-col overflow-y-hidden basis-full">
-          {/* Same title style as the Game room and News drawers. No bottom padding: each list brings its own 12px top spacing. */}
+          {/* Same title style as the Game room and News drawers. No bottom padding: each list brings its own top spacing. */}
           <div className="px-3 pt-3 text-center font-semibold">
             {tabMap[activeTab].header}
           </div>

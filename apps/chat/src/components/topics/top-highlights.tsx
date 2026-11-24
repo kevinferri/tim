@@ -59,18 +59,18 @@ export function TopHighlights() {
   return (
     <div
       className={cn(
-        "transition-opacity",
+        // Room for the first row's toolbar to straddle its top edge, as in the transcript.
+        "pt-3 transition-opacity",
         isLoadingPeriod && "pointer-events-none opacity-50",
       )}
     >
-      {topHighlights.map((message: MessageProps, i) => {
+      {topHighlights.map((message: MessageProps) => {
         return (
           <Message
             key={message.id}
             {...message}
             {...getMessagePositionFlags(recency, message.id)}
-            // Toolbar placement is relative to this list, not the transcript.
-            isFirstMessage={i === 0}
+            isFirstMessage={false}
           />
         );
       })}
