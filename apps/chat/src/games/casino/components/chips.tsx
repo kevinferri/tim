@@ -524,6 +524,26 @@ const STACK_SPACING_PX = 40;
 // Wider when a hand is doubled, since its stack is a pair side by side.
 const PAIR_SPACING_PX = 80;
 
+/** One row across the line to the dealer; past two, a 2×2 block like the hands, its first row toward the dealer. */
+function stackOffset(
+  i: number,
+  count: number,
+  spacing: number,
+  across: { x: number; y: number },
+  dir: { x: number; y: number },
+) {
+  const grid = count > 2;
+  const rows = grid ? Math.ceil(count / 2) : 1;
+  const row = grid ? Math.floor(i / 2) : 0;
+  const inRow = grid ? Math.min(2, count - row * 2) : count;
+  const a = ((grid ? i % 2 : i) - (inRow - 1) / 2) * spacing;
+  const d = -(row - (rows - 1) / 2) * STACK_SPACING_PX;
+  return {
+    marginLeft: across.x * a + dir.x * d,
+    marginTop: across.y * a + dir.y * d,
+  };
+}
+
 /** The circle printed on the felt where a hand's bet goes: a fixed size, with chips piled on top. */
 export function BetSpot({
   stacks,
@@ -578,10 +598,7 @@ export function BetSpot({
           key={i}
           data-bet-stack={i}
           className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 gap-1"
-          style={{
-            marginLeft: across.x * (i - (stacks.length - 1) / 2) * spacing,
-            marginTop: across.y * (i - (stacks.length - 1) / 2) * spacing,
-          }}
+          style={stackOffset(i, stacks.length, spacing, across, dir)}
         >
           <ChipStack {...stack} flyIn={flyIn} />
           {/* The double's stack drops in beside the first when it's placed. */}

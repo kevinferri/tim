@@ -286,15 +286,12 @@ export function applyAction(
     case "split": {
       wagered = hand.bet;
       const aces = hand.cards[0].rank === "A";
-      const split = [hand.cards[0], hand.cards[1]].map((card) => {
+      const [stays, moves] = [hand.cards[0], hand.cards[1]].map((card) => {
         const h = resolveHandTotal(newHand([card, take()], hand.bet, true));
         return aces ? { ...h, done: true } : h;
       });
-      hands = [
-        ...player.hands.slice(0, handIndex),
-        ...split,
-        ...player.hands.slice(handIndex + 1),
-      ];
+      // The new hand goes last, so hands already on the table keep their index (the client keys by it).
+      hands = [...replaceAt(player.hands, handIndex, stays), moves];
       break;
     }
   }

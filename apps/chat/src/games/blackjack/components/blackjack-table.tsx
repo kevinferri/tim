@@ -160,8 +160,8 @@ const NATURAL_RESULT_MS = 3_200;
 // Places leftover chips this long before betting closes, so the bet reaches the server in time.
 const AUTO_PLACE_LEAD_MS = 400;
 
-const smaller = (size: CardSize) =>
-  CARD_SIZES[Math.max(0, CARD_SIZES.indexOf(size) - 1)];
+const shrink = (size: CardSize, steps: number) =>
+  CARD_SIZES[Math.max(0, CARD_SIZES.indexOf(size) - Math.max(0, steps))];
 
 type Props = {
   circleId: string;
@@ -594,10 +594,8 @@ function LiveTable(props: Props) {
                           ? dealDelay(dealt.indexOf(i))
                           : undefined
                       }
-                      // A split seat steps down a size so both hands fit.
-                      size={
-                        seat.hands.length > 1 ? smaller(cardSize) : cardSize
-                      }
+                      // A split seat steps down a size so both hands fit, and another for each resplit.
+                      size={shrink(cardSize, seat.hands.length - 1)}
                     />
                   </PlayerSpot>
                 ),
@@ -785,14 +783,19 @@ function SeatHands({
     view.phase === "players" && view.turn?.seat === seat.seat
       ? view.turn.hand
       : null;
+  const hands = seat.hands.length ? seat.hands : [null];
   return (
-    <div className="relative flex flex-wrap justify-center gap-2">
-      {(seat.hands.length ? seat.hands : [null]).map((hand, h) => (
+    <div className="relative flex justify-center gap-2">
+      {hands.map((hand, h) => (
         <Hand
           key={h}
           hand={hand}
           size={size}
-          dealDelayMs={seat.hands.length > 1 ? splitDealDelay(h) : dealDelayMs}
+          dealDelayMs={
+            hands.length > 1
+              ? splitDealDelay(h === hands.length - 1)
+              : dealDelayMs
+          }
           glow={playingHand === h}
           settled={settled}
           waiting={waiting}
@@ -803,12 +806,12 @@ function SeatHands({
   );
 }
 
-// A split deals each hand its second card in turn, left then right once the left has landed, like two hits.
-// The pair's second card only moves over to start the right hand, so it's placed without a flight from the shoe.
-const splitDealDelay = (hand: number) => (cardIndex: number) =>
+// A split deals the split hand its second card, then the new hand (always last) once that has landed, like two hits.
+// The pair's second card only moves over to start the new hand, so it's placed without a flight from the shoe.
+const splitDealDelay = (newest: boolean) => (cardIndex: number) =>
   cardIndex === 0
     ? null
-    : cardIndex === 1 && hand === 1
+    : cardIndex === 1 && newest
       ? HIT_PAUSE_MS + DEAL_MS
       : HIT_PAUSE_MS;
 

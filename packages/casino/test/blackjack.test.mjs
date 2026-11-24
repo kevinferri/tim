@@ -288,7 +288,7 @@ test("split on equal value (K+Q) makes two hands; double allowed after split", (
   });
 });
 
-test("resplit puts the new pair in place of the hand being played", () => {
+test("resplit adds the new hand last, leaving the other hands in place", () => {
   let round = deal1("8", "9", "8", "7", ["8", "5", "2", "3"]);
   round = applyAction(round, 0, "split").round;
   assert.deepEqual(legalActions(round, 0), ["hit", "stand", "double", "split"]);
@@ -298,8 +298,8 @@ test("resplit puts the new pair in place of the hand being played", () => {
   const ranks = round.players[0].hands.map((h) => h.cards.map((x) => x.rank));
   assert.deepEqual(ranks, [
     ["8", "2"],
-    ["8", "3"],
     ["8", "5"],
+    ["8", "3"],
   ]);
   assert.deepEqual(round.turn, { seat: 0, hand: 0 });
 });
@@ -308,8 +308,8 @@ test("resplit stops at four hands", () => {
   let round = deal1("8", "9", "8", "7", ["8", "8", "8", "2", "3", "4"]);
   for (let i = 0; i < 3; i++) round = applyAction(round, 0, "split").round;
   assert.equal(round.players[0].hands.length, 4);
-  for (let i = 0; i < 3; i++) round = applyAction(round, 0, "stand").round;
-  // The last hand is 8+8, but four hands is the limit.
+  round = applyAction(round, 0, "stand").round;
+  // The second hand is 8+8, but four hands is the limit.
   assert.deepEqual(
     round.players[0].hands[round.turn.hand].cards.map((x) => x.rank),
     ["8", "8"],
