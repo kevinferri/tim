@@ -262,6 +262,10 @@ export type FetchFeedResult =
       lastModified: string | null;
     };
 
+export function parserFor(url: string): (body: string) => ParsedFeed {
+  return isEspnNewsUrl(url) ? parseEspnNews : parseFeed;
+}
+
 /** Re-fetches a known feed URL, using the previous response's validators so unchanged feeds cost almost nothing. */
 export async function fetchFeed(
   feedUrl: string,
@@ -272,7 +276,7 @@ export async function fetchFeed(
   try {
     return {
       status: "ok",
-      feed: (isEspnNewsUrl(res.url) ? parseEspnNews : parseFeed)(res.body),
+      feed: parserFor(res.url)(res.body),
       etag: res.etag,
       lastModified: res.lastModified,
     };

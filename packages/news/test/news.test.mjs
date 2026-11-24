@@ -11,6 +11,7 @@ import {
   fetchFeed,
   ESPN_NEWS_URL,
   parseEspnNews,
+  parserFor,
   NotAFeedError,
   describeNonFeed,
   toPlainText,
@@ -295,4 +296,10 @@ test("parseEspnNews rejects anything else", () => {
 
 test("ESPN_NEWS_URL survives normalizeUrl", () => {
   assert.equal(normalizeUrl(ESPN_NEWS_URL).toString(), ESPN_NEWS_URL);
+});
+
+test("parserFor sends ESPN's API to the ESPN parser and everything else to parseFeed", () => {
+  assert.equal(parserFor(ESPN_NEWS_URL), parseEspnNews);
+  assert.equal(parserFor("https://www.espn.com/espn/rss/news"), parseFeed);
+  assert.equal(parserFor("https://feeds.bbci.co.uk/news/rss.xml"), parseFeed);
 });

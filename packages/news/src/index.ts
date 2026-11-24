@@ -8,6 +8,7 @@ export {
 export { ESPN_NEWS_URL, parseEspnNews } from "./espn";
 export {
   fetchFeed,
+  parserFor,
   safeFetch,
   describeNonFeed,
   normalizeUrl,
