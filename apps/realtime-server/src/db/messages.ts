@@ -10,7 +10,7 @@ type WriteMessageArgs = Pick<
 > &
   // Partial, not a bare Pick: the schema has these nullable, but callers omit
   // them entirely for a non-reply.
-  Partial<Pick<Message, "replyToId" | "threadRootId">> & {
+  Partial<Pick<Message, "replyToId" | "threadRootId" | "command">> & {
     // The parent's createdAt, supplied by the caller (which has already fetched
     // the row via getMessageForReplyPreview) so we don't re-read it here.
     replyToCreatedAt?: Date | string | null;
@@ -31,6 +31,7 @@ export async function writeMessage({
   replyToId,
   threadRootId,
   replyToCreatedAt,
+  command,
 }: WriteMessageArgs) {
   const id = v4();
   let createdAt = new Date();
@@ -46,7 +47,8 @@ export async function writeMessage({
       id,
       text: encrypt(text, id),
       // Set only here, not in editMessage: it records the command that actually ran.
-      command: parseCommand(text ?? "")?.name ?? null,
+      // Server-written messages may set it directly, to render as that command's result.
+      command: command ?? parseCommand(text ?? "")?.name ?? null,
       mediaUrl,
       userId,
       topicId,

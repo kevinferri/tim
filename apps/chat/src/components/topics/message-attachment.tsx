@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { OpenAiViewer } from "@/components/topics/open-ai-viewer";
 import { RollResult, sidesFromPrompt } from "@/components/topics/roll-result";
 import { EightBallResult } from "@/components/topics/eight-ball-result";
+import { TableInvite, parseBlackjackTablePath } from "@/games/blackjack";
 
 type FrameProps = {
   children: ReactNode;
@@ -45,6 +46,14 @@ type ResultProps = {
   createdAt?: Date;
 };
 
+function TextResult({ content }: { content: string }) {
+  return (
+    <AttachmentFrame fit>
+      <div className="px-3 py-2.5 text-sm whitespace-pre-wrap">{content}</div>
+    </AttachmentFrame>
+  );
+}
+
 // For these commands mediaUrl holds the generated result, not a URL.
 const RESULT_RENDERERS: Partial<
   Record<CommandName, (props: ResultProps) => ReactNode>
@@ -60,11 +69,16 @@ const RESULT_RENDERERS: Partial<
   [CommandName.EightBall]: ({ content, createdAt }) => (
     <EightBallResult content={content} createdAt={createdAt} />
   ),
-  [CommandName.SamePage]: ({ content }) => (
-    <AttachmentFrame fit>
-      <div className="px-3 py-2.5 text-sm whitespace-pre-wrap">{content}</div>
-    </AttachmentFrame>
-  ),
+  [CommandName.SamePage]: ({ content }) => <TextResult content={content} />,
+  // A sit-down message stores its table's path; anything else is the command's text reply.
+  [CommandName.Blackjack]: ({ content }) => {
+    const table = parseBlackjackTablePath(content);
+    return table ? (
+      <TableInvite circleId={table.circleId} />
+    ) : (
+      <TextResult content={content} />
+    );
+  },
 };
 
 export function isResultCommand(name?: CommandName) {

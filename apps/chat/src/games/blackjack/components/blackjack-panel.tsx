@@ -13,6 +13,7 @@ import { getInitials } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import { UpDown, chipText, useTableSeats } from "@/games/casino";
 import { BLACKJACK_GAME_ID } from "../lib/game-id";
+import { blackjackTablePath } from "../lib/table-link";
 import { useGameRoomStore } from "@/games/game-room";
 import {
   blackjackQueryKey,
@@ -25,9 +26,6 @@ import {
 import { EmptyState } from "./empty-state";
 import { BlackjackIcon } from "./icon";
 import type { BlackjackView } from "./view-store";
-
-export const tableHref = (circleId: string) =>
-  `/circles/${circleId}/casino/blackjack`;
 
 type Props = {
   circleId: string;
@@ -193,7 +191,7 @@ function PlayView({ circleId }: { circleId: string }) {
       <Button asChild size="sm">
         {/* Its own tab, so the chat stays open beside it. */}
         <Link
-          href={tableHref(circleId)}
+          href={blackjackTablePath(circleId)}
           target="_blank"
           rel="noopener"
           onClick={close}

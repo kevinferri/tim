@@ -30,6 +30,13 @@ export type TableErrorPayload = TableRef & {
 /** The table is closing for a restart; the client says so on the felt, and works out any refund from its last snapshot. */
 export type TableClosingPayload = TableRef;
 
+const TABLE_GAME_NAMES: Record<TableGame, string> = { blackjack: "Blackjack" };
+export const tableGameName = (game: TableGame) => TABLE_GAME_NAMES[game];
+
+/** The status a seated player shows. The text spade, not the emoji: it takes the status text's color. */
+export const casinoStatus = (game: TableGame) =>
+  `♠ At the casino playing ${tableGameName(game)}`;
+
 /** Table chat: quick remarks while playing. What people say is saved for 24 hours. */
 export const TABLE_CHAT_MAX_LENGTH = 200;
 /** How many of the last 24 hours' lines a newcomer gets on watch. */

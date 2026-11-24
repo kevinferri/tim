@@ -1,6 +1,11 @@
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@/lib/prisma/client";
 import type { CommandName } from "@tim/commands";
 import type { MemberActivity } from "@/lib/profile-badges";
+
+// Casino sit-down invites are written by the server when someone sits at a table (their mediaUrl is
+// the table's path), so nothing here counts them as the member writing or using a command.
+const NOT_SIT_DOWN_INVITE = Prisma.sql`COALESCE(m."mediaUrl", '') NOT LIKE '/circles/%/casino/%'`;
 
 // Everything for one member's profile, scoped to the circle. Each query starts from that member's
 // own messages or highlights (indexed by userId), so cost tracks their activity, not the circle's.
@@ -38,6 +43,7 @@ export async function getMemberStats({
       JOIN topics t ON t.id = m."topicId"
       LEFT JOIN messages parent ON parent.id = m."replyToId"
       WHERE m."userId" = ${userId} AND t."circleId" = ${circleId}
+        AND ${NOT_SIT_DOWN_INVITE}
     `,
     prismaClient.$queryRaw<{ total: number; top: number }[]>`
       SELECT COALESCE(SUM(n), 0)::int AS total, COALESCE(MAX(n), 0)::int AS top
@@ -73,6 +79,7 @@ export async function getMemberStats({
       JOIN topics t ON t.id = m."topicId"
       WHERE m."userId" = ${userId} AND m.command IS NOT NULL
         AND t."circleId" = ${circleId}
+        AND ${NOT_SIT_DOWN_INVITE}
       GROUP BY m.command
     `,
     prismaClient.highlight.count({
@@ -90,6 +97,7 @@ export async function getMemberStats({
       WHERE m."userId" = ${userId}
         AND t."circleId" = ${circleId}
         AND m."createdAt" > (now() AT TIME ZONE 'UTC') - interval '60 days'
+        AND ${NOT_SIT_DOWN_INVITE}
       ORDER BY day DESC
     `,
     prismaClient.topic.count({ where: { circleId, userId } }),
