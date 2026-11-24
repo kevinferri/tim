@@ -73,6 +73,8 @@ export async function getMemberStats({
       JOIN topics t ON t.id = m."topicId"
       WHERE m."userId" = ${userId} AND m.command IS NOT NULL
         AND t."circleId" = ${circleId}
+        -- Casino sit-down invites are written by the server, not typed (their mediaUrl is the table's path).
+        AND COALESCE(m."mediaUrl", '') NOT LIKE '/circles/%/casino/%'
       GROUP BY m.command
     `,
     prismaClient.highlight.count({

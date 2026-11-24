@@ -34,6 +34,7 @@ function message(
   topicId: string,
   extra: Partial<{
     command: string;
+    mediaUrl: string;
     replyToId: string;
     createdAt: Date;
   }> = {},
@@ -53,6 +54,11 @@ describe("getMemberStats", () => {
     await message(a.id, topic.id, { command: "roll" });
     await message(a.id, topic.id, { command: "roll" });
     await message(b.id, topic.id, { command: "giphy" });
+    // A casino sit-down invite: written by the server, so not a command use.
+    await message(a.id, topic.id, {
+      command: "blackjack",
+      mediaUrl: `/circles/${topic.circleId}/casino/blackjack`,
+    });
 
     const popular = await message(a.id, topic.id);
     const other = await message(a.id, topic.id);
@@ -71,15 +77,17 @@ describe("getMemberStats", () => {
       ],
     });
 
-    expect(
-      await getMemberStats({ circleId: topic.circleId, userId: a.id }),
-    ).toMatchObject({
+    const stats = await getMemberStats({
+      circleId: topic.circleId,
+      userId: a.id,
+    });
+    expect(stats).toMatchObject({
       highlightsReceived: 3,
       topMessageHighlights: 2,
       highlightsGiven: 1,
       repliesReceived: 2,
-      commandCounts: { roll: 2 },
     });
+    expect(stats.commandCounts).toEqual({ roll: 2 });
   });
 
   it("ignores activity in other circles", async () => {
