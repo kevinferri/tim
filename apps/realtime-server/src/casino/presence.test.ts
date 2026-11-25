@@ -5,13 +5,7 @@ import { pgClient, resetDb } from "../test/db";
 import { createMockServer, createMockSocket } from "../test/socket-mocks";
 import { decrypt } from "../lib/encryption";
 import { writeMessage } from "../db/messages";
-import {
-  FLOOD_LIMIT,
-  FLOOD_WINDOW_MS,
-  SESSION_GAP_MS,
-  createTablePresence,
-  tablePath,
-} from "./presence";
+import { SESSION_GAP_MS, createTablePresence, tablePath } from "./presence";
 
 // A pass-through spy, so a test can make one write fail.
 vi.mock("../db/messages", async (importOriginal) => {
@@ -125,57 +119,56 @@ describe("sit announcement", () => {
     const userId = await createUser();
     const { circleId, topicId } = await createCircle(userId);
     const server = createMockServer();
-    const { presence } = setup();
+    const { presence, advance } = setup();
     const invites = () => pgClient("messages").where({ topicId });
+    const stand = () => presence.stood({ circleId, game: "blackjack", userId });
 
     await seat(presence, server, circleId, userId);
-    await presence.stood({ circleId, game: "blackjack", userId });
-    // A refresh or reconnect right after a hand.
+    await stand();
+    // A refresh or reconnect before any hand has settled.
+    advance(SESSION_GAP_MS - 1);
+    await seat(presence, server, circleId, userId);
+    expect(await invites()).toHaveLength(1);
+
+    // Back long after leaving, though a hand settled recently (e.g. the server restarted).
+    await stand();
+    advance(SESSION_GAP_MS);
     await seat(presence, server, circleId, userId, SESSION_GAP_MS - 1);
     expect(await invites()).toHaveLength(1);
 
-    await presence.stood({ circleId, game: "blackjack", userId });
+    await stand();
+    advance(30 * 60 * 1000);
     await seat(presence, server, circleId, userId, 30 * 60 * 1000);
     expect(await invites()).toHaveLength(2);
   });
 
-  it("stops a flood of sits without play, per circle", async () => {
+  it("posts once for a burst of sits and stands, per circle", async () => {
     const userId = await createUser();
     const { circleId, topicId } = await createCircle(userId);
     const other = await createCircle(userId);
     const server = createMockServer();
     const { presence, advance } = setup();
-    const sitAndStand = async (id = circleId) => {
+    const sitAndStand = async (id: string) => {
       await seat(presence, server, id, userId);
       await presence.stood({ circleId: id, game: "blackjack", userId });
     };
 
-    for (let i = 0; i <= FLOOD_LIMIT; i++) {
-      await sitAndStand();
-      advance(1000);
+    for (let i = 0; i < 20; i++) {
+      await sitAndStand(circleId);
+      advance(30 * 1000);
     }
-    expect(await pgClient("messages").where({ topicId })).toHaveLength(
-      FLOOD_LIMIT,
-    );
     await sitAndStand(other.circleId);
+    expect(await pgClient("messages").where({ topicId })).toHaveLength(1);
     expect(
       await pgClient("messages").where({ topicId: other.topicId }),
     ).toHaveLength(1);
-
-    // Exactly a window after the first invite: only that one has expired.
-    advance(FLOOD_WINDOW_MS - (FLOOD_LIMIT + 1) * 1000);
-    await sitAndStand();
-    await sitAndStand();
-    expect(await pgClient("messages").where({ topicId })).toHaveLength(
-      FLOOD_LIMIT + 1,
-    );
   });
 
-  it("tries again on the next sit if posting failed", async () => {
+  it("tries again next session if posting failed", async () => {
     const userId = await createUser();
     const { circleId, topicId } = await createCircle(userId);
     const server = createMockServer();
-    const { presence } = setup();
+    const { presence, advance } = setup();
     vi.mocked(writeMessage).mockRejectedValueOnce(new Error("db blip"));
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -188,6 +181,7 @@ describe("sit announcement", () => {
     logged.mockRestore();
 
     await presence.stood({ circleId, game: "blackjack", userId });
+    advance(SESSION_GAP_MS);
     await seat(presence, server, circleId, userId);
     expect(await pgClient("messages").where({ topicId })).toHaveLength(1);
   });

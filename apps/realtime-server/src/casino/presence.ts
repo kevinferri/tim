@@ -8,11 +8,8 @@ import { decrypt } from "../lib/encryption";
 import { AppServer, SocketUser } from "../lib/socket";
 import { RoomType, toRoomKey } from "../event-handlers/rooms";
 
-/** A sit this soon after their last hand is the same session, so no new invite. */
+/** A sit this soon after leaving a seat or their last hand is the same session, so no new invite. */
 export const SESSION_GAP_MS = 5 * 60 * 1000;
-/** Flood guard: at most FLOOD_LIMIT invites per user and circle in any FLOOD_WINDOW_MS. */
-export const FLOOD_LIMIT = 3;
-export const FLOOD_WINDOW_MS = 10 * 60 * 1000;
 
 // The command whose result renderer draws the game's table invite.
 const GAME_COMMANDS: Record<TableGame, CommandName> = {
@@ -59,8 +56,8 @@ type Seated = {
 
 export function createTablePresence(now = () => Date.now()): TablePresence {
   const seatedUsers = new Map<string, Seated>();
-  // Per circle and user: when each recent invite was posted, oldest first.
-  const recentInvites = new Map<string, number[]>();
+  // Per circle and user: when they last left a seat. In memory, so the last hand covers a restart.
+  const lastStood = new Map<string, number>();
   // Per user, so a stand can't overtake the sit whose status it restores.
   const queues = new Map<string, Promise<void>>();
   // Set by restoreAll: a sit queued after shutdown starts must not write a status nothing will restore.
@@ -119,37 +116,19 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
   ) => {
     if (closing) return;
     if (msSinceLastHand !== null && msSinceLastHand < SESSION_GAP_MS) return;
-    const claimedAt = now();
-    const key = `${circleId}:${user.id}`;
-    const recent = (recentInvites.get(key) ?? []).filter(
-      (t) => claimedAt - t < FLOOD_WINDOW_MS,
-    );
-    if (recent.length >= FLOOD_LIMIT) {
-      recentInvites.set(key, recent);
-      return;
-    }
-    // Claimed before any await so two quick sits can't both slip under the limit.
-    recentInvites.set(key, [...recent, claimedAt]);
+    const stoodAt = lastStood.get(`${circleId}:${user.id}`);
+    if (stoodAt !== undefined && now() - stoodAt < SESSION_GAP_MS) return;
 
-    let saved: Awaited<ReturnType<typeof writeMessage>>;
-    try {
-      const topicId = await getDefaultTopicId({ circleId });
-      if (!topicId) return;
-      saved = await writeMessage({
-        userId: user.id,
-        topicId,
-        // No text: the chat app draws the whole invite from mediaUrl.
-        text: "",
-        mediaUrl: tablePath(circleId, game),
-        command: GAME_COMMANDS[game],
-      });
-    } catch (err) {
-      // Nothing was posted, so it doesn't count toward the limit.
-      const claims = recentInvites.get(key)?.filter((t) => t !== claimedAt);
-      if (claims?.length) recentInvites.set(key, claims);
-      else recentInvites.delete(key);
-      throw err;
-    }
+    const topicId = await getDefaultTopicId({ circleId });
+    if (!topicId) return;
+    const saved = await writeMessage({
+      userId: user.id,
+      topicId,
+      // No text: the chat app draws the whole invite from mediaUrl.
+      text: "",
+      mediaUrl: tablePath(circleId, game),
+      command: GAME_COMMANDS[game],
+    });
     server
       .to(toRoomKey({ id: circleId, roomType: RoomType.Circle }))
       .emit(SocketEvent.SendMessage, {
@@ -219,6 +198,8 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
     },
 
     stood({ circleId, game, userId }) {
+      // Recorded right away, not queued, so a quick re-sit's invite check sees it.
+      lastStood.set(`${circleId}:${userId}`, now());
       return enqueue(userId, async () => {
         const seated = seatedUsers.get(userId);
         if (!seated?.tables.delete(`${game}:${circleId}`)) return;
