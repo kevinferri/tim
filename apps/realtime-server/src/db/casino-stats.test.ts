@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { pgClient, resetDb } from "../test/db";
-import { loadCircleNet, recordHand } from "./casino-stats";
+import { loadCircleStanding, recordHand } from "./casino-stats";
 
 beforeEach(resetDb);
 
@@ -32,10 +32,47 @@ async function setup() {
 const statsRow = (circleId: string, userId: string, game: string) =>
   pgClient("casino_player_stats").where({ circleId, userId, game }).first();
 
-describe("loadCircleNet", () => {
-  it("is 0 before a first hand", async () => {
+describe("loadCircleStanding", () => {
+  it("is 0 and never played before a first hand", async () => {
     const { userId, circleId } = await setup();
-    expect(await loadCircleNet(circleId, userId)).toBe(0);
+    expect(await loadCircleStanding(circleId, userId)).toEqual({
+      net: 0,
+      msSinceLastHand: null,
+    });
+  });
+
+  it("times their last hand in the circle, in any game, by the DB clock", async () => {
+    const { userId, circleId } = await setup();
+    const otherCircleId = await createCircle(userId);
+    const ago = (interval: string) =>
+      pgClient.raw(`localtimestamp - interval '${interval}'`);
+    await pgClient("casino_player_stats").insert([
+      { circleId, userId, game: "blackjack", updatedAt: ago("2 hours") },
+      { circleId, userId, game: "texas-holdem", updatedAt: ago("1 minute") },
+      {
+        circleId: otherCircleId,
+        userId,
+        game: "blackjack",
+        updatedAt: ago("0 seconds"),
+      },
+    ]);
+    const { msSinceLastHand } = await loadCircleStanding(circleId, userId);
+    expect(msSinceLastHand).toBeGreaterThanOrEqual(60_000);
+    expect(msSinceLastHand).toBeLessThan(70_000);
+  });
+
+  it("counts a hand recordHand just wrote as just played", async () => {
+    const { userId, circleId } = await setup();
+    await recordHand({
+      circleId,
+      userId,
+      game: "blackjack",
+      net: 10,
+      wagered: 10,
+    });
+    const { msSinceLastHand } = await loadCircleStanding(circleId, userId);
+    expect(msSinceLastHand).toBeGreaterThanOrEqual(0);
+    expect(msSinceLastHand).toBeLessThan(5_000);
   });
 
   it("sums every game in the circle, and only that circle", async () => {
@@ -46,7 +83,7 @@ describe("loadCircleNet", () => {
       { circleId, userId, game: "texas-holdem", net: -500 },
       { circleId: otherCircleId, userId, game: "blackjack", net: 9_000 },
     ]);
-    expect(await loadCircleNet(circleId, userId)).toBe(-200);
+    expect((await loadCircleStanding(circleId, userId)).net).toBe(-200);
   });
 });
 
@@ -63,7 +100,7 @@ describe("recordHand", () => {
       wagered: 450,
       handsPlayed: 3,
     });
-    expect(await loadCircleNet(circleId, userId)).toBe(-200);
+    expect((await loadCircleStanding(circleId, userId)).net).toBe(-200);
   });
 
   it("never loses an update when hands settle at the same time", async () => {

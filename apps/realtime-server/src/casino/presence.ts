@@ -8,7 +8,8 @@ import { decrypt } from "../lib/encryption";
 import { AppServer, SocketUser } from "../lib/socket";
 import { RoomType, toRoomKey } from "../event-handlers/rooms";
 
-export const ANNOUNCE_COOLDOWN_MS = 60 * 60 * 1000;
+/** A sit this soon after leaving a seat or their last hand is the same session, so no new invite. */
+export const SESSION_GAP_MS = 5 * 60 * 1000;
 
 // The command whose result renderer draws the game's table invite.
 const GAME_COMMANDS: Record<TableGame, CommandName> = {
@@ -26,6 +27,8 @@ export interface TablePresence {
     circleId: string;
     game: TableGame;
     user: SocketUser;
+    /** How long ago their last hand in this circle settled; null if never. */
+    msSinceLastHand: number | null;
   }): Promise<void>;
   stood(args: {
     circleId: string;
@@ -53,7 +56,8 @@ type Seated = {
 
 export function createTablePresence(now = () => Date.now()): TablePresence {
   const seatedUsers = new Map<string, Seated>();
-  const lastAnnounced = new Map<string, number>();
+  // Per circle and user: when they last left a seat. In memory, so the last hand covers a restart.
+  const lastStood = new Map<string, number>();
   // Per user, so a stand can't overtake the sit whose status it restores.
   const queues = new Map<string, Promise<void>>();
   // Set by restoreAll: a sit queued after shutdown starts must not write a status nothing will restore.
@@ -108,32 +112,23 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
     circleId: string,
     game: TableGame,
     user: SocketUser,
+    msSinceLastHand: number | null,
   ) => {
     if (closing) return;
-    const key = `${circleId}:${user.id}`;
-    const last = lastAnnounced.get(key);
-    if (last !== undefined && now() - last < ANNOUNCE_COOLDOWN_MS) return;
-    // Claimed before any await so two quick sits can't both post.
-    const claimedAt = now();
-    lastAnnounced.set(key, claimedAt);
+    if (msSinceLastHand !== null && msSinceLastHand < SESSION_GAP_MS) return;
+    const stoodAt = lastStood.get(`${circleId}:${user.id}`);
+    if (stoodAt !== undefined && now() - stoodAt < SESSION_GAP_MS) return;
 
-    let saved: Awaited<ReturnType<typeof writeMessage>>;
-    try {
-      const topicId = await getDefaultTopicId({ circleId });
-      if (!topicId) return;
-      saved = await writeMessage({
-        userId: user.id,
-        topicId,
-        // No text: the chat app draws the whole invite from mediaUrl.
-        text: "",
-        mediaUrl: tablePath(circleId, game),
-        command: GAME_COMMANDS[game],
-      });
-    } catch (err) {
-      // Nothing was posted, so the next sit may try again (unless a newer claim replaced this one).
-      if (lastAnnounced.get(key) === claimedAt) lastAnnounced.delete(key);
-      throw err;
-    }
+    const topicId = await getDefaultTopicId({ circleId });
+    if (!topicId) return;
+    const saved = await writeMessage({
+      userId: user.id,
+      topicId,
+      // No text: the chat app draws the whole invite from mediaUrl.
+      text: "",
+      mediaUrl: tablePath(circleId, game),
+      command: GAME_COMMANDS[game],
+    });
     server
       .to(toRoomKey({ id: circleId, roomType: RoomType.Circle }))
       .emit(SocketEvent.SendMessage, {
@@ -162,10 +157,10 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
   };
 
   return {
-    async seated({ server, circleId, game, user }) {
+    async seated({ server, circleId, game, user, msSinceLastHand }) {
       const tableKey = `${game}:${circleId}`;
       await Promise.all([
-        announce(server, circleId, game, user).catch((err) =>
+        announce(server, circleId, game, user, msSinceLastHand).catch((err) =>
           console.error("casino: sit announcement failed", err),
         ),
         enqueue(user.id, async () => {
@@ -203,6 +198,13 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
     },
 
     stood({ circleId, game, userId }) {
+      // Recorded right away, not queued, so a quick re-sit's invite check sees it.
+      const stoodAt = now();
+      // Entries only matter for SESSION_GAP_MS; sweep the rest so the map doesn't grow forever.
+      for (const [key, at] of lastStood) {
+        if (stoodAt - at >= SESSION_GAP_MS) lastStood.delete(key);
+      }
+      lastStood.set(`${circleId}:${userId}`, stoodAt);
       return enqueue(userId, async () => {
         const seated = seatedUsers.get(userId);
         if (!seated?.tables.delete(`${game}:${circleId}`)) return;
