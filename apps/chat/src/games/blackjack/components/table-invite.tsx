@@ -35,7 +35,7 @@ export function TableInvite({ circleId }: { circleId: string }) {
         </div>
         {/* Fills the card's height: square beside the usual text. */}
         <div className="flex min-h-20 w-20 shrink-0 items-center justify-center rounded-md bg-emerald-600/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400">
-          <BlackjackIcon className="size-11 transition-transform duration-300 group-hover:-rotate-6 motion-reduce:transition-none" />
+          <BlackjackIcon className="size-10 transition-transform duration-300 group-hover:-rotate-6 motion-reduce:transition-none" />
         </div>
       </Link>
     </figure>
