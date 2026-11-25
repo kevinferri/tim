@@ -411,7 +411,7 @@ describe("a round", () => {
     });
     expect(view.seats[0]).toMatchObject({ net: 100, lastNet: 100 });
     await vi.waitFor(async () =>
-      expect(await netStore.load("c1", "a")).toBe(100),
+      expect((await netStore.load("c1", "a")).net).toBe(100),
     );
 
     vi.advanceTimersByTime(RESULTS_MS);
@@ -620,7 +620,7 @@ describe("up/down", () => {
       wagered: 300,
     });
     await vi.waitFor(async () =>
-      expect(await netStore.load("c1", "a")).toBe(300),
+      expect((await netStore.load("c1", "a")).net).toBe(300),
     );
   });
 

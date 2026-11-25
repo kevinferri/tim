@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { pgClient, resetDb } from "../test/db";
-import { loadCircleNet, recordHand } from "./casino-stats";
+import { loadCircleStanding, recordHand } from "./casino-stats";
 
 beforeEach(resetDb);
 
@@ -32,10 +32,37 @@ async function setup() {
 const statsRow = (circleId: string, userId: string, game: string) =>
   pgClient("casino_player_stats").where({ circleId, userId, game }).first();
 
-describe("loadCircleNet", () => {
-  it("is 0 before a first hand", async () => {
+describe("loadCircleStanding", () => {
+  it("is 0 and never played before a first hand", async () => {
     const { userId, circleId } = await setup();
-    expect(await loadCircleNet(circleId, userId)).toBe(0);
+    expect(await loadCircleStanding(circleId, userId)).toEqual({
+      net: 0,
+      lastPlayedAt: null,
+    });
+  });
+
+  it("knows when their last hand in the circle settled, in any game", async () => {
+    const { userId, circleId } = await setup();
+    const otherCircleId = await createCircle(userId);
+    const latest = new Date("2026-11-20T10:00:00.000Z");
+    await pgClient("casino_player_stats").insert([
+      {
+        circleId,
+        userId,
+        game: "blackjack",
+        updatedAt: new Date("2026-11-01"),
+      },
+      { circleId, userId, game: "texas-holdem", updatedAt: latest },
+      {
+        circleId: otherCircleId,
+        userId,
+        game: "blackjack",
+        updatedAt: new Date(),
+      },
+    ]);
+    expect((await loadCircleStanding(circleId, userId)).lastPlayedAt).toEqual(
+      latest,
+    );
   });
 
   it("sums every game in the circle, and only that circle", async () => {
@@ -46,7 +73,7 @@ describe("loadCircleNet", () => {
       { circleId, userId, game: "texas-holdem", net: -500 },
       { circleId: otherCircleId, userId, game: "blackjack", net: 9_000 },
     ]);
-    expect(await loadCircleNet(circleId, userId)).toBe(-200);
+    expect((await loadCircleStanding(circleId, userId)).net).toBe(-200);
   });
 });
 
@@ -63,7 +90,7 @@ describe("recordHand", () => {
       wagered: 450,
       handsPlayed: 3,
     });
-    expect(await loadCircleNet(circleId, userId)).toBe(-200);
+    expect((await loadCircleStanding(circleId, userId)).net).toBe(-200);
   });
 
   it("never loses an update when hands settle at the same time", async () => {

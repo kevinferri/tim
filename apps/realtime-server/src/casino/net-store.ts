@@ -1,28 +1,39 @@
-import { HandRecord, loadCircleNet, recordHand } from "../db/casino-stats";
+import {
+  CircleStanding,
+  HandRecord,
+  loadCircleStanding,
+  recordHand,
+} from "../db/casino-stats";
 
-export type { HandRecord };
+export type { CircleStanding, HandRecord };
 
 /** Where each player's all-time up/down lives; written only when a round settles. */
 export interface NetStore {
-  load(circleId: string, userId: string): Promise<number>;
+  load(circleId: string, userId: string): Promise<CircleStanding>;
   record(hand: HandRecord): Promise<void>;
 }
 
 export const dbNetStore: NetStore = {
-  load: loadCircleNet,
+  load: loadCircleStanding,
   record: recordHand,
 };
 
 /** For unit tests. */
 export class InMemoryNetStore implements NetStore {
-  private nets = new Map<string, number>();
+  private standings = new Map<string, CircleStanding>();
 
-  async load(circleId: string, userId: string) {
-    return this.nets.get(`${circleId}:${userId}`) ?? 0;
+  async load(circleId: string, userId: string): Promise<CircleStanding> {
+    return (
+      this.standings.get(`${circleId}:${userId}`) ?? {
+        net: 0,
+        lastPlayedAt: null,
+      }
+    );
   }
 
   async record({ circleId, userId, net }: HandRecord) {
     const key = `${circleId}:${userId}`;
-    this.nets.set(key, (this.nets.get(key) ?? 0) + net);
+    const previous = this.standings.get(key)?.net ?? 0;
+    this.standings.set(key, { net: previous + net, lastPlayedAt: new Date() });
   }
 }

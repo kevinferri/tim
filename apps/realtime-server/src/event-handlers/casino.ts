@@ -8,6 +8,7 @@ import {
 } from "@tim/casino";
 import { isUserInCircle } from "../db/circles";
 import { isGameEnabled } from "../db/circle-games";
+import { CircleStanding } from "../casino/net-store";
 import { CasinoRegistry, casinoRegistry } from "../casino/registry";
 import { AppSocket } from "../lib/socket";
 import { HandlerArgs, SocketEvent } from "./main";
@@ -162,11 +163,11 @@ export function registerCasinoHandlers(
         "game_off",
       );
     }
-    let net: number;
+    let standing: CircleStanding;
     try {
       // A settlement still being written would otherwise load stale.
       await registry.writesSettled(ref.circleId, id);
-      net = await registry.deps.netStore.load(ref.circleId, id);
+      standing = await registry.deps.netStore.load(ref.circleId, id);
     } catch (err) {
       console.error("casino: up/down load failed", err);
       return emitError(socket, ref, "Couldn't load your up/down. Try again.");
@@ -181,10 +182,15 @@ export function registerCasinoHandlers(
     const error = current.sit(
       { userId: id, name, displayName, imageUrl, createdAt },
       target,
-      net,
+      standing.net,
     );
     if (error) return emitError(socket, ref, error);
-    await registry.presence.seated({ server, ...ref, user: user() });
+    await registry.presence.seated({
+      server,
+      ...ref,
+      user: user(),
+      lastPlayedAt: standing.lastPlayedAt,
+    });
   });
 
   on(SocketEvent.TableStand, (payload: unknown) => {
