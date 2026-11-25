@@ -10,6 +10,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { DEAL_FLIGHT_MS } from "@tim/casino";
 import { cn } from "@/lib/utils";
 import {
   cardBox,
@@ -18,7 +19,7 @@ import {
 } from "./components/playing-card";
 import { playTableSound, preloadTableSounds } from "./sounds";
 
-export const DEAL_MS = 600;
+export const DEAL_MS = DEAL_FLIGHT_MS;
 export const DEAL_EASING = "cubic-bezier(0.2, 0.7, 0.3, 1)";
 
 type DealContextValue = {

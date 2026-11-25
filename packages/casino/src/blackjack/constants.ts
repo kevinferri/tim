@@ -18,3 +18,22 @@ export const DEALER_DRAW_MS = 800;
 
 // Long enough for the dealer to settle seat by seat and the last seat's win to finish counting up.
 export const RESULTS_MS = 4_200;
+
+/** The opening deal's pace: the client animates it, and the server waits it out on a dealer blackjack. */
+export const DEAL_STAGGER_MS = 130;
+export const DEAL_FLIGHT_MS = 600;
+/** The dealer peeks this long after the opening deal lands before turning over a blackjack. */
+export const DEALER_PEEK_MS = 700;
+
+/** After the flip, the "Blackjack" badge shows this long before the dealer takes the bets. */
+export const DEALER_BLACKJACK_BEAT_MS = 600;
+
+/** When a dealer blackjack's hole card turns over, from the deal; the hole card is the deal's last card. */
+export function dealerRevealMs(players: number): number {
+  return (2 * players + 1) * DEAL_STAGGER_MS + DEAL_FLIGHT_MS + DEALER_PEEK_MS;
+}
+
+/** How much longer a dealer blackjack's results stay up: the deal, the peek and flip, and the badge's beat. */
+export function dealerBlackjackHoldMs(players: number): number {
+  return dealerRevealMs(players) + DEALER_BLACKJACK_BEAT_MS;
+}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BETTING_WINDOW_MS,
+  DEAL_STAGGER_MS,
   MAX_BET,
   MIN_BET,
   SEAT_COUNT,
@@ -11,6 +12,7 @@ import {
   type BlackjackSeatView,
   type BlackjackTableAction,
   type BlackjackTableView,
+  handValue,
 } from "@tim/casino";
 import {
   BetSpot,
@@ -149,8 +151,6 @@ const HAND_PAD_PX = 8;
 // Between a seat's hands (gap-2).
 const HANDS_GAP_PX = 8;
 
-// Gap between cards in the opening deal, dealt one at a time like a real dealer.
-const DEAL_STAGGER_MS = 130;
 // A hit or double card waits a beat after the player's "Hit"/"Double" bubble, like a dealer reacting.
 // Visual only: the server's turn timer has already moved on.
 const HIT_PAUSE_MS = 160;
@@ -435,6 +435,16 @@ function LiveTable(props: Props) {
     view.phase === "results" &&
     view.dealer.cards.length === 2 &&
     view.dealer.total === 21;
+  // A dealer blackjack at the deal shows its up card alone until the peek turns the hole card over.
+  const holeDown = settlement.peek === "hidden";
+  const dealer = holeDown
+    ? {
+        cards: [view.dealer.cards[0], null],
+        total: view.dealer.cards[0]
+          ? handValue([view.dealer.cards[0]]).total
+          : null,
+      }
+    : view.dealer;
 
   // Opening deal order: one card to each player from first base, one to the dealer, then again.
   const dealt = view.seats.flatMap((s, i) => (s?.inRound ? [i] : []));
@@ -513,14 +523,20 @@ function LiveTable(props: Props) {
                 {view.phase === "dealer" && (
                   <TurnGlow count={view.dealer.cards.length} size={cardSize} />
                 )}
-                {dealerBlackjack && (
-                  // Once the dealer's opening hand has landed: a dealer blackjack ends the round at the deal.
-                  <DealerBlackjackBadge delayMs={dealerDelay(1) + DEAL_MS} />
+                {dealerBlackjack && !holeDown && (
+                  // Right at a live flip; otherwise once the dealer's opening hand has landed.
+                  <DealerBlackjackBadge
+                    delayMs={
+                      settlement.peek === "revealed"
+                        ? 0
+                        : dealerDelay(1) + DEAL_MS
+                    }
+                  />
                 )}
-                {view.dealer.cards.length > 0 ? (
+                {dealer.cards.length > 0 ? (
                   <ScoredCards
-                    cards={view.dealer.cards}
-                    total={view.dealer.total}
+                    cards={dealer.cards}
+                    total={dealer.total}
                     size={cardSize}
                     dealDelayMs={dealerDelay}
                   />
@@ -582,7 +598,10 @@ function LiveTable(props: Props) {
                   ? hadChipsInPlay(restartedFrom, selfId)
                     ? "Restarted, bet returned"
                     : TABLE_NOTICES[notice]
-                  : statusText(view, me, live)}
+                  : holeDown
+                    ? // Blank until the flip: a peek shown only on a blackjack would give it away.
+                      ""
+                    : statusText(view, me, live)}
               </StatusLine>
             )
           }
