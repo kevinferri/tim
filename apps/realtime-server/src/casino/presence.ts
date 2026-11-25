@@ -199,7 +199,12 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
 
     stood({ circleId, game, userId }) {
       // Recorded right away, not queued, so a quick re-sit's invite check sees it.
-      lastStood.set(`${circleId}:${userId}`, now());
+      const stoodAt = now();
+      // Entries only matter for SESSION_GAP_MS; sweep the rest so the map doesn't grow forever.
+      for (const [key, at] of lastStood) {
+        if (stoodAt - at >= SESSION_GAP_MS) lastStood.delete(key);
+      }
+      lastStood.set(`${circleId}:${userId}`, stoodAt);
       return enqueue(userId, async () => {
         const seated = seatedUsers.get(userId);
         if (!seated?.tables.delete(`${game}:${circleId}`)) return;
