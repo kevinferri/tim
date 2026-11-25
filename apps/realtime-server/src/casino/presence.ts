@@ -30,8 +30,8 @@ export interface TablePresence {
     circleId: string;
     game: TableGame;
     user: SocketUser;
-    /** When their last hand in this circle settled; null if never. */
-    lastPlayedAt: Date | null;
+    /** How long ago their last hand in this circle settled; null if never. */
+    msSinceLastHand: number | null;
   }): Promise<void>;
   stood(args: {
     circleId: string;
@@ -115,13 +115,11 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
     circleId: string,
     game: TableGame,
     user: SocketUser,
-    lastPlayedAt: Date | null,
+    msSinceLastHand: number | null,
   ) => {
     if (closing) return;
+    if (msSinceLastHand !== null && msSinceLastHand < SESSION_GAP_MS) return;
     const claimedAt = now();
-    if (lastPlayedAt && claimedAt - lastPlayedAt.getTime() < SESSION_GAP_MS) {
-      return;
-    }
     const key = `${circleId}:${user.id}`;
     const recent = (recentInvites.get(key) ?? []).filter(
       (t) => claimedAt - t < FLOOD_WINDOW_MS,
@@ -180,10 +178,10 @@ export function createTablePresence(now = () => Date.now()): TablePresence {
   };
 
   return {
-    async seated({ server, circleId, game, user, lastPlayedAt }) {
+    async seated({ server, circleId, game, user, msSinceLastHand }) {
       const tableKey = `${game}:${circleId}`;
       await Promise.all([
-        announce(server, circleId, game, user, lastPlayedAt).catch((err) =>
+        announce(server, circleId, game, user, msSinceLastHand).catch((err) =>
           console.error("casino: sit announcement failed", err),
         ),
         enqueue(user.id, async () => {

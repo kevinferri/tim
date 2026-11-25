@@ -70,7 +70,6 @@ function setup(start = Date.parse("2026-11-23T20:00:00.000Z")) {
   return {
     presence,
     advance: (ms: number) => (clock += ms),
-    ago: (ms: number) => new Date(clock - ms),
   };
 }
 
@@ -79,14 +78,14 @@ async function seat(
   server: ReturnType<typeof createMockServer>,
   circleId: string,
   userId: string,
-  lastPlayedAt: Date | null = null,
+  msSinceLastHand: number | null = null,
 ) {
   await presence.seated({
     server: server as any,
     circleId,
     game: "blackjack",
     user: { id: userId, displayName: "Test" } as any,
-    lastPlayedAt,
+    msSinceLastHand,
   });
 }
 
@@ -126,18 +125,17 @@ describe("sit announcement", () => {
     const userId = await createUser();
     const { circleId, topicId } = await createCircle(userId);
     const server = createMockServer();
-    const { presence, advance, ago } = setup();
+    const { presence } = setup();
     const invites = () => pgClient("messages").where({ topicId });
 
     await seat(presence, server, circleId, userId);
     await presence.stood({ circleId, game: "blackjack", userId });
     // A refresh or reconnect right after a hand.
-    await seat(presence, server, circleId, userId, ago(SESSION_GAP_MS - 1));
+    await seat(presence, server, circleId, userId, SESSION_GAP_MS - 1);
     expect(await invites()).toHaveLength(1);
 
     await presence.stood({ circleId, game: "blackjack", userId });
-    advance(30 * 60 * 1000);
-    await seat(presence, server, circleId, userId, ago(30 * 60 * 1000));
+    await seat(presence, server, circleId, userId, 30 * 60 * 1000);
     expect(await invites()).toHaveLength(2);
   });
 

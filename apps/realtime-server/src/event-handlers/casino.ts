@@ -189,7 +189,7 @@ export function registerCasinoHandlers(
       server,
       ...ref,
       user: user(),
-      lastPlayedAt: standing.lastPlayedAt,
+      msSinceLastHand: standing.msSinceLastHand,
     });
   });
 

@@ -37,32 +37,42 @@ describe("loadCircleStanding", () => {
     const { userId, circleId } = await setup();
     expect(await loadCircleStanding(circleId, userId)).toEqual({
       net: 0,
-      lastPlayedAt: null,
+      msSinceLastHand: null,
     });
   });
 
-  it("knows when their last hand in the circle settled, in any game", async () => {
+  it("times their last hand in the circle, in any game, by the DB clock", async () => {
     const { userId, circleId } = await setup();
     const otherCircleId = await createCircle(userId);
-    const latest = new Date("2026-11-20T10:00:00.000Z");
+    const ago = (interval: string) =>
+      pgClient.raw(`localtimestamp - interval '${interval}'`);
     await pgClient("casino_player_stats").insert([
-      {
-        circleId,
-        userId,
-        game: "blackjack",
-        updatedAt: new Date("2026-11-01"),
-      },
-      { circleId, userId, game: "texas-holdem", updatedAt: latest },
+      { circleId, userId, game: "blackjack", updatedAt: ago("2 hours") },
+      { circleId, userId, game: "texas-holdem", updatedAt: ago("1 minute") },
       {
         circleId: otherCircleId,
         userId,
         game: "blackjack",
-        updatedAt: new Date(),
+        updatedAt: ago("0 seconds"),
       },
     ]);
-    expect((await loadCircleStanding(circleId, userId)).lastPlayedAt).toEqual(
-      latest,
-    );
+    const { msSinceLastHand } = await loadCircleStanding(circleId, userId);
+    expect(msSinceLastHand).toBeGreaterThanOrEqual(60_000);
+    expect(msSinceLastHand).toBeLessThan(70_000);
+  });
+
+  it("counts a hand recordHand just wrote as just played", async () => {
+    const { userId, circleId } = await setup();
+    await recordHand({
+      circleId,
+      userId,
+      game: "blackjack",
+      net: 10,
+      wagered: 10,
+    });
+    const { msSinceLastHand } = await loadCircleStanding(circleId, userId);
+    expect(msSinceLastHand).toBeGreaterThanOrEqual(0);
+    expect(msSinceLastHand).toBeLessThan(5_000);
   });
 
   it("sums every game in the circle, and only that circle", async () => {

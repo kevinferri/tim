@@ -20,20 +20,20 @@ export const dbNetStore: NetStore = {
 
 /** For unit tests. */
 export class InMemoryNetStore implements NetStore {
-  private standings = new Map<string, CircleStanding>();
+  private standings = new Map<string, { net: number; playedAt: number }>();
 
   async load(circleId: string, userId: string): Promise<CircleStanding> {
-    return (
-      this.standings.get(`${circleId}:${userId}`) ?? {
-        net: 0,
-        lastPlayedAt: null,
-      }
-    );
+    const standing = this.standings.get(`${circleId}:${userId}`);
+    if (!standing) return { net: 0, msSinceLastHand: null };
+    return {
+      net: standing.net,
+      msSinceLastHand: Date.now() - standing.playedAt,
+    };
   }
 
   async record({ circleId, userId, net }: HandRecord) {
     const key = `${circleId}:${userId}`;
     const previous = this.standings.get(key)?.net ?? 0;
-    this.standings.set(key, { net: previous + net, lastPlayedAt: new Date() });
+    this.standings.set(key, { net: previous + net, playedAt: Date.now() });
   }
 }
