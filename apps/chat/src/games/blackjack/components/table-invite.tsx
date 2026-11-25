@@ -33,7 +33,8 @@ export function TableInvite({ circleId }: { circleId: string }) {
             Join me
           </span>
         </div>
-        <div className="flex size-12 shrink-0 items-center justify-center self-center rounded-md bg-emerald-600/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400">
+        {/* The table's felt (table-layout.tsx). */}
+        <div className="flex size-12 shrink-0 items-center justify-center self-center rounded-md bg-emerald-800 text-emerald-50 shadow-[inset_0_0_8px_rgba(0,0,0,0.45)] ring-1 ring-black/20 dark:bg-[#123a2f]">
           <BlackjackIcon className="size-7 transition-transform duration-300 group-hover:-rotate-6 motion-reduce:transition-none" />
         </div>
       </Link>
