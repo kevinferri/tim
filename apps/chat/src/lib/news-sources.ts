@@ -104,7 +104,7 @@ export const NEWS_PRESETS: {
   },
   {
     name: "ESPN",
-    url: "https://www.espn.com/espn/rss/news",
+    url: "https://now.core.api.espn.com/v1/sports/news?limit=50",
     category: "Sports",
   },
   {

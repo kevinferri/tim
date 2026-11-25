@@ -9,6 +9,10 @@ import {
   normalizeUrl,
   parseFeed,
   fetchFeed,
+  ESPN_NEWS_URL,
+  parseEspnNews,
+  parserFor,
+  NotAFeedError,
   describeNonFeed,
   toPlainText,
 } from "../dist/index.js";
@@ -243,4 +247,59 @@ test("describeNonFeed shows what came back instead of a feed", () => {
     describeNonFeed({ url: "https://example.com/", contentType: "", body: "" }),
     'no content-type, 0 bytes from https://example.com/: ""',
   );
+});
+
+test("parseEspnNews reads ESPN's news API, stories only", () => {
+  const feed = parseEspnNews(
+    JSON.stringify({
+      headlines: [
+        {
+          id: 50585586,
+          type: "Story",
+          headline: "WNBA players elect Williams to lead union",
+          description: "Sky center Elizabeth Williams was elected president.",
+          published: "2026-11-24T20:38:07Z",
+          links: {
+            web: { href: "https://www.espn.com/wnba/story/_/id/50585586/x" },
+          },
+          images: [{ url: "https://a.espncdn.com/photo/r1750763.jpg" }],
+        },
+        {
+          id: 401921022,
+          type: "Recap",
+          headline: "Notre Dame holds off Davidson",
+          links: { web: { href: "https://www.espn.com/ncw/recap?gameId=1" } },
+        },
+        { id: 3, type: "HeadlineNews", headline: "No link, dropped" },
+      ],
+    }),
+  );
+  assert.equal(feed.title, "ESPN");
+  assert.equal(feed.siteUrl, "https://www.espn.com/");
+  assert.deepEqual(feed.items, [
+    {
+      guid: "US-EN-50585586",
+      title: "WNBA players elect Williams to lead union",
+      link: "https://www.espn.com/wnba/story/_/id/50585586/x",
+      summary: "Sky center Elizabeth Williams was elected president.",
+      imageUrl: "https://a.espncdn.com/photo/r1750763.jpg",
+      publishedAt: new Date("2026-11-24T20:38:07Z"),
+    },
+  ]);
+});
+
+test("parseEspnNews rejects anything else", () => {
+  for (const body of ["", "<html></html>", "{}", '{"headlines":null}']) {
+    assert.throws(() => parseEspnNews(body), NotAFeedError, body);
+  }
+});
+
+test("ESPN_NEWS_URL survives normalizeUrl", () => {
+  assert.equal(normalizeUrl(ESPN_NEWS_URL).toString(), ESPN_NEWS_URL);
+});
+
+test("parserFor sends ESPN's API to the ESPN parser and everything else to parseFeed", () => {
+  assert.equal(parserFor(ESPN_NEWS_URL), parseEspnNews);
+  assert.equal(parserFor("https://www.espn.com/espn/rss/news"), parseFeed);
+  assert.equal(parserFor("https://feeds.bbci.co.uk/news/rss.xml"), parseFeed);
 });
