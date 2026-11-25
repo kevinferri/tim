@@ -386,8 +386,7 @@ function LiveTable(props: Props) {
     view.dealer.cards.length === 2 &&
     view.dealer.total === 21;
   // A dealer blackjack at the deal shows its up card alone until the peek turns the hole card over.
-  const holeDown =
-    settlement.peek === "dealing" || settlement.peek === "peeking";
+  const holeDown = settlement.peek === "hidden";
   const dealer = holeDown
     ? {
         cards: [view.dealer.cards[0], null],
@@ -549,11 +548,10 @@ function LiveTable(props: Props) {
                   ? hadChipsInPlay(restartedFrom, selfId)
                     ? "Restarted, bet returned"
                     : TABLE_NOTICES[notice]
-                  : settlement.peek === "dealing"
-                    ? ""
-                    : settlement.peek === "peeking"
-                      ? "Dealer peeks"
-                      : statusText(view, me, live)}
+                  : holeDown
+                    ? // Blank until the flip: a peek shown only on a blackjack would give it away.
+                      ""
+                    : statusText(view, me, live)}
               </StatusLine>
             )
           }
