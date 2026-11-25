@@ -769,8 +769,11 @@ export const TopicsList = ({
 
       {isMinimized && (
         <div className="flex flex-col items-center gap-3 px-3 pt-3">
-          <GameRoomButton circleId={circle.id} placement="rail" />
-          <NewsButton circleId={circle.id} placement="rail" />
+          {/* Below md these sit with the settings gear at the bottom of the rail. */}
+          <div className="hidden md:contents">
+            <GameRoomButton circleId={circle.id} placement="rail" />
+            <NewsButton circleId={circle.id} placement="rail" />
+          </div>
           <NewTopicButton
             circleId={circle.id}
             circleName={circle.name}
@@ -976,7 +979,11 @@ export const TopicsList = ({
         </div>
       </ScrollArea>
       {isMinimized && (
-        <div className="flex flex-col items-center mt-auto p-3">
+        <div className="flex flex-col items-center gap-3 mt-auto p-3">
+          <div className="contents md:hidden">
+            <GameRoomButton circleId={circle.id} placement="rail" />
+            <NewsButton circleId={circle.id} placement="rail" />
+          </div>
           <UpsertCircleForm
             existingCircle={circle ?? undefined}
             trigger={

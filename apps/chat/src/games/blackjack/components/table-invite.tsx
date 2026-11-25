@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { PlayingCard, cardOverlap } from "@/games/casino";
 import { blackjackTablePath } from "../lib/table-link";
 import { BlackjackIcon } from "./icon";
 
@@ -20,9 +18,7 @@ export function TableInvite({ circleId }: { circleId: string }) {
           <span className="text-sm font-semibold leading-snug">
             Entered the casino
           </span>
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {/* Down a pixel: centered on the caps, it reads high next to mostly lowercase text. */}
-            <BlackjackIcon className="size-3.5 shrink-0 translate-y-px" />
+          <span className="text-xs text-muted-foreground">
             Sat at the blackjack table
           </span>
           {/* A span with button styles: the whole card is the link. */}
@@ -37,24 +33,9 @@ export function TableInvite({ circleId }: { circleId: string }) {
             Join me
           </span>
         </div>
-        {/* Fills the card's height: square beside the usual text, taller if it wraps. */}
-        <div className="flex min-h-20 w-20 shrink-0 items-center justify-center rounded-md bg-emerald-800 shadow-[inset_0_0_10px_rgba(0,0,0,0.45)] ring-1 ring-black/20 dark:bg-[#123a2f]">
-          <div className="flex scale-[1.15]">
-            <PlayingCard
-              card={{ rank: "A", suit: "spades" }}
-              size="sm"
-              dealDelayMs={null}
-            />
-            <PlayingCard
-              card={null}
-              size="sm"
-              dealDelayMs={null}
-              className={cn(
-                cardOverlap("sm"),
-                "origin-bottom-left transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-[8deg] motion-reduce:transition-none",
-              )}
-            />
-          </div>
+        {/* Fills the card's height like a link preview's image: square beside the usual text. */}
+        <div className="flex w-14 shrink-0 sm:w-20 items-center justify-center rounded-md border bg-background">
+          <BlackjackIcon className="size-6 sm:size-8 transition-transform duration-300 group-hover:-rotate-6 motion-reduce:transition-none" />
         </div>
       </Link>
     </figure>
