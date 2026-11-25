@@ -33,9 +33,8 @@ export function TableInvite({ circleId }: { circleId: string }) {
             Join me
           </span>
         </div>
-        {/* Fills the card's height like a link preview's image: square beside the usual text. */}
-        <div className="flex w-14 shrink-0 sm:w-20 items-center justify-center rounded-md border bg-background">
-          <BlackjackIcon className="size-6 sm:size-8 transition-transform duration-300 group-hover:-rotate-6 motion-reduce:transition-none" />
+        <div className="flex size-12 shrink-0 items-center justify-center self-center rounded-md bg-emerald-600/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400">
+          <BlackjackIcon className="size-7 transition-transform duration-300 group-hover:-rotate-6 motion-reduce:transition-none" />
         </div>
       </Link>
     </figure>
