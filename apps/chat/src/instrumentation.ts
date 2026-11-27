@@ -5,4 +5,7 @@ export async function register() {
 
   const { startSamePageCron } = await import("@/games/same-page/server");
   startSamePageCron();
+
+  const { startNflAtsCron } = await import("@/games/nfl-ats/server");
+  startNflAtsCron();
 }
