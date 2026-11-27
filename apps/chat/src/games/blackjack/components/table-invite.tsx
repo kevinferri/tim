@@ -12,6 +12,8 @@ export function TableInvite({ circleId }: { circleId: string }) {
     <figure className="w-full max-w-full overflow-hidden rounded-lg border bg-secondary/40 transition-colors hover:bg-secondary sm:max-w-md">
       <Link
         href={blackjackTablePath(circleId)}
+        target="_blank"
+        rel="noopener noreferrer"
         className="group flex items-stretch gap-3 p-2.5"
       >
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
